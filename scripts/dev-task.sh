@@ -39,6 +39,7 @@ declared_cmd() {
   fi
   [ -f "$DECL" ] || return 0
   # Nạp trong subshell để không rò biến; lấy giá trị biến trùng tên task.
+  # shellcheck source=/dev/null
   ( set +u; . "$DECL" >/dev/null 2>&1; eval "printf '%s' \"\${$1:-}\"" )
 }
 
@@ -72,10 +73,10 @@ detected_cmd() {
       format)    command -v ruff >/dev/null 2>&1 && { echo "ruff format ."; return 0; }
                  command -v black >/dev/null 2>&1 && { echo "black ."; return 0; } ;;
       lint)      command -v ruff >/dev/null 2>&1 && { echo "ruff check ."; return 0; } ;;
-      typecheck) command -v mypy >/dev/null 2>&1 && { echo "mypy ."; return 0; } ;;
+      typecheck) command -v pyright >/dev/null 2>&1 && { echo "pyright"; return 0; }
+                 command -v mypy >/dev/null 2>&1 && { echo "mypy ."; return 0; } ;;
       test)      command -v pytest >/dev/null 2>&1 && { echo "pytest -q"; return 0; }
                  [ -d "$ROOT/tests" ] && { echo "python3 -m unittest discover -s tests"; return 0; } ;;
-      typecheck) command -v pyright >/dev/null 2>&1 && { echo "pyright"; return 0; } ;;
     esac
   fi
   # Go
@@ -123,6 +124,7 @@ declared_format_file() {
     [ -n "$v" ] && { printf '%s' "$v"; return 0; }
   fi
   [ -f "$DECL" ] || return 0
+  # shellcheck source=/dev/null
   ( set +u; . "$DECL" >/dev/null 2>&1; eval "printf '%s' \"\${format_file:-}\"" )
 }
 resolve_format_file() { # $1=path -> in lệnh format 1 file, rỗng nếu không có per-file formatter
