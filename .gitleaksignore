@@ -1,6 +1,0 @@
-# Fingerprint gitleaks bỏ qua — chỉ cho VÍ DỤ trong tài liệu, không phải bí mật thật.
-# Định dạng: <commit>:<file>:<rule>:<line>. Mỗi dòng phải có lý do ở ngay trên.
-# Ví dụ giá trị "idempotency_key" trong hợp đồng API của đặc tả (file cũ đã xoá khi gộp tài liệu).
-a1740a08a67cbf69f4a1d2e8e6fee7efda769925:docs/specs/AI-HARNESS-SPEC.md:generic-api-key:708
-# Cùng ví dụ, ở file gộp — commit sau đã đổi ví dụ thành chuỗi ngắn để không khớp quy tắc nữa.
-f7d6ec84a0f860a8a57b6741961eee1f07fd032d:docs/specs/AI-HARNESS-AND-COMPANY-SPEC.md:generic-api-key:754

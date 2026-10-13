@@ -1,32 +1,17 @@
-# Biến môi trường
-.env
-.env*.local
-
-# Phụ thuộc & build
-node_modules
-.next
-out
-build
-coverage
-
-# Test/hiệu năng (sinh tự động)
-playwright-report
-test-results
-.lighthouseci
-
-# PWA (Serwist sinh ra)
-public/sw.js
-public/sw.js.map
-public/swe-worker-*.js
-
-# Linh tinh
-*.tsbuildinfo
-next-env.d.ts
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+# Trạng thái autopilot cục bộ (bằng chứng chạy của từng máy)
+.autopilot/
+# Hệ điều hành / editor
 .DS_Store
-
-# Khai bao lenh dev dac thu du an (copy tu .claude/project-commands.example.sh)
-.claude/project-commands.sh
-
-# Ước tính usage (tự hiệu chỉnh) + marker
-.claude/usage-budget.sh
-.claude/.winddown-nudged
+Thumbs.db
+.idea/
+.vscode/
+# Bí mật
+.env
+.env.*
+!.env.example
+# Claude Code cục bộ
+.claude/settings.local.json

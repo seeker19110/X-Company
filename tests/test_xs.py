@@ -1,0 +1,398 @@
+"""Test cho scripts/xs.py — chạy: python3 -m unittest discover -s tests -v"""
+from __future__ import annotations
+
+import io
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import xs  # noqa: E402
+
+
+def write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(textwrap.dedent(text).lstrip("\n"), encoding="utf-8")
+
+
+def make_framework(tmp: Path) -> Path:
+    fw = tmp / "framework"
+    write(fw / "README.md", """
+        ---
+        title: Khung
+        kind: index
+        updated: 2026-10-13
+        ---
+
+        # Khung
+        """)
+    for d in ("01-baseline", "02-profiles", "03-industries", "08-backend"):
+        write(fw / d / "README.md", f"""
+            ---
+            title: {d}
+            kind: index
+            updated: 2026-10-13
+            ---
+
+            # {d}
+            """)
+    write(fw / "01-baseline" / "security.md", """
+        ---
+        title: Bảo mật nền
+        kind: baseline
+        prefix: BASE-SEC
+        applies_to: [all]
+        updated: 2026-10-13
+        ---
+
+        # Bảo mật nền
+
+        ## Checklist
+
+        - [ ] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI.
+        - [ ] `BASE-SEC-002` **MUST@L** Kiểm toán độc lập. → Kiểm: báo cáo kiểm toán.
+        - [ ] `BASE-SEC-003` **MAY** Bug bounty.
+
+        ## Nguồn
+
+        - x
+        """)
+    write(fw / "08-backend" / "api.md", """
+        ---
+        title: API
+        kind: module
+        prefix: BE-API
+        applies_to: [web-app]
+        updated: 2026-10-13
+        ---
+
+        # API
+
+        ## Checklist
+
+        - [ ] `BE-API-001` **MUST** Lỗi theo RFC 9457. → Kiểm: test contract.
+
+        ```markdown
+        - [ ] `BE-API-999` **MUST** ví dụ trong code fence không được tính
+        ```
+
+        ## Nguồn
+
+        - y
+        """)
+    write(fw / "08-backend" / "cli-only.md", """
+        ---
+        title: CLI only
+        kind: module
+        prefix: BE-CLI
+        applies_to: [cli-tool]
+        updated: 2026-10-13
+        ---
+
+        # CLI only
+
+        ## Checklist
+
+        - [ ] `BE-CLI-001` **SHOULD** Chỉ cho CLI.
+
+        ## Nguồn
+
+        - z
+        """)
+    write(fw / "02-profiles" / "web-app.md", """
+        ---
+        title: Web app
+        kind: profile
+        slug: web-app
+        prefix: PRF-WEB
+        modules: [08-backend/*]
+        updated: 2026-10-13
+        ---
+
+        # Web app
+
+        ## Checklist
+
+        - [ ] `PRF-WEB-001` **SHOULD** PWA khi cần offline.
+
+        ## Nguồn
+
+        - w
+        """)
+    write(fw / "02-profiles" / "cli-tool.md", """
+        ---
+        title: CLI tool
+        kind: profile
+        slug: cli-tool
+        modules: [08-backend/cli-only]
+        updated: 2026-10-13
+        ---
+
+        # CLI tool
+
+        ## Nguồn
+
+        - c
+        """)
+    write(fw / "03-industries" / "fintech.md", """
+        ---
+        title: Fintech
+        kind: industry
+        slug: fintech
+        prefix: IND-FIN
+        modules: []
+        updated: 2026-10-13
+        ---
+
+        # Fintech
+
+        ## Checklist
+
+        - [ ] `IND-FIN-001` **MUST** Tiền dùng số nguyên đơn vị nhỏ nhất. → Kiểm: test kiểu.
+
+        ## Nguồn
+
+        - f
+        """)
+    return fw
+
+
+class FrontmatterTest(unittest.TestCase):
+    def test_parse_list_and_scalar(self):
+        meta, body, n = xs.parse_frontmatter("---\ntitle: A\nmodules: [a/b, c/*]\n---\n# A\n")
+        self.assertEqual(meta["title"], "A")
+        self.assertEqual(meta["modules"], ["a/b", "c/*"])
+        self.assertEqual(n, 4)
+        self.assertTrue(body.startswith("# A"))
+
+    def test_missing_frontmatter(self):
+        with self.assertRaises(xs.FrontmatterError):
+            xs.parse_frontmatter("# no fm\n")
+
+    def test_unclosed_frontmatter(self):
+        with self.assertRaises(xs.FrontmatterError):
+            xs.parse_frontmatter("---\ntitle: A\n")
+
+
+class ValidateTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.fw = make_framework(self.tmp)
+
+    def test_valid_fixture(self):
+        self.assertEqual(xs.validate(self.fw), [])
+
+    def test_fenced_items_ignored(self):
+        docs, _ = xs.load_docs(self.fw)
+        ids = {it.id for d in docs for it in d.items}
+        self.assertNotIn("BE-API-999", ids)
+
+    def test_duplicate_id(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace(
+            "## Nguồn", "- [ ] `BE-API-001` **SHOULD** trùng.\n\n## Nguồn", 1), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("ID trùng BE-API-001" in e for e in errs), errs)
+
+    def test_must_without_check(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace(" → Kiểm: test contract.", ""), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("thiếu '→ Kiểm:'" in e for e in errs), errs)
+
+    def test_prefix_mismatch(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("`BE-API-001`", "`BE-XYZ-001`"), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("không khớp prefix" in e for e in errs), errs)
+
+    def test_malformed_item_reported(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace(
+            "## Nguồn", "- [ ] `BE-API-002` MUST thiếu in đậm.\n\n## Nguồn", 1), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("sai định dạng" in e for e in errs), errs)
+
+    def test_broken_link(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n[x](khong-co.md)\n", encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("liên kết hỏng" in e for e in errs), errs)
+
+    def test_missing_module_in_profile(self):
+        p = self.fw / "02-profiles" / "cli-tool.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("08-backend/cli-only", "08-backend/khong-co"),
+                     encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("không tồn tại" in e for e in errs), errs)
+
+    def test_missing_readme_in_dir(self):
+        (self.fw / "09-database").mkdir()
+        (self.fw / "09-database" / "x.md").write_text("---\ntitle: X\nkind: method\nupdated: 2026-10-13\n---\n# X\n",
+                                                      encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("thiếu README.md" in e for e in errs), errs)
+
+    def test_unknown_applies_to(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("[web-app]", "[khong-co-ho-so]"), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("applies_to" in e for e in errs), errs)
+
+
+class ComposeTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.fw = make_framework(self.tmp)
+
+    def test_compose_web_fintech_scale_m(self):
+        out = xs.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
+        self.assertIn("`BASE-SEC-001` **MUST**", out)
+        self.assertIn("`BASE-SEC-002` **SHOULD**", out)  # MUST@L hạ xuống ở quy mô M
+        self.assertNotIn("BASE-SEC-003", out)  # MAY bị bỏ khi không --include-may
+        self.assertIn("`BE-API-001` **MUST**", out)
+        self.assertNotIn("BE-CLI-001", out)  # applies_to chỉ cli-tool
+        self.assertIn("`PRF-WEB-001`", out)
+        self.assertIn("`IND-FIN-001` **MUST**", out)
+        self.assertIn("generated: 2026-10-13", out)
+
+    def test_compose_scale_l_keeps_must(self):
+        out = xs.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
+        self.assertIn("`BASE-SEC-002` **MUST**", out)
+        self.assertIn("`BASE-SEC-003` **MAY**", out)
+
+    def test_compose_unknown_profile(self):
+        with self.assertRaises(SystemExit):
+            xs.compose(self.fw, "khong-co", [], "M", include_may=False)
+
+    def test_blueprint_roundtrip_status(self):
+        out = xs.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
+        bp = self.tmp / "BLUEPRINT.md"
+        bp.write_text(out, encoding="utf-8")
+        s = xs.blueprint_status(bp)
+        self.assertEqual(s["levels"]["MUST"]["open"], 3)
+        text = out.replace("- [ ] `BASE-SEC-001`", "- [x] `BASE-SEC-001`")
+        text = text.replace("- [ ] `BE-API-001`", "- [~] `BE-API-001`")  # miễn trừ thiếu lý do
+        bp.write_text(text, encoding="utf-8")
+        s = xs.blueprint_status(bp)
+        self.assertEqual(s["levels"]["MUST"]["done"], 1)
+        self.assertEqual(s["open_must"], ["IND-FIN-001"])
+        self.assertEqual(len(s["bad_waivers"]), 1)
+
+
+class LoopTest(unittest.TestCase):
+    def setUp(self):
+        self.base = Path(tempfile.mkdtemp())
+        write(self.base / "docs" / "autopilot" / "PLAN.md", """
+            # PLAN
+            - [ ] `T-001` Viết hàm cộng — Gate: `python3 -c "import sys; sys.exit(0)"`
+            - [ ] `T-002` Viết test
+            """)
+        self.env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.base))
+        self._old = os.environ.get("CLAUDE_PROJECT_DIR")
+        os.environ["CLAUDE_PROJECT_DIR"] = str(self.base)
+
+    def tearDown(self):
+        if self._old is None:
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        else:
+            os.environ["CLAUDE_PROJECT_DIR"] = self._old
+
+    def run_cli(self, *args) -> int:
+        with redirect_stdout(io.StringIO()):
+            return xs.main(list(args))
+
+    def test_inactive_allows_stop(self):
+        out, code = xs.hook_stop("{}", self.base)
+        self.assertEqual((out, code), ("", 0))
+
+    def test_continue_then_verify_then_done(self):
+        self.assertEqual(self.run_cli("loop", "init", "--max-iterations", "10"), 0)
+        v = xs.loop_verdict(self.base)
+        self.assertEqual((v["verdict"], v["task"]), ("continue", "T-001"))
+        out, _ = xs.hook_stop("{}", self.base)
+        self.assertEqual(json.loads(out)["decision"], "block")
+        self.assertEqual(xs.read_state(self.base)["iterations"], 1)
+
+        plan = self.base / "docs" / "autopilot" / "PLAN.md"
+        plan.write_text(plan.read_text(encoding="utf-8").replace("- [ ] `T-001`", "- [x] `T-001`"), encoding="utf-8")
+        v = xs.loop_verdict(self.base)
+        self.assertEqual((v["verdict"], v["task"]), ("verify", "T-001"))  # tick mà chưa có bằng chứng
+
+        # Bằng chứng chạy lệnh KHÁC với Gate khai báo -> vẫn verify
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-001", ["true"], self.base)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "verify")
+
+        with redirect_stdout(io.StringIO()):
+            code = xs.loop_record("T-001", ['python3 -c "import sys; sys.exit(0)"'], self.base)
+        self.assertEqual(code, 0)
+        v = xs.loop_verdict(self.base)
+        self.assertEqual((v["verdict"], v["task"]), ("continue", "T-002"))
+
+        plan.write_text(plan.read_text(encoding="utf-8").replace("- [ ] `T-002`", "- [x] `T-002`"), encoding="utf-8")
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-002", ["true"], self.base)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
+        out, code = xs.hook_stop("{}", self.base)
+        self.assertEqual((out, code), ("", 0))
+        self.assertFalse(xs.read_state(self.base)["active"])
+
+    def test_same_failure_three_times_blocks(self):
+        self.run_cli("loop", "init")
+        with redirect_stdout(io.StringIO()):
+            for _ in range(3):
+                xs.loop_record("T-001", ["sh -c 'echo boom at line 12; exit 3'"], self.base)
+        v = xs.loop_verdict(self.base)
+        self.assertEqual(v["verdict"], "blocked")
+        out, _ = xs.hook_stop("{}", self.base)
+        self.assertEqual(out, "")  # blocked -> cho dừng
+
+    def test_different_failures_do_not_block(self):
+        self.run_cli("loop", "init")
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-001", ["sh -c 'echo A; exit 1'"], self.base)
+            xs.loop_record("T-001", ["sh -c 'echo B; exit 1'"], self.base)
+            xs.loop_record("T-001", ["sh -c 'echo C; exit 1'"], self.base)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
+
+    def test_iteration_cap(self):
+        self.run_cli("loop", "init", "--max-iterations", "2")
+        for _ in range(2):
+            out, _ = xs.hook_stop("{}", self.base)
+            self.assertIn("block", out)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "budget")
+        out, _ = xs.hook_stop("{}", self.base)
+        self.assertEqual(out, "")
+
+    def test_manual_block(self):
+        self.run_cli("loop", "init")
+        self.run_cli("loop", "block", "--reason", "cần duyệt thanh toán thật")
+        v = xs.loop_verdict(self.base)
+        self.assertEqual(v["verdict"], "blocked")
+        self.assertIn("thanh toán", v["reason"])
+
+    def test_cli_hook_stop_fail_open_on_garbage(self):
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],
+                           input="not json", capture_output=True, text=True, env=self.env)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
+
+class RealFrameworkTest(unittest.TestCase):
+    """Khung thật trong repo phải luôn hợp lệ."""
+
+    def test_repo_framework_valid(self):
+        errs = xs.validate(xs.DEFAULT_FRAMEWORK)
+        self.assertEqual(errs, [], "\n".join(errs[:30]))
+
+
+if __name__ == "__main__":
+    unittest.main()
