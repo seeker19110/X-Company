@@ -8,10 +8,11 @@ Kết quả trong dự án đích:
   .xstored/scripts/dev-task.sh
   .xstored/VERSION           SHA/nhãn phiên bản khung đã cài
   .claude/settings.json, hooks/, skills/, agents/   harness (COPY-IF-ABSENT: không đè file đã có; bản mới ghi .xstored-new)
+  .github/rulesets/main.json, pull_request_template.md, dependabot.yml   chỉ khi --with-github (copy-if-absent)
   AGENTS.md, CLAUDE.md, PROGRESS.md, xs.yaml       từ framework/templates (copy-if-absent, bỏ frontmatter YAML)
 
 Dùng:
-  python3 scripts/install.py <thư-mục-dự-án> [--force-harness] [--no-harness] [--label v1.0.0]
+  python3 scripts/install.py <thư-mục-dự-án> [--force-harness] [--no-harness] [--with-github] [--label v1.0.0]
   (chạy từ bản clone của X-stored; hoặc: python3 -c "$(curl ...)" KHÔNG được khuyến khích — tải về, kiểm checksum rồi chạy)
 Thoát 0 = ổn; 2 = lỗi tham số.
 """
@@ -29,6 +30,8 @@ SRC = Path(__file__).resolve().parent.parent
 HARNESS_FILES = ["settings.json"]
 HARNESS_DIRS = ["hooks", "skills", "agents"]
 ROOT_TEMPLATES = {"AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "PROGRESS.md": "PROGRESS.md", "xs.yaml": "xs.yaml"}
+# --with-github: hàng rào GitHub mẫu của khung (copy-if-absent). Workflow KHÔNG copy vì job quality phụ thuộc stack.
+GITHUB_FILES = [".github/rulesets/main.json", ".github/pull_request_template.md", ".github/dependabot.yml"]
 
 
 def log(msg: str) -> None:
@@ -80,7 +83,7 @@ def framework_label(explicit: str | None) -> str:
     return "unknown"
 
 
-def install(target: Path, force_harness: bool, no_harness: bool, label: str | None) -> int:
+def install(target: Path, force_harness: bool, no_harness: bool, label: str | None, with_github: bool = False) -> int:
     target = target.resolve()
     if not target.is_dir():
         log(f"✗ không phải thư mục: {target}")
@@ -127,6 +130,12 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
         r = copy_if_absent(src, target / name, False, transform=strip_frontmatter)
         log(f"  {name}: {r}")
 
+    # 3b) --with-github: ruleset mẫu + PR template + Dependabot (copy-if-absent)
+    if with_github:
+        for rel in GITHUB_FILES:
+            r = copy_if_absent(SRC / rel, target / rel, False)
+            log(f"  {rel}: {r}")
+
     # 4) .gitignore: thêm .autopilot/ nếu thiếu
     gi = target / ".gitignore"
     line = ".autopilot/"
@@ -149,8 +158,9 @@ def main(argv=None) -> int:
     p.add_argument("--force-harness", action="store_true", help="đè .claude/ của dự án bằng bản khung")
     p.add_argument("--no-harness", action="store_true", help="không copy .claude/")
     p.add_argument("--label", help="nhãn phiên bản ghi vào .xstored/VERSION (mặc định: git SHA)")
+    p.add_argument("--with-github", action="store_true", help="copy ruleset mẫu, PR template, Dependabot vào .github/ (không đè)")
     a = p.parse_args(argv)
-    return install(Path(a.target), a.force_harness, a.no_harness, a.label)
+    return install(Path(a.target), a.force_harness, a.no_harness, a.label, a.with_github)
 
 
 if __name__ == "__main__":

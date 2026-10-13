@@ -18,7 +18,7 @@ updated: 2026-10-13
 
 - Sản phẩm có smart contract giữ/chuyển giá trị, token, NFT, DAO, DeFi, định danh on-chain.
 - dApp = frontend web + contract → chọn hồ sơ này cho contract, ghép thêm blueprint `web-app` cho frontend
-  (module `07-frontend/*` không áp cho slug này, cố ý).
+  (module `07-frontend/*` không áp cho slug này, cố ý). dApp có giao diện web: ghép thêm bằng `xs.py compose --profile blockchain --add "07-frontend/*" --add "06-design-ux/*"` (bỏ lọc `applies_to` có chủ đích), hoặc tách blueprint `web-app` riêng cho frontend.
 - **Không** dùng cho: ứng dụng chỉ đọc dữ liệu on-chain qua API bên thứ ba (→ `api-service`/`web-app`).
 - **Từ chối** theo [`../00-method/principles.md`](../00-method/principles.md) "Ranh giới sử dụng": rug pull, mixer né
   AML, lừa đảo, sàn/ví vi phạm giấy phép, công cụ khai thác lỗ hổng không có uỷ quyền.

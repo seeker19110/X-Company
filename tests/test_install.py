@@ -55,6 +55,18 @@ class InstallTest(unittest.TestCase):
         self.run_install("--force-harness")
         self.assertNotEqual(settings.read_text(encoding="utf-8"), "{}\n")
 
+    def test_with_github_copies_guardrails_without_overwrite(self):
+        self.assertEqual(self.run_install(), 0)
+        self.assertFalse((self.target / ".github").exists())
+        self.assertEqual(self.run_install("--with-github"), 0)
+        rs = self.target / ".github" / "rulesets" / "main.json"
+        self.assertTrue(rs.exists())
+        self.assertTrue((self.target / ".github" / "pull_request_template.md").exists())
+        rs.write_text("{}\n", encoding="utf-8")
+        self.run_install("--with-github")
+        self.assertEqual(rs.read_text(encoding="utf-8"), "{}\n")
+        self.assertTrue(rs.with_name("main.json.xstored-new").exists())
+
     def test_refuses_self_and_missing(self):
         self.assertEqual(install.main([str(ROOT), "--label", "x"]), 2)
         self.assertEqual(install.main([str(self.target / "khong-co"), "--label", "x"]), 2)

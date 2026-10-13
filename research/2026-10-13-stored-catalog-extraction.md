@@ -348,3 +348,9 @@ Tôi chỉ đọc, không sửa file nào. Đã đọc kỹ các mục 03, 04, 0
 - **Ralph:** plugin gọi là `ralph-loop` nhưng đường dẫn nguồn là `plugins/ralph-wiggum` (03 §3).
 
 **File liên quan (đều trong `/home/user/seeker19110/stored/`):** `WORKFLOW.md`, `TEMPLATE.md`, `README.md`, `03-agentic-patterns-loops/README.md`, `09-engineering-checklists/README.md`, `12-ai-security-guardrails/README.md`, `13-dev-stack-devops/README.md`, `20-claude-plugins-ecosystem/README.md`, `21-autonomous-workflows/README.md`, `23-own-repos-lessons/README.md`.
+
+---
+
+## Đính chính (2026-10-13, sau khi viết mảng 16)
+
+- §2.16 ghi NĐ 13/2023 là văn bản chính về dữ liệu cá nhân: **đã lỗi thời**. Hiện hành là **Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15** (hiệu lực 01/01/2026) và **NĐ 356/2025/NĐ-CP** (ký 31/12/2025, hiệu lực 01/01/2026, thay NĐ 13/2023). Luật An ninh mạng 116/2025/QH15 (hiệu lực 01/07/2026) + NĐ 333/2026 thay Luật 24/2018 + NĐ 53/2022. Chi tiết và nguồn: `framework/16-compliance-privacy/vietnam-data-law.md`. Giữ nguyên nội dung gốc ở trên để lưu dấu vết (luật 12 chống ảo giác).
