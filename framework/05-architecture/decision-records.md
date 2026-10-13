@@ -65,8 +65,8 @@ updated: 2026-10-13
 - **Sửa ADR cũ cho khớp hiện tại** → mất lịch sử "tại sao"; người sau tưởng chưa từng có lý do khác. Tránh: ARC-ADR-004/005.
 - **Accepted = đã làm.** ADR chấp nhận 6 tháng, code chưa đụng; đọc chỉ mục tưởng hệ đã có. Tránh: ARC-ADR-007/008.
 - **ADR một phương án** ("Chúng ta dùng X") — không thể biết đã cân nhắc gì. Tránh: ARC-ADR-003.
-- **Phiên bản theo trí nhớ** trong ADR (khung cũ ghi "Postgres 16/17" trong khi 18 là major hiện hành; Opus 4.8 vs 5
-  lệch giữa hai tài liệu — `research/2026-10-13-old-framework-analysis.md`). Tránh: ARC-ADR-006.
+- **Phiên bản theo trí nhớ** trong ADR (khung cũ ghi "Postgres 16/17" trong khi 18 là major hiện hành; tên/giá
+  model AI lệch giữa hai tài liệu — `research/2026-10-13-old-framework-analysis.md`). Tránh: ARC-ADR-006.
 - **ADR mô tả hệ nhiều máy khi repo chạy một máy** (ADR-0002 vs thực tế SQLite). Tránh: ARC-ADR-012 (bảng giả định vs thực tế).
 - **ADR nằm ngoài repo** (wiki/Slack) → agent và người mới không thấy. Tránh: ARC-ADR-001 (`docs/adr/` trong repo).
 - **Mẫu dài, không ai điền** → không có ADR nào. Tránh: ARC-ADR-014, mẫu tối thiểu ở [`../templates/ADR.md`](../templates/ADR.md).

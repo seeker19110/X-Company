@@ -61,7 +61,7 @@ Mẫu đầy đủ: [`../templates/PLAN.md`](../templates/PLAN.md); PROGRESS: [`
 
 ## Checklist
 
-- [ ] `LOOP-HARNESS-001` **MUST** `PLAN.md` dùng đúng cú pháp parser: mỗi task một dòng `- [ ] \`T-NNN\` <việc> — Gate: \`<lệnh>\``, không lồng danh sách con. → Kiểm: `python3 scripts/xs.py loop status` không báo "PLAN không có task"; số task parse được = số dòng `T-`.
+- [ ] `LOOP-HARNESS-001` **MUST** `PLAN.md` dùng đúng cú pháp parser: mỗi task một dòng bắt đầu bằng `- [ ]` rồi mã `T-NNN` trong backtick, việc, và `Gate:` theo sau là lệnh trong backtick; không lồng danh sách con. → Kiểm: `python3 scripts/xs.py loop status` không báo "PLAN không có task"; số task parse được = số dòng `T-`.
 - [ ] `LOOP-HARNESS-002` **MUST** Lệnh Gate của mỗi task lấy từ `xs.yaml`/`dev-task.sh` hoặc là lệnh test cụ thể, chạy được trên máy sạch; không ghi "kiểm tay". → Kiểm: `grep -c 'Gate: `' docs/autopilot/PLAN.md` = số task; mỗi Gate chạy được trong CI.
 - [ ] `LOOP-HARNESS-003` **MUST** `PLAN.md` ghi 4 con số (trần vòng, giờ, chi phí, hạn) và danh sách điểm dừng bắt buộc dự kiến trước cổng duyệt. → Kiểm: mục "Ngân sách" và "Điểm dừng" tồn tại; giá trị khớp tham số `loop init`.
 - [ ] `LOOP-HARNESS-004` **MUST** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên); lịch sử dài chuyển sang `CHANGELOG.md`/`docs/`. → Kiểm: `wc -c PROGRESS.md` ≤ 8192; `grep -c '^## ' PROGRESS.md` = 4. · Nguồn: stored 23 §2.1
