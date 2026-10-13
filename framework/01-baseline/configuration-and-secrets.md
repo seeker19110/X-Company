@@ -63,6 +63,8 @@ updated: 2026-10-13
 - **Bí mật trong Dockerfile `ARG`/`ENV`** nằm trong layer image kể cả khi xoá ở layer sau. Dùng BuildKit `--mount=type=secret`.
 - **Một "big secret" dùng chung mọi nơi** → lộ một chỗ, mất tất cả, và không xoay được. Tách theo dịch vụ/môi trường.
 - **Agent/LLM đọc `.env`** để "hiểu dự án" rồi đưa giá trị vào chat/commit. Hook `deny` đọc `.env*` (xem `.claude/settings.json` của khung).
+- **Cùng tên biến, nghĩa khác nhau giữa dịch vụ** (`DATABASE_URL` của app A trỏ CSDL của app B khi chạy chung máy). Đặt tiền tố theo dịch vụ (`BILLING_DATABASE_URL`) và schema riêng từng tiến trình.
+- **Bí mật dán vào ticket/chat/PR để "chia sẻ nhanh"** — kênh đó không xoá được. Chỉ chia sẻ qua secret manager có quyền; dán rồi thì coi như lộ, xoay.
 
 ## Cổng tự động
 

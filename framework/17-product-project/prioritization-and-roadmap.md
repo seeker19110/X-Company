@@ -21,6 +21,7 @@ updated: 2026-10-13
 5. **Lộ trình là cam kết về kết quả, không phải danh sách tính năng kèm ngày.** Mỗi mốc gắn chỉ số ở [`metrics-and-analytics.md`](metrics-and-analytics.md); tính năng là giả thuyết để đạt chỉ số.
 6. **Phạm vi, thời gian, chất lượng: chỉ phạm vi được co.** Hạn thật không đổi, cổng chất lượng không hạ → cắt Could/Should (quy tắc MoSCoW của DSDM).
 7. **Ưu tiên lại là việc định kỳ**, có hồ sơ: bảng RICE/MoSCoW có ngày, người quyết, lý do đổi.
+8. **Yêu cầu bắt buộc theo luật/bảo mật không tham gia xếp hạng** — chúng là Must mặc định; chỉ xếp hạng phần còn lại.
 
 ## Quyết định
 
@@ -32,6 +33,8 @@ updated: 2026-10-13
 | **Chi phí trì hoãn** (WSJF rút gọn) | Nhiều đội tranh cùng năng lực; có khoản phạt/thời hạn pháp lý | Ưu tiên việc có (giá trị + rủi ro pháp lý + thời hạn) ÷ kích thước lớn nhất | Dự án một người, một luồng |
 
 **Mặc định:** MoSCoW cho MVP → walking skeleton → các lát dọc theo thứ tự rủi ro rồi giá trị → RICE khi backlog sau phát hành vượt vài chục mục.
+
+**Một lát dọc hợp lệ khi:** (1) người dùng làm được một việc có nghĩa từ đầu đến cuối; (2) đi qua mọi tầng kỹ thuật sẽ dùng (UI/API/dữ liệu/hạ tầng); (3) có test và deploy được; (4) đo được bằng ≥1 sự kiện. Thiếu một điều kiện → đó là tầng ngang, chia lại.
 
 ## Checklist
 
@@ -64,6 +67,8 @@ updated: 2026-10-13
 | Lộ trình = lịch tính năng | Mỗi dòng là "tính năng X — ngày Y" | Mốc theo kết quả đo được; tính năng là giả thuyết |
 | Việc "nhỏ thôi" đi tắt | Hotfix thành tính năng không spec | Mọi `feat:` có spec; "nhỏ" chỉ giảm độ dài spec, không bỏ |
 | Tính năng tuân thủ bị xếp sau | DPIA, log kiểm toán "làm sau khi ra mắt" | MUST blueprint/luật = Must; cổng G7 chặn bằng `blueprint-status --strict` |
+| Ưu tiên theo người nói to nhất | Thứ tự backlog đổi sau mỗi cuộc họp, không có lý do ghi lại | Bảng ưu tiên có cột lý do + ngày + người quyết; đổi thứ hạng là một commit |
+| Walking skeleton "để sau" | Deploy lần đầu ở tuần cuối, lộ lỗi hạ tầng muộn | Lát 1 luôn có task deploy + smoke với Gate (`PM-PRIO-003`) |
 
 ## Cổng tự động
 
@@ -74,6 +79,7 @@ updated: 2026-10-13
 | Ý tưởng từ chối có file | `ls .out-of-scope/*.md`; issue template checkbox | Issue template + CI | ≥1 file khi dự án ≥ M |
 | Cổng chất lượng không bị tắt | `rg -n "continue-on-error: true\|--no-verify\|ignoreBuildErrors" .github/ package.json` | CI | 0 kết quả ngoài allowlist có lý do |
 | MUST blueprint mở | `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict` | CI trước release | exit 0 |
+| Walking skeleton có deploy | `rg -n "T-00[1-3].*Gate: \`.*(deploy|smoke)" PLAN.md` | CI (job docs) | ≥1 task trong lát 1 |
 
 ## Nguồn
 

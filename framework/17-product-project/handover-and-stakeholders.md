@@ -22,6 +22,7 @@ updated: 2026-10-13
 5. **Hỗ trợ có mức dịch vụ ghi thành số** (kênh, giờ, thời gian phản hồi theo SEV); quy trình sự cố ở [`../15-operations/incident-response.md`](../15-operations/incident-response.md).
 6. **Kết thúc có checklist như bắt đầu**: thu hồi quyền, tắt tài nguyên, xử lý dữ liệu theo luật, chuyển giao domain/IP, lưu trữ repo — không "để đó".
 7. **Mỗi bàn giao để lại bài học**: retrospective ngắn, hàng rào mới (P12) cho lần sau.
+8. **Tài liệu bàn giao là file trong repo, được máy kiểm còn đúng** (build từ clone sạch, link sống, lệnh chạy được) — không phải tệp đính kèm email.
 
 ## Quyết định
 
@@ -65,6 +66,8 @@ updated: 2026-10-13
 | Nghiệm thu bằng cảm giác | "Trông ổn", "framework lo rồi" | "Evidence or FAIL": mỗi mục có bằng chứng, con người ký (catalog 09 §1.5) |
 | Người cũ làm hộ mãi | Người mới không bao giờ tự vận hành | Lịch đi kèm có hạn, quy tắc "chỉ trả lời" |
 | Hạn gia hạn bị quên | Domain hết hạn, chứng chỉ hết hạn | Bảng renewals + nhắc trước ≥30 ngày |
+| Tài liệu bàn giao là bản chụp lúc viết | README nói lệnh cũ, CI đã đổi | Job "clean clone build" hằng tuần; runbook cập nhật khi cảnh báo nổ (SRE Workbook ch. 8) |
+| Nhiều người quyết, không ai quyết | Phát hành chờ "mọi người đồng ý" | Bản đồ các bên: một tên ở cột "quyết định cuối" cho mỗi loại quyết định |
 
 ## Cổng tự động
 
@@ -75,6 +78,7 @@ updated: 2026-10-13
 | Không secret trong repo/lịch sử | `gitleaks detect --redact` (MIT) | pre-commit + CI | 0 phát hiện |
 | Quyền thành viên khớp danh sách | `gh api orgs/<org>/members --jq '.[].login'` so với `docs/STAKEHOLDERS.md` | CI hằng tuần | Người ngoài danh sách → issue |
 | Hạn gia hạn | Script đọc `docs/handover/renewals.md`, cảnh báo ≤ 30 ngày; chứng chỉ: `openssl s_client … \| openssl x509 -enddate` | CI hằng ngày | Mở issue |
+| Link trong tài liệu bàn giao còn sống | `lychee README.md RUNBOOK.md docs/` (MIT/Apache-2.0) | CI hằng tuần | 0 link hỏng |
 | GO/NO-GO không còn BLOCKER | `rg -n "BLOCKER.*FAIL" docs/GO-NO-GO-*.md` | CI trước release | 0 kết quả |
 
 ## Nguồn

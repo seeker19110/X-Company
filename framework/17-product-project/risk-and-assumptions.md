@@ -67,6 +67,7 @@ updated: 2026-10-13
 | Pháp lý "làm sau ra mắt" | DPIA, điều khoản, đồng ý thu thập dữ liệu xuất hiện ở G7 | `PM-RISK-007` ở G2; tuân thủ là Must trong MoSCoW |
 | Benchmark của nhà cung cấp làm căn cứ | Chọn model/DB vì bảng so sánh của họ | Luật 11 `evidence-and-sources.md`: tái lập hoặc A/B trên dữ liệu của mình |
 | Rủi ro bảo mật ghi hai nơi lệch nhau | Sổ rủi ro và threat model khác mức | Một nhà: threat model; sổ chỉ trỏ |
+| Kế hoạch B chưa từng thử | Nhà cung cấp ngừng dịch vụ, mới biết dữ liệu không xuất được | Diễn tập kế hoạch B cho rủi ro cao nhất trước G7 (`PM-RISK-016`); kiểm "xuất dữ liệu" khi thẩm định |
 
 ## Cổng tự động
 
