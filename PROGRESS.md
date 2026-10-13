@@ -1,55 +1,26 @@
----
-title: Tiến độ xây dựng khung X-stored
-kind: progress
-updated: 2026-10-13
----
+# PROGRESS.md — Khung X-stored
 
-# PROGRESS — Khung tham chiếu phát triển phần mềm X-stored
+> Giai đoạn hiện tại: G7 Kiểm & phát hành (khung v2) · Cập nhật: 2026-10-13 · Nhánh: claude/gracious-ritchie-kqb5fy
 
-> File trạng thái để **phiên sau tiếp tục đúng chỗ**. Cập nhật sau mỗi mốc. Phiên mới: đọc mục
-> "Bàn giao phiên" trước, rồi "Kế hoạch".
+## Đang làm
+- Rà chéo nhất quán toàn khung (reviewer độc lập) → sửa phát hiện → mở PR khung v2 → CI xanh → squash-merge vào `main`.
 
-## Yêu cầu gốc (người dùng, 2026-10-13)
-
-Nghiên cứu repo `stored` (+ internet) và tạo **một bộ khung** để mọi phần mềm sau này tham khảo và áp dụng:
-
-1. Những gì **mọi phần mềm** đều cần
-2. Phân theo **loại phần mềm** (web app, mobile, AI agent, agentic, …)
-3. **Chuyên dụng theo ngành nghề**
-4. **Tiêu chuẩn**
-5. **Kiến trúc**
-6. **Design, UI/UX**
-7. **Frontend**
-8. **Backend**
-9. **Database**
-10. **Workflow**
-11. **Loop** (vòng lặp tự động)
-12. **Bảo mật**
-13. Thành phần khác còn thiếu (AI engineering, testing, vận hành, tuân thủ/pháp lý, sản phẩm, i18n, hiệu năng, license…)
-
-Mục tiêu: **khi yêu cầu được duyệt thì tự động làm đến khi hoàn thiện, không cần hỏi**; chất lượng cao nhất.
-Ràng buộc vận hành: **khi giới hạn sử dụng đạt ~95% → commit + push tất cả, ghi bàn giao** để chạy tiếp ở phiên khác.
-
-## Kế hoạch (đã chốt — chạy tự động)
-
-| # | Hạng mục | Trạng thái |
-|---|---|---|
-| P0 | Nghiên cứu: khung cũ (commit `1b80fe4`), `seeker19110/stored`, `seeker19110/projects-template`, internet (tiêu chuẩn chung, AI agent, ngành nghề, stack 10/2026, kiến trúc/UI/DB/workflow) → `research/` | đang chạy |
-| P1 | Lõi: `framework/00-method/` (nguyên tắc, vòng đời, quy ước module, ghép blueprint, chống ảo giác) + `scripts/xs.py` (validate / compose / blueprint-status / loop) + test | đang làm |
-| P2 | Nội dung 01–18: baseline, profiles, industries, standards, architecture, design-ux, frontend, backend, database, workflow, autonomous-loop, security, ai-engineering, testing, operations, compliance, product, cross-cutting | chưa |
-| P3 | Harness tự động: `AGENTS.md`, `CLAUDE.md`, `.claude/skills` (autopilot, blueprint, gate, audit, research, adr), `.claude/agents`, hooks (stop-guard có trần vòng, chặn lệnh nguy hiểm, session-resume), `settings.json` | chưa |
-| P4 | CI (`.github/workflows/ci.yml`: validate + test + markdownlint, action ghim SHA, `permissions:`), ruleset mẫu, PR template, Dependabot, `scripts/install.sh` | chưa |
-| P5 | Kiểm toàn bộ (validate xanh, test xanh, compose mẫu), README/CHANGELOG, cập nhật PR #10 | chưa |
+## Tiếp theo
+1. Áp phát hiện rà chéo (Gate: `python3 scripts/xs.py validate && python3 -m unittest discover -s tests && python3 scripts/check-links.py`).
+2. PR vào `main`, theo dõi CI (`quality`, `protection-guard`, `gitleaks`, `codeql`), squash-merge khi xanh.
+3. Thử khung trên một dự án thật: `install.py` → `compose` → `/autopilot`; ghi mục MUST thường bị miễn trừ để hạ mức (ADR-0003, Hệ quả).
+4. Import `.github/rulesets/main.json` trong Settings → Rules (ruleset cũ đã bị xoá); muốn ép buộc thì đổi cảnh báo `protection-guard` thành lỗi.
 
 ## Quyết định
-
-- Xây lại trên nhánh `claude/kind-einstein-ilz51h` (PR #10 — vốn là PR xoá toàn bộ). PR #10 sẽ thành "xoá khung cũ + thêm khung mới".
-- Ranh giới 3 repo: `stored` = catalog repo ngoài; `projects-template` = harness quy trình drop-in đầy đủ; **X-stored = khung tri thức tham chiếu** (checklist có ID, hồ sơ loại phần mềm, gói ngành, tiêu chuẩn) + harness tự động gọn. Dùng chung được với `projects-template`.
-- Checklist có **ID ổn định** + mức **MUST/SHOULD/MAY** (+ ngưỡng quy mô `@M`/`@L`) để máy ghép thành `BLUEPRINT.md` cho từng dự án và kiểm "hoàn thiện" bằng máy.
-- "Xong" do **máy xác nhận** (bằng chứng lệnh chạy thật do script ghi), không do model tự khai.
+- 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
+- 2026-10-13 Harness: hook fail-open về luồng, fail-closed về hành động nguy hiểm; Stop hook đọc bằng chứng — ADR-0002.
+- 2026-10-13 Quy mô S chỉ giữ MUST của baseline/hồ sơ/ngành — ADR-0003.
+- 2026-10-13 Luật dữ liệu VN hiện hành: Luật 91/2025/QH15 + NĐ 356/2025 (thay NĐ 13/2023 từ 01/01/2026); Luật ANM 116/2025 (01/07/2026).
+- 2026-10-13 Mặc định OSI: OpenTofu (MPL-2.0) thay Terraform (BUSL-1.1), Valkey thay Redis 8; Lighthouse CI giữ có cảnh báo, ghi phương án thay.
+- Nợ kỹ thuật chấp nhận: blueprint M khoảng 1.000 MUST; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 
 ## Bàn giao phiên
-
-- **Đang làm:** P0 (agent nghiên cứu chạy nền) + P1 (viết quy ước & `xs.py`).
-- **Bước kế tiếp cụ thể:** hoàn tất `framework/00-method/conventions.md` + `scripts/xs.py` + `tests/`; rồi giao viết nội dung P2 theo quy ước.
-- **Khôi phục khung cũ để tham khảo:** `git archive 1b80fe4 | tar -x -C <thư-mục>`.
+- Commit cuối: xem `git log -1` trên nhánh trên (đã push) · CI: chạy khi mở PR.
+- Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`).
+- Đang chặn: không.
+- Câu hỏi cần người: không.

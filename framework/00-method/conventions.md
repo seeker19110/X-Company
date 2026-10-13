@@ -50,6 +50,7 @@ Mỗi yêu cầu kiểm được là **một dòng**:
 - **ID** = `prefix` của file + `-` + 3 chữ số, **duy nhất toàn khung, không bao giờ tái sử dụng** (mục bị bỏ → giữ ID, đổi mức thành `MAY` và ghi "Ngừng dùng").
 - **Mức** (theo RFC 2119): `MUST` — thiếu là chưa đạt; `SHOULD` — bỏ phải ghi lý do; `MAY` — tùy chọn.
 - **Ngưỡng quy mô** (tùy chọn): `MUST@M` hoặc `MUST@L` — bắt buộc từ quy mô đó trở lên; nhỏ hơn thì máy hạ thành `SHOULD`.
+  Ở quy mô S, máy còn hạ MUST trơn của module chuyên sâu thành SHOULD (ADR-0003). Vì vậy yêu cầu mà **mọi** phần mềm, kể cả prototype, phải có thì đặt ở `01-baseline/`, không đặt ở module.
   - `S` = thử nghiệm/MVP nội bộ, ít người dùng · `M` = production có người dùng thật · `L` = quy mô lớn, nhiều đội, hoặc ngành bị quản lý.
 - **`→ Kiểm:`** (bắt buộc với `MUST`, nên có với `SHOULD`): cách chứng minh bằng máy hoặc bằng chứng cụ thể (lệnh, test, file, cấu hình). Không viết "đảm bảo X" mà không nói kiểm thế nào.
 - **`· Nguồn:`** (khi yêu cầu đến từ chuẩn/luật): mã chuẩn + mục (`ASVS 5.0 V6`, `WCAG 2.2 SC 2.5.8`, `NĐ 13/2023 Đ.9`).

@@ -26,6 +26,7 @@ BLUEPRINT = Baseline (mọi phần mềm)
 - **Gói ngành** (`03-industries/`) chọn **0..n**. Ví dụ ví điện tử cho bệnh viện = `fintech` + `healthcare`.
 - Module có `applies_to` không chứa hồ sơ đã chọn (và không phải `all`) sẽ bị loại.
 - Mục `MUST@M` / `MUST@L` hạ thành `SHOULD` khi quy mô nhỏ hơn ngưỡng.
+- Ở quy mô **S**, MUST của module chuyên sâu (`kind: module`/`standard`) cũng hạ thành `SHOULD`; chỉ MUST của baseline, hồ sơ và gói ngành giữ nguyên — đó là **sàn** của mọi dự án (ADR-0003). Khi dự án lên M, ghép lại blueprint: các mục đó tự trở về MUST.
 
 ## Lệnh
 
@@ -60,6 +61,8 @@ python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict
 | Có tiền thật, dữ liệu sức khoẻ, dữ liệu trẻ em, dữ liệu định danh nhạy cảm? | L (hoặc M + gói ngành đúng) |
 | Nhiều đội cùng phát triển, SLA ký với khách hàng, kiểm toán bên ngoài? | L |
 | Chỉ thử nghiệm ý tưởng, không lưu dữ liệu thật? | S |
+
+Quy mô quyết định khối lượng: blueprint `web-app` khoảng 80 MUST ở S, khoảng 1.100 MUST ở M (đo 2026-10-13). Chọn đúng quy mô quan trọng hơn chọn đủ module.
 
 ## Nguồn
 

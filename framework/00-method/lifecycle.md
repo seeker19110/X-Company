@@ -37,7 +37,7 @@ updated: 2026-10-13
 
 | Quy mô | Ví dụ | Khác biệt |
 |---|---|---|
-| **S** | Prototype, công cụ nội bộ, MVP chưa có người dùng thật | G2–G4 gộp thành một tài liệu ngắn; mục `MUST@M`/`MUST@L` thành SHOULD |
+| **S** | Prototype, công cụ nội bộ, MVP chưa có người dùng thật | G2–G4 gộp thành một tài liệu ngắn; chỉ **sàn** bắt buộc: MUST của baseline + hồ sơ + gói ngành; MUST của module chuyên sâu và mọi `MUST@M`/`MUST@L` thành SHOULD (ADR-0003) |
 | **M** | Production có người dùng thật, đội nhỏ | Đủ 9 GĐ; mọi `MUST` và `MUST@M` bắt buộc |
 | **L** | Quy mô lớn, nhiều đội, dữ liệu nhạy cảm, ngành bị quản lý | Thêm `MUST@L`; review bảo mật độc lập; diễn tập DR; tuân thủ có kiểm toán |
 

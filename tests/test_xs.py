@@ -263,6 +263,13 @@ class ComposeTest(unittest.TestCase):
         self.assertIn("`IND-FIN-001` **MUST**", out)
         self.assertIn("generated: 2026-10-13", out)
 
+    def test_compose_scale_s_keeps_floor_demotes_modules(self):
+        out = xs.compose(self.fw, "web-app", ["fintech"], "S", include_may=False, today="2026-10-13")
+        self.assertIn("`BASE-SEC-001` **MUST**", out)   # baseline: sàn, giữ MUST
+        self.assertIn("`IND-FIN-001` **MUST**", out)    # gói ngành: giữ MUST
+        self.assertIn("`BE-API-001` **SHOULD**", out)   # module chuyên sâu: S hạ SHOULD
+        self.assertIn("`BASE-SEC-002` **SHOULD**", out) # MUST@L vẫn hạ
+
     def test_compose_scale_l_keeps_must(self):
         out = xs.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
         self.assertIn("`BASE-SEC-002` **MUST**", out)

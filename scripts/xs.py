@@ -298,8 +298,17 @@ def validate(root: Path) -> List[str]:
 
 # --------------------------------------------------------------------------- compose
 
-def effective_level(item: Item, scale: str) -> str:
-    if item.level == "MUST" and item.scale and SCALES.index(scale) < SCALES.index(item.scale):
+# Ở quy mô S chỉ "sàn" là bắt buộc: baseline + hồ sơ + gói ngành. MUST của module chuyên sâu
+# (kind module/standard) hạ thành SHOULD — xem ADR-0003 và 00-method/lifecycle.md.
+FLOOR_KINDS = ("baseline", "profile", "industry")
+
+
+def effective_level(item: Item, scale: str, doc_kind: str = "baseline") -> str:
+    if item.level != "MUST":
+        return item.level
+    if item.scale and SCALES.index(scale) < SCALES.index(item.scale):
+        return "SHOULD"
+    if scale == "S" and doc_kind not in FLOOR_KINDS:
         return "SHOULD"
     return item.level
 
@@ -361,7 +370,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     for d in ordered:
         rows = []
         for it in d.items:
-            lv = effective_level(it, scale)
+            lv = effective_level(it, scale, d.kind)
             if lv == "MAY" and not include_may:
                 continue
             counts[lv] += 1
