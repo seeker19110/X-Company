@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+# Trạng thái autopilot cục bộ (bằng chứng chạy của từng máy)
+.autopilot/
+# Hệ điều hành / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+# Bí mật
+.env
+.env.*
+!.env.example
+# Claude Code cục bộ
+.claude/settings.local.json
