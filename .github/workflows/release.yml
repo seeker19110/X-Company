@@ -18,7 +18,7 @@ jobs:
     outputs:
       exists: ${{ steps.app.outputs.exists }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - id: app
         run: |
           if [ -f package.json ]; then
@@ -33,6 +33,6 @@ jobs:
     if: needs.check.outputs.exists == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
           release-type: node

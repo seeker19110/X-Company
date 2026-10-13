@@ -11,6 +11,10 @@ on:
     # Quét định kỳ để bắt lỗ hổng mới phát hiện trong code đã merge.
     - cron: '0 3 * * 1'
 
+# Mặc định tối thiểu; job `analyze` tự nâng `security-events: write` ở job-level để upload SARIF.
+permissions:
+  contents: read
+
 jobs:
   # Repo khung (chưa có package.json) → bỏ qua để CI xanh; tự bật khi có dự án thật.
   # LƯU Ý cho dự án thật: phải BẬT "Code scanning" trong Settings → Code security & analysis,
@@ -20,7 +24,7 @@ jobs:
     outputs:
       exists: ${{ steps.app.outputs.exists }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - id: app
         run: |
           if [ -f package.json ]; then
@@ -44,16 +48,16 @@ jobs:
       matrix:
         language: [javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Khởi tạo CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@9f759ee644a3e7c15c1390abf49868036c00067b # v3.38.3
         with:
           languages: ${{ matrix.language }}
           # Quét sâu hơn bộ mặc định (gồm cả các rule chất lượng + bảo mật mở rộng).
           queries: security-and-quality
 
       - name: Phân tích
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@9f759ee644a3e7c15c1390abf49868036c00067b # v3.38.3
         with:
           category: '/language:${{ matrix.language }}'

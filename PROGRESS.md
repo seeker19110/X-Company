@@ -326,6 +326,14 @@
       kích thước diff) và điều kiện xem lại sau 4 tuần. **ADR-0002 chuyển sang "Đã chấp nhận phần nguyên tắc"** — quyết định 4 và 7
       (ngăn xếp) do ADR-0003 điều chỉnh; theo quy ước của khung, **không sửa nội dung ADR cũ**, chỉ đổi dòng trạng thái.
 
+- ✅ **Vệ sinh supply-chain CI theo gợi ý #9 mục 2** (2026-10-13): ghim **20/20** `uses:` theo SHA 40 ký tự
+      (giữ comment `# vX.Y.Z`; SHA giải bằng `git ls-remote --tags` qua git proxy — không cần pinact/ratchet),
+      thêm `permissions: contents: read` cấp đầu cho `ci.yml`/`codeql.yml`/`lighthouse-ci.yml` (job `analyze`
+      giữ `security-events: write` ở job-level), thêm Dependabot `github-actions` để tự nâng SHA. Kiểm cục bộ:
+      YAML parse 5/5, guard "required check ↔ job có thật" 8/8 OK, `check-docs-consistency.sh` OK.
+      Phiên bản ghim: checkout 4.4.0 · setup-node 4.4.0 · cache 4.3.0 · upload-artifact 4.6.2 ·
+      gitleaks-action 2.3.9 · release-please 4.4.1 · codeql-action 3.38.3.
+
 ## Đang làm
 - **PR #40 (Claude-Agents) — chặn ở người dùng.** Chờ nhập `.github/rulesets/main.json` qua Settings → Rules →
   Rulesets → *Import a ruleset*, bật *Allow auto-merge* + *Automatically delete head branches*, rồi chạy lại job
@@ -334,6 +342,9 @@
 - **Đo tiến cứu 4 tuần từ T0 = 05/09** đã mở trên Claude-Agents (đường cơ sở hồi cứu không tồn tại — xem Đ0).
 
 ## Tiếp theo
+- **Quyết định mục 1 của `docs/2026-10-13-goi-y-nang-cap.md` (chờ người dùng):** archive repo này (khung đã
+  chuyển sang `projects-template`) hay giữ và đồng bộ như Xgold. Mục 2 (ghim SHA/permissions/Dependabot) đã xong
+  nên dù chọn hướng nào repo cũng không còn nợ vệ sinh CI.
 - **Tuần 2 theo lộ trình §B12.2.9** — mở sau khi #40 xanh. Đây giờ là việc lớn duy nhất còn treo ở Claude-Agents.
 - **Thực thi ngưỡng làn nhanh (§B3.1a) trên `Claude-Agents`** — đã chốt ở tầng đặc tả nhưng **chưa có code**.
   Phải cài vị từ 5 điều kiện + ngoại lệ cứng vào chỗ chọn người review (`BASE_REVIEWS`/`RISK_REVIEWS`).

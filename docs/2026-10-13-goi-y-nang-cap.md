@@ -7,13 +7,14 @@
 | HEAD đọc | Action ghim SHA | Workflow thiếu `permissions:` cấp đầu | Dependabot | LICENSE · SECURITY | File test |
 |---|---|---|---|---|---|
 | `09c3c3c` (2026-09-06) | 0/20 | `ci.yml`, `codeql.yml`, `lighthouse-ci.yml` | npm | có · có | 1 |
+| sau mục 2 (2026-10-13) | **20/20** | **không còn** | npm + **github-actions** | có · có | 1 |
 
 ## Đề xuất (🔴 cao · 🟠 trung bình · 🟢 nhẹ)
 
 | # | Mức | Đề xuất | Bằng chứng | Kiểm xong khi |
 |---|---|---|---|---|
 | 1 | 🟠 | Quyết định vai trò: hoặc **archive** (khung đã chuyển sang projects-template), hoặc đồng bộ lại như Xgold | HEAD `09c3c3c` ngày 6/9 có commit message trùng với Xgold; chỉ có 1 file test; còn `"model": "opusplan"`; ghim 0/20 action | Repo được archive, hoặc đạt chuẩn như Xgold |
-| 2 | 🟢 | Nếu giữ lại: ghim 20 action theo SHA, thêm `permissions:` cấp đầu cho `ci.yml`, `codeql.yml`, `lighthouse-ci.yml`, thêm Dependabot `github-actions` | Đo như trên | Grep `uses:` không ghim trả về 0 |
+| 2 | ✅ | ~~Nếu giữ lại: ghim 20 action theo SHA, thêm `permissions:` cấp đầu cho `ci.yml`, `codeql.yml`, `lighthouse-ci.yml`, thêm Dependabot `github-actions`~~ — **đã làm 2026-10-13** (SHA lấy bằng `git ls-remote --tags`, giữ comment `# vX.Y.Z` để Dependabot nâng tiếp) | Sau khi làm: 20/20 ghim SHA; 5/5 workflow có `permissions:` cấp đầu; Dependabot npm + github-actions | ✅ `grep -rn uses: .github/workflows/ \| grep -vE '@[0-9a-f]{40} # v'` trả về 0 dòng |
 
 ## Giữ nguyên (điểm mạnh)
 
