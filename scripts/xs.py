@@ -4,7 +4,7 @@
 Lệnh:
   validate                      Kiểm quy ước toàn khung (frontmatter, ID, liên kết, hồ sơ/gói ngành).
   list [profiles|industries|modules]
-  compose --profile P [--industry I ...] [--scale S|M|L] [--include-may] [--out FILE]
+  compose --profile P [--industry I ...] [--scale S|M|L] [--include-may] [--add MODULE ...] [--out FILE]
                                 Ghép baseline + hồ sơ + gói ngành thành BLUEPRINT.md cho dự án.
   blueprint-status FILE [--strict]
                                 Đếm mục đạt/chưa/miễn; --strict: còn MUST chưa đạt -> exit 1.
@@ -311,7 +311,7 @@ def find_by_slug(docs: List[Doc], kind: str, slug: str) -> Optional[Doc]:
 
 
 def compose(root: Path, profile: str, industries: List[str], scale: str, include_may: bool,
-            today: Optional[str] = None) -> str:
+            today: Optional[str] = None, extra: Optional[List[str]] = None) -> str:
     docs, errors = load_docs(root)
     if errors:
         raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
@@ -330,9 +330,17 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     patterns: List[str] = []
     for src in [prof, *inds]:
         patterns.extend(_as_list(src.meta.get("modules")))
-    mods, _ = resolve_modules(patterns, by_rel)
+    patterns.extend(extra or [])
+    mods, missing = resolve_modules(patterns, by_rel)
+    bad_extra = [m for m in missing if m in (extra or [])]
+    if bad_extra:
+        raise SystemExit("Module --add không tồn tại: " + ", ".join(bad_extra) + " (xem: xs.py list modules)")
+
+    extra_rels = {d.rel for d in resolve_modules(extra or [], by_rel)[0]}
 
     def applies(d: Doc) -> bool:
+        if d.rel in extra_rels:  # --add là lựa chọn có chủ đích của người dùng → bỏ lọc applies_to
+            return True
         at = _as_list(d.meta.get("applies_to"))
         return not at or "all" in at or profile in at
 
@@ -369,6 +377,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
         "kind: blueprint",
         f"profile: {profile}",
         f"industries: [{', '.join(str(i.meta.get('slug')) for i in inds)}]",
+        f"extra: [{', '.join(extra or [])}]",
         f"scale: {scale}",
         f"generated: {today}",
         "---",
@@ -623,7 +632,8 @@ def cmd_list(args) -> int:
 
 
 def cmd_compose(args) -> int:
-    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may)
+    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may,
+                  extra=args.add or [])
     if args.out:
         Path(args.out).write_text(out, encoding="utf-8")
         print(f"✓ Đã ghi {args.out}")
@@ -729,6 +739,8 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--industry", action="append")
     pc.add_argument("--scale", choices=SCALES, default="M")
     pc.add_argument("--include-may", action="store_true")
+    pc.add_argument("--add", action="append", metavar="MODULE",
+                    help="ghép thêm module/glob ngoài hồ sơ (vd 13-ai-engineering/*), bỏ lọc applies_to")
     pc.add_argument("--out")
     pc.set_defaults(fn=cmd_compose)
     pb = sub.add_parser("blueprint-status")

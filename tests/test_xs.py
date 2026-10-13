@@ -268,6 +268,14 @@ class ComposeTest(unittest.TestCase):
         self.assertIn("`BASE-SEC-002` **MUST**", out)
         self.assertIn("`BASE-SEC-003` **MAY**", out)
 
+    def test_compose_add_extra_module_bypasses_applies_to(self):
+        out = xs.compose(self.fw, "web-app", [], "M", include_may=False, today="2026-10-13",
+                         extra=["08-backend/cli-only"])
+        self.assertIn("`BE-CLI-001`", out)  # applies_to chỉ cli-tool nhưng --add là có chủ đích
+        self.assertIn("extra: [08-backend/cli-only]", out)
+        with self.assertRaises(SystemExit):
+            xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["08-backend/khong-co"])
+
     def test_compose_unknown_profile(self):
         with self.assertRaises(SystemExit):
             xs.compose(self.fw, "khong-co", [], "M", include_may=False)
