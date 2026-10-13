@@ -387,6 +387,19 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("thanh toán", v["reason"])
 
+    def test_resume_clears_block_and_failure_streak(self):
+        self.run_cli("loop", "init")
+        with redirect_stdout(io.StringIO()):
+            for _ in range(3):
+                xs.loop_record("T-001", ["sh -c 'echo boom; exit 3'"], self.base)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "blocked")
+        out, _ = xs.hook_stop("{}", self.base)  # blocked -> cho dừng, active=false
+        self.assertFalse(xs.read_state(self.base)["active"])
+        self.assertEqual(self.run_cli("loop", "resume", "--reason", "đã sửa tay"), 0)
+        st = xs.read_state(self.base)
+        self.assertTrue(st["active"]); self.assertEqual(st["same_failure_count"], 0)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
+
     def test_cli_hook_stop_fail_open_on_garbage(self):
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],
                            input="not json", capture_output=True, text=True, env=self.env)

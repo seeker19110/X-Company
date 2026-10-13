@@ -44,6 +44,7 @@ class PreBashGuardTest(unittest.TestCase):
         self.assertEqual(self.d("git push -f origin feat"), "deny")
         self.assertEqual(self.d("git reset --hard HEAD~1"), "deny")
         self.assertEqual(self.d("git clean -fdx"), "deny")
+        self.assertEqual(self.d("git commit --allow-empty -m 'kick ci'"), "deny")
 
     def test_ask_external_actions(self):
         self.assertEqual(self.d("cd infra && terraform apply"), "ask")

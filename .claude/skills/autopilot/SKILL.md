@@ -28,7 +28,7 @@ argument-hint: "[mô tả yêu cầu hoặc đường dẫn PROJECT.md]"
 11. Gate đỏ: sửa; cùng một lỗi **lần 2 → đổi cách tiếp cận** (ghi vào PROGRESS), **lần 3 → máy tự BLOCKED** (dừng để người xem). Không skip/disable test, không nới cấu hình cổng để xanh (hook sẽ hỏi).
 12. Blueprint: tick `[x]` **chỉ khi có bằng chứng** (CI/test/scan/file) ghi ở PR; mục không áp dụng → `[~] — Miễn: <lý do>`.
 13. Giao việc: `executor` cho task rõ phạm vi; `reviewer` (model khác) review diff trước khi merge PR; phiên chính điều phối, **subagent không lồng subagent**.
-14. **Điểm dừng bắt buộc** (gọi `<XS> loop block --reason "..."` rồi dừng): thao tác không đảo ngược (xoá dữ liệu, drop/alter phá vỡ), tiền thật/thanh toán, dữ liệu người dùng thật, publish/deploy production/gửi email-thông báo ra ngoài, đổi quyền hoặc cấu hình cổng, mâu thuẫn spec không tự giải, bảo mật/pháp lý mơ hồ.
+14. **Điểm dừng bắt buộc** (gọi `<XS> loop block --reason "..."` rồi dừng; người xử lý xong chạy `<XS> loop resume --reason "..."`): thao tác không đảo ngược (xoá dữ liệu, drop/alter phá vỡ), tiền thật/thanh toán, dữ liệu người dùng thật, publish/deploy production/gửi email-thông báo ra ngoài, đổi quyền hoặc cấu hình cổng, mâu thuẫn spec không tự giải, bảo mật/pháp lý mơ hồ.
 15. Gần hết ngân sách (≥ 80% vòng/giờ) hoặc context lớn: ghi **Bàn giao phiên** vào PROGRESS.md (việc dở ở đâu, bước kế tiếp cụ thể, SHA), commit + push, rồi để Stop hook kết thúc.
 
 ## Kết thúc

@@ -40,6 +40,9 @@ done
 
 # ---- 3) Cổng trước commit ------------------------------------------------------
 if printf '%s' "$cmd" | grep -Eq '(^|[^-])git[[:space:]]+([^|&;]*[[:space:]])?commit([[:space:]]|$)'; then
+  if printf '%s' "$cmd" | grep -Eq -- '--allow-empty([[:space:]]|$)'; then
+    pretool_decision deny "Commit rỗng bị khung chặn (không dùng empty commit để kích CI — 11-autonomous-loop/self-healing-ci). Muốn chạy lại CI: push thay đổi thật hoặc re-run job."
+  fi
   if printf '%s' "$cmd" | grep -Eq '(--no-verify|[[:space:]]-n[[:space:]]|--no-gate)'; then
     echo "[pre-bash-guard] --no-verify → bỏ qua cổng commit (ghi lý do vào commit message)." >&2
     exit 0

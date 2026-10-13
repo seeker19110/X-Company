@@ -55,7 +55,7 @@ updated: 2026-10-13
     `budget` → `active=false`, cho dừng. `verify` nghĩa là có task tick mà thiếu/khác bằng chứng — chạy lại `loop record`.
 13. **Điểm dừng bắt buộc** (thao tác không đảo ngược, tiền thật, dữ liệu người dùng thật, đổi quyền/cấu hình cổng,
     hành động đối ngoại, mâu thuẫn spec): `<XS> loop block --reason "..."` rồi dừng; hook `pre-bash-guard.sh`/
-    `pre-edit-guard.sh` deny/ask là lưới thứ hai. Người đọc lý do, xử lý, rồi `loop init` lại để tiếp.
+    `pre-edit-guard.sh` deny/ask là lưới thứ hai. Người đọc lý do, xử lý, rồi `loop resume --reason "..."` để tiếp (giữ số vòng và bằng chứng; `loop init` lại chỉ khi đổi PLAN/ngân sách).
 14. **Gần hết ngân sách** (≥ 80% vòng/giờ hoặc context lớn): ghi mục "Bàn giao phiên" vào PROGRESS (chỗ dở, bước kế tiếp, SHA), commit + push, để Stop hook kết thúc (`/handover`).
 15. **Kết thúc**: `done` = mọi task có bằng chứng xanh và `<XS> blueprint-status BLUEPRINT.md --strict` không còn MUST mở
     → `GO-NO-GO.md`, PR cuối, báo cáo ≤ 20 dòng (đã làm · bằng chứng · còn treo · đề xuất). `blocked`/`budget` → báo lý do + bước kế tiếp, không khai "xong".

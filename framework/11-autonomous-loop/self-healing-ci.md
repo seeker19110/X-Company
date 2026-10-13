@@ -78,7 +78,7 @@ updated: 2026-10-13
 |---|---|---|
 | "Test này không liên quan, skip tạm" | Hồi quy lọt; cổng mất giá trị | Cấm skip; sửa hoặc hỏi |
 | Re-run đến khi xanh | Che flake thật, tốn runner, bằng chứng giả | Trần 1 re-run; flake → issue |
-| Empty commit để kích lại CI | Lịch sử rác, ẩn lỗi cấu hình | Cấm theo `AGENTS.md` §3 (hook hiện chưa chặn `--allow-empty`); dùng re-run của CI |
+| Empty commit để kích lại CI | Lịch sử rác, ẩn lỗi cấu hình | Cấm theo `AGENTS.md` §3; hook `pre-bash-guard` deny `git commit --allow-empty`; dùng re-run của CI |
 | Agent chạy trên PR từ fork với secret | Prompt injection từ PR lấy token | Kiểm actor; tách job ghi |
 | `--bare` trong CI "cho nhanh" | Mất hook deny/ask, mất CLAUDE.md | Không `--bare`; truyền `--settings` |
 | Thêm bí mật vào allowlist scanner để qua | Lộ bí mật được "hợp thức hoá" | Secret scan đỏ → dừng, xoay khoá |

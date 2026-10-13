@@ -13,6 +13,7 @@ Lệnh:
   loop record --task T-001 -- <lệnh...>
                                 Chạy lệnh kiểm của task, ghi bằng chứng (exit code, thời gian, đuôi output).
   loop block --reason TEXT      Đánh dấu BLOCKED (cần người).
+  loop resume [--reason TEXT]   Người đã xử lý → bỏ BLOCKED, đặt lại đếm lỗi lặp, giữ số vòng/bằng chứng.
   loop stop [--reason TEXT]     Tắt vòng lặp.
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
   stats                         Thống kê số module/mục.
@@ -692,6 +693,17 @@ def cmd_loop(args) -> int:
         write_state(st, base)
         print(f"■ BLOCKED: {args.reason}")
         return 0
+    if args.loop_cmd == "resume":
+        st = read_state(base)
+        if not st:
+            print("✗ Chưa có vòng lặp (chạy loop init trước)", file=sys.stderr)
+            return 2
+        st.update({"active": True, "blocked": False, "blocked_reason": None, "same_failure_count": 0,
+                   "last_failure_signature": None, "resumed_at": now_iso(), "resume_reason": args.reason})
+        st.pop("ended", None); st.pop("final_verdict", None)
+        write_state(st, base)
+        print(f"▶ Autopilot tiếp tục (vòng {st.get('iterations', 0)}/{st.get('max_iterations', 50)}): {args.reason}")
+        return 0
     if args.loop_cmd == "stop":
         st = read_state(base)
         if st:
@@ -761,6 +773,8 @@ def build_parser() -> argparse.ArgumentParser:
     lr.add_argument("cmd", nargs=argparse.REMAINDER)
     lb = lsub.add_parser("block")
     lb.add_argument("--reason", required=True)
+    lrs = lsub.add_parser("resume")
+    lrs.add_argument("--reason", default="người đã xử lý điểm dừng")
     lst = lsub.add_parser("stop")
     lst.add_argument("--reason", default="dừng thủ công")
     lsub.add_parser("hook-stop")

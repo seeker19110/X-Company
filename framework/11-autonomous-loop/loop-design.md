@@ -84,7 +84,7 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 | Đặt `permissions.defaultMode: auto` trong `.claude/settings.json` của dự án | Bị bỏ qua; vẫn hỏi quyền | Đặt ở settings người dùng/managed hoặc cờ `--permission-mode auto` |
 | Runaway: một tool lỗi bị gọi hàng trăm lần | Đốt ngân sách, không tiến triển | Chữ ký lỗi 3 lần → blocked; trần vòng; cap 8 lần chặn liên tiếp |
 | "Context anxiety": agent vội kết luận xong khi context đầy | Code dở, tài liệu thiếu | Bàn giao theo `context-and-token-budget.md`; verdict không cho dừng khi còn task |
-| Nhiều lần `loop init` để "reset" chuỗi lỗi | Mất lịch sử lỗi lặp, lặp lại sai lầm | `loop init` lại chỉ sau khi người đã xem lý do blocked và ghi vào PROGRESS |
+| Nhiều lần `loop init` để "reset" chuỗi lỗi | Mất lịch sử lỗi lặp, lặp lại sai lầm | Sau BLOCKED dùng `loop resume --reason` (giữ số vòng, đặt lại đếm lỗi) khi người đã xem lý do và ghi vào PROGRESS; `loop init` chỉ khi đổi PLAN/ngân sách |
 
 ## Cổng tự động
 
@@ -99,7 +99,7 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 
 ## Nguồn
 
-- Mã nguồn `scripts/xs.py` (lệnh `loop init/status/record/block/stop/hook-stop`, `loop_verdict`, `failure_signature`, `max_same_failure=3`, `max_iterations=50`) — đọc 2026-10-13.
+- Mã nguồn `scripts/xs.py` (lệnh `loop init/status/record/block/resume/stop/hook-stop`, `loop_verdict`, `failure_signature`, `max_same_failure=3`, `max_iterations=50`) — đọc 2026-10-13.
 - Claude Code docs — hooks (Stop, `stop_hook_active`, exit 2/`decision: block`): <https://code.claude.com/docs/en/hooks> · hooks guide "Stop hook hits the block cap" (8 lần liên tiếp không có tool call): <https://code.claude.com/docs/en/hooks-guide> · env `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` (mặc định 8, `0` = tắt cap): <https://code.claude.com/docs/en/env-vars> — xác minh 2026-10-13.
 - Claude Code docs — `/goal` (model nhỏ đánh giá, "doesn't run commands or read files independently"): <https://code.claude.com/docs/en/goal> — xác minh 2026-10-13.
 - Claude Code docs — headless (`--bare` bỏ hook/skill/CLAUDE.md; `--max-turns`, `--max-budget-usd`, `total_cost_usd`): <https://code.claude.com/docs/en/headless> — xác minh 2026-10-13.
