@@ -263,10 +263,25 @@ class ComposeTest(unittest.TestCase):
         self.assertIn("`IND-FIN-001` **MUST**", out)
         self.assertIn("generated: 2026-10-13", out)
 
+    def test_compose_scale_s_keeps_floor_demotes_modules(self):
+        out = xs.compose(self.fw, "web-app", ["fintech"], "S", include_may=False, today="2026-10-13")
+        self.assertIn("`BASE-SEC-001` **MUST**", out)   # baseline: sàn, giữ MUST
+        self.assertIn("`IND-FIN-001` **MUST**", out)    # gói ngành: giữ MUST
+        self.assertIn("`BE-API-001` **SHOULD**", out)   # module chuyên sâu: S hạ SHOULD
+        self.assertIn("`BASE-SEC-002` **SHOULD**", out) # MUST@L vẫn hạ
+
     def test_compose_scale_l_keeps_must(self):
         out = xs.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
         self.assertIn("`BASE-SEC-002` **MUST**", out)
         self.assertIn("`BASE-SEC-003` **MAY**", out)
+
+    def test_compose_add_extra_module_bypasses_applies_to(self):
+        out = xs.compose(self.fw, "web-app", [], "M", include_may=False, today="2026-10-13",
+                         extra=["08-backend/cli-only"])
+        self.assertIn("`BE-CLI-001`", out)  # applies_to chỉ cli-tool nhưng --add là có chủ đích
+        self.assertIn("extra: [08-backend/cli-only]", out)
+        with self.assertRaises(SystemExit):
+            xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["08-backend/khong-co"])
 
     def test_compose_unknown_profile(self):
         with self.assertRaises(SystemExit):
@@ -378,6 +393,19 @@ class LoopTest(unittest.TestCase):
         v = xs.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("thanh toán", v["reason"])
+
+    def test_resume_clears_block_and_failure_streak(self):
+        self.run_cli("loop", "init")
+        with redirect_stdout(io.StringIO()):
+            for _ in range(3):
+                xs.loop_record("T-001", ["sh -c 'echo boom; exit 3'"], self.base)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "blocked")
+        out, _ = xs.hook_stop("{}", self.base)  # blocked -> cho dừng, active=false
+        self.assertFalse(xs.read_state(self.base)["active"])
+        self.assertEqual(self.run_cli("loop", "resume", "--reason", "đã sửa tay"), 0)
+        st = xs.read_state(self.base)
+        self.assertTrue(st["active"]); self.assertEqual(st["same_failure_count"], 0)
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
 
     def test_cli_hook_stop_fail_open_on_garbage(self):
         r = subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],

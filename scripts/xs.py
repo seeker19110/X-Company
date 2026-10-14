@@ -4,7 +4,7 @@
 Lệnh:
   validate                      Kiểm quy ước toàn khung (frontmatter, ID, liên kết, hồ sơ/gói ngành).
   list [profiles|industries|modules]
-  compose --profile P [--industry I ...] [--scale S|M|L] [--include-may] [--out FILE]
+  compose --profile P [--industry I ...] [--scale S|M|L] [--include-may] [--add MODULE ...] [--out FILE]
                                 Ghép baseline + hồ sơ + gói ngành thành BLUEPRINT.md cho dự án.
   blueprint-status FILE [--strict]
                                 Đếm mục đạt/chưa/miễn; --strict: còn MUST chưa đạt -> exit 1.
@@ -13,6 +13,7 @@ Lệnh:
   loop record --task T-001 -- <lệnh...>
                                 Chạy lệnh kiểm của task, ghi bằng chứng (exit code, thời gian, đuôi output).
   loop block --reason TEXT      Đánh dấu BLOCKED (cần người).
+  loop resume [--reason TEXT]   Người đã xử lý → bỏ BLOCKED, đặt lại đếm lỗi lặp, giữ số vòng/bằng chứng.
   loop stop [--reason TEXT]     Tắt vòng lặp.
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
   stats                         Thống kê số module/mục.
@@ -297,8 +298,17 @@ def validate(root: Path) -> List[str]:
 
 # --------------------------------------------------------------------------- compose
 
-def effective_level(item: Item, scale: str) -> str:
-    if item.level == "MUST" and item.scale and SCALES.index(scale) < SCALES.index(item.scale):
+# Ở quy mô S chỉ "sàn" là bắt buộc: baseline + hồ sơ + gói ngành. MUST của module chuyên sâu
+# (kind module/standard) hạ thành SHOULD — xem ADR-0003 và 00-method/lifecycle.md.
+FLOOR_KINDS = ("baseline", "profile", "industry")
+
+
+def effective_level(item: Item, scale: str, doc_kind: str = "baseline") -> str:
+    if item.level != "MUST":
+        return item.level
+    if item.scale and SCALES.index(scale) < SCALES.index(item.scale):
+        return "SHOULD"
+    if scale == "S" and doc_kind not in FLOOR_KINDS:
         return "SHOULD"
     return item.level
 
@@ -311,7 +321,7 @@ def find_by_slug(docs: List[Doc], kind: str, slug: str) -> Optional[Doc]:
 
 
 def compose(root: Path, profile: str, industries: List[str], scale: str, include_may: bool,
-            today: Optional[str] = None) -> str:
+            today: Optional[str] = None, extra: Optional[List[str]] = None) -> str:
     docs, errors = load_docs(root)
     if errors:
         raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
@@ -330,9 +340,17 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     patterns: List[str] = []
     for src in [prof, *inds]:
         patterns.extend(_as_list(src.meta.get("modules")))
-    mods, _ = resolve_modules(patterns, by_rel)
+    patterns.extend(extra or [])
+    mods, missing = resolve_modules(patterns, by_rel)
+    bad_extra = [m for m in missing if m in (extra or [])]
+    if bad_extra:
+        raise SystemExit("Module --add không tồn tại: " + ", ".join(bad_extra) + " (xem: xs.py list modules)")
+
+    extra_rels = {d.rel for d in resolve_modules(extra or [], by_rel)[0]}
 
     def applies(d: Doc) -> bool:
+        if d.rel in extra_rels:  # --add là lựa chọn có chủ đích của người dùng → bỏ lọc applies_to
+            return True
         at = _as_list(d.meta.get("applies_to"))
         return not at or "all" in at or profile in at
 
@@ -352,7 +370,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     for d in ordered:
         rows = []
         for it in d.items:
-            lv = effective_level(it, scale)
+            lv = effective_level(it, scale, d.kind)
             if lv == "MAY" and not include_may:
                 continue
             counts[lv] += 1
@@ -369,6 +387,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
         "kind: blueprint",
         f"profile: {profile}",
         f"industries: [{', '.join(str(i.meta.get('slug')) for i in inds)}]",
+        f"extra: [{', '.join(extra or [])}]",
         f"scale: {scale}",
         f"generated: {today}",
         "---",
@@ -623,7 +642,8 @@ def cmd_list(args) -> int:
 
 
 def cmd_compose(args) -> int:
-    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may)
+    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may,
+                  extra=args.add or [])
     if args.out:
         Path(args.out).write_text(out, encoding="utf-8")
         print(f"✓ Đã ghi {args.out}")
@@ -682,6 +702,17 @@ def cmd_loop(args) -> int:
         write_state(st, base)
         print(f"■ BLOCKED: {args.reason}")
         return 0
+    if args.loop_cmd == "resume":
+        st = read_state(base)
+        if not st:
+            print("✗ Chưa có vòng lặp (chạy loop init trước)", file=sys.stderr)
+            return 2
+        st.update({"active": True, "blocked": False, "blocked_reason": None, "same_failure_count": 0,
+                   "last_failure_signature": None, "resumed_at": now_iso(), "resume_reason": args.reason})
+        st.pop("ended", None); st.pop("final_verdict", None)
+        write_state(st, base)
+        print(f"▶ Autopilot tiếp tục (vòng {st.get('iterations', 0)}/{st.get('max_iterations', 50)}): {args.reason}")
+        return 0
     if args.loop_cmd == "stop":
         st = read_state(base)
         if st:
@@ -729,6 +760,8 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--industry", action="append")
     pc.add_argument("--scale", choices=SCALES, default="M")
     pc.add_argument("--include-may", action="store_true")
+    pc.add_argument("--add", action="append", metavar="MODULE",
+                    help="ghép thêm module/glob ngoài hồ sơ (vd 13-ai-engineering/*), bỏ lọc applies_to")
     pc.add_argument("--out")
     pc.set_defaults(fn=cmd_compose)
     pb = sub.add_parser("blueprint-status")
@@ -749,6 +782,8 @@ def build_parser() -> argparse.ArgumentParser:
     lr.add_argument("cmd", nargs=argparse.REMAINDER)
     lb = lsub.add_parser("block")
     lb.add_argument("--reason", required=True)
+    lrs = lsub.add_parser("resume")
+    lrs.add_argument("--reason", default="người đã xử lý điểm dừng")
     lst = lsub.add_parser("stop")
     lst.add_argument("--reason", default="dừng thủ công")
     lsub.add_parser("hook-stop")

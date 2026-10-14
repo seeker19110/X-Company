@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Mặc định tối thiểu cho MỌI job (GITHUB_TOKEN chỉ đọc). Job nào cần hơn tự khai ở job-level.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # MỘT job gate duy nhất làm required check (stored 23 §2.5): validate khung + test + link + shell + cài thử.
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Quy ước khung (frontmatter, ID, liên kết, hồ sơ/ngành)
+        run: python3 scripts/xs.py validate
+
+      - name: Liên kết Markdown toàn repo
+        run: python3 scripts/check-links.py
+
+      - name: Cú pháp shell + ShellCheck (hook, script)
+        run: |
+          set -euo pipefail
+          for f in scripts/*.sh .claude/hooks/*.sh; do bash -n "$f"; done
+          shellcheck --severity=warning scripts/*.sh .claude/hooks/*.sh
+
+      - name: JSON hợp lệ (settings, ruleset)
+        run: |
+          set -euo pipefail
+          for f in .claude/settings.json .github/rulesets/main.json; do python3 -m json.tool "$f" >/dev/null && echo "OK $f"; done
+
+      - name: Test
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Ghép thử blueprint cho MỌI hồ sơ × gói ngành (smoke)
+        run: |
+          set -euo pipefail
+          profiles=$(python3 scripts/xs.py list profiles | awk '{print $1}')
+          industries=$(python3 scripts/xs.py list industries | awk '{print $1}')
+          n=0
+          for p in $profiles; do
+            python3 scripts/xs.py compose --profile "$p" --scale M --out "/tmp/bp-$p.md" >/dev/null
+            python3 scripts/xs.py blueprint-status "/tmp/bp-$p.md" >/dev/null || true
+            n=$((n+1))
+          done
+          for i in $industries; do
+            python3 scripts/xs.py compose --profile web-app --industry "$i" --scale L --include-may --out "/tmp/bp-web-$i.md" >/dev/null
+            n=$((n+1))
+          done
+          echo "OK — ghép $n blueprint"
+
+      - name: Cài thử vào dự án rỗng rồi validate/compose từ bản cài
+        run: |
+          set -euo pipefail
+          d=$(mktemp -d)
+          python3 scripts/install.py "$d" --label ci
+          python3 "$d/.xstored/scripts/xs.py" validate
+          python3 "$d/.xstored/scripts/xs.py" compose --profile api-service --industry fintech --scale M --out "$d/BLUEPRINT.md"
+          test -f "$d/AGENTS.md" && test -f "$d/.claude/settings.json"
+          echo "OK — cài thử thành công"
+
+      - name: Không còn "(đang viết)" / placeholder trong khung
+        run: |
+          set -euo pipefail
+          if grep -rn "(đang viết)" framework/ ; then echo "::error::Còn chỗ đang viết trong framework/"; exit 1; fi
+          echo "OK"
+
+  # Hàng rào cho hàng rào: (1) mọi required check trong ruleset mẫu phải là job có thật (chặn khoá-nhánh-do-đổi-tên-job);
+  # (2) ruleset trên nhánh mặc định có đang hiệu lực không — chỉ CẢNH BÁO (không đỏ) để repo mới chưa import vẫn merge được;
+  # muốn bắt buộc, đổi `::warning` thành `exit 1` (xem CONTRIBUTING.md).
+  protection-guard:
+    name: protection-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Required check trong ruleset ↔ job có thật
+        run: |
+          set -euo pipefail
+          jobs=$(python3 - <<'PY'
+          import glob, re
+          names = set()
+          for f in glob.glob(".github/workflows/*.yml"):
+              txt = open(f, encoding="utf-8").read()
+              m = re.search(r"^jobs:\n(.*)", txt, re.S | re.M)
+              if not m: continue
+              for jm in re.finditer(r"^  ([A-Za-z0-9_-]+):\n((?:    .*\n|\n)*)", m.group(1), re.M):
+                  key, body = jm.group(1), jm.group(2)
+                  nm = re.search(r"^    name:\s*(.+?)\s*$", body, re.M)
+                  names.add(nm.group(1).strip('"\'') if nm else key)
+          print("\n".join(sorted(names)))
+          PY
+          )
+          fail=0
+          for c in $(python3 -c "import json;[print(x['context']) for r in json.load(open('.github/rulesets/main.json'))['rules'] if r['type']=='required_status_checks' for x in r['parameters']['required_status_checks']]"); do
+            grep -qx "$c" <<<"$jobs" || { echo "::error::Required check '$c' không khớp job nào trong .github/workflows/"; fail=1; }
+          done
+          [ "$fail" = 0 ] && echo "OK — mọi required check đều là job có thật."
+          exit $fail
+      - name: Ruleset trên nhánh mặc định đang hiệu lực? (cảnh báo)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -uo pipefail
+          rules=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/rules/branches/$BRANCH" || echo "[]")
+          for t in pull_request required_status_checks deletion non_fast_forward; do
+            if ! python3 -c "import json,sys; r=json.loads(sys.argv[1]); sys.exit(0 if any(x.get('type')==sys.argv[2] for x in r) else 1)" "$rules" "$t"; then
+              echo "::warning::Nhánh $BRANCH chưa có rule '$t' — import .github/rulesets/main.json (Settings → Rules → Rulesets → Import)."
+            fi
+          done
+          echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."

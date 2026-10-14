@@ -1,0 +1,7 @@
+# xs.yaml — lệnh chuẩn của repo này cho agent và hook (YAML phẳng `task: lệnh`, đọc bởi scripts/dev-task.sh).
+# Agent KHÔNG suy diễn lệnh từ văn xuôi; đọc file này. Thêm khoá mới khi dự án có công cụ mới.
+lint: python3 scripts/xs.py validate && python3 scripts/check-links.py && bash -n scripts/dev-task.sh .claude/hooks/*.sh
+test: python3 -m unittest discover -s tests
+typecheck: python3 -m py_compile scripts/xs.py scripts/install.py scripts/check-links.py
+build: python3 scripts/xs.py stats
+format: ""

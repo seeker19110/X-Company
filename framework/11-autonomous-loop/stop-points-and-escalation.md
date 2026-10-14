@@ -1,0 +1,122 @@
+---
+title: Điểm dừng bắt buộc, mức tin cậy T0–T4, leo thang
+kind: module
+prefix: LOOP-STOP
+applies_to: [all]
+updated: 2026-10-13
+---
+
+# Điểm dừng bắt buộc, mức tin cậy T0–T4, leo thang
+
+> Tự động hoá chỉ an toàn khi biết **chỗ nào phải dừng**. Module này liệt kê các điểm dừng bắt buộc (máy chặn được
+> bằng hook), thang tin cậy T0–T4 cho từng việc giao, mức tự chủ L0–L4 của cả hệ, vị từ "làn nhanh", và đường leo
+> thang khi bế tắc. Áp dụng cho mọi agent làm việc trên repo, mọi quy mô.
+
+## Nguyên tắc
+
+1. **Dừng là một cổng, không phải ngoại lệ** (`G-esc`): việc `blocked` mở cổng cho người; duyệt = mở lại kèm gợi ý,
+   từ chối = đóng việc. Máy ghi `loop block --reason`, người quyết.
+2. **Nghi ngờ thì lên làn cao hơn, không xuống.** Một việc bị xếp làn thấp sai là cách sự cố production ra đời.
+3. **Quá hạn chờ không tự đi tiếp và không tự huỷ** — leo thang cho người (mặc định 24 h, nhắc giữa hạn 12 h).
+4. **Fail-closed cho cổng duyệt**: điều kiện không đánh giá được tính là trượt; "gần đủ" là không đủ.
+5. **Đặc quyền tách bằng code, không bằng lời dặn**: PreToolUse `deny` có hiệu lực cả ở chế độ bỏ qua hỏi quyền;
+   lời dặn trong prompt không phải cơ chế bảo mật.
+6. **Lỗi lần 2 đổi cách, lần 3 hỏi người; sửa mã vòng thứ 4 gần như luôn là đặc tả sai.**
+
+## Quyết định
+
+### Điểm dừng bắt buộc (máy chặn/hỏi trước khi làm)
+
+| Nhóm | Ví dụ | Cơ chế thật trong khung | Ai mở khoá |
+|---|---|---|---|
+| Thao tác không đảo ngược | `rm -rf`, `git push --force`, `reset --hard`, drop/alter phá vỡ, xoá dữ liệu | `pre-bash-guard.sh` → **deny**; `permissions.deny` | Người tự chạy tay |
+| Tiền thật | Thanh toán, hoàn tiền, đổi giá, gọi API thu phí ngoài sandbox | `loop block --reason` + SPEC phải có ca test | Chủ sản phẩm |
+| Dữ liệu người dùng thật | Migration trên DB production, export PII, xoá tài khoản | `pre-edit-guard.sh` ask khi sửa migration đã tồn tại; deploy → ask | Người trực + chủ dữ liệu |
+| Đổi quyền / nới cổng | Sửa `eslint`/`tsconfig`/coverage/workflows/ruleset/`.claude/settings.json`/`.xstored/` | `pre-edit-guard.sh` → **ask** kèm lý do | Tech lead |
+| Hành động đối ngoại | `gh pr merge`, `gh release`, `npm publish`, `docker push`, `terraform apply`, gửi email/thông báo, đăng bài | `pre-bash-guard.sh` → **ask**; Routine chỉ đề xuất | Người duyệt T4 |
+| Mâu thuẫn spec | SPEC ↔ code ↔ test không khớp, yêu cầu nhiều cách hiểu | `loop block --reason "spec: ..."`; không tự route lại để né hỏi | Chủ sản phẩm |
+| Bảo mật / pháp lý mơ hồ | Chạm auth, mật mã, dữ liệu nhạy cảm, luật ngành | Luôn làn kiến trúc; `risk_tags` ≠ rỗng → thêm review bảo mật | Người phê duyệt bảo mật |
+
+### Thang tin cậy T0–T4 cho mỗi việc giao (stored 23 §4.5)
+
+| Tier | Việc | Side effect cho phép | Ai chốt |
+|---|---|---|---|
+| T0 | Đọc, tra cứu, tóm tắt | none | Không |
+| T1 | Sửa cơ học có test, docs, format | ghi repo trong worktree | Máy (Gate xanh) |
+| T2 | Tính năng theo spec kín | ghi repo, mở PR | Reviewer khác tier + CI |
+| T3 | Có side effect mạng/ingest, đổi hợp đồng API, publish thử | ingest-network / publish staging | Người review PR |
+| T4 | Production, tiền, dữ liệu thật, ToS, xoá | account-change / publish prod | **Người** duyệt trước khi merge/chạy |
+
+Subagent **không tự nâng tier**; `external_side_effects` là enum trong task pack (`none · ingest-network · publish · account-change`).
+
+### Mức tự chủ L0–L4 của hệ (spec cũ §B11, rút gọn)
+
+| Mức | Agent được | Người giữ | Điều kiện lên mức |
+|---|---|---|---|
+| L0 Trợ lý | Nháp spec/plan/diff | Mọi thứ | Có baseline 8 tuần |
+| L1 Sinh PR | Chạy trọn tới PR + test + review report | Review và merge mọi PR | `first_pass_gate_rate ≥ 70 %` 4 tuần, lỗi lọt ≤ baseline |
+| L2 Tự chủ làn nhanh | Tự merge **làn nhanh** khi cổng xanh | Duyệt spec, review mẫu ≥ 10 %, làn kiến trúc | 200 merge làn nhanh liên tiếp không lỗi nghiêm trọng (đội 1 người: 60) |
+| L3 Tự chủ làn chuẩn | Trọn tính năng làn chuẩn | Chốt spec, chốt phát hành nhạy cảm | 8 tuần ở L2, `change_failure_rate ≤` baseline, can thiệp ≤ 15 % |
+| L4 Trong hàng rào | Phát hành canary | Spec, giám sát, kill switch; làn kiến trúc luôn có người | Chỉ hệ rủi ro thấp, có phê duyệt quản trị |
+
+**Đường lùi tự động:** 2 tuần liên tiếp lỗi lọt xấu hơn baseline, hoặc 1 vi phạm phân tách đặc quyền ⇒ hạ một mức.
+
+### Vị từ "làn nhanh" (được tự merge ở L2) — đủ cả 5, thiếu một là làn chuẩn
+
+1. Không chạm đường dẫn nhạy cảm (secret, schema/migration, gateway/auth).
+2. `risk_tags` rỗng (`auth · payment · pii · crypto · upload · admin · external-api`).
+3. Diff trong ≤ 1 package.
+4. ≤ 150 dòng thay đổi (không tính file sinh/lockfile).
+5. Có test phủ nhánh sửa và toàn bộ CI xanh.
+Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã luôn là làn kiến trúc**, kể cả diff 1 dòng.
+
+## Checklist
+
+- [ ] `LOOP-STOP-001` **MUST** Lệnh phá huỷ/không đảo ngược bị **deny** ở PreToolUse (không chỉ `ask`), sau khi tách lệnh nối `; && | ||`. → Kiểm: hook trả `permissionDecision: deny` cho `ls; rm -rf /` và `git push --force`; test hook xanh. · Nguồn: stored 12 §4 quy tắc 6
+- [ ] `LOOP-STOP-002` **MUST** Hành động đối ngoại (merge, release, publish, deploy, gửi thông báo) qua `ask` hoặc `loop block`, không bao giờ tự chạy trong autopilot. → Kiểm: `.claude/settings.json` `permissions.ask` có `gh pr merge`, `npm publish`, `docker push`; log phiên không có lệnh đó chạy tự động.
+- [ ] `LOOP-STOP-003` **MUST** Sửa cấu hình cổng (lint/type/coverage/workflows/ruleset/hook) và migration đã tồn tại đi qua `ask` kèm lý do ghi ở PR. → Kiểm: `pre-edit-guard.sh` trả `ask` cho `.github/workflows/x.yml` và file trong `migrations/` đã có; PR mô tả lý do. · Nguồn: stored 23 §4.3
+- [ ] `LOOP-STOP-004` **MUST** Mâu thuẫn spec hoặc yêu cầu nhiều cách hiểu → `xs.py loop block --reason` và dừng; không tự chọn một cách hiểu. → Kiểm: `state.json.blocked_reason` bắt đầu bằng `spec:`; PROGRESS ghi câu hỏi cần người. · Nguồn: stored 23 §2.3
+- [ ] `LOOP-STOP-005` **MUST** Việc chạm tiền thật, dữ liệu người dùng thật, xác thực/phân quyền, mật mã luôn có người duyệt trước merge (T4/làn kiến trúc). → Kiểm: PR có nhãn `risk:` tương ứng và required review của người; CI chặn merge khi thiếu.
+- [ ] `LOOP-STOP-006` **MUST** Mỗi task giao cho subagent ghi `model_tier` (T0–T4) và `external_side_effects`; subagent không tự nâng tier. → Kiểm: task pack có hai trường; test từ chối task thiếu trường. · Nguồn: stored 23 §4.5
+- [ ] `LOOP-STOP-007` **MUST** Cổng chờ người có hạn (mặc định 24 h) và nhắc giữa hạn; quá hạn **không tự pass, không tự huỷ**. → Kiểm: cấu hình `gate_timeout_hours: 24`; test quá hạn → trạng thái `escalated`. · Nguồn: spec cũ ASC-FR-14
+- [ ] `LOOP-STOP-008` **MUST** Trần rework 3 vòng/việc; vượt → `escalated` cho người, cấm sửa tiếp máy móc. → Kiểm: `same_failure_count ≥ 3` → `loop status = blocked`; PROGRESS ghi "lần 3". · Nguồn: spec cũ §B6.3
+- [ ] `LOOP-STOP-009` **MUST@M** Làn nhanh (tự merge) chỉ bật ở L2 trở lên và được định nghĩa bằng vị từ máy (5 điều kiện + 3 ngoại lệ cứng); mặc định là "không phải làn nhanh". → Kiểm: script phân làn đọc `git diff --numstat` + đường dẫn + `risk_tags`; test: diff chạm `auth/` → làn kiến trúc. · Nguồn: spec cũ §B3.1a
+- [ ] `LOOP-STOP-010` **MUST@M** Đường lùi tự chủ được đo: lỗi lọt nghiêm trọng qua làn nhanh → về L1 cho tới khi rà xong nguyên nhân. → Kiểm: `docs/ops/` có bảng mức hiện tại + ngày + lý do đổi; chỉ số `escaped_defect_rate` có số.
+- [ ] `LOOP-STOP-011` **SHOULD** Lỗi lần 2 cùng bước → đổi cách tiếp cận trước khi thử lại; ghi vào PROGRESS mục Quyết định. → Kiểm: evidence lần 2 và 3 có `cmd`/diff khác nhau; PROGRESS có dòng "đổi cách". · Nguồn: stored 23 §6.1
+- [ ] `LOOP-STOP-012` **SHOULD** Người giữ review mẫu ≥ 10 % PR ở mọi mức tự chủ để hiệu chuẩn niềm tin vào reviewer máy. → Kiểm: báo cáo tháng có tỉ lệ review mẫu. · Nguồn: spec cũ §B10
+- [ ] `LOOP-STOP-013` **SHOULD** Lần đầu sửa file trong vùng rủi ro (`risk-zones.txt`) trong phiên → hook yêu cầu nêu 4 dữ kiện (mục đích, test phủ, rollback, ảnh hưởng) rồi mới cho sửa. → Kiểm: hook `risk-zone-gate` trả `deny` lần 1 kèm 4 câu hỏi, lần 2 cho qua. · Nguồn: stored 23 §4.3
+- [ ] `LOOP-STOP-014` **SHOULD** Routine/cron không người trực chỉ **đề xuất** hành động đối ngoại (mở issue/PR nháp), không gửi/đăng/merge. → Kiểm: workflow lịch không có `contents: write` trừ job tách riêng tạo PR nháp. · Nguồn: stored 21 §10
+- [ ] `LOOP-STOP-015` **SHOULD** Lý do `loop block` đủ để người quyết trong một lần đọc: ngữ cảnh, 2–3 lựa chọn, đề xuất, hệ quả. → Kiểm: `blocked_reason` ≥ 3 câu hoặc trỏ tới mục PROGRESS.
+- [ ] `LOOP-STOP-016` **MAY** Dùng cổng "hành động trên $X" (vd > 0,5 USD mỗi lệnh gọi, > 10 USD mỗi run) hỏi lại người ngay cả khi tool được allow. → Kiểm: cấu hình ngưỡng tiền trong harness; test vượt ngưỡng → ask. · Nguồn: stored 19 §1.2
+- [ ] `LOOP-STOP-017` **MAY** Mọi lần người bỏ qua một cổng được ghi vào `escalations` của việc kèm lý do, không xoá dấu vết. → Kiểm: PR/issue có mục "Bỏ qua cổng: lý do".
+
+## Bẫy thường gặp
+
+| Bẫy | Hậu quả | Cách tránh |
+|---|---|---|
+| Cổng duyệt nằm trong system prompt ("hỏi tôi trước khi xoá") | Prompt injection hoặc model nhầm → vẫn xoá | Deny/ask ở hook và `permissions`; prompt chỉ là lớp nhắc |
+| Chạy mọi CLI với cờ bỏ qua quyền để "nhanh" | Mất toàn bộ điểm dừng, sandbox | Chế độ bỏ qua hỏi quyền chỉ trong VM/container dùng một lần; deny vẫn hiệu lực |
+| Agent tự route lại việc mơ hồ để né hỏi | Làm sai việc nhanh hơn | Luật cứng: spec hở → block |
+| Quá hạn chờ duyệt → tự coi là đồng ý | Thay đổi nhạy cảm lọt | Hết hạn = leo thang, không pass |
+| Allowlist glob so khớp trước khi tách lệnh nối | `ls && rm -rf /` lọt qua allow `ls *` | Tách `; && \| \|\|` rồi mới so (hook của khung làm vậy) |
+| Bật làn nhanh khi chưa đo được `first_pass_gate_rate` | Không biết lúc nào phải lùi | Đếm trước, bật sau |
+| Coi "mục tiêu 6 tháng là L3" khi baseline chưa có | Nhắm ngưỡng chưa tồn tại | Dừng ở L2 cho đến khi có số |
+
+## Cổng tự động
+
+| Công cụ | Lệnh | Đặt ở | Ngưỡng |
+|---|---|---|---|
+| `pre-bash-guard.sh` | PreToolUse(Bash) | `.claude/settings.json` | deny phá huỷ; ask đối ngoại/push main |
+| `pre-edit-guard.sh` | PreToolUse(Edit\|Write) | `.claude/settings.json` | deny file bí mật; ask cấu hình cổng, migration cũ |
+| `permissions.deny/ask` | `claude -p --permission-mode dontAsk` trong CI | settings | deny thắng allow |
+| `xs.py loop block` | `python3 scripts/xs.py loop block --reason "..."` | Agent khi gặp điểm dừng | verdict `blocked` |
+| Phân làn | script đọc `git diff --numstat` + đường dẫn + `risk_tags` | CI `pr-policy` | 5 điều kiện; mặc định làn chuẩn |
+| Ruleset | `.github/rulesets/main.json` | GitHub | PR bắt buộc, required check `gate`, không bypass |
+
+## Nguồn
+
+- `.claude/hooks/pre-bash-guard.sh`, `pre-edit-guard.sh`, `.claude/settings.json` của khung — đọc 2026-10-13.
+- Claude Code docs — permission modes (`defaultMode` `auto`/`bypassPermissions` bị bỏ qua ở project settings; deny có hiệu lực mọi chế độ): <https://code.claude.com/docs/en/permission-modes> · hooks `PreToolUse` `permissionDecision`: <https://code.claude.com/docs/en/hooks> — theo `research/2026-10-13-claude-code-hooks-skills.md`, xác minh 2026-10-13.
+- Khung cũ X-stored `docs/specs/AI-HARNESS-AND-COMPANY-SPEC.md` (commit `1b80fe4`) §B3.1a (làn nhanh 5 điều kiện), §B6.3 (trần rework), §B6.4 (leo thang), ASC-FR-14 (hạn cổng 24 h), §B10, §B11 (L0–L4) — đọc 2026-10-13.
+- OWASP Top 10 for Agentic Applications 2026 (ASI01 Goal Hijack, ASI02 Tool Misuse, ASI03 Identity & Privilege Abuse): <https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/> — theo `research/2026-10-13-ai-agent-research.md` §5.1 [F]; trang trả 403 khi fetch lại ngày 2026-10-13.
+- `seeker19110/stored` mục 12 §4 (7 quy tắc), mục 19 §1.2, mục 21 §10, mục 23 §2.3, §4.3, §4.5, §6.1 — đọc 2026-10-13.
