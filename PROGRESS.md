@@ -3,12 +3,14 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- Không có việc dở. #17 đã merge: `xs.py progress-check`, `xs.py ci-check`, 21 SHOULD có bằng chứng (PLAN `docs/autopilot/PLAN.md` xong).
+- PR "audit có máy đỡ" (PLAN `docs/autopilot/PLAN.md` T-001…T-006 xong, ADR-0005): `xs.py audit plan/check`, `framework/00-method/audit.md`, mẫu AUDIT-STATUS/REPORT, skill `/audit` mới; audit lần đầu repo khung ở `docs/ops/`.
+- **Chờ người duyệt kế hoạch sửa 5 đợt** (`docs/ops/AUDIT-REPORT-2026-10-14.md` §5): 1 🔴 (AUD-HAR-001 cổng dự án đích xanh giả) · 28 🟠 · 21 🟢 mở.
 
 ## Tiếp theo
-1. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
-2. Cần người quyết: `WF-DOC-004` đòi "nhánh nêu tên còn trên remote" — xung đột với squash + xoá nhánh (PROGRESS trên `main` nêu nhánh PR đã xoá → đỏ mãi); `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
-3. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo annotated tag `v2.0.0` trên `55de4d1` (đã duyệt; phiên agent bị proxy chặn push tag — 403).
+1. Sau duyệt: sửa đợt 1 (AUD-HAR-001 trước), mỗi đợt một PR; đợt 2 (hook) và 4 (CI/ruleset) là điểm dừng bắt buộc.
+2. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
+3. Cần người quyết: `WF-DOC-004` (= AUD-DOC-004) đòi "nhánh nêu tên còn trên remote" — xung đột với squash + xoá nhánh (PROGRESS trên `main` nêu nhánh PR đã xoá → đỏ mãi); `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
+4. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo annotated tag `v2.0.0` trên `55de4d1` (đã duyệt; phiên agent bị proxy chặn push tag — 403).
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -20,10 +22,11 @@
 - 2026-10-14 Quy mô M: tối đa 4 MUST mỗi module/chuẩn, phần vượt `MUST@L`; web-app M 1.094 → 470 — ADR-0004.
 - 2026-10-13 Mặc định OSI: OpenTofu (MPL-2.0) thay Terraform (BUSL-1.1), Valkey thay Redis 8; Lighthouse CI giữ có cảnh báo, ghi phương án thay.
 - 2026-10-14 PROGRESS chỉ ghi SHA trên `main`: squash-merge làm SHA của nhánh PR không còn là tổ tiên HEAD — `xs.py progress-check` trong cổng `lint` sẽ đỏ.
+- 2026-10-14 Audit có máy đỡ: sổ `docs/ops/AUDIT-STATUS.md` máy đọc, `audit check --strict` = Definition of Complete — ADR-0005.
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `a14af09` (#17 progress-check + ci-check) · CI PR xanh (quality, protection-guard, gitleaks, codeql, macos-bash32).
+- Commit cuối trên `main`: `0511c1e` (#18 PROGRESS) — cũng là SHA quét trong `docs/ops/AUDIT-STATUS.md`.
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; cần ruff 0.17.0, mypy 2.4.0, shellcheck).
 - Đang chặn: autopilot BLOCKED ở 5 MUST cần admin (mục Tiếp theo 3); xong thì `xs.py loop resume`.
-- Câu hỏi cần người: không.
+- Câu hỏi cần người: duyệt kế hoạch sửa audit (đợt 1–5).

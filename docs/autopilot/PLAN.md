@@ -28,4 +28,4 @@ Chỉ số: audit chính repo khung chạy hết bằng quy trình mới, `audit
 - [x] `T-004` `xs.py audit check STATUS [--strict]`: schema nhóm/phát hiện, SHA tổ tiên HEAD, chấp nhận rủi ro có hạn chưa quá, `--strict` đỏ khi còn 🔴/🟠 mở hoặc nhóm chưa quét + test — Gate: `python3 -m unittest discover -s tests -k audit_check`
 - [x] `T-005` Viết lại skill `/audit` dùng hai lệnh + fan-out subagent theo cụm nhóm + xác minh đối kháng; ADR-0005; README/AGENTS/CHANGELOG — Gate: `scripts/dev-task.sh gate`
 - [x] `T-006` Dogfood: audit repo khung theo quy trình mới → `docs/ops/AUDIT-STATUS.md` + `docs/ops/AUDIT-REPORT-2026-10-14.md`; dừng chờ duyệt kế hoạch sửa — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md`
-- [ ] `T-007` PR, CI xanh, tự merge theo uỷ quyền; PROGRESS — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`
+- [x] `T-007` PR, CI xanh, tự merge theo uỷ quyền; PROGRESS — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`
