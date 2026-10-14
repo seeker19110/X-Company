@@ -6,7 +6,7 @@ updated: 2026-10-14
 
 # AGENTS.md — luật vận hành cho AI agent trong dự án này
 
-> File này do `install.py` của khung X-stored tạo (copy-if-absent). Sửa phần `[ĐIỀN]` cho dự án của bạn; phần còn lại là
+> File này do `install.py` của khung X-Templates tạo (copy-if-absent). Sửa phần `[ĐIỀN]` cho dự án của bạn; phần còn lại là
 > luật chung của khung. Khung nằm ở `.xstored/` (`framework/` = thư viện yêu cầu, `scripts/xs.py` = công cụ).
 > Dùng chung cho Claude Code, Codex, Gemini CLI, Cursor…; `CLAUDE.md` chỉ import file này.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""guard.py — phân tích lệnh/đường dẫn cho hook PreToolUse của khung X-stored (chỉ thư viện chuẩn).
+"""guard.py — phân tích lệnh/đường dẫn cho hook PreToolUse của khung X-Templates (chỉ thư viện chuẩn).
 
 Dùng (payload JSON của Claude Code trên stdin, kết quả JSON trên stdout):
   guard.py bash   → {"decision": "deny"|"ask"|"", "reason": "...", "commit": true|false, "no_verify": true|false}

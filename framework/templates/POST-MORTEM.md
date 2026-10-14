@@ -60,5 +60,5 @@ Yếu tố góp phần khác: <...>
 - Cập nhật runbook: mục <...> · Cập nhật sổ rủi ro: RK-<NNN>
 
 ## 8. Bài học cho khung/đội
-<1–3 gạch đầu dòng: điều gì nên vào CLAUDE.md/AGENTS.md, TRAPS, hoặc PR vào khung X-stored.>
+<1–3 gạch đầu dòng: điều gì nên vào CLAUDE.md/AGENTS.md, TRAPS, hoặc PR vào khung X-Templates.>
 ```

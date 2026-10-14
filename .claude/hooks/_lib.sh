@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# _lib.sh — hàm dùng chung cho hook của khung X-stored. Nguồn (source) từ hook khác.
+# _lib.sh — hàm dùng chung cho hook của khung X-Templates. Nguồn (source) từ hook khác.
 # Mọi hook: fail-open (lỗi của hook không được kẹt phiên), chỉ dùng bash + python3 (jq tùy chọn).
 
 XS_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"

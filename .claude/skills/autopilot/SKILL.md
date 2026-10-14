@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: Chạy tự động từ yêu cầu đến khi hoàn thành theo khung X-stored — lập kế hoạch (G0–G4), MỘT cổng duyệt, rồi vòng lặp có bằng chứng máy (xs.py loop) tới khi done/blocked/budget. Dùng khi người dùng mô tả dự án mới, muốn "làm tự động đến khi xong", hoặc gõ /autopilot.
+description: Chạy tự động từ yêu cầu đến khi hoàn thành theo khung X-Templates — lập kế hoạch (G0–G4), MỘT cổng duyệt, rồi vòng lặp có bằng chứng máy (xs.py loop) tới khi done/blocked/budget. Dùng khi người dùng mô tả dự án mới, muốn "làm tự động đến khi xong", hoặc gõ /autopilot.
 argument-hint: "[mô tả yêu cầu hoặc đường dẫn PROJECT.md]"
 ---
 

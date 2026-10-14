@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""xs.py — công cụ dòng lệnh của khung X-stored (chỉ dùng thư viện chuẩn Python >= 3.11).
+"""xs.py — công cụ dòng lệnh của khung X-Templates (chỉ dùng thư viện chuẩn Python >= 3.11).
 
 Lệnh:
   validate                      Kiểm quy ước toàn khung (frontmatter, ID, liên kết, hồ sơ/gói ngành).
@@ -1945,7 +1945,7 @@ def framework_version() -> str:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="xs.py",
-        description="Công cụ khung X-stored",
+        description="Công cụ khung X-Templates",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="ví dụ:\n"
         "  xs.py list profiles\n"

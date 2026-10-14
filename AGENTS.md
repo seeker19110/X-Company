@@ -1,4 +1,4 @@
-# AGENTS.md — luật vận hành cho AI agent trong repo X-stored
+# AGENTS.md — luật vận hành cho AI agent trong repo X-Templates
 
 > Repo này **là** khung tham chiếu (thư viện yêu cầu có ID + công cụ + harness). Agent làm việc ở đây để **sửa/mở rộng khung**.
 > Dự án đích cài khung vào `.xstored/` và có `AGENTS.md` riêng (sinh từ `framework/templates/AGENTS.md`).

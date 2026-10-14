@@ -1,4 +1,4 @@
-# PROGRESS.md — Khung X-stored
+# PROGRESS.md — Khung X-Templates
 
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
@@ -26,6 +26,8 @@
 - 2026-10-14 Sửa audit 5 đợt (#20–#24): `dev-task.sh` lấy gốc dự án đúng ở `.xstored/`; hook phân tích lệnh bằng `guard.py` (shlex); install gộp hook + manifest hash; công cụ cổng khoá hash + `dep-audit`; WF-DOC-004 bỏ điều kiện "nhánh còn trên remote" (xung đột squash).
 - 2026-10-14 9 mục trùng chủ đề chuyển `MAY` "gộp vào" nhà (ID giữ, CHANGELOG).
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
+
+- 2026-10-14 Repo đổi tên X-stored → X-Templates; giữ `.xstored/`, `xs.py`, `XS_*` (đổi = phá dự án đã cài, cần ADR riêng).
 
 ## Bàn giao phiên
 - Commit cuối trên `main`: `f6cd254` (#28 trả nợ C901); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).

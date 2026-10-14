@@ -1,4 +1,4 @@
-# AUDIT-STATUS — Khung X-stored
+# AUDIT-STATUS — Khung X-Templates
 
 > Cập nhật: 2026-10-14 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-14.md` · SHA quét = `main` lúc quét (nhánh audit có cùng cây) · quét lại 9 nhóm sau 5 đợt sửa trên `main` 6490f7b.
 

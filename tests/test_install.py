@@ -342,7 +342,7 @@ class InstallEdgeTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(
             gi.read_text(encoding="utf-8"),
-            "node_modules/\n\n# X-stored: trạng thái autopilot cục bộ\n.autopilot/\n",
+            "node_modules/\n\n# X-Templates: trạng thái autopilot cục bộ\n.autopilot/\n",
         )
         self.assertIn("thêm .autopilot/", err)
         self.install_quiet()  # chạy lại: đã có dòng → không nhân đôi

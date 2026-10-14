@@ -1,4 +1,4 @@
-# PLAN.md — Khung X-stored · trả nợ C901 (AUD-CODE-001)
+# PLAN.md — Khung X-Templates · trả nợ C901 (AUD-CODE-001)
 
 > Lập ngày 2026-10-14. Người dùng yêu cầu: "trả nợ C901 luôn đi".
 > 11 hàm có độ phức tạp vòng (mccabe) > 10 — đo bằng
