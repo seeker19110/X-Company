@@ -3,14 +3,13 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- PR "audit có máy đỡ" (PLAN `docs/autopilot/PLAN.md` T-001…T-006 xong, ADR-0005): `xs.py audit plan/check`, `framework/00-method/audit.md`, mẫu AUDIT-STATUS/REPORT, skill `/audit` mới; audit lần đầu repo khung ở `docs/ops/`.
-- **Chờ người duyệt kế hoạch sửa 5 đợt** (`docs/ops/AUDIT-REPORT-2026-10-14.md` §5): 1 🔴 (AUD-HAR-001 cổng dự án đích xanh giả) · 28 🟠 · 21 🟢 mở.
+- Không có việc dở. Sửa audit 2026-10-14 xong: `audit check docs/ops/AUDIT-STATUS.md --strict` exit 0 (🔴 1 · 🟠 30 · 🟢 19 đã sửa; 🟢 3 chấp nhận có chủ + hạn); quét lại 9 nhóm trên `main` 6490f7b không phát hiện mới.
 
 ## Tiếp theo
-1. Sau duyệt: sửa đợt 1 (AUD-HAR-001 trước), mỗi đợt một PR; đợt 2 (hook) và 4 (CI/ruleset) là điểm dừng bắt buộc.
-2. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
-3. Cần người quyết: `WF-DOC-004` (= AUD-DOC-004) đòi "nhánh nêu tên còn trên remote" — xung đột với squash + xoá nhánh (PROGRESS trên `main` nêu nhánh PR đã xoá → đỏ mãi); `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
-4. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo annotated tag `v2.0.0` trên `55de4d1` (đã duyệt; phiên agent bị proxy chặn push tag — 403).
+1. Việc của admin (6 MUST mở trong BLUEPRINT.md: GATE-004, GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
+2. Trả nợ 🟢 trước khi thêm tính năng lớn vào `xs.py`: AUD-CODE-002 mypy `--strict` 24 lỗi (hạn 2026-12-31), AUD-TEST-001 đo coverage cả subprocess rồi đặt ratchet (hạn 2026-12-31), AUD-CODE-001 C901 11 hàm (hạn 2027-03-31).
+3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
+4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -24,9 +23,11 @@
 - 2026-10-14 PROGRESS chỉ ghi SHA trên `main`: squash-merge làm SHA của nhánh PR không còn là tổ tiên HEAD — `xs.py progress-check` trong cổng `lint` sẽ đỏ.
 - 2026-10-14 Audit có máy đỡ: sổ `docs/ops/AUDIT-STATUS.md` máy đọc, `audit check --strict` = Definition of Complete — ADR-0005.
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
+- 2026-10-14 Sửa audit 5 đợt (#20–#24): `dev-task.sh` lấy gốc dự án đúng ở `.xstored/`; hook phân tích lệnh bằng `guard.py` (shlex); install gộp hook + manifest hash; công cụ cổng khoá hash + `dep-audit`; WF-DOC-004 bỏ điều kiện "nhánh còn trên remote" (xung đột squash).
+- 2026-10-14 9 mục trùng chủ đề chuyển `MAY` "gộp vào" nhà (ID giữ, CHANGELOG).
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `0511c1e` (#18 PROGRESS) — cũng là SHA quét trong `docs/ops/AUDIT-STATUS.md`.
-- Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; cần ruff 0.17.0, mypy 2.4.0, shellcheck).
-- Đang chặn: autopilot BLOCKED ở 5 MUST cần admin (mục Tiếp theo 3); xong thì `xs.py loop resume`.
-- Câu hỏi cần người: duyệt kế hoạch sửa audit (đợt 1–5).
+- Commit cuối trên `main`: `6490f7b` (#24 audit đợt 5) — SHA quét lại trong `docs/ops/AUDIT-STATUS.md`.
+- Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
+- Đang chặn: không; autopilot PLAN T-101…T-106 xong.
+- Câu hỏi cần người: mục Tiếp theo 1 và 4.
