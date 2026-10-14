@@ -3,7 +3,7 @@ title: Tài liệu tối thiểu (README · runbook · ADR · CHANGELOG)
 kind: baseline
 prefix: BASE-DOC
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Tài liệu tối thiểu (README · runbook · ADR · CHANGELOG)
@@ -37,12 +37,12 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `BASE-DOC-001` **MUST** `README.md` ở gốc có các mục: mô tả một đoạn (vấn đề + cho ai), yêu cầu môi trường (runtime + phiên bản), cách cài & chạy, cách chạy test, cấu hình cần đặt (trỏ `.env.example`), cách đóng góp/liên hệ, license. → Kiểm: script kiểm tồn tại heading theo danh sách (`check:readme`); lệnh cài/chạy/test trong README được CI thực thi (xem BASE-DOC-005). · Nguồn: OpenSSF Badge `documentation_basics`; GitHub community profile
-- [ ] `BASE-DOC-002` **MUST** Có `CHANGELOG.md` theo Keep a Changelog 1.1.0 (quy tắc ở [`repo-and-versioning.md`](repo-and-versioning.md)); mỗi phiên bản phát hành có ghi chú thay đổi người đọc được, không phải `git log`. → Kiểm: heading bản mới nhất trong CHANGELOG == tag mới nhất; CI kiểm. · Nguồn: Keep a Changelog 1.1.0; OpenSSF Badge `release_notes`
+- [ ] `BASE-DOC-002` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-REPO-007`](repo-and-versioning.md): `CHANGELOG.md` theo Keep a Changelog 1.1.0, ghi chú người đọc được cho mỗi bản phát hành, heading bản mới nhất khớp tag.
 - [ ] `BASE-DOC-003` **MUST** Quyết định kiến trúc/công nghệ quan trọng có **ADR** trong `docs/adr/` theo mẫu [`../templates/ADR.md`](../templates/ADR.md) (MADR 4.0.0: bối cảnh, lựa chọn đã xét, quyết định, hệ quả); ADR cũ không sửa, đổi ý thì viết ADR mới "supersedes". → Kiểm: `ls docs/adr/*.md` ≥ 1 (ADR chọn stack); mỗi file có các heading bắt buộc; chi tiết [`../05-architecture/decision-records.md`](../05-architecture/decision-records.md). · Nguồn: MADR 4.0.0; lifecycle.md G2
 - [ ] `BASE-DOC-004` **MUST** Phần mềm được triển khai có **runbook**: cách deploy/rollback, lệnh chẩn đoán, cảnh báo nào nghĩa là gì, liên hệ trực, bí mật nằm ở đâu (không phải giá trị). → Kiểm: `docs/RUNBOOK.md` (hoặc `docs/ops/`) tồn tại theo mẫu; mỗi alert trong cấu hình alert có mục tương ứng trong runbook. · Nguồn: [`../15-operations/incident-response.md`](../15-operations/incident-response.md); OpenSSF Badge `documentation_basics`
 - [ ] `BASE-DOC-005` **MUST** Lệnh "cài → chạy → test" trong README được **CI chạy thật** từ clone sạch (smoke) để tài liệu không lệch mã. → Kiểm: job CI `readme-smoke` thực thi đúng các lệnh (trích từ block ```bash có nhãn hoặc từ `xs.yaml`/`runtime.yaml`), exit 0. · Nguồn: P1; evidence-and-sources.md luật 5
 - [ ] `BASE-DOC-006` **MUST** Liên kết nội bộ trong tài liệu trỏ tới file có thật; liên kết ngoài không chết. → Kiểm: `lychee --offline` (nội bộ, chặn merge) + `lychee` có mạng (cron, cảnh báo) = 0 lỗi. · Nguồn: conventions.md §7
-- [ ] `BASE-DOC-007` **MUST** Tài liệu mô tả **giao diện bên ngoài** (API/CLI/SDK/định dạng file/sự kiện) được **sinh từ nguồn sự thật** (OpenAPI/proto/docstring/`--help`) hoặc kiểm khớp bằng test; không có bảng tham số viết tay riêng. → Kiểm: `git diff --exit-code docs/api/` sau khi chạy generator trong CI. · Nguồn: OpenSSF Badge `documentation_interface`; P5
+- [ ] `BASE-DOC-007` **MUST** Tài liệu mô tả **giao diện bên ngoài** (API/CLI/SDK/định dạng file/sự kiện) được **sinh từ nguồn sự thật** (OpenAPI/proto/docstring/`--help`) hoặc kiểm khớp bằng test; không có bảng tham số viết tay riêng. → Kiểm: CI chạy generator tài liệu (OpenAPI, `--help`, typedoc…) rồi `git diff --exit-code` trên thư mục docs được sinh. · Nguồn: OpenSSF Badge `documentation_interface`; P5
 - [ ] `BASE-DOC-008` **MUST@M** Có file trạng thái dự án (`PROGRESS.md` theo [`../templates/PROGRESS.md`](../templates/PROGRESS.md), ≤ 8 KB, 4 mục) để phiên sau tiếp tục; SHA/ngày ghi trong đó phải là tổ tiên của HEAD. → Kiểm: script `check:progress-freshness` (`git merge-base --is-ancestor <sha> HEAD`) chạy trong CI. · Nguồn: catalog 21 §8 điểm 9, 23 §2.1
 - [ ] `BASE-DOC-009` **SHOULD** Tài liệu phân loại theo Diátaxis: `docs/tutorials/`, `docs/how-to/`, `docs/reference/`, `docs/explanation/` (hoặc nhãn tương đương trong mục lục); mỗi trang thuộc một loại. → Kiểm: mục lục `docs/README.md` gắn loại cho mỗi trang. · Nguồn: Diátaxis
 - [ ] `BASE-DOC-010` **SHOULD** Mỗi trang tài liệu có `updated: YYYY-MM-DD` (frontmatter) và/hoặc mốc phiên bản áp dụng; trang quá 12 tháng không cập nhật được đánh dấu "cần rà". → Kiểm: script liệt kê trang có `updated` cũ hơn 365 ngày, xuất cảnh báo trong CI. · Nguồn: [`../10-workflow/documentation-workflow.md`](../10-workflow/documentation-workflow.md)
