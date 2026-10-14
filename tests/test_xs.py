@@ -729,6 +729,102 @@ class ProgressCheckTest(unittest.TestCase):
         self.assertEqual(run(str(self.repo / "khong-co.md")), 2)
 
 
+SHA40 = "11d5960a326750d5838078e36cf38b85af677262"
+GOOD_WORKFLOW = f"""name: CI
+on: [push]
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@{SHA40} # v4
+      - uses: ./.github/actions/local
+      - run: |
+          echo "uses: evil/action@v1"
+          echo "continue-on-error: true write-all"
+      - name: bước có timeout riêng
+        timeout-minutes: 2
+        run: true
+  call:
+    uses: org/repo/.github/workflows/x.yml@{SHA40}
+env:
+  A: b
+"""
+
+
+class CiCheckTest(unittest.TestCase):
+    def errs(self, text: str):
+        return xs.ci_check_text(text)
+
+    def test_ci_check_good_workflow(self):
+        self.assertEqual(self.errs(GOOD_WORKFLOW), [])
+
+    def test_ci_check_missing_permissions(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("permissions:\n  contents: read\n", ""))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("permissions", errs[0])
+
+    def test_ci_check_write_all(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("permissions:\n  contents: read", "permissions: write-all"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("write-all", errs[0])
+
+    def test_ci_check_unpinned_uses(self):
+        errs = self.errs(GOOD_WORKFLOW.replace(f"actions/checkout@{SHA40}", "actions/checkout@v4"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("actions/checkout@v4", errs[0])
+        self.assertIn("dòng 10", errs[0])
+
+    def test_ci_check_unpinned_reusable_workflow(self):
+        errs = self.errs(GOOD_WORKFLOW.replace(f"x.yml@{SHA40}", "x.yml@main"))
+        self.assertEqual(len(errs), 1)
+
+    def test_ci_check_missing_job_timeout(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("    timeout-minutes: 10\n", ""))
+        self.assertEqual(errs, ["dòng 6: job `quality` thiếu `timeout-minutes`"])
+
+    def test_ci_check_continue_on_error(self):
+        text = GOOD_WORKFLOW.replace(
+            "    timeout-minutes: 10\n", "    timeout-minutes: 10\n    continue-on-error: true\n"
+        )
+        self.assertEqual(len(self.errs(text)), 1)
+        allowed = text.replace(
+            "continue-on-error: true", "continue-on-error: true # ci-check-allow: thử, hết hạn 2026-12"
+        )
+        self.assertEqual(self.errs(allowed), [])
+        no_reason = text.replace("continue-on-error: true", "continue-on-error: true # ci-check-allow:")
+        self.assertEqual(len(self.errs(no_reason)), 1)
+        self.assertEqual(self.errs(text.replace("continue-on-error: true", "continue-on-error: false")), [])
+
+    def test_ci_check_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            wf = Path(d) / "wf"
+            wf.mkdir()
+            (wf / "ci.yml").write_text(GOOD_WORKFLOW, encoding="utf-8")
+            run = lambda *a: (
+                subprocess.run(  # noqa: E731
+                    [sys.executable, str(ROOT / "scripts" / "xs.py"), "ci-check", *a],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    cwd=d,
+                ).returncode
+            )
+            self.assertEqual(run(str(wf)), 0)
+            (wf / "bad.yaml").write_text(GOOD_WORKFLOW.replace("@" + SHA40 + " # v4", "@v4"), encoding="utf-8")
+            self.assertEqual(run(str(wf)), 1)
+            self.assertEqual(run(str(Path(d) / "khong-co")), 2)
+            self.assertEqual(run(), 0)  # không có .github/workflows ở cwd → bỏ qua
+
+    def test_ci_check_repo_workflows(self):
+        self.assertEqual(
+            xs.ci_check(ROOT / ".github" / "workflows"),
+            {p.name: [] for p in sorted((ROOT / ".github" / "workflows").glob("*.yml"))},
+        )
+
+
 class RealFrameworkTest(unittest.TestCase):
     """Khung thật trong repo phải luôn hợp lệ."""
 

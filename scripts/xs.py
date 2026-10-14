@@ -17,6 +17,7 @@ Lệnh:
   loop stop [--reason TEXT]     Tắt vòng lặp.
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
   progress-check [FILE]         PROGRESS.md: ≤ 8 KB, đúng 4 mục, SHA trong Bàn giao phiên là tổ tiên HEAD.
+  ci-check [DIR]                Fitness function cho workflow CI (permissions, ghim SHA, timeout, continue-on-error).
   stats                         Thống kê số module/mục.
 
 Thoát: 0 = ổn, 1 = vi phạm/chưa đạt, 2 = lỗi dùng lệnh.
@@ -28,6 +29,7 @@ import argparse
 import datetime as _dt
 import fnmatch
 import hashlib
+import itertools
 import json
 import os
 import posixpath
@@ -772,6 +774,84 @@ def progress_check(path: Path) -> List[str]:
     return errors
 
 
+# --------------------------------------------------------------------------- ci-check
+
+USES_RE = re.compile(r"^\s*(?:-\s+)?uses:\s*['\"]?([^'\"\s#]+)")
+PINNED_RE = re.compile(r"@[0-9a-f]{40}$")
+BLOCK_SCALAR_RE = re.compile(r":\s*[|>][-+0-9]*\s*(?:#.*)?$")
+CI_ALLOW = "ci-check-allow:"
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _allowed(line: str) -> bool:
+    """Ngoại lệ có chủ đích: comment `# ci-check-allow: <lý do>` trên cùng dòng (lý do bắt buộc)."""
+    _, sep, reason = line.partition(CI_ALLOW)
+    return bool(sep) and bool(reason.strip())
+
+
+def ci_check_text(text: str) -> List[str]:
+    """Fitness function cho một workflow GitHub Actions (đọc theo dòng, chỉ thư viện chuẩn).
+
+    Luật: `permissions:` cấp workflow · không `write-all` · `uses:` ngoài ghim SHA 40 ký tự ·
+    mọi job có `timeout-minutes` (trừ job gọi reusable workflow) · không `continue-on-error`.
+    Bỏ qua nội dung block scalar (`run: |`) để script shell không gây báo nhầm.
+    """
+    errors: List[str] = []
+    lines: List[Tuple[int, str]] = []
+    scalar_indent: Optional[int] = None
+    for no, line in enumerate(text.splitlines(), 1):
+        if scalar_indent is not None:
+            if not line.strip() or _indent(line) > scalar_indent:
+                continue
+            scalar_indent = None
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        lines.append((no, line))
+        if BLOCK_SCALAR_RE.search(line):
+            scalar_indent = _indent(line)
+    if not any(ln.startswith("permissions:") for _, ln in lines):
+        errors.append("thiếu `permissions:` cấp workflow (mặc định `contents: read`)")
+    for no, line in lines:
+        code = line.split(" #", 1)[0]
+        if "write-all" in code and not _allowed(line):
+            errors.append(f"dòng {no}: `write-all` — khai quyền tối thiểu theo job")
+        if re.match(r"^\s*continue-on-error:", code) and not re.search(r":\s*false\s*$", code) and not _allowed(line):
+            errors.append(f"dòng {no}: `continue-on-error` trên job/bước — ngoại lệ ghi `# {CI_ALLOW} <lý do + hạn>`")
+        m = USES_RE.match(line)
+        if (
+            m
+            and not m.group(1).startswith(("./", "docker://"))
+            and not PINNED_RE.search(m.group(1))
+            and not _allowed(line)
+        ):
+            errors.append(f"dòng {no}: `{m.group(1)}` chưa ghim SHA 40 ký tự")
+    # Job: khoá con trực tiếp của `jobs:`; thân job = các dòng thụt sâu hơn tới khoá job kế tiếp.
+    jobs_at = next((i for i, (_, ln) in enumerate(lines) if ln.startswith("jobs:")), None)
+    if jobs_at is not None:
+        body = list(itertools.takewhile(lambda x: _indent(x[1]) > 0, lines[jobs_at + 1 :]))
+        job_indent = _indent(body[0][1]) if body else 0
+        jobs: List[Tuple[int, str, List[str]]] = []
+        for no, ln in body:
+            if _indent(ln) == job_indent:
+                jobs.append((no, ln.strip().rstrip(":"), []))
+            elif jobs:
+                jobs[-1][2].append(ln)
+        for no, name, job_lines in jobs:
+            child = min((_indent(x) for x in job_lines), default=0)
+            keys = {x.strip().split(":", 1)[0] for x in job_lines if _indent(x) == child}
+            if "uses" not in keys and "timeout-minutes" not in keys:
+                errors.append(f"dòng {no}: job `{name}` thiếu `timeout-minutes`")
+    return errors
+
+
+def ci_check(workflows: Path) -> Dict[str, List[str]]:
+    files = sorted(p for p in workflows.iterdir() if p.suffix in (".yml", ".yaml") and p.is_file())
+    return {p.name: ci_check_text(p.read_text(encoding="utf-8")) for p in files}
+
+
 # --------------------------------------------------------------------------- CLI
 
 
@@ -931,6 +1011,24 @@ def cmd_progress_check(args) -> int:
     return 1 if errors else 0
 
 
+def cmd_ci_check(args) -> int:
+    d = Path(args.dir or ".github/workflows")
+    if not d.is_dir():
+        if args.dir:  # chỉ định rõ mà không có → sai cách dùng
+            raise OSError(f"không thấy thư mục workflow: {d}")
+        print(f"– Không có {d} — bỏ qua.")
+        return 0
+    results = ci_check(d)
+    bad = 0
+    for name, errors in results.items():
+        for e in errors:
+            print(f"✗ {d / name}: {e}")
+        bad += len(errors)
+    if not bad:
+        print(f"✓ {len(results)} workflow: permissions, ghim SHA, timeout, không continue-on-error.")
+    return 1 if bad else 0
+
+
 def cmd_stats(args) -> int:
     docs, _ = load_docs(args.framework)
     by_kind: Dict[str, int] = {}
@@ -1024,6 +1122,9 @@ def build_parser() -> argparse.ArgumentParser:
     pp = sub.add_parser("progress-check")
     pp.add_argument("file", nargs="?", default="PROGRESS.md")
     pp.set_defaults(fn=cmd_progress_check)
+    pci = sub.add_parser("ci-check")
+    pci.add_argument("dir", nargs="?", help="thư mục workflow (mặc định .github/workflows, không có thì bỏ qua)")
+    pci.set_defaults(fn=cmd_ci_check)
     sub.add_parser("stats").set_defaults(fn=cmd_stats)
     return p
 

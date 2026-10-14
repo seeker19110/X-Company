@@ -72,6 +72,7 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 | `python3 scripts/xs.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
 | `python3 scripts/install.py DỰ_ÁN [--with-github]` | Cài khung + harness vào dự án đích |
 | `python3 scripts/xs.py progress-check [FILE]` | `PROGRESS.md` ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD (CI cần `fetch-depth: 0`) |
+| `python3 scripts/xs.py ci-check [DIR]` | Fitness function cho workflow CI: `permissions:` cấp workflow, không `write-all`, `uses:` ghim SHA 40 ký tự, job có `timeout-minutes`, không `continue-on-error` (ngoại lệ `# ci-check-allow: <lý do>`) |
 | `python3 scripts/xs.py stats` | Đếm file theo loại và mục theo mức |
 | `python3 scripts/xs.py --version` · `--help` | Phiên bản khung (file `VERSION`) · ví dụ và mã thoát (0 ổn · 1 chưa đạt · 2 sai cách dùng) |
 | `python3 scripts/check-links.py` | Kiểm liên kết Markdown toàn repo |
