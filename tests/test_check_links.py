@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
-from unittest import mock
+import unittest.mock as mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "check-links.py"
