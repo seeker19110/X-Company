@@ -47,7 +47,7 @@ updated: 2026-10-14
 - [ ] `PM-PLAN-006` **MUST** `PLAN.md` có mục "Ngân sách (4 con số)": số vòng tối đa, ngân sách token/tiền, timeout mỗi lệnh, ngày hết hạn. → Kiểm: `rg -n "^## Ngân sách" PLAN.md`; `xs.py loop init --plan PLAN.md --max-iterations N --hours H` dùng đúng số đó.
 - [ ] `PM-PLAN-007` **MUST@L** WIP giới hạn và ghi số: task "đang làm" ≤ 2 cho một người; PR mở toàn repo ≤ 3 (kể cả bot/draft); vượt thì không bắt đầu việc mới. → Kiểm: `gh pr list --state open --json number | jq length` ≤ 3; `PROGRESS.md` mục "Đang làm" ≤ 2 dòng.
 - [ ] `PM-PLAN-008` **MUST@L** Hạn thật và hạn mong muốn ghi riêng, mỗi hạn thật nêu hậu quả bên ngoài; trễ hạn thật xử lý bằng cắt phạm vi (xem `PM-PRIO-007`). → Kiểm: mục "Hạn" trong `PLAN.md` có hai bảng; hạn thật có cột "hậu quả".
-- [ ] `PM-PLAN-009` **MUST@L** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm / Tiếp theo / Quyết định / Bàn giao phiên) và ghi SHA commit là tổ tiên của HEAD. → Kiểm: `test $(wc -c < PROGRESS.md) -le 8192`; `git merge-base --is-ancestor <SHA> HEAD`.
+- [ ] `PM-PLAN-009` **MUST@L** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm / Tiếp theo / Quyết định / Bàn giao phiên) và ghi SHA commit là tổ tiên của HEAD. → Kiểm: `xs.py progress-check` exit 0 (≤ 8192 byte, đúng 4 mục, SHA tổ tiên HEAD).
 - [ ] `PM-PLAN-010` **SHOULD** Ước lượng ghi dạng khoảng P50–P90; tổng lịch báo bằng P50/P85, không cộng P50 các task thành một ngày hứa. → Kiểm: bảng ước lượng có hai cột; `PROGRESS.md` ghi "P50 … / P85 …".
 - [ ] `PM-PLAN-011` **SHOULD** Có throughput và cycle time đo thật (từ ngày bắt đầu/kết thúc task hoặc PR) sau 2 tuần đầu; dự báo cập nhật từ số đo, không từ cảm giác. → Kiểm: bảng "Dòng chảy" trong `PROGRESS.md` hoặc `docs/metrics/flow.csv` cập nhật hằng tuần.
 - [ ] `PM-PLAN-012` **SHOULD** Phụ thuộc giữa task ghi rõ (`sau: T-NNN`) và việc chờ bên ngoài có ngày cam kết + kế hoạch B. → Kiểm: `rg -n "sau: T-" PLAN.md` cho task có phụ thuộc; cột "Phụ thuộc ngoài".
@@ -79,7 +79,7 @@ updated: 2026-10-14
 | PLAN parse được, mọi task có Gate | `python3 scripts/xs.py loop status --json` (sau `loop init`) hoặc lệnh parse ở `PM-PLAN-001` | pre-commit khi sửa `PLAN.md` + CI | 0 task thiếu Gate |
 | Bằng chứng khớp Gate | `python3 scripts/xs.py loop status` → verdict không phải `verify` | Stop hook / CI | Task tick mà không có bằng chứng → `verify` |
 | WIP PR | `gh pr list --state open --json number --jq length` | CI (`pr-policy`) | ≤ 3, kể cả bot/draft |
-| PROGRESS kích thước + SHA | `wc -c PROGRESS.md`; `git merge-base --is-ancestor $(rg -o "[0-9a-f]{7,40}" PROGRESS.md | head -1) HEAD` | pre-commit + CI | ≤ 8192 byte; SHA là tổ tiên |
+| PROGRESS kích thước + SHA | `xs.py progress-check` | pre-commit + CI | ≤ 8192 byte; SHA là tổ tiên |
 | Mục bắt buộc của PLAN | `rg -n "^## (Điểm dừng bắt buộc|Ngân sách|Hạn)" PLAN.md` | CI | Đủ 3 mục |
 | Dòng chảy (throughput, cycle time) | Script đọc `gh pr list --state merged --json createdAt,mergedAt` → CSV | CI hằng tuần | Báo cáo, không chặn |
 

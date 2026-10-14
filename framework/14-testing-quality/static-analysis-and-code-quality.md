@@ -53,7 +53,7 @@ Mặc định cho repo mới: **Biome + TypeScript strict + knip + jscpd + depen
 - [ ] `QA-STATIC-015` **SHOULD** Không gom thứ chỉ *trông* giống nhau khi DRY (quy tắc 3 lần); không gom trừu tượng sớm. → Kiểm: review; jscpd báo trùng nhưng PR giải thích nếu giữ.
 - [ ] `QA-STATIC-016` **SHOULD** Hàm > 4 tham số gom thành object có kiểu; `if/else` lồng sâu → guard clause. → Kiểm: rule `max-params: 4`, ruff `PLR0913`; `max-depth`.
 - [ ] `QA-STATIC-017` **SHOULD** Import lẻ và tách động cho phần nặng ít dùng; không hai thư viện cùng vai trò (2 lib ngày tháng, 2 HTTP client). → Kiểm: knip/`deptry` + script liệt kê dep theo nhóm; bundle analyzer trong PR.
-- [ ] `QA-STATIC-018` **SHOULD** Tài liệu tươi bằng máy: SHA ghi trong `PROGRESS.md` là tổ tiên của HEAD; `validate_repo` kiểm hợp đồng repo. → Kiểm: `check-progress-freshness` exit 0. · Nguồn: catalog 23 §4.5, 21 §8
+- [ ] `QA-STATIC-018` **SHOULD** Tài liệu tươi bằng máy: SHA ghi trong `PROGRESS.md` là tổ tiên của HEAD; `validate_repo` kiểm hợp đồng repo. → Kiểm: `xs.py progress-check` exit 0. · Nguồn: catalog 23 §4.5, 21 §8
 - [ ] `QA-STATIC-019` **MAY** SonarQube Community Build tự host làm bảng tổng hợp khi đội > 1; không thay cổng CI.
 - [ ] `QA-STATIC-020` **MAY** Fitness function AST tự viết cho quy tắc riêng (vd mọi route có kiểm quyền; SQL chạm PII phải nhận context) khi lint sẵn không đủ.
 
