@@ -55,6 +55,6 @@ nhắm mục tiêu hàng loạt, tấn công chuỗi cung ứng hay né tránh p
 - Thang "ít hơn": rút gọn từ `DietrichGebert/ponytail` `skills/ponytail/SKILL.md` (MIT, commit `2961b52`, v5.2.0) — <https://github.com/DietrichGebert/ponytail> — đọc 2026-10-14.
   Nền: M. Fowler "Yagni" (2015) <https://martinfowler.com/bliki/Yagni.html>; W. Cunningham "The Simplest Thing that Could Possibly Work" (Artima 2004)
   <https://www.artima.com/articles/the-simplest-thing-that-could-possibly-work>; W3C TAG "The Rule of Least Power" (2006) <https://www.w3.org/2001/tag/doc/leastPower.html> — xác minh 2026-10-14.
-- Đo độc lập: JetBrains AI Blog (07/2026, 80 cặp task: −15,4 % dòng, −10,3 % chi phí; marker đường tắt được ghi 1/80 lần) <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/>;
+- Đo độc lập: JetBrains AI Blog (07/2026, ponytail v4.8.4, 80 cặp task: −15,4 % dòng với p = 0,088, −10,3 % chi phí với p = 0,004; marker đường tắt được ghi 1/80 lần) <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/>;
   KuldeepB19/ponytail-benchmark (480 build: −44 % mã; xử lý đầu vào xấu rơi ở 5/24 task) <https://github.com/KuldeepB19/ponytail-benchmark> — xác minh 2026-10-14.
   Chi tiết và phản biện: [`research/2026-10-14-ponytail-and-stored-additions.md`](../../research/2026-10-14-ponytail-and-stored-additions.md).

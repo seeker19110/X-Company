@@ -11,6 +11,8 @@
 3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
 4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
 5. Cần người chọn: 7 đề xuất còn lại từ catalog (research 2026-10-14 §5) — ưu tiên `loop status` đòi Gate render cho task UI, và quyền tool theo kênh đã xác thực.
+6. Cần người quyết (chạm cấu hình harness): `templates/CLAUDE.md` + `AGENTS.md` mẫu bị Claude Code nạp khi agent đọc `templates/` (vi phạm `XC-DOCAI-019`) — thêm `claudeMdExcludes` vào settings mẫu hay đổi tên mẫu (research §5.8).
+7. Khi squash-merge PR của nhánh này: bỏ dòng tên model/link phiên ở message commit `442eb21` (AGENTS.md §3).
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.

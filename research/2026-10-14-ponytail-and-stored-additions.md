@@ -14,8 +14,8 @@ updated: 2026-10-14
 ## 1. Kết luận
 
 1. **Ponytail là repo thật** (catalog đã đính chính nhận định cũ "nghi dựng"). Bản chất là **một prompt** khoảng 50 dòng.
-   Cái đáng lấy là **thang 6 bậc trước khi viết mã** và **danh sách không cắt**. Plugin không đáng cài: đo độc lập cho thấy
-   hiệu quả bằng khoảng một phần tư đến một nửa con số quảng cáo. Ba chữ "Follow YAGNI principles" trong prompt đạt gần bằng.
+   Cái đáng lấy là **thang 6 bậc trước khi viết mã** và **danh sách không cắt**. Plugin không đáng cài: JetBrains đo được hiệu quả "roughly a quarter to a half" con số quảng cáo
+   (chi phí −10,3 %, p = 0,004; dòng mã −15,4 %, p = 0,088 nên chưa vượt nhiễu). Prompt "Follow YAGNI principles" kèm "chỉ một ví dụ" đạt gần bằng (Scott Logic).
    Prompt tối giản còn làm rơi xử lý đầu vào xấu ở 5/24 task.
 2. Khung đã mạnh ở phần **sau khi viết** (dead code, trùng lặp, dep thừa, nợ có chủ: `QA-STATIC-006/007`, `XC-GREEN-003/004`,
    `OPS-MAINT-006`; luật 11 "benchmark tự công bố chưa phải bằng chứng"). Khung còn thiếu phần **trước khi viết** (thang),
@@ -44,18 +44,21 @@ updated: 2026-10-14
 |---|---|---|
 | Tác giả, `benchmarks/results/2026-10-07-agentic.md` | 39 task × 5 lần × 3 nhánh = 585 phiên headless; trung vị, trung bình hình học, bootstrap 95 % | −53 % dòng, −26 % chi phí; hidden check 87/90 so với 86/90 (tác giả: "did not add any either") |
 | Tác giả, lỗi harness tự nhận | — | bản cũ chạy task trong chính repo ponytail nên lộ commit message; hook SessionStart chạy ở mọi nhánh (lệch ~4 % giả); baseline "chatty" thổi phồng số 80–94 % |
-| JetBrains AI Blog (07/2026) | 80 cặp task SkillsBench, 251 trial | −15,4 % dòng (p = 0,088), −10,3 % chi phí (p = 0,004), −11 % thời gian; đúng/sai 65 như nhau, 9 kém, 6 tốt hơn; skill tự kích hoạt **0/10** phiên; marker được ghi **1/80** lần; smoke run 10 task cho kết luận ngược (+9,6 % chi phí) |
-| Scott Logic, C. Eberhardt (2026-06-16) | benchmark của tác giả, Haiku | LOC: baseline 108 · "Follow YAGNI" + một ví dụ 10,4 · ponytail 8,25; thêm "one-liner" vượt ponytail |
+| README ponytail (thời v4.8, JetBrains trích) | quảng cáo | −54 % mã, −22 % token, −20 % chi phí, −27 % thời gian |
+| JetBrains AI Blog (07/2026) | ponytail v4.8.4, 80 cặp task SkillsBench, 251 trial | −15,4 % dòng (p = 0,088), −10,3 % chi phí (p = 0,004), −11 % thời gian; đúng/sai 65 như nhau, 9 kém, 6 tốt hơn; skill tự kích hoạt **0/10** phiên; marker được ghi **1/80** lần; smoke run 10 task cho kết luận ngược (+9,6 % chi phí) |
+| Scott Logic, C. Eberhardt (2026-06-16) | benchmark single-shot của tác giả, model nhỏ | LOC trung bình: baseline 108 · "chỉ một ví dụ" 16 · thêm "Follow YAGNI principles" 10,4 · ponytail 8,25; thêm "one-liner" thì vượt ponytail |
 | KuldeepB19/ponytail-benchmark | 24 task × 4 nhánh × 5 = 480 build | −44 % mã ở mức Full; ở 5/24 task, xử lý đầu vào xấu rơi từ gần hoàn hảo xuống gần 0, mức càng gắt càng tệ |
 | caveman (đối chiếu) | JetBrains 82 cặp | quảng cáo −65 % output token, đo được −8,5 %, chất lượng không đổi (p = 0,82) |
 
 ## 3. Caveman, impeccable, vercel-labs — chỉ lấy bài học dữ liệu rời máy
 
 - **caveman** v4.0.1, Apache-2.0 từ 3.0.0 (trước đó MIT + BSL 1.1). Telemetry CLI **bật mặc định**, gửi IP (giữ 90 ngày).
-  Module Auto gửi prompt lên Caveman Cloud. Proxy đứng giữa agent và provider, giữ login. ĐX (`SECURITY.md`, `LICENSING.md`).
+  Module Auto gửi prompt gần nhất kèm `CLAUDE.md`/memory/file @-mention lên Caveman Cloud (catalog 20 §3g.2; đối chiếu `SECURITY.md` nhánh `main`).
+  Proxy đứng giữa agent và provider, giữ login. Tắt telemetry: `caveman telemetry off`, `DO_NOT_TRACK=1`, `CAVEMAN_TELEMETRY=0`. ĐX (`SECURITY.md`, `LICENSING.md`).
   Số Elastic −63,6 % là skill `elastic-caveman` của người khác, **không** phải đánh giá caveman gốc.
 - **impeccable** 4.5.2, Apache-2.0, 59 rule tất định. Hook (SessionStart/PostToolUse/Stop) tải `engine-v0.1.14` từ GitHub Releases,
-  kiểm sha256 cùng nguồn (toàn vẹn, không xác thực). Roll API luôn gọi; telemetry lựa chọn là opt-out. ĐX (README, privacy).
+  kiểm sha256 cùng nguồn (toàn vẹn, không xác thực). Roll API luôn gọi; telemetry lựa chọn là opt-out
+  (`npx impeccable telemetry off`, `DO_NOT_TRACK=1`, `IMPECCABLE_NO_TELEMETRY=1`). ĐX (README, privacy).
 - **vercel-labs/agent-skills**: `vercel/agent-skills` không tồn tại (catalog 20 §3g.1); README ghi MIT nhưng không có file LICENSE.
 
 ## 4. Ba cột và hành động
@@ -87,6 +90,10 @@ Tất cả mục mới ở mức SHOULD vì các module đích đã đủ 4 MUST
 5. `SECURITY.md` có mục "Giới hạn đã biết & cấu hình không an toàn" sinh từ threat model (5 dự án tự khai).
 6. Model/checkpoint tải lúc chạy ghim revision + SHA256, không pickle (22 §9d) — mở rộng `BASE-DEP-008`.
 7. `DESIGN.md` (VoltAgent, spec alpha): token sinh từ token gốc + lint (06 §7c) — MAY.
+8. **Khung tự vi phạm `XC-DOCAI-019` ở mức nạp context** (reviewer phát hiện 2026-10-14): khi agent đọc file trong `framework/templates/`
+   (hoặc `.xstored/framework/templates/` ở dự án đích; skill `/adr`, `/audit`, `/autopilot`, `/handover` đều đọc), Claude Code nạp
+   `templates/CLAUDE.md` rồi qua `@AGENTS.md` nạp luôn bản mẫu còn `[ĐIỀN]`. Cách sửa cần người chọn vì chạm cấu hình harness/công cụ:
+   thêm `claudeMdExcludes` cho `**/.xstored/**` và `framework/templates/**` vào settings mẫu, hoặc đổi tên mẫu (`AGENTS.template.md`) và sửa `install.py`.
 
 ## Nguồn
 

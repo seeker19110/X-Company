@@ -55,7 +55,7 @@ updated: 2026-10-14
 - [ ] `OPS-MAINT-018` **MAY** Nâng major theo "spike có hạn" (≤ 2 ngày) trên nhánh bỏ đi để ước lượng trước khi lập kế hoạch. → Kiểm: kết quả spike ghi vào ticket. · Nguồn: P8
 - [ ] `OPS-MAINT-019` **MAY** Theo dõi sức khoẻ dependency bằng deps.dev/Scorecard định kỳ và hiển thị trong README nội bộ. → Kiểm: badge/báo cáo. · Nguồn: OpenSSF Scorecard
 - [ ] `OPS-MAINT-020` **MAY** Mirror/fork phụ thuộc quan trọng được đồng bộ upstream theo lịch và cite upstream; drift > N phiên bản = cảnh báo. → Kiểm: job so tag upstream. · Nguồn: catalog stored 23 §8.1 (mirror trôi xa upstream)
-- [ ] `OPS-MAINT-021` **SHOULD** Đường tắt có chủ ý trong mã mang marker máy đọc nêu **giới hạn** và **điều kiện nâng**: `shortcut: <giới hạn>, <khi nào nâng>` hoặc TODO có hạn/link theo lint của ngôn ngữ. Marker thiếu điều kiện là lỗi lint (nợ ngầm). Sổ nợ của `OPS-MAINT-006` được đối chiếu bằng máy với marker, không chép tay. → Kiểm: `git grep -nE '(#|//|/[*]) ?shortcut:' | grep -vE 'shortcut: [^,]+, .+'` rỗng; JS/TS bật `unicorn/expiring-todo-comments` với `checkDates: true` (mặc định không kiểm ngày); Python bật ruff `TD002`/`TD003`; script so số marker với sổ nợ. · Nguồn: ponytail `ponytail-debt` (marker thiếu điều kiện gắn `no-trigger`); JetBrains 07/2026 (quy ước chỉ có trong prompt được theo 1/80 lần)
+- [ ] `OPS-MAINT-021` **SHOULD** Đường tắt có chủ ý trong mã mang marker máy đọc nêu **giới hạn** và **điều kiện nâng**: `shortcut: <giới hạn>, <khi nào nâng>` hoặc TODO có hạn/link theo lint của ngôn ngữ. Marker thiếu điều kiện là lỗi lint (nợ ngầm). Sổ nợ của `OPS-MAINT-006` được đối chiếu bằng máy với marker, không chép tay. → Kiểm: `git grep -niE '(^|\s)(#|//|/[*]|[*]|--) ?shortcut:' | grep -viE 'shortcut: .+, .+'` rỗng; JS/TS bật `unicorn/expiring-todo-comments` với `checkDates: true` (mặc định không kiểm ngày; hạn chỉ làm đỏ CI nhánh chính vì `checkDatesOnPullRequests` mặc định tắt); Python bật ruff `TD002`/`TD003`; script so số marker với sổ nợ. · Nguồn: ponytail `ponytail-debt` (marker thiếu điều kiện gắn `no-trigger`); JetBrains 07/2026 (quy ước chỉ có trong prompt được theo 1/80 lần)
 
 ## Bẫy thường gặp
 
@@ -81,7 +81,7 @@ updated: 2026-10-14
 | Lỗ hổng tuần | OSV-Scanner v2.7.0 / pip-audit 2.10.1 / `npm audit` | `schedule` tuần | CI | quá SLA = báo cáo đỏ |
 | Dependency bỏ rơi | Scorecard `Maintained` / script release date | > 18 tháng | CI lịch tháng | liệt kê + ticket |
 | Nợ kỹ thuật | script so `PROGRESS.md` với issue `tech-debt` | — | CI | "(không có)" mà còn issue = đỏ |
-| Marker đường tắt | `git grep` + eslint-plugin-unicorn 78.0.0 (MIT) `expiring-todo-comments` / ruff `TD002` `TD003` | `checkDates: true`; `select = ["TD002", "TD003"]` | hook + CI | marker thiếu điều kiện hoặc quá hạn = đỏ |
+| Marker đường tắt | `git grep` + eslint-plugin-unicorn 78.0.0 (MIT) `expiring-todo-comments` / ruff `TD002` `TD003` | `checkDates: true`; `select = ["TD002", "TD003"]` | hook + CI | marker thiếu điều kiện = đỏ; quá hạn = đỏ ở CI nhánh chính |
 | Docs tươi | script frontmatter `updated`/`review_by`; `git merge-base --is-ancestor <sha> HEAD` | — | CI | quá 12 tháng/SHA lạ = cảnh báo/đỏ |
 | Dead code / dep thừa | knip (ISC), vulture (MIT), depcheck (MIT) | lịch tháng | CI | báo cáo |
 | License diff | dependency-review `deny-licenses`; SBOM diff | PR cập nhật | CI | license cấm = đỏ |
