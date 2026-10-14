@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/gracious-ritchie-kqb5fy
 
 ## Đang làm
-- Trần 4 MUST mỗi module ở quy mô M (ADR-0004): 671 mục → `MUST@L`; PR chờ CI → squash-merge.
+- Không có việc dở. Khung đã xong các mục tự làm được; bước tiếp cần một dự án sản phẩm thật (mục Tiếp theo 1).
 
 ## Tiếp theo
 1. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
@@ -21,7 +21,7 @@
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `55de4d1` (#14 dogfood) · CI xanh (quality, protection-guard, gitleaks, codeql, macos-bash32).
+- Commit cuối trên `main`: `b19ba86` (#15 trần MUST ở M) · CI xanh (quality, protection-guard, gitleaks, codeql, macos-bash32).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`).
 - Đang chặn: không.
 - Câu hỏi cần người: không.
