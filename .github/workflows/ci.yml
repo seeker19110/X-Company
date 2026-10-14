@@ -22,19 +22,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # `xs.py progress-check` cần lịch sử để kiểm SHA bàn giao là tổ tiên HEAD
 
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           # 3.11 = sàn hỗ trợ (3.10 hết hạn 2026-10-01); 3.13 = mặc định. Cài cả hai trong MỘT job để giữ tên check `quality`.
           python-version: |
             3.11
             3.13
 
-      - name: Công cụ ghim (khớp xs.yaml)
-        run: pip install --quiet "ruff==0.17.0" "mypy==2.4.0"
+      - name: Công cụ ghim kèm hash (requirements-dev.txt — khớp xs.yaml)
+        run: pip install --quiet --require-hashes -r requirements-dev.txt
 
       - name: Cổng chuẩn — đúng lệnh trong xs.yaml (build · typecheck · lint · test)
         run: scripts/dev-task.sh gate
@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Required check trong ruleset ↔ job có thật
         run: |
           set -euo pipefail
