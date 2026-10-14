@@ -71,13 +71,15 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 | `python3 scripts/xs.py blueprint-status FILE --strict [--json]` | Đếm đạt/miễn/chưa; cổng phát hành; `FILE` là `-` thì đọc stdin |
 | `python3 scripts/xs.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
 | `python3 scripts/install.py DỰ_ÁN [--with-github]` | Cài khung + harness vào dự án đích |
+| `python3 scripts/xs.py progress-check [FILE]` | `PROGRESS.md` ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính `origin/main` (CI cần `fetch-depth: 0`) |
+| `python3 scripts/xs.py ci-check [DIR]` | Fitness function cho workflow CI: `permissions:` cấp workflow, không `write-all`, `uses:` ghim SHA 40 ký tự (`docker://` ghim `@sha256:`), job có `timeout-minutes`, không `continue-on-error` (ngoại lệ `# ci-check-allow: <lý do>`) |
 | `python3 scripts/xs.py stats` | Đếm file theo loại và mục theo mức |
 | `python3 scripts/xs.py --version` · `--help` | Phiên bản khung (file `VERSION`) · ví dụ và mã thoát (0 ổn · 1 chưa đạt · 2 sai cách dùng) |
 | `python3 scripts/check-links.py` | Kiểm liên kết Markdown toàn repo |
 | `scripts/dev-task.sh gate` | Cổng commit: chạy lệnh trong `xs.yaml` (build · typecheck · lint · test), CI chạy đúng lệnh này |
 
 Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XS_FRAMEWORK_LINK` (gốc liên kết
-trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
+trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `XS_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
 `loop`) · `XS_DEBUG=1` (in traceback khi lỗi).
 
 Kiểm tra trước khi đóng góp (cần Python ≥ 3.11, `ruff==0.17.0`, `mypy==2.4.0`):

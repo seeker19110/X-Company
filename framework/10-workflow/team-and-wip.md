@@ -80,7 +80,7 @@ updated: 2026-10-14
 | FIFO audit | script so `createdAt`/`mergedAt` 30 ngày; ngoại lệ phải có nhãn | CI schedule | Báo cáo |
 | DoR | issue template checklist; nhãn `ready` bắt buộc trước khi link PR; skill agent kiểm DoR đầu task | GitHub + hook | Thiếu → hỏi |
 | DoD | PR template mỗi mục có bằng chứng; `xs.py blueprint-status --strict` cho release | CI | 0 MUST mở |
-| Handover | `status-freshness` (SHA tổ tiên HEAD, ≤ 8 KB, nhánh tồn tại) | pre-push + CI | Exit 0 |
+| Handover | `xs.py progress-check` (SHA tổ tiên HEAD, ≤ 8 KB, 4 mục) + nhánh tồn tại | pre-push + CI | Exit 0 |
 | Gate SLA | cron nhắc 12h, leo thang 24h, hạ WIP khi > 48h | CI schedule | Thông báo |
 | Dependabot | `groups` + `open-pull-requests-limit ≤ cap/2`, security update tách | GitHub | — |
 | Review phân bố | script % review theo người | CI schedule | Cảnh báo > 70% |

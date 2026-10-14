@@ -1,13 +1,14 @@
 # PROGRESS.md — Khung X-stored
 
-> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/gracious-ritchie-kqb5fy
+> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- Không có việc dở. Khung đã xong các mục tự làm được; bước tiếp cần một dự án sản phẩm thật (mục Tiếp theo 1).
+- PR gia cố bằng máy (nhánh `claude/stoic-einstein-0tid74`, PLAN `docs/autopilot/PLAN.md` T-001…T-006 xong): `xs.py progress-check`, `xs.py ci-check`, 20 SHOULD có bằng chứng — chờ CI + người merge.
 
 ## Tiếp theo
 1. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
-2. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo tag `v2.0.0`.
+2. Cần người quyết: `WF-DOC-004` đòi "nhánh nêu tên còn trên remote" — xung đột với squash + xoá nhánh (PROGRESS trên `main` nêu nhánh PR đã xoá → đỏ mãi); `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
+3. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo tag `v2.0.0`.
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -18,10 +19,11 @@
 - 2026-10-14 Dogfood: compose giữ trạng thái theo ID; sàn Python 3.11; CI chạy đúng `dev-task.sh gate`; ruff + mypy ghim.
 - 2026-10-14 Quy mô M: tối đa 4 MUST mỗi module/chuẩn, phần vượt `MUST@L`; web-app M 1.094 → 470 — ADR-0004.
 - 2026-10-13 Mặc định OSI: OpenTofu (MPL-2.0) thay Terraform (BUSL-1.1), Valkey thay Redis 8; Lighthouse CI giữ có cảnh báo, ghi phương án thay.
+- 2026-10-14 PROGRESS chỉ ghi SHA trên `main`: squash-merge làm SHA của nhánh PR không còn là tổ tiên HEAD — `xs.py progress-check` trong cổng `lint` sẽ đỏ.
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `b19ba86` (#15 trần MUST ở M) · CI xanh (quality, protection-guard, gitleaks, codeql, macos-bash32).
-- Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`).
+- Commit cuối trên `main`: `9a9c916` (#16 cập nhật PROGRESS) · CI xanh. Việc mới nằm trên nhánh PR, chưa vào `main`.
+- Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; cần ruff 0.17.0, mypy 2.4.0, shellcheck).
 - Đang chặn: không.
 - Câu hỏi cần người: không.

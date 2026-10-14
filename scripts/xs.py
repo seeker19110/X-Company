@@ -16,6 +16,8 @@ Lệnh:
   loop resume [--reason TEXT]   Người đã xử lý → bỏ BLOCKED, đặt lại đếm lỗi lặp, giữ số vòng/bằng chứng.
   loop stop [--reason TEXT]     Tắt vòng lặp.
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
+  progress-check [FILE]         PROGRESS.md: ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính.
+  ci-check [DIR]                Fitness function cho workflow CI (permissions, ghim SHA, timeout, continue-on-error).
   stats                         Thống kê số module/mục.
 
 Thoát: 0 = ổn, 1 = vi phạm/chưa đạt, 2 = lỗi dùng lệnh.
@@ -27,6 +29,7 @@ import argparse
 import datetime as _dt
 import fnmatch
 import hashlib
+import itertools
 import json
 import os
 import posixpath
@@ -706,6 +709,177 @@ def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
     return "", 0
 
 
+# --------------------------------------------------------------------------- progress-check
+
+PROGRESS_MAX_BYTES = 8192
+PROGRESS_SECTIONS = ("Đang làm", "Tiếp theo", "Quyết định", "Bàn giao phiên")
+SHA_TOKEN_RE = re.compile(r"`([0-9a-fA-F]{7,40})`")
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False)
+
+
+def progress_sections(text: str) -> List[Tuple[str, List[str]]]:
+    """Các mục `## ` (bỏ qua heading trong code fence ``` / ~~~) cùng dòng thân của từng mục."""
+    sections: List[Tuple[str, List[str]]] = []
+    fence: Optional[str] = None
+    for line in text.splitlines():
+        m = FENCE_RE.match(line)
+        if m and (fence is None or m.group(1) == fence):
+            fence = None if fence else m.group(1)
+        if fence is None and not m and line.startswith("## "):
+            name = re.sub(r"\s+#+\s*$", "", line[3:]).strip()  # bỏ dấu # đóng kiểu ATX
+            sections.append((unicodedata.normalize("NFC", name), []))
+        elif sections:
+            sections[-1][1].append(line)
+    return sections
+
+
+def progress_base_ref(repo: Path) -> Optional[str]:
+    """Nhánh chính để kiểm SHA bàn giao còn sống sau squash-merge.
+
+    `XS_PROGRESS_BASE` (rỗng = tắt) > `origin/HEAD` > `origin/main` > `origin/master`; không có thì bỏ qua.
+    """
+    env = os.environ.get("XS_PROGRESS_BASE")
+    if env is not None:
+        return env.strip() or None
+    head = _git(repo, "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD").stdout.strip()
+    for ref in (head, "origin/main", "origin/master"):
+        if ref and _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode == 0:
+            return ref
+    return None
+
+
+def progress_check(path: Path) -> List[str]:
+    """Luật PROGRESS.md (mẫu templates/PROGRESS.md): ≤ 8 KB, đúng 4 mục, SHA bàn giao là tổ tiên HEAD
+    và nằm trên nhánh chính (squash-merge xoá SHA của nhánh PR → nhánh chính đỏ sau merge).
+
+    Trả danh sách vi phạm; ném OSError khi không đọc được file hoặc không chạy được git.
+    """
+    raw = path.read_bytes()
+    errors: List[str] = []
+    if len(raw) > PROGRESS_MAX_BYTES:
+        errors.append(f"{len(raw)} byte > {PROGRESS_MAX_BYTES} — chuyển lịch sử sang CHANGELOG.md/docs/")
+    sections = progress_sections(raw.decode("utf-8", errors="replace"))
+    names = tuple(n for n, _ in sections)
+    if names != PROGRESS_SECTIONS:
+        errors.append(
+            "mục `## ` phải đúng thứ tự "
+            + " · ".join(PROGRESS_SECTIONS)
+            + "; đang có: "
+            + (" · ".join(names) or "(không có)")
+        )
+    handover = next((body for n, body in sections if n == PROGRESS_SECTIONS[-1]), None)
+    if handover is None:
+        return errors
+    shas = list(dict.fromkeys(m.group(1).lower() for line in handover for m in SHA_TOKEN_RE.finditer(line)))
+    if not shas:
+        errors.append("mục Bàn giao phiên không ghi SHA commit (dạng `abc1234`)")
+        return errors
+    repo = path.resolve().parent
+    if _git(repo, "rev-parse", "--git-dir").returncode != 0:
+        raise OSError(f"không phải repo git: {repo}")
+    shallow = _git(repo, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
+    hint = " (clone nông — CI cần checkout `fetch-depth: 0`)" if shallow else ""
+    base = progress_base_ref(repo)
+    for sha in shas:
+        if _git(repo, "rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}").returncode != 0:
+            errors.append(f"SHA `{sha}` không phải commit có trong lịch sử{hint}")
+        elif _git(repo, "merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+            errors.append(f"SHA `{sha}` không phải tổ tiên của HEAD (squash/rebase làm mất?){hint}")
+        elif base and _git(repo, "merge-base", "--is-ancestor", sha, base).returncode != 0:
+            errors.append(
+                f"SHA `{sha}` chưa nằm trên `{base}` — squash-merge sẽ làm nhánh chính đỏ; "
+                f"ghi SHA đã có trên nhánh chính (`git fetch` nếu `{base}` cũ)"
+            )
+    return errors
+
+
+# --------------------------------------------------------------------------- ci-check
+
+# Khoá đầu dòng (`- uses:`) hoặc trong flow mapping (`- {uses: ..., continue-on-error: true}`).
+KEY_AT = r"(?:^\s*(?:-\s+)?|[{,]\s*)"
+USES_RE = re.compile(KEY_AT + r"uses:\s*['\"]?([^'\"\s#,}]+)")
+COE_RE = re.compile(KEY_AT + r"continue-on-error:\s*([^#,}]*)")
+WRITE_ALL_RE = re.compile(KEY_AT + r"permissions:\s*['\"]?write-all")
+PINNED_RE = re.compile(r"@[0-9a-f]{40}$")
+DOCKER_PINNED_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
+BLOCK_SCALAR_RE = re.compile(r":\s*[|>][-+0-9]*\s*(?:#.*)?$")
+CI_ALLOW = "ci-check-allow:"
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _allowed(line: str) -> bool:
+    """Ngoại lệ có chủ đích: comment `# ci-check-allow: <lý do>` trên cùng dòng (lý do bắt buộc)."""
+    _, sep, reason = line.partition(CI_ALLOW)
+    return bool(sep) and bool(reason.strip())
+
+
+def ci_check_text(text: str) -> List[str]:
+    """Fitness function cho một workflow GitHub Actions (đọc theo dòng, chỉ thư viện chuẩn).
+
+    Luật: `permissions:` cấp workflow · không `write-all` · `uses:` ngoài ghim SHA 40 ký tự (`docker://` ghim `@sha256:`) ·
+    mọi job có `timeout-minutes` (trừ job gọi reusable workflow) · không `continue-on-error`.
+    Bỏ qua nội dung block scalar (`run: |`) để script shell không gây báo nhầm.
+    """
+    errors: List[str] = []
+    lines: List[Tuple[int, str]] = []
+    scalar_indent: Optional[int] = None
+    for no, line in enumerate(text.splitlines(), 1):
+        if scalar_indent is not None:
+            if not line.strip() or _indent(line) > scalar_indent:
+                continue
+            scalar_indent = None
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        lines.append((no, line))
+        if BLOCK_SCALAR_RE.search(line):
+            scalar_indent = _indent(line)
+    if not any(ln.startswith("permissions:") for _, ln in lines):
+        errors.append("thiếu `permissions:` cấp workflow (mặc định `contents: read`)")
+    for no, line in lines:
+        code = line.split(" #", 1)[0]
+        if WRITE_ALL_RE.search(code) and not _allowed(line):
+            errors.append(f"dòng {no}: `write-all` — khai quyền tối thiểu theo job")
+        coe = COE_RE.search(code)
+        if coe and coe.group(1).strip().strip("'\"") != "false" and not _allowed(line):
+            errors.append(f"dòng {no}: `continue-on-error` trên job/bước — ngoại lệ ghi `# {CI_ALLOW} <lý do + hạn>`")
+        m = USES_RE.search(code)
+        ref = m.group(1) if m else ""
+        if ref.startswith("docker://"):
+            if not DOCKER_PINNED_RE.search(ref) and not _allowed(line):
+                errors.append(f"dòng {no}: `{ref}` chưa ghim digest `@sha256:`")
+        elif ref and not ref.startswith("./") and not PINNED_RE.search(ref) and not _allowed(line):
+            errors.append(f"dòng {no}: `{ref}` chưa ghim SHA 40 ký tự")
+    # Job: khoá con trực tiếp của `jobs:`; thân job = các dòng thụt sâu hơn tới khoá job kế tiếp.
+    jobs_at = next((i for i, (_, ln) in enumerate(lines) if ln.startswith("jobs:")), None)
+    if jobs_at is not None:
+        body = list(itertools.takewhile(lambda x: _indent(x[1]) > 0, lines[jobs_at + 1 :]))
+        job_indent = _indent(body[0][1]) if body else 0
+        jobs: List[Tuple[int, str, List[str]]] = []
+        for no, ln in body:
+            if _indent(ln) == job_indent:
+                jobs.append((no, ln.strip().rstrip(":"), []))
+            elif jobs:
+                jobs[-1][2].append(ln)
+        for no, name, job_lines in jobs:
+            child = min((_indent(x) for x in job_lines), default=0)
+            keys = {x.strip().split(":", 1)[0] for x in job_lines if _indent(x) == child}
+            if not keys & {"uses", "timeout-minutes", "<<"}:  # `<<: *anchor` không giải được theo dòng → bỏ qua
+                errors.append(f"dòng {no}: job `{name}` thiếu `timeout-minutes`")
+    return errors
+
+
+def ci_check(workflows: Path) -> Dict[str, List[str]]:
+    files = sorted(p for p in workflows.iterdir() if p.suffix in (".yml", ".yaml") and p.is_file())
+    return {p.name: ci_check_text(p.read_bytes().decode("utf-8", errors="replace")) for p in files}
+
+
 # --------------------------------------------------------------------------- CLI
 
 
@@ -856,6 +1030,33 @@ def cmd_loop(args) -> int:
     return 2
 
 
+def cmd_progress_check(args) -> int:
+    errors = progress_check(Path(args.file))
+    for e in errors:
+        print(f"✗ {args.file}: {e}")
+    if not errors:
+        print(f"✓ {args.file}: ≤ {PROGRESS_MAX_BYTES} byte, đủ 4 mục, SHA bàn giao là tổ tiên HEAD.")
+    return 1 if errors else 0
+
+
+def cmd_ci_check(args) -> int:
+    d = Path(args.dir or ".github/workflows")
+    if not d.is_dir():
+        if args.dir:  # chỉ định rõ mà không có → sai cách dùng
+            raise OSError(f"không thấy thư mục workflow: {d}")
+        print(f"– Không có {d} — bỏ qua.")
+        return 0
+    results = ci_check(d)
+    bad = 0
+    for name, errors in results.items():
+        for e in errors:
+            print(f"✗ {d / name}: {e}")
+        bad += len(errors)
+    if not bad:
+        print(f"✓ {len(results)} workflow: permissions, ghim SHA, timeout, không continue-on-error.")
+    return 1 if bad else 0
+
+
 def cmd_stats(args) -> int:
     docs, _ = load_docs(args.framework)
     by_kind: Dict[str, int] = {}
@@ -946,6 +1147,12 @@ def build_parser() -> argparse.ArgumentParser:
     lst.add_argument("--reason", default="dừng thủ công")
     lsub.add_parser("hook-stop")
     plp.set_defaults(fn=cmd_loop)
+    pp = sub.add_parser("progress-check")
+    pp.add_argument("file", nargs="?", default="PROGRESS.md")
+    pp.set_defaults(fn=cmd_progress_check)
+    pci = sub.add_parser("ci-check")
+    pci.add_argument("dir", nargs="?", help="thư mục workflow (mặc định .github/workflows, không có thì bỏ qua)")
+    pci.set_defaults(fn=cmd_ci_check)
     sub.add_parser("stats").set_defaults(fn=cmd_stats)
     return p
 

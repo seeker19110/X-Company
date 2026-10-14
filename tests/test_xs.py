@@ -11,6 +11,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+import unittest.mock
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -626,6 +627,254 @@ class CliContractTest(unittest.TestCase):
         sub = next(a for a in xs.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
         missing = [c for c in sub.choices if f"xs.py {c}" not in readme]
         self.assertEqual(missing, [], "README thiếu lệnh — cập nhật bảng Công cụ")
+
+
+GOOD_PROGRESS = """# PROGRESS.md — Thử
+
+## Đang làm
+- Không.
+
+## Tiếp theo
+1. Việc kế.
+
+## Quyết định
+- 2026-10-14 Chọn X.
+
+## Bàn giao phiên
+- Commit cuối: `{sha}` · CI xanh
+"""
+
+
+class ProgressCheckTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        self.git("init", "-q", "-b", "main")
+        self.base = self.commit("a")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def git(self, *args) -> str:
+        r = subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return r.stdout.strip()
+
+    def commit(self, name: str) -> str:
+        (self.repo / name).write_text(name, encoding="utf-8")
+        self.git("add", name)
+        self.git("commit", "-q", "-m", name)
+        return self.git("rev-parse", "HEAD")
+
+    def check(self, text: str):
+        f = self.repo / "PROGRESS.md"
+        f.write_text(text, encoding="utf-8")
+        return xs.progress_check(f)
+
+    def test_progress_ok_with_ancestor_sha(self):
+        self.commit("b")
+        self.assertEqual(self.check(GOOD_PROGRESS.format(sha=self.base[:7])), [])
+
+    def test_progress_too_big(self):
+        errs = self.check(GOOD_PROGRESS.format(sha=self.base) + "x" * 9000)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("> 8192", errs[0])
+
+    def test_progress_wrong_sections(self):
+        text = GOOD_PROGRESS.format(sha=self.base).replace("## Quyết định", "## Lịch sử")
+        errs = self.check(text)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("Lịch sử", errs[0])
+
+    def test_progress_heading_inside_fence_ignored(self):
+        text = GOOD_PROGRESS.format(sha=self.base).replace("- Không.", "```\n## Không tính\n```")
+        self.assertEqual(self.check(text), [])
+
+    def test_progress_missing_sha(self):
+        errs = self.check(GOOD_PROGRESS.format(sha="SHA"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không ghi SHA", errs[0])
+
+    def test_progress_sha_not_ancestor(self):
+        self.git("checkout", "-q", "-b", "nhanh")
+        side = self.commit("side")
+        self.git("checkout", "-q", "main")
+        self.commit("c")
+        errs = self.check(GOOD_PROGRESS.format(sha=side))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không phải tổ tiên", errs[0])
+
+    def test_progress_unknown_sha(self):
+        errs = self.check(GOOD_PROGRESS.format(sha="deadbeef"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không phải commit có trong lịch sử", errs[0])
+
+    def test_progress_branch_sha_not_on_base(self):
+        # Squash-merge: SHA của nhánh PR là tổ tiên HEAD của nhánh nhưng không bao giờ vào nhánh chính.
+        self.git("checkout", "-q", "-b", "feat")
+        feat = self.commit("feat")
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": "main"}):
+            errs = self.check(GOOD_PROGRESS.format(sha=feat))
+            self.assertEqual(len(errs), 1)
+            self.assertIn("chưa nằm trên `main`", errs[0])
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=self.base)), [])
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": ""}):
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=feat)), [])
+
+    def test_progress_base_ref_from_origin(self):
+        with unittest.mock.patch.dict(os.environ):
+            os.environ.pop("XS_PROGRESS_BASE", None)
+            self.assertIsNone(xs.progress_base_ref(self.repo))
+            self.git("update-ref", "refs/remotes/origin/main", self.base)
+            self.assertEqual(xs.progress_base_ref(self.repo), "origin/main")
+
+    def test_progress_uppercase_sha_tilde_fence_closing_hashes(self):
+        text = (
+            GOOD_PROGRESS.format(sha=self.base[:9].upper())
+            .replace("- Không.", "~~~\n## Không tính\n```\n~~~")
+            .replace("## Bàn giao phiên", "## Bàn giao phiên ##")
+        )
+        self.assertEqual(self.check(text), [])
+
+    def test_progress_cli_exit_codes(self):
+        f = self.repo / "PROGRESS.md"
+        f.write_text(GOOD_PROGRESS.format(sha="deadbeef"), encoding="utf-8")
+        run = lambda *a: (
+            subprocess.run(  # noqa: E731
+                [sys.executable, str(ROOT / "scripts" / "xs.py"), "progress-check", *a],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).returncode
+        )
+        self.assertEqual(run(str(f)), 1)
+        f.write_text(GOOD_PROGRESS.format(sha=self.base), encoding="utf-8")
+        self.assertEqual(run(str(f)), 0)
+        self.assertEqual(run(str(self.repo / "khong-co.md")), 2)
+
+
+SHA40 = "11d5960a326750d5838078e36cf38b85af677262"
+GOOD_WORKFLOW = f"""name: CI
+on: [push]
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@{SHA40} # v4
+      - uses: ./.github/actions/local
+      - run: |
+          echo "uses: evil/action@v1"
+          echo "continue-on-error: true write-all"
+      - name: bước có timeout riêng
+        timeout-minutes: 2
+        run: true
+  call:
+    uses: org/repo/.github/workflows/x.yml@{SHA40}
+env:
+  A: b
+"""
+
+
+class CiCheckTest(unittest.TestCase):
+    def errs(self, text: str):
+        return xs.ci_check_text(text)
+
+    def test_ci_check_good_workflow(self):
+        self.assertEqual(self.errs(GOOD_WORKFLOW), [])
+
+    def test_ci_check_missing_permissions(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("permissions:\n  contents: read\n", ""))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("permissions", errs[0])
+
+    def test_ci_check_write_all(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("permissions:\n  contents: read", "permissions: write-all"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("write-all", errs[0])
+
+    def test_ci_check_unpinned_uses(self):
+        errs = self.errs(GOOD_WORKFLOW.replace(f"actions/checkout@{SHA40}", "actions/checkout@v4"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("actions/checkout@v4", errs[0])
+        self.assertIn("dòng 10", errs[0])
+
+    def test_ci_check_unpinned_reusable_workflow(self):
+        errs = self.errs(GOOD_WORKFLOW.replace(f"x.yml@{SHA40}", "x.yml@main"))
+        self.assertEqual(len(errs), 1)
+
+    def test_ci_check_missing_job_timeout(self):
+        errs = self.errs(GOOD_WORKFLOW.replace("    timeout-minutes: 10\n", ""))
+        self.assertEqual(errs, ["dòng 6: job `quality` thiếu `timeout-minutes`"])
+
+    def test_ci_check_continue_on_error(self):
+        text = GOOD_WORKFLOW.replace(
+            "    timeout-minutes: 10\n", "    timeout-minutes: 10\n    continue-on-error: true\n"
+        )
+        self.assertEqual(len(self.errs(text)), 1)
+        allowed = text.replace(
+            "continue-on-error: true", "continue-on-error: true # ci-check-allow: thử, hết hạn 2026-12"
+        )
+        self.assertEqual(self.errs(allowed), [])
+        no_reason = text.replace("continue-on-error: true", "continue-on-error: true # ci-check-allow:")
+        self.assertEqual(len(self.errs(no_reason)), 1)
+        self.assertEqual(self.errs(text.replace("continue-on-error: true", "continue-on-error: false")), [])
+
+    def test_ci_check_no_false_positives(self):
+        text = GOOD_WORKFLOW.replace("  quality:\n", "  quality:\n    name: test write-all detection\n").replace(
+            "    timeout-minutes: 10\n", '    timeout-minutes: ${{ inputs.t }}\n    continue-on-error: "false"\n'
+        )
+        text += "  merged:\n    <<: *base\n"
+        self.assertEqual(self.errs(text), [])
+
+    def test_ci_check_layout_variants(self):
+        text = (
+            GOOD_WORKFLOW.replace("\n  ", "\n    ")  # jobs/permissions thụt 4
+            .replace(f"actions/checkout@{SHA40} # v4", f"'actions/checkout@{SHA40}' # v4")
+            .replace("      - run: |", "      - run: >-")
+            .replace("\n", "\r\n")
+        )
+        self.assertEqual(self.errs(text), [])
+
+    def test_ci_check_flow_mapping_and_docker(self):
+        base = GOOD_WORKFLOW.replace("      - uses: ./.github/actions/local\n", "{}")
+        self.assertEqual(len(self.errs(base.format("      - {uses: actions/checkout@v4}\n"))), 1)
+        self.assertEqual(len(self.errs(base.format("      - {run: true, continue-on-error: true}\n"))), 1)
+        self.assertEqual(len(self.errs(base.format("      - uses: docker://alpine:3\n"))), 1)
+        digest = "docker://alpine@sha256:" + "a" * 64
+        self.assertEqual(self.errs(base.format(f"      - uses: {digest}\n")), [])
+
+    def test_ci_check_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            wf = Path(d) / "wf"
+            wf.mkdir()
+            (wf / "ci.yml").write_text(GOOD_WORKFLOW, encoding="utf-8")
+            run = lambda *a: (
+                subprocess.run(  # noqa: E731
+                    [sys.executable, str(ROOT / "scripts" / "xs.py"), "ci-check", *a],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    cwd=d,
+                ).returncode
+            )
+            self.assertEqual(run(str(wf)), 0)
+            (wf / "bad.yaml").write_text(GOOD_WORKFLOW.replace("@" + SHA40 + " # v4", "@v4"), encoding="utf-8")
+            self.assertEqual(run(str(wf)), 1)
+            self.assertEqual(run(str(Path(d) / "khong-co")), 2)
+            self.assertEqual(run(), 0)  # không có .github/workflows ở cwd → bỏ qua
+
+    def test_ci_check_repo_workflows(self):
+        self.assertEqual(
+            xs.ci_check(ROOT / ".github" / "workflows"),
+            {p.name: [] for p in (ROOT / ".github" / "workflows").iterdir() if p.suffix in (".yml", ".yaml")},
+        )
 
 
 class RealFrameworkTest(unittest.TestCase):
