@@ -31,4 +31,4 @@ Biến hai luật đang chỉ nằm trên giấy thành kiểm bằng máy, dùn
 - [x] `T-003` Nối vào cổng: thêm hai lệnh vào `lint` trong `xs.yaml`; job `quality` checkout `fetch-depth: 0` — Gate: `scripts/dev-task.sh gate`
 - [x] `T-004` Tài liệu: README mục Công cụ, Kiểm của mục liên quan ở `harness-files.md`/`ci-cd-pipeline.md` trỏ lệnh mới (cập nhật `updated`), `CHANGELOG.md` Unreleased — Gate: `python3 scripts/xs.py validate`
 - [x] `T-005` BLUEPRINT: tick các SHOULD đã đạt kèm bằng chứng (harness, CI, phân tích tĩnh, tài liệu), không tick mục chưa có lệnh/file chứng minh — Gate: `scripts/dev-task.sh gate`
-- [ ] `T-006` Cập nhật PROGRESS.md, push nhánh, mở PR — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`
+- [x] `T-006` Cập nhật PROGRESS.md, push nhánh, mở PR — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`
