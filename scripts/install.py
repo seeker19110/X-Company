@@ -9,7 +9,7 @@ Kết quả trong dự án đích:
   .xstored/VERSION           SHA/nhãn phiên bản khung đã cài
   .claude/settings.json, hooks/, skills/, agents/   harness (COPY-IF-ABSENT: không đè file đã có; bản mới ghi .xstored-new)
   .github/rulesets/main.json, pull_request_template.md, dependabot.yml   chỉ khi --with-github (copy-if-absent)
-  AGENTS.md, CLAUDE.md, PROGRESS.md, xs.yaml       từ framework/templates (copy-if-absent, bỏ frontmatter YAML)
+  AGENTS.md, CLAUDE.md, PROGRESS.md, xs.yaml       từ framework/templates (copy-if-absent, bỏ frontmatter YAML; mẫu bọc ```markdown thì lấy phần trong)
 
 Dùng:
   python3 scripts/install.py <thư-mục-dự-án> [--force-harness] [--no-harness] [--with-github] [--label v1.0.0]
@@ -50,6 +50,17 @@ def strip_frontmatter(text: str) -> str:
             if lines[i].strip() == "---":
                 return "\n".join(lines[i + 1 :]).lstrip("\n") + "\n"
     return text
+
+
+def template_body(text: str) -> str:
+    """Bỏ frontmatter; mẫu bọc nội dung trong khối ```markdown (PROGRESS.md) thì chỉ lấy phần trong khối."""
+    text = strip_frontmatter(text)
+    lines = text.splitlines()
+    start = next((i for i, ln in enumerate(lines) if ln.strip() == "```markdown"), None)
+    if start is None:
+        return text
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "```"), len(lines))
+    return "\n".join(lines[start + 1 : end]).strip("\n") + "\n"
 
 
 def copy_tree_replace(src: Path, dst: Path) -> None:
@@ -143,7 +154,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
         tsrc = SRC / "framework" / "templates" / tmpl
         if not tsrc.exists():
             continue
-        r = copy_if_absent(tsrc, target / name, False, transform=strip_frontmatter)
+        r = copy_if_absent(tsrc, target / name, False, transform=template_body)
         log(f"  {name}: {r}")
 
     # 3b) --with-github: ruleset mẫu + PR template + Dependabot (copy-if-absent)

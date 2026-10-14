@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- PR gia cố bằng máy (nhánh `claude/stoic-einstein-0tid74`, PLAN `docs/autopilot/PLAN.md` T-001…T-006 xong): `xs.py progress-check`, `xs.py ci-check`, 22 SHOULD có bằng chứng — chờ CI + người merge.
+- PR gia cố bằng máy (nhánh `claude/stoic-einstein-0tid74`, PLAN `docs/autopilot/PLAN.md` T-001…T-006 xong): `xs.py progress-check`, `xs.py ci-check`, 20 SHOULD có bằng chứng — chờ CI + người merge.
 
 ## Tiếp theo
 1. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.

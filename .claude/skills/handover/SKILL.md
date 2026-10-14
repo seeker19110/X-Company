@@ -10,7 +10,7 @@ description: Bàn giao phiên khi gần hết ngân sách/context hoặc kết t
    - **Đang làm:** task hiện tại, đã tới đâu, file nào đang sửa.
    - **Tiếp theo:** 1–5 bước kế tiếp cụ thể (lệnh/ file / tiêu chí xong).
    - **Quyết định:** quyết định mới trong phiên (trỏ ADR nếu lớn); giả định đang dùng.
-   - **Bàn giao phiên:** ngày, SHA commit cuối (phải là tổ tiên HEAD), nhánh, trạng thái autopilot (`xs.py loop status`), điều cần người quyết.
+   - **Bàn giao phiên:** ngày, SHA commit cuối **đã có trên nhánh chính** (squash-merge xoá SHA của nhánh PR; `xs.py progress-check` chặn), nhánh, trạng thái autopilot (`xs.py loop status`), điều cần người quyết.
 3. Lịch sử dài → chuyển sang `CHANGELOG.md`/`docs/`, không giữ trong PROGRESS.
 4. `/gate` → commit `chore(progress): bàn giao <ngày>` → push nhánh làm việc. Nếu đang autopilot: để Stop hook kết thúc theo verdict máy, không tự khai done.
 5. Trả lời người dùng ≤ 10 dòng: đã xong gì, dở ở đâu, câu hỏi cần họ quyết (nếu có).

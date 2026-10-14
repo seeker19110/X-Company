@@ -9,7 +9,7 @@ updated: 2026-10-14
 > **Ai viết:** mọi phiên (người hoặc AI) trước khi kết thúc; hook SessionStart nạp file này cho phiên sau.
 > **Giai đoạn:** suốt G1–G8. **Cổng dùng:** `PM-PLAN-009` (≤ 8 KB, đúng 4 mục, SHA là tổ tiên HEAD), `/handover`.
 > **Luật:** chỉ 4 mục dưới đây; không chép lịch sử (lịch sử ở `CHANGELOG.md`/git log); không ghi secret; không quá 8192 byte
-> (`test $(wc -c < PROGRESS.md) -le 8192`). SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD. Kiểm cả ba bằng `xs.py progress-check`.
+> (`test $(wc -c < PROGRESS.md) -le 8192`). SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD và đã có trên nhánh chính. Kiểm bằng `xs.py progress-check`.
 
 ```markdown
 # PROGRESS.md — <Tên dự án>
@@ -31,7 +31,7 @@ updated: 2026-10-14
 - Nợ kỹ thuật chấp nhận: <mục> — lý do — hạn trả: <ngày> (hoặc "không có")
 
 ## Bàn giao phiên
-- Commit cuối: `<SHA đầy đủ>` (tổ tiên của HEAD) · CI: <xanh/đỏ — link>
+- Commit cuối trên nhánh chính: `<SHA đầy đủ>` (tổ tiên của HEAD; không ghi SHA của nhánh PR — squash-merge xoá nó) · CI: <xanh/đỏ — link>
 - Lệnh kiểm nhanh: `<lệnh gate>` → exit <0/1> lúc <hh:mm>
 - Đang chặn: <không | xs.py loop block: lý do>
 - Việc dở chưa commit: <không | mô tả + file>

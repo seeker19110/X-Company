@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import install  # noqa: E402
+import xs  # noqa: E402
 
 
 class InstallTest(unittest.TestCase):
@@ -34,6 +35,13 @@ class InstallTest(unittest.TestCase):
             self.assertFalse(
                 (self.target / name).read_text(encoding="utf-8").startswith("---"), f"{name} còn frontmatter"
             )
+
+    def test_installed_progress_is_body_of_template(self):
+        # Mẫu PROGRESS bọc 4 mục trong ```markdown — dự án đích phải nhận đúng 4 mục, không phải trang hướng dẫn.
+        self.run_install()
+        text = (self.target / "PROGRESS.md").read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# PROGRESS.md"), text[:80])
+        self.assertEqual(tuple(n for n, _ in xs.progress_sections(text)), xs.PROGRESS_SECTIONS)
 
     def test_installed_xs_validates_and_composes(self):
         self.run_install()

@@ -65,7 +65,7 @@ Mẫu đầy đủ: [`../templates/PLAN.md`](../templates/PLAN.md); PROGRESS: [`
 - [ ] `LOOP-HARNESS-002` **MUST** Lệnh Gate của mỗi task lấy từ `xs.yaml`/`dev-task.sh` hoặc là lệnh test cụ thể, chạy được trên máy sạch; không ghi "kiểm tay". → Kiểm: `grep -c 'Gate: `' docs/autopilot/PLAN.md` = số task; mỗi Gate chạy được trong CI.
 - [ ] `LOOP-HARNESS-003` **MUST** `PLAN.md` ghi 4 con số (trần vòng, giờ, chi phí, hạn) và danh sách điểm dừng bắt buộc dự kiến trước cổng duyệt. → Kiểm: mục "Ngân sách" và "Điểm dừng" tồn tại; giá trị khớp tham số `loop init`.
 - [ ] `LOOP-HARNESS-004` **MUST@L** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên); lịch sử dài chuyển sang `CHANGELOG.md`/`docs/`. → Kiểm: `xs.py progress-check` exit 0 (≤ 8192 byte, đúng 4 mục theo thứ tự). · Nguồn: stored 23 §2.1
-- [ ] `LOOP-HARNESS-005` **MUST@L** Mục Bàn giao ghi SHA commit cuối và nhánh; SHA phải là tổ tiên của HEAD. → Kiểm: `xs.py progress-check` exit 0 trong CI (mọi SHA trong mục Bàn giao là tổ tiên HEAD; checkout `fetch-depth: 0`). · Nguồn: stored 21 §8 điểm 9
+- [ ] `LOOP-HARNESS-005` **MUST@L** Mục Bàn giao ghi SHA commit cuối và nhánh; SHA phải là tổ tiên của HEAD và **đã có trên nhánh chính** (squash-merge xoá SHA của nhánh PR). → Kiểm: `xs.py progress-check` exit 0 trong CI (mọi SHA ở Bàn giao là tổ tiên HEAD và của `origin/main`; checkout `fetch-depth: 0`). · Nguồn: stored 21 §8 điểm 9
 - [ ] `LOOP-HARNESS-006` **MUST@L** `.autopilot/` nằm trong `.gitignore`; bằng chứng chia sẻ cho người khác là link CI run/PR, không phải file cục bộ. → Kiểm: `git check-ignore .autopilot/state.json` exit 0; PR có link run CI.
 - [ ] `LOOP-HARNESS-007` **MUST@L** `BLUEPRINT.md` được sinh bằng `xs.py compose`, commit ở G1; chữ của mục không bị sửa tay, chỉ đổi trạng thái. → Kiểm: diff với bản `compose` lại chỉ khác cột trạng thái và `— Miễn:`. · Nguồn: 00-method/composition.md
 - [ ] `LOOP-HARNESS-008` **MUST** `xs.yaml` khai các khoá `lint`, `test`, `typecheck`, `build` (chuỗi rỗng nếu không áp dụng); agent không suy diễn lệnh từ README. → Kiểm: `scripts/dev-task.sh gate` chạy đúng lệnh khai; `xs.yaml` tồn tại ở gốc. · Nguồn: stored 23 §3.3
@@ -97,7 +97,7 @@ Mẫu đầy đủ: [`../templates/PLAN.md`](../templates/PLAN.md); PROGRESS: [`
 |---|---|---|---|
 | Parser PLAN | `python3 scripts/xs.py loop status --json` | SessionStart, CI | Không `blocked` vì PLAN |
 | Kích thước PROGRESS | `test $(wc -c < PROGRESS.md) -le 8192` | pre-commit, CI | ≤ 8 KB, 4 mục |
-| Tươi SHA | `xs.py progress-check` (bên trong: `git merge-base --is-ancestor <SHA> HEAD` cho mọi SHA ở Bàn giao) | cổng `lint` + CI | exit 0 |
+| Tươi SHA | `xs.py progress-check` (bên trong: `git merge-base --is-ancestor <SHA> HEAD` và `origin/main` cho mọi SHA ở Bàn giao) | thêm vào `lint` trong `xs.yaml` + CI | exit 0 |
 | Blueprint | `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict` | CI, G7 | 0 MUST mở |
 | Hợp đồng repo | script `validate_repo` (file bắt buộc, link, `xs.yaml`) | pre-commit + CI | 0 lỗi |
 | Hook | `bash -n .claude/hooks/*.sh && python3 -m unittest discover -s tests` | CI | xanh |

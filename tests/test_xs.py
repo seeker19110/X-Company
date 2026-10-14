@@ -11,6 +11,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+import unittest.mock
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -710,7 +711,34 @@ class ProgressCheckTest(unittest.TestCase):
     def test_progress_unknown_sha(self):
         errs = self.check(GOOD_PROGRESS.format(sha="deadbeef"))
         self.assertEqual(len(errs), 1)
-        self.assertIn("không có trong lịch sử", errs[0])
+        self.assertIn("không phải commit có trong lịch sử", errs[0])
+
+    def test_progress_branch_sha_not_on_base(self):
+        # Squash-merge: SHA của nhánh PR là tổ tiên HEAD của nhánh nhưng không bao giờ vào nhánh chính.
+        self.git("checkout", "-q", "-b", "feat")
+        feat = self.commit("feat")
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": "main"}):
+            errs = self.check(GOOD_PROGRESS.format(sha=feat))
+            self.assertEqual(len(errs), 1)
+            self.assertIn("chưa nằm trên `main`", errs[0])
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=self.base)), [])
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": ""}):
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=feat)), [])
+
+    def test_progress_base_ref_from_origin(self):
+        with unittest.mock.patch.dict(os.environ):
+            os.environ.pop("XS_PROGRESS_BASE", None)
+            self.assertIsNone(xs.progress_base_ref(self.repo))
+            self.git("update-ref", "refs/remotes/origin/main", self.base)
+            self.assertEqual(xs.progress_base_ref(self.repo), "origin/main")
+
+    def test_progress_uppercase_sha_tilde_fence_closing_hashes(self):
+        text = (
+            GOOD_PROGRESS.format(sha=self.base[:9].upper())
+            .replace("- Không.", "~~~\n## Không tính\n```\n~~~")
+            .replace("## Bàn giao phiên", "## Bàn giao phiên ##")
+        )
+        self.assertEqual(self.check(text), [])
 
     def test_progress_cli_exit_codes(self):
         f = self.repo / "PROGRESS.md"
@@ -798,6 +826,30 @@ class CiCheckTest(unittest.TestCase):
         self.assertEqual(len(self.errs(no_reason)), 1)
         self.assertEqual(self.errs(text.replace("continue-on-error: true", "continue-on-error: false")), [])
 
+    def test_ci_check_no_false_positives(self):
+        text = GOOD_WORKFLOW.replace("  quality:\n", "  quality:\n    name: test write-all detection\n").replace(
+            "    timeout-minutes: 10\n", '    timeout-minutes: ${{ inputs.t }}\n    continue-on-error: "false"\n'
+        )
+        text += "  merged:\n    <<: *base\n"
+        self.assertEqual(self.errs(text), [])
+
+    def test_ci_check_layout_variants(self):
+        text = (
+            GOOD_WORKFLOW.replace("\n  ", "\n    ")  # jobs/permissions thụt 4
+            .replace(f"actions/checkout@{SHA40} # v4", f"'actions/checkout@{SHA40}' # v4")
+            .replace("      - run: |", "      - run: >-")
+            .replace("\n", "\r\n")
+        )
+        self.assertEqual(self.errs(text), [])
+
+    def test_ci_check_flow_mapping_and_docker(self):
+        base = GOOD_WORKFLOW.replace("      - uses: ./.github/actions/local\n", "{}")
+        self.assertEqual(len(self.errs(base.format("      - {uses: actions/checkout@v4}\n"))), 1)
+        self.assertEqual(len(self.errs(base.format("      - {run: true, continue-on-error: true}\n"))), 1)
+        self.assertEqual(len(self.errs(base.format("      - uses: docker://alpine:3\n"))), 1)
+        digest = "docker://alpine@sha256:" + "a" * 64
+        self.assertEqual(self.errs(base.format(f"      - uses: {digest}\n")), [])
+
     def test_ci_check_cli(self):
         with tempfile.TemporaryDirectory() as d:
             wf = Path(d) / "wf"
@@ -821,7 +873,7 @@ class CiCheckTest(unittest.TestCase):
     def test_ci_check_repo_workflows(self):
         self.assertEqual(
             xs.ci_check(ROOT / ".github" / "workflows"),
-            {p.name: [] for p in sorted((ROOT / ".github" / "workflows").glob("*.yml"))},
+            {p.name: [] for p in (ROOT / ".github" / "workflows").iterdir() if p.suffix in (".yml", ".yaml")},
         )
 
 
