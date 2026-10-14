@@ -49,11 +49,11 @@ Mặc định cho repo mới: **Biome + TypeScript strict + knip + jscpd + depen
 - [ ] `QA-STATIC-011` **MUST@L** Trước khi đóng một mảng/tính năng: chạy checklist tối ưu mã nguồn (dead code, trùng lặp, dep thừa, bundle) và ghi kết quả vào PR cuối của mảng. → Kiểm: PR có mục "Tối ưu mã nguồn" với output knip/jscpd/size.
 - [ ] `QA-STATIC-012` **MUST@L** Dự án có sẵn: baseline số đo tĩnh commit vào repo (`docs/ops/static-baseline.json`), CI chặn tăng (ratchet), hạ dần theo "đụng đâu dọn đó". → Kiểm: script so output hiện tại với baseline; vượt → đỏ; baseline chỉ giảm.
 - [ ] `QA-STATIC-013` **SHOULD** Hook local không phải cổng cuối: CI chạy lại toàn bộ lint/type/format vì `--no-verify` bỏ qua được. → Kiểm: job CI `quality` có 3 bước này không `continue-on-error`.
-- [ ] `QA-STATIC-014` **SHOULD** Một job `quality`/`gate` gom mọi cổng tĩnh làm required check duy nhất; thêm cổng không cần sửa ruleset. → Kiểm: ruleset chỉ yêu cầu `gate`; `gate` `needs:` các job con. · Nguồn: catalog 23 §2.5 (ADR-0003)
+- [ ] `QA-STATIC-014` **SHOULD** Một job `quality` gom mọi cổng tĩnh làm required check chất lượng (ruleset còn `protection-guard`, `gitleaks`, `dep-audit`); thêm cổng không cần sửa ruleset. → Kiểm: ruleset yêu cầu `quality`; `quality` `needs:` các job con. · Nguồn: catalog 23 §2.5 (ADR-0003)
 - [ ] `QA-STATIC-015` **SHOULD** Không gom thứ chỉ *trông* giống nhau khi DRY (quy tắc 3 lần); không gom trừu tượng sớm. → Kiểm: review; jscpd báo trùng nhưng PR giải thích nếu giữ.
 - [ ] `QA-STATIC-016` **SHOULD** Hàm > 4 tham số gom thành object có kiểu; `if/else` lồng sâu → guard clause. → Kiểm: rule `max-params: 4`, ruff `PLR0913`; `max-depth`.
 - [ ] `QA-STATIC-017` **SHOULD** Import lẻ và tách động cho phần nặng ít dùng; không hai thư viện cùng vai trò (2 lib ngày tháng, 2 HTTP client). → Kiểm: knip/`deptry` + script liệt kê dep theo nhóm; bundle analyzer trong PR.
-- [ ] `QA-STATIC-018` **SHOULD** Tài liệu tươi bằng máy: SHA ghi trong `PROGRESS.md` là tổ tiên của HEAD; `validate_repo` kiểm hợp đồng repo. → Kiểm: `xs.py progress-check` exit 0. · Nguồn: catalog 23 §4.5, 21 §8
+- [ ] `QA-STATIC-018` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md) (`PROGRESS.md` tươi bằng máy: SHA tổ tiên HEAD); hợp đồng repo kiểm bằng `xs.py validate`.
 - [ ] `QA-STATIC-019` **MAY** SonarQube Community Build tự host làm bảng tổng hợp khi đội > 1; không thay cổng CI.
 - [ ] `QA-STATIC-020` **MAY** Fitness function AST tự viết cho quy tắc riêng (vd mọi route có kiểm quyền; SQL chạm PII phải nhận context) khi lint sẵn không đủ.
 
@@ -83,7 +83,7 @@ Mặc định cho repo mới: **Biome + TypeScript strict + knip + jscpd + depen
 | jscpd 5.4.1 | `jscpd src --threshold 3 --reporters console,sarif` | CI | ≤ 3% |
 | dependency-cruiser 18.6.0 / import-linter 2.15 | `depcruise --validate .dependency-cruiser.cjs src` · `lint-imports` | CI | 0 vi phạm |
 | vulture 2.16 / radon 6.0.1 | `vulture src --min-confidence 80` · `radon cc src -n C` | CI | 0 / không hàm mức C+ mới |
-| pre-commit 4.6.2 (MIT) | `pre-commit run --all-files` | hook + CI | 0 |
+| pre-commit 4.7.0 (MIT; xác minh PyPI 2026-10-12) | `pre-commit run --all-files` | hook + CI | 0 |
 | Baseline ratchet (tự viết) | `python3 scripts/static-ratchet.py --baseline docs/ops/static-baseline.json` | CI | không tăng |
 
 ## Nguồn
@@ -91,5 +91,5 @@ Mặc định cho repo mới: **Biome + TypeScript strict + knip + jscpd + depen
 - Phiên bản (registry, xác minh 2026-10-13): npm `@biomejs/biome` 2.5.15, `oxlint` 1.87.0, `eslint` 10.12.0, `typescript` 7.0.2, `knip` 6.41.0, `jscpd` 5.4.1, `dependency-cruiser` 18.6.0; PyPI `ruff` 0.17.0, `pyright` 1.1.414, `mypy` 2.4.0, `import-linter` 2.15, `vulture` 2.16, `radon` 6.0.1 (2023 — bảo trì chậm), `uv` 0.13.0.
 - SonarQube Community Build LGPL-3.0: <https://github.com/SonarSource/sonarqube> · <https://www.sonarsource.com/open-source-editions/> — xác minh 2026-10-13
 - import-linter: <https://import-linter.readthedocs.io/> (trang contract types trả 404 ngày 2026-10-13 — kiểm tài liệu phiên bản hiện hành)
-- Catalog `seeker19110/stored` 13 §4b–4c (stack quality gate, pre-commit 4.6.2, hook `--no-verify`, uv/ruff thuộc OpenAI), 23 §2.5 (gate aggregator), 23 §3.3 (fitness function AST, coverage ratchet), 23 §4.5 (`validate_repo.py`) — đọc 2026-10-13.
+- Catalog `seeker19110/stored` 13 §4b–4c (stack quality gate, pre-commit (bản 4.7.0 xác minh PyPI 2026-10-12), hook `--no-verify`, uv/ruff thuộc OpenAI), 23 §2.5 (gate aggregator), 23 §3.3 (fitness function AST, coverage ratchet), 23 §4.5 (`validate_repo.py`) — đọc 2026-10-13.
 - Khung cũ X-stored `quality-supplements.md` Nhóm 2 mục 9 "Tối ưu mã nguồn" (nguyên tắc vàng, checklist dead code/trùng lặp/dep/bundle, khi nào không refactor), commit `1b80fe4` — đọc 2026-10-13.

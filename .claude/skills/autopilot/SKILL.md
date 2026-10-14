@@ -18,7 +18,7 @@ argument-hint: "[mô tả yêu cầu hoặc đường dẫn PROJECT.md]"
 4. **G2 Research** → giao subagent `researcher` xác minh phiên bản/chuẩn/luật từ nguồn sống (ghi ngày); viết ADR chọn stack (mẫu `<FW>/templates/ADR.md`).
 5. **G3 Specify** → `SPEC-<tính-năng>.md` cho từng tính năng MVP: Given/When/Then + ca biên. Spec hở → **dừng và hỏi**, không tự lấp.
 6. **G4 Design** → sơ đồ C4 mức 1–2, schema, `API-CONTRACT.md`, `THREAT-MODEL.md` (mức ≥ M).
-7. **PLAN.md** (mẫu `<FW>/templates/PLAN.md`): task `T-001…` ≤ 1 ngày/task, mỗi task một **Gate** là lệnh máy kiểm; 4 con số ngân sách (max vòng, giờ, chi phí, hạn); danh sách **điểm dừng bắt buộc**.
+7. **PLAN.md** (mẫu `<FW>/templates/PLAN.md`): task `T-001…` ≤ 1 ngày/task, mỗi task một **Gate** là lệnh máy kiểm; 4 con số theo `<FW>/11-autonomous-loop/loop-design.md` (`LOOP-DESIGN-001`: trần vòng · ngân sách tiền/token · timeout mỗi lệnh kiểm · hạn chót); danh sách **điểm dừng bắt buộc**.
 8. Trình **MỘT cổng duyệt**: tóm tắt ≤ 30 dòng (blueprint: số MUST/SHOULD; stack + phiên bản; task; rủi ro; điểm dừng). Chờ người duyệt. **Sau khi duyệt, không hỏi lại trừ điểm dừng bắt buộc.**
 
 ## Pha 2 — Vòng lặp có bằng chứng (G5–G7)

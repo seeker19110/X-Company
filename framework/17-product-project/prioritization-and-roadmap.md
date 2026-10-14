@@ -78,7 +78,7 @@ updated: 2026-10-14
 | Phạm vi bị đổi có hồ sơ | `git log --format=%s -- PROJECT.md \| rg "^docs\(scope\)"` khi diff mục MVP | CI | Diff mục MVP mà không có commit `docs(scope)` → đỏ |
 | Ý tưởng từ chối có file | `ls .out-of-scope/*.md`; issue template checkbox | Issue template + CI | ≥1 file khi dự án ≥ M |
 | Cổng chất lượng không bị tắt | `rg -n "continue-on-error: true\|--no-verify\|ignoreBuildErrors" .github/ package.json` | CI | 0 kết quả ngoài allowlist có lý do |
-| MUST blueprint mở | `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict` | CI trước release | exit 0 |
+| MUST blueprint mở | `xs.py blueprint-status BLUEPRINT.md --strict` | CI trước release | exit 0 |
 | Walking skeleton có deploy | `rg -n "T-00[1-3].*Gate: \`.*(deploy|smoke)" PLAN.md` | CI (job docs) | ≥1 task trong lát 1 |
 
 ## Nguồn

@@ -1,19 +1,19 @@
 ---
 title: Mẫu PLAN
 kind: template
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Mẫu PLAN.md
 
 > **Ai viết:** phiên lập kế hoạch (người + AI) sau G0–G4, trước khi code; người duyệt một lần (cổng duyệt duy nhất của autopilot).
-> **Giai đoạn:** G4 → G6. **Cổng dùng:** `xs.py loop init --plan PLAN.md`, `xs.py loop status`, `PM-PLAN-*`.
+> **Giai đoạn:** G4 → G6. **Cổng dùng:** `xs.py loop init --plan docs/autopilot/PLAN.md`, `xs.py loop status`, `PM-PLAN-*`. **Đường dẫn:** `docs/autopilot/PLAN.md`.
 > **Cú pháp bắt buộc cho máy:** mỗi task một dòng `- [ ] \`T-001\` <việc> — Gate: \`<lệnh>\`` — ID `T-` + ≥3 chữ số, tăng dần; Gate là lệnh chạy trong repo, exit 0 = đạt. Dòng không đúng dạng này máy bỏ qua.
 > **Trạng thái:** `[ ]` chưa · `[x]` xong (chỉ khi `.autopilot/evidence/T-NNN.json` có `exit_code: 0` và `cmd` đúng Gate) · `[~]` bỏ (ghi lý do).
-> Ba mục "Điểm dừng bắt buộc", "Ngân sách (4 con số)", "Hạn" là bắt buộc.
+> Ba mục "Điểm dừng bắt buộc", "Ngân sách (4 con số)", "Hạn" là bắt buộc. 4 con số theo [`LOOP-DESIGN-001`](../11-autonomous-loop/loop-design.md): trần vòng · ngân sách tiền/token · timeout mỗi lệnh kiểm · hạn chót.
 
 ```markdown
-# PLAN.md — <Tên dự án> · <mốc/lát>
+# docs/autopilot/PLAN.md — <Tên dự án> · <mốc/lát>
 
 > Duyệt bởi <tên> ngày <YYYY-MM-DD> · Spec gốc: docs/specs/SPEC-<slug>.md (F-<NNN>) · Blueprint: BLUEPRINT.md
 

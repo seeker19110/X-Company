@@ -7,9 +7,8 @@ updated: 2026-10-14
 # Mẫu PROGRESS.md
 
 > **Ai viết:** mọi phiên (người hoặc AI) trước khi kết thúc; hook SessionStart nạp file này cho phiên sau.
-> **Giai đoạn:** suốt G1–G8. **Cổng dùng:** `PM-PLAN-009` (≤ 8 KB, đúng 4 mục, SHA là tổ tiên HEAD), `/handover`.
-> **Luật:** chỉ 4 mục dưới đây; không chép lịch sử (lịch sử ở `CHANGELOG.md`/git log); không ghi secret; không quá 8192 byte
-> (`test $(wc -c < PROGRESS.md) -le 8192`). SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD và đã có trên nhánh chính. Kiểm bằng `xs.py progress-check`.
+> **Giai đoạn:** suốt G1–G8. **Cổng dùng:** [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md) (≤ 8 KB, đúng 4 mục, SHA là tổ tiên HEAD và của nhánh chính), `/handover`.
+> **Luật:** chỉ 4 mục dưới đây; không chép lịch sử (lịch sử ở `CHANGELOG.md`/git log); không ghi secret; không quá 8192 byte. SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD và đã có trên nhánh chính. Kiểm bằng `xs.py progress-check`.
 
 ```markdown
 # PROGRESS.md — <Tên dự án>

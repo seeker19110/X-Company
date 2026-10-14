@@ -79,7 +79,7 @@ updated: 2026-10-14
 | Heading bắt buộc, số thứ tự, tên file | script tự viết `scripts/adr-lint.py` (stdlib) | `python3 scripts/adr-lint.py docs/adr` | pre-commit + CI | 0 lỗi |
 | Chỉ mục không drift | `scripts/adr-index.py --check` (sinh README từ ADR) | như trên | CI | diff = 0 |
 | Markdown chuẩn | markdownlint-cli2 0.23.3 · MIT | `markdownlint-cli2 "docs/adr/**/*.md"` | pre-commit | 0 lỗi |
-| Liên kết hỏng | lychee 0.24.2 · Apache-2.0/MIT, hoặc `scripts/check-links.py` của khung | `lychee --offline docs/adr` (nội bộ) · online theo lịch | CI | 0 link hỏng |
+| Liên kết hỏng | lychee 0.24.2 · Apache-2.0/MIT, hoặc `check-links.py` của khung (`.xstored/scripts/check-links.py` ở dự án đích) | `lychee --offline docs/adr` (nội bộ) · online theo lịch | CI | 0 link hỏng |
 | ADR accepted bị sửa | script diff theo nhánh gốc + hook `ask` (xem [`../11-autonomous-loop/harness-files.md`](../11-autonomous-loop/harness-files.md)) | `git diff origin/main -- docs/adr` lọc file accepted | PR CI + PreToolUse hook | chỉ dòng Status/link thay đổi |
 | PR làn kiến trúc phải link ADR | rule CI đọc thân PR (như `pr-policy.yml`) | `gh pr view --json body` + regex `ADR-\d{4}` | CI (PR) | có link, ADR accepted |
 

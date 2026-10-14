@@ -95,7 +95,7 @@ updated: 2026-10-14
 | Áp migration trên CSDL sạch, chạy 2 lần | công cụ migration của stack + service container | `atlas migrate apply` / `flyway migrate` / `alembic upgrade head` ×2 | CI | exit 0 cả hai lần |
 | Up → down → up | như trên (khi có down) | `alembic downgrade -1 && alembic upgrade head` | CI | exit 0 |
 | Drift schema ↔ migration | Atlas 1.3.0 Apache-2.0 / `supabase db diff` / `prisma migrate diff` | `atlas schema diff --from env://... --to file://schema.sql` | CI | rỗng |
-| Trùng số migration, sửa file đã áp | script (như xboss `pre-push-gate.sh`) + hook PreToolUse `deny` | `scripts/check-migrations.sh` | pre-push + hook + CI | 0 |
+| Trùng số migration, sửa file đã áp | script (như xboss `pre-push-gate.sh`) + hook PreToolUse `deny` | `scripts/check-migrations.sh` (dự án tự viết) | pre-push + hook + CI | 0 |
 | Index INVALID sau migrate | SQL `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid` | trong job CI/post-deploy | CI + post-deploy | 0 dòng |
 | Tương thích N/N+1 | test tích hợp chạy code cũ trên schema mới | ma trận CI | CI | xanh |
 

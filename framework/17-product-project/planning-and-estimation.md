@@ -44,10 +44,10 @@ updated: 2026-10-14
 - [ ] `PM-PLAN-003` **MUST** Gate của task là lệnh chạy được trong repo, trả exit 0 khi đạt (test, lint, build, script kiểm, smoke). → Kiểm: `xs.py loop record --task T-NNN -- <gate>` tạo `.autopilot/evidence/T-NNN.json` với `exit_code: 0`; Gate dạng "đã review" không được chấp nhận.
 - [ ] `PM-PLAN-004` **MUST@L** Mỗi task trỏ về spec/yêu cầu (`F-NNN`/`S-NNN`/`RK-NNN`); không có task mồ côi. → Kiểm: `rg -n "T-[0-9]{3}" PLAN.md | rg -v "F-|S-|RK-|chore"` rỗng.
 - [ ] `PM-PLAN-005` **MUST** `PLAN.md` có mục "Điểm dừng bắt buộc" liệt kê thao tác cần người duyệt (xoá dữ liệu, migration phá vỡ, tiền thật, secret, dữ liệu người dùng thật, mâu thuẫn spec). → Kiểm: `rg -n "^## Điểm dừng bắt buộc" PLAN.md` và ≥4 dòng dưới mục.
-- [ ] `PM-PLAN-006` **MUST** `PLAN.md` có mục "Ngân sách (4 con số)": số vòng tối đa, ngân sách token/tiền, timeout mỗi lệnh, ngày hết hạn. → Kiểm: `rg -n "^## Ngân sách" PLAN.md`; `xs.py loop init --plan PLAN.md --max-iterations N --hours H` dùng đúng số đó.
+- [ ] `PM-PLAN-006` **MUST** `docs/autopilot/PLAN.md` có mục "Ngân sách (4 con số)" theo [`LOOP-DESIGN-001`](../11-autonomous-loop/loop-design.md): số vòng tối đa, ngân sách token/tiền, timeout mỗi lệnh kiểm, ngày hết hạn. → Kiểm: `rg -n "^## Ngân sách" docs/autopilot/PLAN.md`; `xs.py loop init --plan docs/autopilot/PLAN.md --max-iterations N --hours H` dùng đúng số đó.
 - [ ] `PM-PLAN-007` **MUST@L** WIP giới hạn và ghi số: task "đang làm" ≤ 2 cho một người; PR mở toàn repo ≤ 3 (kể cả bot/draft); vượt thì không bắt đầu việc mới. → Kiểm: `gh pr list --state open --json number | jq length` ≤ 3; `PROGRESS.md` mục "Đang làm" ≤ 2 dòng.
 - [ ] `PM-PLAN-008` **MUST@L** Hạn thật và hạn mong muốn ghi riêng, mỗi hạn thật nêu hậu quả bên ngoài; trễ hạn thật xử lý bằng cắt phạm vi (xem `PM-PRIO-007`). → Kiểm: mục "Hạn" trong `PLAN.md` có hai bảng; hạn thật có cột "hậu quả".
-- [ ] `PM-PLAN-009` **MUST@L** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm / Tiếp theo / Quyết định / Bàn giao phiên) và ghi SHA commit là tổ tiên của HEAD. → Kiểm: `xs.py progress-check` exit 0 (≤ 8192 byte, đúng 4 mục, SHA tổ tiên HEAD).
+- [ ] `PM-PLAN-009` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md) (định dạng và độ tươi `PROGRESS.md`: ≤ 8 KB, 4 mục, SHA tổ tiên HEAD).
 - [ ] `PM-PLAN-010` **SHOULD** Ước lượng ghi dạng khoảng P50–P90; tổng lịch báo bằng P50/P85, không cộng P50 các task thành một ngày hứa. → Kiểm: bảng ước lượng có hai cột; `PROGRESS.md` ghi "P50 … / P85 …".
 - [ ] `PM-PLAN-011` **SHOULD** Có throughput và cycle time đo thật (từ ngày bắt đầu/kết thúc task hoặc PR) sau 2 tuần đầu; dự báo cập nhật từ số đo, không từ cảm giác. → Kiểm: bảng "Dòng chảy" trong `PROGRESS.md` hoặc `docs/metrics/flow.csv` cập nhật hằng tuần.
 - [ ] `PM-PLAN-012` **SHOULD** Phụ thuộc giữa task ghi rõ (`sau: T-NNN`) và việc chờ bên ngoài có ngày cam kết + kế hoạch B. → Kiểm: `rg -n "sau: T-" PLAN.md` cho task có phụ thuộc; cột "Phụ thuộc ngoài".
@@ -76,8 +76,8 @@ updated: 2026-10-14
 
 | Việc | Công cụ / lệnh | Đặt ở | Ngưỡng |
 |---|---|---|---|
-| PLAN parse được, mọi task có Gate | `python3 scripts/xs.py loop status --json` (sau `loop init`) hoặc lệnh parse ở `PM-PLAN-001` | pre-commit khi sửa `PLAN.md` + CI | 0 task thiếu Gate |
-| Bằng chứng khớp Gate | `python3 scripts/xs.py loop status` → verdict không phải `verify` | Stop hook / CI | Task tick mà không có bằng chứng → `verify` |
+| PLAN parse được, mọi task có Gate | `xs.py loop status --json` (sau `loop init`) hoặc lệnh parse ở `PM-PLAN-001` | pre-commit khi sửa `PLAN.md` + CI | 0 task thiếu Gate |
+| Bằng chứng khớp Gate | `xs.py loop status` → verdict không phải `verify` | Stop hook / CI | Task tick mà không có bằng chứng → `verify` |
 | WIP PR | `gh pr list --state open --json number --jq length` | CI (`pr-policy`) | ≤ 3, kể cả bot/draft |
 | PROGRESS kích thước + SHA | `xs.py progress-check` | pre-commit + CI | ≤ 8192 byte; SHA là tổ tiên |
 | Mục bắt buộc của PLAN | `rg -n "^## (Điểm dừng bắt buộc|Ngân sách|Hạn)" PLAN.md` | CI | Đủ 3 mục |

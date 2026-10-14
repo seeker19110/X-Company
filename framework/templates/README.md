@@ -14,8 +14,8 @@ updated: 2026-10-14
 | File | Dùng cho | Giai đoạn · cổng |
 |---|---|---|
 | [`PROJECT.md`](PROJECT.md) | `PROJECT.md` — vấn đề, người dùng (JTBD), chỉ số thành công có baseline, MVP MoSCoW, "không làm", dữ liệu & pháp lý, giả định, các bên | G0–G2 · cổng G0/G1; `PM-REQ-*`, `PM-PRIO-*` |
-| [`PLAN.md`](PLAN.md) | `PLAN.md` — task `T-NNN` ≤1 ngày có `Gate:` máy kiểm (đúng regex `xs.py`), điểm dừng bắt buộc, ngân sách 4 con số, hạn thật | G4–G6 · `xs.py loop init/status`; `PM-PLAN-*` |
-| [`PROGRESS.md`](PROGRESS.md) | `PROGRESS.md` — ≤ 8 KB, 4 mục (Đang làm / Tiếp theo / Quyết định / Bàn giao phiên + SHA tổ tiên HEAD) | Mọi phiên · hook SessionStart; `PM-PLAN-009` |
+| [`PLAN.md`](PLAN.md) | `docs/autopilot/PLAN.md` — task `T-NNN` ≤1 ngày có `Gate:` máy kiểm (đúng regex `xs.py`), điểm dừng bắt buộc, ngân sách 4 con số, hạn thật | G4–G6 · `xs.py loop init/status`; `PM-PLAN-*` |
+| [`PROGRESS.md`](PROGRESS.md) | `PROGRESS.md` — ≤ 8 KB, 4 mục (Đang làm / Tiếp theo / Quyết định / Bàn giao phiên + SHA tổ tiên HEAD) | Mọi phiên · hook SessionStart; `LOOP-HARNESS-004`/`005` |
 | [`SPEC.md`](SPEC.md) | `docs/specs/SPEC-<slug>.md` — user story, scenario `S-NNN` Given/When/Then, 8 nhóm ca biên, dữ liệu, lỗi, DoR/DoD, truy vết | G3 · cổng G3; `PM-SPEC-*` |
 | [`ADR.md`](ADR.md) | `docs/adr/NNNN-<slug>.md` — MADR 4.0.0 + hai cột Status / Implementation status; không sửa ADR cũ | G2, G4 · `/adr`; `ARC-ADR-*` |
 | [`THREAT-MODEL.md`](THREAT-MODEL.md) | `docs/THREAT-MODEL.md` — tài sản, ranh giới tin cậy, luồng dữ liệu, bảng STRIDE theo luồng → mức → biện pháp → bằng chứng | G4 · cổng G4, GO/NO-GO; `SEC-TM-*` |
@@ -29,4 +29,4 @@ updated: 2026-10-14
 | [`API-CONTRACT.md`](API-CONTRACT.md) | `docs/api/API-CONTRACT-<slug>.md` — endpoint, schema, lỗi RFC 9457, versioning (`Deprecation`/`Sunset`), phân trang, idempotency, ví dụ chạy được | G3–G4 · trước khi chia việc; `PM-SPEC-005`, `BE-API-*` |
 | [`AGENTS.md`](AGENTS.md) | `AGENTS.md` của dự án đích — luật vận hành cho mọi AI agent (Claude Code, Codex, Gemini CLI, Cursor…); `install.py` copy-if-absent | G5 · dựng nền harness |
 | [`CLAUDE.md`](CLAUDE.md) | `CLAUDE.md` của dự án đích — chỉ import `AGENTS.md` + phần riêng cho Claude Code (hook, skill) | G5 · dựng nền harness |
-| [`xs.yaml`](xs.yaml) | `xs.yaml` — lệnh chuẩn của dự án (lint/typecheck/test/build/format) cho hook và agent; YAML phẳng, không suy diễn từ văn xuôi | G5 · `dev-task.sh gate` |
+| [`xs.yaml`](xs.yaml) | `xs.yaml` — lệnh chuẩn của dự án cho hook và agent; YAML phẳng, không suy diễn từ văn xuôi. `dev-task.sh` chỉ chạy `format · lint · typecheck · test · build · format_file` (`gate` = build→typecheck→lint→test); khoá khác (`install`, `dev`, `e2e`, `migrate`, `init`, `smoke`, `audit`…) agent đọc và chạy trực tiếp | G5 · `dev-task.sh gate`; `LOOP-HARNESS-008` |

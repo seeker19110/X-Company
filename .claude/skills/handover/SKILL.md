@@ -5,6 +5,8 @@ description: Bàn giao phiên khi gần hết ngân sách/context hoặc kết t
 
 # /handover — để phiên sau tiếp tục đúng chỗ
 
+`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+
 1. Hoàn tất việc đang dở ở **điểm an toàn gần nhất** (test xanh hoặc WIP rõ ràng) — không để file nửa chừng phá build; nếu bắt buộc, ghi rõ.
 2. Cập nhật `PROGRESS.md` (mẫu `<FW>/templates/PROGRESS.md`), **≤ 8 KB**, đúng 4 mục:
    - **Đang làm:** task hiện tại, đã tới đâu, file nào đang sửa.

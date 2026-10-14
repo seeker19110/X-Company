@@ -4,7 +4,7 @@ kind: profile
 slug: blockchain
 prefix: PRF-CHAIN
 modules: [04-standards/*, 05-architecture/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Blockchain / smart contract / dApp
@@ -119,5 +119,5 @@ Phiên bản xác minh **2026-10-13** — **xác minh lại trước khi dùng**
 - Nghị quyết 05/2025/NQ-CP (09/09/2025) thí điểm thị trường tài sản mã hoá: <https://luatvietnam.vn/tin-van-ban-moi/tai-toan-van-nghi-quyet-05-2025-nq-cp-ve-trien-khai-thi-diem-thi-truong-tai-san-ma-hoa-186-103979-article.html> — xác minh 2026-10-13 qua nguồn thứ cấp (thời hạn 5 năm: theo tin, chưa thấy trong trích dẫn văn bản)
 - Luật Công nghiệp công nghệ số 71/2025/QH15 (hiệu lực 01/01/2026): <https://thuvienphapluat.vn/van-ban/Cong-nghe-thong-tin/Luat-Cong-nghiep-cong-nghe-so-2025-so-71-2025-QH15-621341.aspx> — ngày/số hiệu xác minh qua tìm kiếm 2026-10-13; **điều khoản về tài sản mã hoá chưa xác minh** (trang trả 403)
 - Phiên bản: <https://github.com/foundry-rs/foundry/releases/latest> v1.8.5; <https://registry.npmjs.org/hardhat/latest> 3.19.0; `@openzeppelin/contracts` 5.6.1; `viem` 2.57.5; `wagmi` 4.2.1; <https://pypi.org/project/slither-analyzer/> 0.11.6; <https://github.com/crytic/echidna/releases/latest> 2.3.3; <https://github.com/solana-foundation/anchor/releases/latest> v1.2.1 — xác minh 2026-10-13
-- (chưa xác minh) Phiên bản Solidity hiện hành — <https://endoflife.date/api/solidity.json> trả 404 ngày 2026-10-13.
+- (chưa xác minh) Phiên bản Solidity hiện hành — endoflife.date không có sản phẩm Solidity (link gốc 404); tra tài liệu chính thức <https://docs.soliditylang.org/en/latest/> (HTTP 200, xác minh 2026-10-14) hoặc bản phát hành của trình biên dịch trước khi chốt.
 - Khung cũ X-stored PHẦN C9 (commit `1b80fe4`).

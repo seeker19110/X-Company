@@ -71,7 +71,7 @@ Mặc định: **branch coverage ratchet toàn repo + mutation ≥ 70% cho thư 
 | `go test` | `go test ./... -covermode=atomic -coverprofile=cover.out && python3 scripts/cov-ratchet.py cover.out` | CI | ≥ baseline |
 | JaCoCo | `jacoco:check` rule BRANCH `COVEREDRATIO` ≥ baseline | CI | ≥ baseline |
 | StrykerJS 10.0.0 | `npx stryker run --incremental` (`thresholds: {high: 80, low: 60, break: 70}`) | CI PR (file đổi) + nightly | ≥ 70% vùng critical |
-| mutmut 3.8.0 | `mutmut run && mutmut export-cicd-stats > stats.json && python3 scripts/mutation-gate.py stats.json --min 70` | CI nightly + PR scope | ≥ 70% |
+| mutmut 3.8.0 | `mutmut run && mutmut export-cicd-stats > stats.json && python3 scripts/mutation-gate.py stats.json --min 70` (dự án tự viết) | CI nightly + PR scope | ≥ 70% |
 | PIT 1.30.0 | `mvn org.pitest:pitest-maven:mutationCoverage -DmutationThreshold=70` | CI | ≥ 70% |
 | Lint test | `eslint-plugin-vitest`/`jest` `expect-expect`, `no-standalone-expect` | CI | 0 |
 

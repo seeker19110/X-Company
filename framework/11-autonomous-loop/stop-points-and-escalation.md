@@ -79,7 +79,7 @@ Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã lu�
 - [ ] `LOOP-STOP-005` **MUST** Việc chạm tiền thật, dữ liệu người dùng thật, xác thực/phân quyền, mật mã luôn có người duyệt trước merge (T4/làn kiến trúc). → Kiểm: PR có nhãn `risk:` tương ứng và required review của người; CI chặn merge khi thiếu.
 - [ ] `LOOP-STOP-006` **MUST@L** Mỗi task giao cho subagent ghi `model_tier` (T0–T4) và `external_side_effects`; subagent không tự nâng tier. → Kiểm: task pack có hai trường; test từ chối task thiếu trường. · Nguồn: stored 23 §4.5
 - [ ] `LOOP-STOP-007` **MUST@L** Cổng chờ người có hạn (mặc định 24 h) và nhắc giữa hạn; quá hạn **không tự pass, không tự huỷ**. → Kiểm: cấu hình `gate_timeout_hours: 24`; test quá hạn → trạng thái `escalated`. · Nguồn: spec cũ ASC-FR-14
-- [ ] `LOOP-STOP-008` **MUST@L** Trần rework 3 vòng/việc; vượt → `escalated` cho người, cấm sửa tiếp máy móc. → Kiểm: `same_failure_count ≥ 3` → `loop status = blocked`; PROGRESS ghi "lần 3". · Nguồn: spec cũ §B6.3
+- [ ] `LOOP-STOP-008` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`LOOP-DESIGN-005`](loop-design.md) (trần rework 3 vòng/việc → `blocked`, người xem).
 - [ ] `LOOP-STOP-009` **MUST@L** Làn nhanh (tự merge) chỉ bật ở L2 trở lên và được định nghĩa bằng vị từ máy (5 điều kiện + 3 ngoại lệ cứng); mặc định là "không phải làn nhanh". → Kiểm: script phân làn đọc `git diff --numstat` + đường dẫn + `risk_tags`; test: diff chạm `auth/` → làn kiến trúc. · Nguồn: spec cũ §B3.1a
 - [ ] `LOOP-STOP-010` **MUST@L** Đường lùi tự chủ được đo: lỗi lọt nghiêm trọng qua làn nhanh → về L1 cho tới khi rà xong nguyên nhân. → Kiểm: `docs/ops/` có bảng mức hiện tại + ngày + lý do đổi; chỉ số `escaped_defect_rate` có số.
 - [ ] `LOOP-STOP-011` **SHOULD** Lỗi lần 2 cùng bước → đổi cách tiếp cận trước khi thử lại; ghi vào PROGRESS mục Quyết định. → Kiểm: evidence lần 2 và 3 có `cmd`/diff khác nhau; PROGRESS có dòng "đổi cách". · Nguồn: stored 23 §6.1
@@ -109,9 +109,9 @@ Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã lu�
 | `pre-bash-guard.sh` | PreToolUse(Bash) | `.claude/settings.json` | deny phá huỷ; ask đối ngoại/push main |
 | `pre-edit-guard.sh` | PreToolUse(Edit\|Write) | `.claude/settings.json` | deny file bí mật; ask cấu hình cổng, migration cũ |
 | `permissions.deny/ask` | `claude -p --permission-mode dontAsk` trong CI | settings | deny thắng allow |
-| `xs.py loop block` | `python3 scripts/xs.py loop block --reason "..."` | Agent khi gặp điểm dừng | verdict `blocked` |
+| `xs.py loop block` | `xs.py loop block --reason "..."` | Agent khi gặp điểm dừng | verdict `blocked` |
 | Phân làn | script đọc `git diff --numstat` + đường dẫn + `risk_tags` | CI `pr-policy` | 5 điều kiện; mặc định làn chuẩn |
-| Ruleset | `.github/rulesets/main.json` | GitHub | PR bắt buộc, required check `gate`, không bypass |
+| Ruleset | `.github/rulesets/main.json` | GitHub | PR bắt buộc, required check `quality` + `protection-guard` + `gitleaks` + `dep-audit`, không bypass |
 
 ## Nguồn
 

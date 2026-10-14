@@ -43,7 +43,7 @@ mâu thuẫn spec hoặc với code hiện có · bảo mật/pháp lý mơ hồ
 Ngoài các điểm trên, **sau khi kế hoạch được duyệt thì không hỏi lại** — tự làm đến khi có bằng chứng xong.
 
 ## 6. Cổng
-- **Trước commit** (`/gate`): `scripts`/`xs.yaml` → build · typecheck · lint · format · test xanh; tự review diff; không rác/bí mật; conventional commit.
+- **Trước commit** (`/gate`): `scripts/dev-task.sh gate` (đọc `xs.yaml`) → build · typecheck · lint · test xanh (lint nên gồm kiểm format); tự review diff; không rác/bí mật; conventional commit.
 - **Trước merge:** + toàn bộ test, nhánh cập nhật với `main`, tiêu chí chấp nhận trong SPEC, mục blueprint liên quan tick kèm bằng chứng, review (người hoặc `reviewer` model khác), CI xanh.
 - **Phát hành (G7):** `python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict` = 0 MUST mở + `GO-NO-GO.md` không còn BLOCKER.
 

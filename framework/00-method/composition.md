@@ -33,14 +33,14 @@ BLUEPRINT = Baseline (mọi phần mềm)
 
 ```bash
 # Liệt kê lựa chọn
-python3 scripts/xs.py list profiles
-python3 scripts/xs.py list industries
+python3 .xstored/scripts/xs.py list profiles
+python3 .xstored/scripts/xs.py list industries
 
 # Ghép blueprint: web app cho thương mại điện tử, quy mô production
-python3 scripts/xs.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
+python3 .xstored/scripts/xs.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
 
 # Theo dõi tiến độ; --strict trả exit 1 nếu còn MUST chưa đạt (dùng làm cổng phát hành)
-python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict
+python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict
 ```
 
 ## Dùng blueprint thế nào
@@ -65,7 +65,7 @@ python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict
 | Nhiều đội cùng phát triển, SLA ký với khách hàng, kiểm toán bên ngoài? | L |
 | Chỉ thử nghiệm ý tưởng, không lưu dữ liệu thật? | S |
 
-Quy mô quyết định khối lượng: blueprint `web-app` khoảng 80 MUST ở S, khoảng 1.100 MUST ở M (đo 2026-10-13). Chọn đúng quy mô quan trọng hơn chọn đủ module.
+Quy mô quyết định khối lượng: blueprint `web-app` 70 MUST ở S, 468 ở M, 1.124 ở L (đo 2026-10-14). Chọn đúng quy mô quan trọng hơn chọn đủ module.
 
 ## Nguồn
 

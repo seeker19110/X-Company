@@ -148,7 +148,7 @@ từ 02/12/2027) · WCAG 2.2; EN 301 549 V3.2.1; Section 508 (US) · 1EdTech LTI
 - Luật Giáo dục sửa đổi 123/2025/QH15 (10/12/2025, hiệu lực 01/01/2026): <https://thuvienphapluat.vn/van-ban/Giao-duc/Luat-Giao-duc-sua-doi-2025-so-123-2025-QH15-656970.aspx> — xác minh 2026-10-13.
 - TT 09/2021/TT-BGDĐT (30/03/2021, hiệu lực 16/05/2021): <https://hethongphapluat.com/phap-luat/the/thong-tu-092021tt-bgddt.html> — xác minh 2026-10-13.
 - FERPA 20 U.S.C. §1232g; 34 CFR Part 99: <https://studentprivacy.ed.gov/ferpa> — xác minh 2026-10-13.
-- COPPA 16 CFR Part 312 (bản sửa 22/04/2025, hiệu lực 23/06/2025, tuân thủ 22/04/2026): <https://www.ftc.gov/legal-library/browse/rules/childrens-online-privacy-protection-rule-coppa> — xác minh 2026-10-13.
+- COPPA 16 CFR Part 312 (bản sửa 22/04/2025, hiệu lực 23/06/2025, tuân thủ 22/04/2026): <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-312> (eCFR, HTTP 200) và bản sửa đổi <https://www.federalregister.gov/documents/2025/04/22/2025-05904/childrens-online-privacy-protection-rule> (Federal Register, HTTP 200) — xác minh 2026-10-14 (link ftc.gov gốc 404/không truy cập được).
 - UK Online Safety Act 2023 (17/03/2025; 25/07/2025): <https://www.ofcom.org.uk/online-safety/illegal-and-harmful-content/statement-protecting-children-from-harms-online> — xác minh 2026-10-13.
 - 1EdTech LTI 1.3 Advantage: <https://standards.1edtech.org/lti/specifications/guides/implementation_guide/implementation-guide> — xác minh 2026-10-13; (chưa xác minh) phiên bản QTI 3.0, Caliper 1.2, Open Badges 3.0.
 - WCAG 2.2 (W3C Recommendation 05/10/2023, bản cập nhật 12/12/2024): <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.

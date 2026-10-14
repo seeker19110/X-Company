@@ -24,5 +24,5 @@
 - [x] `T-102` Đợt 2: hook tách lệnh bằng shlex (AUD-SEC-001…010), session-start cắt UTF-8 an toàn (HAR-011) — Gate: `python3 -m unittest discover -s tests -k guard`
 - [x] `T-103` Đợt 3: install đăng ký hook vào settings có sẵn (HAR-003), manifest hash cập nhật hook chưa sửa (HAR-004), bỏ qua symlink (HAR-010), cảnh báo ruleset cần workflow (CI-003) — Gate: `python3 -m unittest discover -s tests -k install`
 - [x] `T-104` Đợt 4: requirements-dev có hash + Dependabot pip (DEP-001), nâng action (DEP-002), ruleset strict (CI-002), lychee nhận 202 (CI-004) — Gate: `scripts/dev-task.sh gate`
-- [ ] `T-105` Đợt 5: thống nhất tài liệu AUD-DOC-001…019, CI-001, CI-005, HAR-005; xác minh lại 45 bằng chứng blueprint (HAR-006) — Gate: `python3 scripts/xs.py validate`
+- [x] `T-105` Đợt 5: thống nhất tài liệu AUD-DOC-001…019, CI-001, CI-005, HAR-005; xác minh lại 45 bằng chứng blueprint (HAR-006) — Gate: `python3 scripts/xs.py validate`
 - [ ] `T-106` Sổ audit: cập nhật trạng thái, quét lại nhóm bị chạm, `--strict` xanh — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict`

@@ -82,7 +82,7 @@ Mục tiêu tham chiếu (đội tự chốt và ghi vào `docs/ops/RPO-RTO.md`)
 |---|---|---|---|---|
 | Backup + WAL archive chạy và toàn vẹn | pgBackRest 2.59.3 · MIT | `pgbackrest --stanza=main check` · `pgbackrest info` · `pgbackrest verify` | cron + cảnh báo | exit 0; backup mới nhất ≤ chu kỳ |
 | Thay thế | WAL-G 3.0.9 · Apache-2.0 | `wal-g backup-list` + verify | cron | như trên |
-| Restore-verify tự động | script: restore vào container tạm + truy vấn kiểm | `scripts/restore-drill.sh` | CI nightly/tuần | exit 0; RTO đo ≤ chốt |
+| Restore-verify tự động | script: restore vào container tạm + truy vấn kiểm | `scripts/restore-drill.sh` (dự án tự viết) | CI nightly/tuần | exit 0; RTO đo ≤ chốt |
 | Archive thất bại / pg_wal phình | `pg_stat_archiver.failed_count`, dung lượng `pg_wal` | exporter + cảnh báo | production | failed_count không tăng |
 | pg_dump → pg_restore | PostgreSQL 18 client tools | `pg_dump -Fd -j 4 … && pg_restore -d verify …` | CI tuần | exit 0 |
 | Quyền xoá backup | IaC policy test (OPA/conftest, phiên bản theo lockfile) | `conftest test iam/` | CI | 0 policy cho phép Delete cho app role |

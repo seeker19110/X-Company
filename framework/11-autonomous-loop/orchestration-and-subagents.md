@@ -98,7 +98,7 @@ lệnh + exit code · còn treo). Thiếu `acceptance_criteria` → không giao.
 | Việc | Công cụ → lệnh | Đặt ở đâu | Ngưỡng |
 |---|---|---|---|
 | Cấm lồng subagent | Kiểm `tools:` của `.claude/agents/*.md` không có `Agent` (grep) | Test harness `tests/test_hooks.py` hoặc script CI | 0 vi phạm |
-| Bằng chứng task do subagent làm | `python3 scripts/xs.py loop record --task T-xxx -- <Gate>` ở phiên chính | Trước khi tick `[x]` | `exit_code: 0` |
+| Bằng chứng task do subagent làm | `xs.py loop record --task T-xxx -- <Gate>` ở phiên chính | Trước khi tick `[x]` | `exit_code: 0` |
 | Giao nhau tập file giữa task song song | Script đọc `files:` trong PLAN, báo cặp giao nhau | Trước khi tách subagent | 0 cặp giao nhau |
 | Reviewer khác model, read-only | Kiểm frontmatter `model:`/`tools:` | Test harness | Khác `executor`; không `Edit/Write` |
 | Trần turn mỗi subagent | `maxTurns:` trong frontmatter agent | `.claude/agents/*.md` | Có giá trị (repo này: 40–60) |

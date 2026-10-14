@@ -54,8 +54,8 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 
 ## Checklist
 
-- [ ] `LOOP-DESIGN-001` **MUST** Vòng lặp khai đủ 4 con số trước khi chạy: trần vòng, ngân sách tiền/token, timeout mỗi lệnh kiểm, hạn chót. → Kiểm: `.autopilot/state.json` có `max_iterations` và `deadline` (từ `loop init --max-iterations N --hours H`); lệnh headless có `--max-turns` + `--max-budget-usd`; `XS_RECORD_TIMEOUT` (mặc định 1800 s) ghi trong `PLAN.md`. · Nguồn: stored 21 §10
-- [ ] `LOOP-DESIGN-002` **MUST@L** Mỗi task trong `PLAN.md` có tiêu chí dừng máy kiểm dạng `— Gate:` theo sau là lệnh trong backtick (test/lint/build/script), không phải mô tả bằng lời. → Kiểm: `python3 scripts/xs.py loop status --json` không trả `blocked` với lý do "PLAN không có task"; grep `Gate:` cho mọi dòng `T-\d{3}`.
+- [ ] `LOOP-DESIGN-001` **MUST** Nhà của "4 con số": vòng lặp khai đủ trước khi chạy trần vòng · ngân sách tiền/token · timeout mỗi lệnh kiểm · hạn chót. → Kiểm: `.autopilot/state.json` có `max_iterations` và `deadline` (từ `loop init --max-iterations N --hours H`); lệnh headless có `--max-turns` + `--max-budget-usd`; `XS_RECORD_TIMEOUT` (mặc định 1800 s) ghi trong `PLAN.md`. · Nguồn: stored 21 §10
+- [ ] `LOOP-DESIGN-002` **MUST@L** Mỗi task trong `PLAN.md` có tiêu chí dừng máy kiểm dạng `— Gate:` theo sau là lệnh trong backtick (test/lint/build/script), không phải mô tả bằng lời. → Kiểm: `xs.py loop status --json` không trả `blocked` với lý do "PLAN không có task"; grep `Gate:` cho mọi dòng `T-\d{3}`.
 - [ ] `LOOP-DESIGN-003` **MUST** Task chỉ được tick `[x]` sau khi `xs.py loop record --task T-xxx -- <đúng lệnh Gate>` trả exit 0. → Kiểm: `.autopilot/evidence/T-xxx.json` có `exit_code: 0` và `cmd` bằng chuỗi Gate; `loop status` không trả `verify`.
 - [ ] `LOOP-DESIGN-004` **MUST** Tín hiệu dừng đọc từ file trạng thái/bằng chứng, không từ chuỗi model in ra (promise string) hay phán quyết của model đánh giá transcript. → Kiểm: `.claude/settings.json` có Stop hook gọi `xs.py loop hook-stop`; không có hook nào grep `<promise>`; `/goal` nếu dùng chỉ là lớp phụ. · Nguồn: stored 23 §2.2
 - [ ] `LOOP-DESIGN-005` **MUST@L** Cùng một chữ ký lỗi (task + exit code + 20 dòng cuối đã bỏ số) lặp 3 lần → verdict `blocked`, vòng lặp tự dừng để người xem. → Kiểm: `state.json` có `max_same_failure: 3`; test tái hiện: 3 lần `loop record` cùng lỗi → `loop status` = `blocked`.
@@ -90,10 +90,10 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 
 | Công cụ | Lệnh | Đặt ở | Ngưỡng |
 |---|---|---|---|
-| `xs.py loop status` | `python3 scripts/xs.py loop status --json` | SessionStart hook, trước khi chọn task | verdict ∈ {continue, verify, done}; `blocked`/`budget` → người |
+| `xs.py loop status` | `xs.py loop status --json` | SessionStart hook, trước khi chọn task | verdict ∈ {continue, verify, done}; `blocked`/`budget` → người |
 | `xs.py loop hook-stop` | qua `.claude/hooks/stop-guard.sh` | Stop hook | `decision: block` khi continue/verify; cap 8 lần chặn (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`) |
-| `xs.py loop record` | `python3 scripts/xs.py loop record --task T-001 -- <Gate>` | Mỗi task | exit 0; timeout `XS_RECORD_TIMEOUT=1800` |
-| `xs.py blueprint-status` | `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict` | CI job `quality`, G7 | 0 MUST mở, 0 miễn trừ thiếu lý do |
+| `xs.py loop record` | `xs.py loop record --task T-001 -- <Gate>` | Mỗi task | exit 0; timeout `XS_RECORD_TIMEOUT=1800` |
+| `xs.py blueprint-status` | `xs.py blueprint-status BLUEPRINT.md --strict` | Cổng phát hành G7 (dự án tự thêm vào CI khi phát hành) | 0 MUST mở, 0 miễn trừ thiếu lý do |
 | Headless | `claude -p ... --max-turns N --max-budget-usd X --output-format json` | CI/Routine | dừng cứng theo trần |
 | Test hook | `python3 -m unittest discover -s tests` | pre-commit, CI | Mọi test loop/hook xanh |
 
