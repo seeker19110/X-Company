@@ -10,9 +10,10 @@ on:
 permissions:
   contents: read
 
+# PR: push mới hủy run cũ cùng PR. `main`: mỗi commit một group riêng (run_id), không hủy — giữ bằng chứng CI từng commit.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # MỘT job gate duy nhất làm required check (stored 23 §2.5): validate khung + test + link + shell + cài thử.

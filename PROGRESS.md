@@ -7,7 +7,7 @@
 
 ## Tiếp theo
 1. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ — repo khung đã dogfood xong ở S.
-2. SHOULD gần tầm tay: `WF-CI-008` (concurrency đang hủy cả run trên `main` — chỉ hủy cho PR), `WF-DOC-004` (thêm kiểm nhánh nêu tên còn trên remote), `LOOP-HARNESS-012` (biến môi trường tắt hook).
+2. Cần người quyết: `WF-DOC-004` đòi "nhánh nêu tên còn trên remote" — xung đột với squash + xoá nhánh (PROGRESS trên `main` nêu nhánh PR đã xoá → đỏ mãi); `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
 3. Việc của admin (5 MUST còn mở trong BLUEPRINT.md): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting, tạo tag `v2.0.0`.
 
 ## Quyết định
