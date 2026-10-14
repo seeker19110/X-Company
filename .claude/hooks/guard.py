@@ -21,7 +21,7 @@ import posixpath
 import re
 import shlex
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 WRAPPERS = {"command", "builtin", "exec", "nohup", "time", "nice", "stdbuf", "xargs"}
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "fish"}
@@ -216,38 +216,52 @@ def pipelines(tokens: List[str]) -> List[List[List[str]]]:
     return [[c for c in g if c] for g in groups if any(g)]
 
 
-def normalize(argv: List[str]) -> List[str]:
-    """Bỏ gán biến đầu lệnh, wrapper (`command`, `env -i`, `nohup`…), đường dẫn của argv[0], tuỳ chọn toàn cục git."""
+ENV_ASSIGN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*")
+
+
+def _skip_env_args(a: List[str]) -> None:
+    """Sau `env`: bỏ tuỳ chọn và gán biến tại chỗ (`-u`/`-C`/`-S` kèm một giá trị)."""
+    while a and (a[0].startswith("-") or "=" in a[0]):
+        opt = a.pop(0)
+        if opt in ("-u", "-C", "-S") and a:
+            a.pop(0)
+
+
+def _strip_prefixes(argv: List[str]) -> List[str]:
+    """Bỏ gán biến đầu lệnh và wrapper (`command`, `env -i`, `nohup`…) cho tới khi gặp lệnh thật."""
     a = list(argv)
     while a:
         head = a[0]
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", head):
+        if ENV_ASSIGN_RE.fullmatch(head):
             a.pop(0)
         elif posixpath.basename(head) == "env":
             a.pop(0)
-            while a and (a[0].startswith("-") or "=" in a[0]):
-                opt = a.pop(0)
-                if opt in ("-u", "-C", "-S") and a:
-                    a.pop(0)
+            _skip_env_args(a)
         elif posixpath.basename(head) in WRAPPERS:
             a.pop(0)
             while a and a[0].startswith("-"):
                 a.pop(0)
         else:
             break
+    return a
+
+
+def _strip_git_global_opts(a: List[str]) -> List[str]:
+    """`git -C p -c k=v --no-pager sub …` → `git sub …` (tuỳ chọn có giá trị ăn thêm một token)."""
+    rest = a[1:]
+    i = 0
+    while i < len(rest) and rest[i].startswith("-"):
+        i += 2 if rest[i] in GIT_OPTS_WITH_VALUE else 1
+    return ["git", *rest[i:]]
+
+
+def normalize(argv: List[str]) -> List[str]:
+    """Bỏ gán biến đầu lệnh, wrapper (`command`, `env -i`, `nohup`…), đường dẫn của argv[0], tuỳ chọn toàn cục git."""
+    a = _strip_prefixes(argv)
     if not a:
         return a
     a[0] = posixpath.basename(a[0])
-    if a[0] == "git":
-        rest = a[1:]
-        out = ["git"]
-        i = 0
-        while i < len(rest) and rest[i].startswith("-"):
-            opt = rest[i]
-            i += 2 if opt in GIT_OPTS_WITH_VALUE else 1
-        out += rest[i:]
-        return out
-    return a
+    return _strip_git_global_opts(a) if a[0] == "git" else a
 
 
 def _short_flags(args: List[str]) -> str:
@@ -299,44 +313,109 @@ def remote_exec(cmd: str, tokens: List[str]) -> Optional[str]:
     return None
 
 
+GitRule = Callable[[List[str]], Tuple[str, str]]
+DISCARD_WHOLE_TREE_WHY = "{} . vứt toàn bộ thay đổi chưa commit"
+
+
+def _push_ref_rule(ref: str, deleting: bool) -> Tuple[str, str]:
+    """Một refspec của push: đích là nhánh chính → deny nếu xoá, ask nếu đẩy thẳng."""
+    dst = ref.split(":", 1)[1] if ":" in ref else ref
+    dst = dst.removeprefix("refs/heads/")
+    if dst not in MAIN_BRANCHES:
+        return "", ""
+    if deleting or ref.startswith(":"):
+        return "deny", "xoá nhánh chính trên remote"
+    return "ask", "push thẳng nhánh chính — khung yêu cầu đi qua PR"
+
+
+def _git_push(args: List[str]) -> Tuple[str, str]:
+    """push: deny --force/--mirror/+refspec và xoá nhánh chính; ask khi đẩy thẳng nhánh chính."""
+    flags = _short_flags(args)
+    force = any(x.startswith("--force") or x == "--mirror" for x in args) or "f" in flags
+    refs = _positionals(args, ("-o", "--push-option", "--repo", "--receive-pack", "--exec"))
+    if force or any(r.startswith("+") for r in refs):
+        return "deny", "push --force/--mirror/+refspec ghi đè lịch sử"
+    deleting = "--delete" in args or "d" in flags
+    for r in refs[1:]:
+        verdict = _push_ref_rule(r, deleting)
+        if verdict[0]:
+            return verdict
+    return "", ""
+
+
+def _git_reset(args: List[str]) -> Tuple[str, str]:
+    """reset: deny --hard."""
+    if "--hard" in args:
+        return "deny", "reset --hard làm mất thay đổi"
+    return "", ""
+
+
+def _git_clean(args: List[str]) -> Tuple[str, str]:
+    """clean: deny -f/--force."""
+    if "f" in _short_flags(args) or "--force" in args:
+        return "deny", "clean -f xoá file chưa track"
+    return "", ""
+
+
+def _discards_whole_tree(args: List[str]) -> bool:
+    """checkout/restore có đích là cả cây làm việc (`.`, `./`, `:/`, `*`) — đích nằm sau `--` hoặc là đối số vị trí."""
+    if "--" in args:
+        targets = args[args.index("--") + 1 :]
+    else:
+        targets = _positionals(args, ("-s", "--source", "-b", "-B"))
+    return any(t in (".", "./", ":/", "*") for t in targets)
+
+
+def _git_checkout(args: List[str]) -> Tuple[str, str]:
+    """checkout: deny -f/--force và checkout cả cây."""
+    if "f" in _short_flags(args) or "--force" in args:
+        return "deny", "checkout -f vứt thay đổi"
+    if _discards_whole_tree(args):
+        return "deny", DISCARD_WHOLE_TREE_WHY.format("checkout")
+    return "", ""
+
+
+def _git_restore(args: List[str]) -> Tuple[str, str]:
+    """restore: deny restore cả cây, trừ khi chỉ bỏ khỏi index (`--staged` không kèm worktree)."""
+    index_only = "--staged" in args and "--worktree" not in args and "W" not in _short_flags(args)
+    if _discards_whole_tree(args) and not index_only:
+        return "deny", DISCARD_WHOLE_TREE_WHY.format("restore")
+    return "", ""
+
+
+def _git_stash(args: List[str]) -> Tuple[str, str]:
+    """stash: ask khi drop/clear."""
+    if args[:1] in (["drop"], ["clear"]):
+        return "ask", f"stash {args[0]} xoá thay đổi đã cất"
+    return "", ""
+
+
+def _git_branch(args: List[str]) -> Tuple[str, str]:
+    """branch: deny xoá cưỡng bức nhánh chính."""
+    flags = _short_flags(args)
+    deleting_force = "D" in flags or (("d" in flags or "--delete" in args) and ("f" in flags or "--force" in args))
+    if deleting_force and any(x in MAIN_BRANCHES for x in _positionals(args)):
+        return "deny", "xoá nhánh chính"
+    return "", ""
+
+
+GIT_RULES: Dict[str, GitRule] = {
+    "push": _git_push,
+    "reset": _git_reset,
+    "clean": _git_clean,
+    "checkout": _git_checkout,
+    "restore": _git_restore,
+    "stash": _git_stash,
+    "branch": _git_branch,
+}
+
+
 def git_rules(n: List[str]) -> Tuple[str, str]:
+    """Luật theo lệnh con của git (bảng GIT_RULES); lệnh con không có luật → cho qua."""
     if len(n) < 2:
         return "", ""
-    sub, args = n[1], n[2:]
-    flags = _short_flags(args)
-    if sub == "push":
-        force = any(x.startswith("--force") or x == "--mirror" for x in args) or "f" in flags
-        refs = _positionals(args, ("-o", "--push-option", "--repo", "--receive-pack", "--exec"))
-        if force or any(r.startswith("+") for r in refs):
-            return "deny", "push --force/--mirror/+refspec ghi đè lịch sử"
-        deleting = "--delete" in args or "d" in flags
-        for r in refs[1:]:
-            dst = r.split(":", 1)[1] if ":" in r else r
-            dst = dst.removeprefix("refs/heads/")
-            if dst in MAIN_BRANCHES and (deleting or r.startswith(":")):
-                return "deny", "xoá nhánh chính trên remote"
-            if dst in MAIN_BRANCHES:
-                return "ask", "push thẳng nhánh chính — khung yêu cầu đi qua PR"
-        return "", ""
-    if sub == "reset" and "--hard" in args:
-        return "deny", "reset --hard làm mất thay đổi"
-    if sub == "clean" and ("f" in flags or "--force" in args):
-        return "deny", "clean -f xoá file chưa track"
-    if sub in ("checkout", "restore"):
-        targets = args[args.index("--") + 1 :] if "--" in args else _positionals(args, ("-s", "--source", "-b", "-B"))
-        whole = any(t in (".", "./", ":/", "*") for t in targets)
-        if sub == "checkout" and ("f" in flags or "--force" in args):
-            return "deny", "checkout -f vứt thay đổi"
-        if whole and not (sub == "restore" and "--staged" in args and "--worktree" not in args and "W" not in flags):
-            return "deny", f"{sub} . vứt toàn bộ thay đổi chưa commit"
-        return "", ""
-    if sub == "stash" and args[:1] in (["drop"], ["clear"]):
-        return "ask", f"stash {args[0]} xoá thay đổi đã cất"
-    if sub == "branch":
-        deleting_force = "D" in flags or (("d" in flags or "--delete" in args) and ("f" in flags or "--force" in args))
-        if deleting_force and any(x in MAIN_BRANCHES for x in _positionals(args)):
-            return "deny", "xoá nhánh chính"
-    return "", ""
+    rule = GIT_RULES.get(n[1])
+    return rule(n[2:]) if rule else ("", "")
 
 
 ASK_CMDS: Dict[str, Optional[Tuple[str, ...]]] = {
@@ -408,7 +487,65 @@ def write_targets(n: List[str], argv: List[str]) -> List[str]:
     return out
 
 
+COMMIT_OPTS_WITH_VALUE = ("-m", "--message", "-F", "--file", "-c", "-C", "--author", "--date", "-t", "--template")
+
+
+def _commit_flag_args(args: List[str]) -> List[str]:
+    """Đối số của `git commit` sau khi bỏ giá trị của -m/-F/… (nội dung message là dữ liệu, không phải cờ)."""
+    out: List[str] = []
+    skip = False
+    for x in args:
+        if skip:
+            skip = False
+        elif x in COMMIT_OPTS_WITH_VALUE:
+            skip = True
+        else:
+            out.append(x)
+    return out
+
+
+def _write_asks(n: List[str], argv: List[str], root: str) -> List[str]:
+    """Câu hỏi xác nhận cho file bí mật/cổng/migration mà lệnh có thể ghi (bỏ qua /dev/*)."""
+    asks: List[str] = []
+    for target in write_targets(n, argv):
+        kind = classify_path(rel_path(target, root)) if target and not target.startswith("/dev/") else ""
+        if kind == "secret":
+            asks.append(f"ghi file bí mật qua Bash: {target}")
+        elif kind in ("gate", "migration"):
+            asks.append(f"sửa cấu hình cổng/CI/harness/migration qua Bash ({target}) — nói rõ lý do")
+    return asks
+
+
+def _scan_commit(args: List[str], res: Dict[str, object], asks: List[str]) -> Optional[str]:
+    """`git commit`: --allow-empty → trả lý do deny; còn lại đánh dấu commit, --no-verify thì thêm câu hỏi."""
+    if "--allow-empty" in args:
+        return "Commit rỗng bị khung chặn (không dùng empty commit để kích CI). Push thay đổi thật hoặc re-run job."
+    flag_args = _commit_flag_args(args)
+    res["commit"] = True
+    if "--no-verify" in flag_args or "n" in _short_flags(flag_args):
+        res["no_verify"] = True
+        asks.append("commit --no-verify bỏ qua cổng chất lượng — cần người xác nhận lý do")
+    return None
+
+
+def _scan_command(argv: List[str], root: str, res: Dict[str, object], asks: List[str]) -> Optional[str]:
+    """Quét một lệnh đơn: thêm câu hỏi vào `asks`, ghi cờ commit vào `res`; trả lý do deny nếu phải chặn."""
+    n = normalize(argv)
+    if not n:
+        return None
+    decision, why = command_rules(n, root)
+    if decision == "deny":
+        return f"Lệnh bị khung chặn ({why}): {' '.join(argv)[:300]}. Muốn làm thật thì người dùng tự chạy."
+    if decision == "ask":
+        asks.append(f"{why}: {' '.join(argv)[:200]}")
+    asks.extend(_write_asks(n, argv, root))
+    if n[:2] == ["git", "commit"]:
+        return _scan_commit(n[2:], res, asks)
+    return None
+
+
 def bash_decision(cmd: str, root: str) -> Dict[str, object]:
+    """Quyết định cho một lệnh Bash: deny/ask/"" kèm cờ `commit` và `no_verify` cho hook cổng commit."""
     tokens = tokenize(cmd)
     res: Dict[str, object] = {"decision": "", "reason": "", "commit": False, "no_verify": False}
     rx = remote_exec(cmd, tokens)
@@ -420,46 +557,10 @@ def bash_decision(cmd: str, root: str) -> Dict[str, object]:
         return res
     asks: List[str] = []
     for argv in split_commands(tokens):
-        n = normalize(argv)
-        if not n:
-            continue
-        decision, why = command_rules(n, root)
-        if decision == "deny":
-            res.update(
-                decision="deny",
-                reason=f"Lệnh bị khung chặn ({why}): {' '.join(argv)[:300]}. Muốn làm thật thì người dùng tự chạy.",
-            )
+        deny_reason = _scan_command(argv, root, res, asks)
+        if deny_reason:
+            res.update(decision="deny", reason=deny_reason)
             return res
-        if decision == "ask":
-            asks.append(f"{why}: {' '.join(argv)[:200]}")
-        for target in write_targets(n, argv):
-            kind = classify_path(rel_path(target, root)) if target and not target.startswith("/dev/") else ""
-            if kind == "secret":
-                asks.append(f"ghi file bí mật qua Bash: {target}")
-            elif kind in ("gate", "migration"):
-                asks.append(f"sửa cấu hình cổng/CI/harness/migration qua Bash ({target}) — nói rõ lý do")
-        if n[0] == "git" and len(n) > 1 and n[1] == "commit":
-            args = n[2:]
-            if "--allow-empty" in args:
-                res.update(
-                    decision="deny",
-                    reason="Commit rỗng bị khung chặn (không dùng empty commit để kích CI). Push thay đổi thật hoặc re-run job.",
-                )
-                return res
-            msg_free = []
-            skip = False
-            for x in args:
-                if skip:
-                    skip = False
-                    continue
-                if x in ("-m", "--message", "-F", "--file", "-c", "-C", "--author", "--date", "-t", "--template"):
-                    skip = True
-                    continue
-                msg_free.append(x)
-            res["commit"] = True
-            if "--no-verify" in msg_free or "n" in _short_flags(msg_free):
-                res["no_verify"] = True
-                asks.append("commit --no-verify bỏ qua cổng chất lượng — cần người xác nhận lý do")
     if asks:
         res.update(decision="ask", reason="Khung cần xác nhận: " + "; ".join(dict.fromkeys(asks)))
     return res

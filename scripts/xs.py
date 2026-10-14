@@ -46,7 +46,7 @@ import sys
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_FRAMEWORK = (SCRIPT_DIR.parent / "framework").resolve()
@@ -177,6 +177,16 @@ class Doc:
         return str(self.meta.get("title", self.rel))
 
 
+def _lines_outside_fences(body: str, first_no: int) -> Iterator[Tuple[int, str]]:
+    """(số dòng, dòng) của thân tài liệu, bỏ dòng ``` và nội dung nằm trong code fence."""
+    in_fence = False
+    for n, line in enumerate(body.splitlines(), start=first_no):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence:
+            yield n, line
+
+
 def load_docs(root: Path) -> Tuple[List[Doc], List[str]]:
     docs: List[Doc] = []
     errors: List[str] = []
@@ -189,13 +199,7 @@ def load_docs(root: Path) -> Tuple[List[Doc], List[str]]:
             errors.append(f"{rel}.md: {exc}")
             continue
         doc = Doc(path=path, rel=rel, meta=meta, body=body, body_offset=offset)
-        in_fence = False
-        for n, line in enumerate(body.splitlines(), start=offset + 1):
-            if line.lstrip().startswith("```"):
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                continue
+        for n, line in _lines_outside_fences(body, offset + 1):
             m = ITEM_RE.match(line)
             if m:
                 doc.items.append(Item(m["id"], m["level"], m["scale"], m["text"].strip(), m["state"], n))
@@ -240,7 +244,132 @@ def resolve_modules(patterns: Iterable[str], by_rel: Dict[str, Doc]) -> Tuple[Li
 # --------------------------------------------------------------------------- validate
 
 
+def _check_frontmatter(d: Doc, where: str) -> List[str]:
+    """Khoá bắt buộc, `kind` hợp lệ, `updated` dạng ngày, thân bắt đầu bằng tiêu đề `# ...`."""
+    errors = [f"{where}: thiếu khoá frontmatter '{key}'" for key in REQUIRED_KEYS if not d.meta.get(key)]
+    if d.kind and d.kind not in KINDS:
+        errors.append(f"{where}: kind không hợp lệ '{d.kind}'")
+    upd = str(d.meta.get("updated", ""))
+    if upd and not DATE_RE.match(upd):
+        errors.append(f"{where}: 'updated' phải dạng YYYY-MM-DD")
+    if not d.headings or not d.body.lstrip().startswith("#"):
+        errors.append(f"{where}: nội dung phải bắt đầu bằng tiêu đề '# ...' ngay sau frontmatter")
+    return errors
+
+
+def _check_prefix(d: Doc, where: str, prefixes: Dict[str, str]) -> List[str]:
+    """`prefix` bắt buộc khi có mục, đúng dạng, không trùng file khác (ghi nhận vào `prefixes`)."""
+    errors: List[str] = []
+    prefix = d.meta.get("prefix")
+    if d.items:
+        if not prefix:
+            errors.append(f"{where}: có mục checklist nhưng thiếu 'prefix'")
+        elif not PREFIX_RE.match(str(prefix)):
+            errors.append(f"{where}: prefix '{prefix}' không hợp lệ")
+    if prefix:
+        p = str(prefix)
+        if p in prefixes and prefixes[p] != where:
+            errors.append(f"{where}: prefix '{p}' đã dùng ở {prefixes[p]}")
+        prefixes[p] = where
+    return errors
+
+
+def _check_items(d: Doc, where: str, ids: Dict[str, str]) -> List[str]:
+    """Từng mục checklist: ID duy nhất toàn khung (ghi nhận vào `ids`), khớp prefix, trạng thái, `→ Kiểm:`, ngưỡng quy mô."""
+    errors: List[str] = []
+    prefix = d.meta.get("prefix")
+    for it in d.items:
+        at = f"{where}:{it.line}"
+        if it.id in ids:
+            errors.append(f"{at}: ID trùng {it.id} (đã có ở {ids[it.id]})")
+        ids[it.id] = at
+        # fullmatch: prefix SEC và SEC-AUTH đều hợp lệ, nhưng ID SEC-AUTH-001 phải thuộc file SEC-AUTH, không phải file SEC.
+        if prefix and not re.fullmatch(re.escape(str(prefix)) + r"-\d{3}", it.id):
+            errors.append(f"{at}: ID {it.id} không khớp prefix '{prefix}'")
+        if it.state != " ":
+            errors.append(f"{at}: mục trong khung phải ở trạng thái '[ ]'")
+        if it.level == "MUST" and "→ Kiểm:" not in it.text:
+            errors.append(f"{at}: mục MUST {it.id} thiếu '→ Kiểm:'")
+        if it.scale and it.level != "MUST":
+            errors.append(f"{at}: ngưỡng quy mô '@{it.scale}' chỉ dùng với MUST")
+    return errors
+
+
+def _check_must_cap(d: Doc, where: str) -> List[str]:
+    """module/standard: số MUST hiệu lực ở quy mô M không vượt trần (ADR-0004)."""
+    n_m = sum(effective_level(it, "M", d.kind) == "MUST" for it in d.items)
+    if d.kind in ("module", "standard") and n_m > MAX_MUST_AT_M:
+        return [f"{where}: {n_m} MUST hiệu lực ở quy mô M, trần {MAX_MUST_AT_M} — hạ phần vượt thành MUST@L"]
+    return []
+
+
+def _check_sections(d: Doc, where: str) -> List[str]:
+    """module/baseline/profile/industry: có `## Checklist` (khi có mục) và `## Nguồn`."""
+    if d.kind not in ("module", "baseline", "profile", "industry"):
+        return []
+    errors: List[str] = []
+    if d.items and not any("Checklist" in h for h in d.headings):
+        errors.append(f"{where}: thiếu mục '## Checklist'")
+    if not any(h.strip().startswith("Nguồn") for h in d.headings):
+        errors.append(f"{where}: thiếu mục '## Nguồn'")
+    return errors
+
+
+def _check_applies_to(d: Doc, where: str, profile_slugs: Set[str]) -> List[str]:
+    """module/baseline/standard: có `applies_to`, mỗi slug là `all` hoặc hồ sơ có thật."""
+    if d.kind not in ("module", "baseline", "standard"):
+        return []
+    at = _as_list(d.meta.get("applies_to"))
+    if not at:
+        return [f"{where}: thiếu 'applies_to'"]
+    unknown = [a for a in at if a != "all" and a not in profile_slugs]
+    if unknown and profile_slugs:
+        return [f"{where}: applies_to có slug hồ sơ không tồn tại: {', '.join(unknown)}"]
+    return []
+
+
+def _check_slug_modules(d: Doc, where: str, slugs: Dict[Tuple[str, str], str], by_rel: Dict[str, Doc]) -> List[str]:
+    """profile/industry: có `slug` không trùng trong cùng loại (ghi nhận vào `slugs`); mọi module ở `modules` tồn tại."""
+    if d.kind not in ("profile", "industry"):
+        return []
+    errors: List[str] = []
+    slug = d.meta.get("slug")
+    if not slug:
+        errors.append(f"{where}: thiếu 'slug'")
+    else:
+        slug_key = (d.kind, str(slug))
+        if slug_key in slugs:
+            errors.append(f"{where}: slug '{slug}' trùng với {slugs[slug_key]}")
+        slugs[slug_key] = where
+    _, missing = resolve_modules(_as_list(d.meta.get("modules")), by_rel)
+    errors.extend(f"{where}: module '{m}' trong 'modules' không tồn tại" for m in missing)
+    return errors
+
+
+def _check_links(d: Doc, where: str) -> List[str]:
+    """Liên kết nội bộ tương đối (ngoài code fence) phải trỏ tới file có thật."""
+    errors: List[str] = []
+    for n, line in _lines_outside_fences(d.body, d.body_offset + 1):
+        for target in LINK_RE.findall(line):
+            if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
+                continue
+            path_part = target.split("#", 1)[0]  # không rỗng: target bắt đầu bằng `#` đã bỏ qua ở trên
+            if not (d.path.parent / path_part).resolve().exists():
+                errors.append(f"{where}:{n}: liên kết hỏng -> {target}")
+    return errors
+
+
+def _check_readmes(root: Path) -> List[str]:
+    """Mỗi thư mục con của framework/ phải có README.md (chỉ mục)."""
+    return [
+        f"{sub.relative_to(root).as_posix()}/: thiếu README.md (chỉ mục thư mục)"
+        for sub in sorted(p for p in root.rglob("*") if p.is_dir())
+        if not (sub / "README.md").exists()
+    ]
+
+
 def validate(root: Path) -> List[str]:
+    """Kiểm quy ước toàn khung. Thứ tự lỗi: lỗi nạp file → từng file (theo thứ tự các nhóm kiểm) → README thư mục."""
     docs, errors = load_docs(root)
     by_rel = {d.rel: d for d in docs}
     ids: Dict[str, str] = {}
@@ -250,95 +379,15 @@ def validate(root: Path) -> List[str]:
 
     for d in docs:
         where = f"{d.rel}.md"
-        for key in REQUIRED_KEYS:
-            if not d.meta.get(key):
-                errors.append(f"{where}: thiếu khoá frontmatter '{key}'")
-        if d.kind and d.kind not in KINDS:
-            errors.append(f"{where}: kind không hợp lệ '{d.kind}'")
-        upd = str(d.meta.get("updated", ""))
-        if upd and not DATE_RE.match(upd):
-            errors.append(f"{where}: 'updated' phải dạng YYYY-MM-DD")
-        if not any(True for _ in d.headings) or not d.body.lstrip().startswith("#"):
-            errors.append(f"{where}: nội dung phải bắt đầu bằng tiêu đề '# ...' ngay sau frontmatter")
-
-        prefix = d.meta.get("prefix")
-        if d.items:
-            if not prefix:
-                errors.append(f"{where}: có mục checklist nhưng thiếu 'prefix'")
-            elif not PREFIX_RE.match(str(prefix)):
-                errors.append(f"{where}: prefix '{prefix}' không hợp lệ")
-        if prefix:
-            p = str(prefix)
-            if p in prefixes and prefixes[p] != where:
-                errors.append(f"{where}: prefix '{p}' đã dùng ở {prefixes[p]}")
-            prefixes[p] = where
-            # Không cho prefix này là tiền tố "ID" của prefix khác (vd SEC và SEC-AUTH đều hợp lệ,
-            # nhưng ID SEC-AUTH-001 phải thuộc file SEC-AUTH, không phải file SEC).
-        for it in d.items:
-            if it.id in ids:
-                errors.append(f"{where}:{it.line}: ID trùng {it.id} (đã có ở {ids[it.id]})")
-            ids[it.id] = f"{where}:{it.line}"
-            if prefix and not re.fullmatch(re.escape(str(prefix)) + r"-\d{3}", it.id):
-                errors.append(f"{where}:{it.line}: ID {it.id} không khớp prefix '{prefix}'")
-            if it.state != " ":
-                errors.append(f"{where}:{it.line}: mục trong khung phải ở trạng thái '[ ]'")
-            if it.level == "MUST" and "→ Kiểm:" not in it.text:
-                errors.append(f"{where}:{it.line}: mục MUST {it.id} thiếu '→ Kiểm:'")
-            if it.scale and it.level != "MUST":
-                errors.append(f"{where}:{it.line}: ngưỡng quy mô '@{it.scale}' chỉ dùng với MUST")
-
-        n_m = sum(effective_level(it, "M", d.kind) == "MUST" for it in d.items)
-        if d.kind in ("module", "standard") and n_m > MAX_MUST_AT_M:
-            errors.append(f"{where}: {n_m} MUST hiệu lực ở quy mô M, trần {MAX_MUST_AT_M} — hạ phần vượt thành MUST@L")
-
-        if d.kind in ("module", "baseline", "profile", "industry"):
-            if d.items and not any("Checklist" in h for h in d.headings):
-                errors.append(f"{where}: thiếu mục '## Checklist'")
-            if not any(h.strip().startswith("Nguồn") for h in d.headings):
-                errors.append(f"{where}: thiếu mục '## Nguồn'")
-        if d.kind in ("module", "baseline", "standard"):
-            at = _as_list(d.meta.get("applies_to"))
-            if not at:
-                errors.append(f"{where}: thiếu 'applies_to'")
-            else:
-                unknown = [a for a in at if a != "all" and a not in profile_slugs]
-                if unknown and profile_slugs:
-                    errors.append(f"{where}: applies_to có slug hồ sơ không tồn tại: {', '.join(unknown)}")
-        if d.kind in ("profile", "industry"):
-            slug = d.meta.get("slug")
-            if not slug:
-                errors.append(f"{where}: thiếu 'slug'")
-            else:
-                slug_key = (d.kind, str(slug))
-                if slug_key in slugs:
-                    errors.append(f"{where}: slug '{slug}' trùng với {slugs[slug_key]}")
-                slugs[slug_key] = where
-            mods = _as_list(d.meta.get("modules"))
-            _, missing = resolve_modules(mods, by_rel)
-            for m in missing:
-                errors.append(f"{where}: module '{m}' trong 'modules' không tồn tại")
-
-        # Liên kết nội bộ tương đối phải trỏ tới file có thật.
-        in_fence = False
-        for n, line in enumerate(d.body.splitlines(), start=d.body_offset + 1):
-            if line.lstrip().startswith("```"):
-                in_fence = not in_fence
-                continue
-            if in_fence:
-                continue
-            for target in LINK_RE.findall(line):
-                if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
-                    continue
-                path_part = target.split("#", 1)[0]  # không rỗng: target bắt đầu bằng `#` đã bỏ qua ở trên
-                resolved = (d.path.parent / path_part).resolve()
-                if not resolved.exists():
-                    errors.append(f"{where}:{n}: liên kết hỏng -> {target}")
-
-    # Mỗi thư mục con của framework/ phải có README.md (chỉ mục).
-    for sub in sorted(p for p in root.rglob("*") if p.is_dir()):
-        if not (sub / "README.md").exists():
-            errors.append(f"{sub.relative_to(root).as_posix()}/: thiếu README.md (chỉ mục thư mục)")
-    return errors
+        errors += _check_frontmatter(d, where)
+        errors += _check_prefix(d, where, prefixes)
+        errors += _check_items(d, where, ids)
+        errors += _check_must_cap(d, where)
+        errors += _check_sections(d, where)
+        errors += _check_applies_to(d, where, profile_slugs)
+        errors += _check_slug_modules(d, where, slugs, by_rel)
+        errors += _check_links(d, where)
+    return errors + _check_readmes(root)
 
 
 # --------------------------------------------------------------------------- compose
@@ -365,19 +414,8 @@ def find_by_slug(docs: List[Doc], kind: str, slug: str) -> Optional[Doc]:
     return None
 
 
-def compose(
-    root: Path,
-    profile: str,
-    industries: List[str],
-    scale: str,
-    include_may: bool,
-    today: Optional[str] = None,
-    extra: Optional[List[str]] = None,
-) -> str:
-    docs, errors = load_docs(root)
-    if errors:
-        raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
-    by_rel = {d.rel: d for d in docs}
+def _pick_sources(docs: List[Doc], profile: str, industries: List[str]) -> Tuple[Doc, List[Doc]]:
+    """Hồ sơ + các gói ngành theo slug; không có thì thoát kèm gợi ý lệnh `list`."""
     prof = find_by_slug(docs, "profile", profile)
     if prof is None:
         raise SystemExit(f"Không có hồ sơ '{profile}'. Xem: xs.py list profiles")
@@ -387,36 +425,47 @@ def compose(
         if ind is None:
             raise SystemExit(f"Không có gói ngành '{s}'. Xem: xs.py list industries")
         inds.append(ind)
+    return prof, inds
 
+
+def _applies(d: Doc, profile: str, extra_rels: Set[str]) -> bool:
+    """Module có áp dụng cho hồ sơ không? `--add` là lựa chọn có chủ đích của người dùng → bỏ lọc `applies_to`."""
+    if d.rel in extra_rels:
+        return True
+    at = _as_list(d.meta.get("applies_to"))
+    return not at or "all" in at or profile in at
+
+
+def _compose_order(docs: List[Doc], profile: str, prof: Doc, inds: List[Doc], extra: List[str]) -> List[Doc]:
+    """Thứ tự ghép: baseline → module (hồ sơ, ngành, `--add`) → hồ sơ → ngành; bỏ trùng, lọc `applies_to`."""
+    by_rel = {d.rel: d for d in docs}
     baseline = sorted((d for d in docs if d.kind == "baseline"), key=lambda d: d.rel)
     patterns: List[str] = []
     for src in [prof, *inds]:
         patterns.extend(_as_list(src.meta.get("modules")))
-    patterns.extend(extra or [])
+    patterns.extend(extra)
     mods, missing = resolve_modules(patterns, by_rel)
-    bad_extra = [m for m in missing if m in (extra or [])]
+    bad_extra = [m for m in missing if m in extra]
     if bad_extra:
         raise SystemExit("Module --add không tồn tại: " + ", ".join(bad_extra) + " (xem: xs.py list modules)")
 
-    extra_rels = {d.rel for d in resolve_modules(extra or [], by_rel)[0]}
-
-    def applies(d: Doc) -> bool:
-        if d.rel in extra_rels:  # --add là lựa chọn có chủ đích của người dùng → bỏ lọc applies_to
-            return True
-        at = _as_list(d.meta.get("applies_to"))
-        return not at or "all" in at or profile in at
-
+    extra_rels = {d.rel for d in resolve_modules(extra, by_rel)[0]}
     ordered: List[Doc] = []
     seen = set()
     for d in [*baseline, *mods, prof, *inds]:
         if d.rel in seen:
             continue
-        if d.kind in ("module", "baseline", "standard") and not applies(d):
+        if d.kind in ("module", "baseline", "standard") and not _applies(d, profile, extra_rels):
             continue
         seen.add(d.rel)
         ordered.append(d)
+    return ordered
 
-    today = today or _dt.date.today().isoformat()
+
+def _compose_sections(
+    root: Path, ordered: List[Doc], scale: str, include_may: bool
+) -> Tuple[List[str], Dict[str, int]]:
+    """Mỗi tài liệu có mục thành một phần `### tiêu đề` + danh sách mục ở mức hiệu lực theo quy mô; đếm theo mức."""
     counts = {lv: 0 for lv in LEVELS}
     sections: List[str] = []
     for d in ordered:
@@ -431,15 +480,27 @@ def compose(
             continue
         link = f"{_rel_link(root)}/{d.rel}.md"
         sections.append(f"### {d.title}\n\nNguồn khung: [`{d.rel}.md`]({link})\n\n" + "\n".join(rows))
+    return sections, counts
 
-    ind_names = ", ".join(str(i.meta.get("slug")) for i in inds) or "(không)"
+
+def _compose_header(
+    profile: str,
+    ind_slugs: List[str],
+    extra: List[str],
+    scale: str,
+    today: str,
+    counts: Dict[str, int],
+    include_may: bool,
+) -> List[str]:
+    """Frontmatter + đầu trang + bảng đếm mục của BLUEPRINT.md (các dòng, chưa nối)."""
+    ind_names = ", ".join(ind_slugs) or "(không)"
     header = [
         "---",
         "title: Blueprint dự án",
         "kind: blueprint",
         f"profile: {profile}",
-        f"industries: [{', '.join(str(i.meta.get('slug')) for i in inds)}]",
-        f"extra: [{', '.join(extra or [])}]",
+        f"industries: [{', '.join(ind_slugs)}]",
+        f"extra: [{', '.join(extra)}]",
         f"scale: {scale}",
         f"generated: {today}",
         "---",
@@ -458,6 +519,28 @@ def compose(
     if include_may:
         header.append(f"| MAY | {counts['MAY']} |")
     header.append("")
+    return header
+
+
+def compose(
+    root: Path,
+    profile: str,
+    industries: List[str],
+    scale: str,
+    include_may: bool,
+    today: Optional[str] = None,
+    extra: Optional[List[str]] = None,
+) -> str:
+    docs, errors = load_docs(root)
+    if errors:
+        raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
+    prof, inds = _pick_sources(docs, profile, industries)
+    extra = extra or []
+    ordered = _compose_order(docs, profile, prof, inds, extra)
+    today = today or _dt.date.today().isoformat()
+    sections, counts = _compose_sections(root, ordered, scale, include_may)
+    ind_slugs = [str(i.meta.get("slug")) for i in inds]
+    header = _compose_header(profile, ind_slugs, extra, scale, today, counts, include_may)
     return "\n".join(header) + "\n" + "\n\n".join(sections) + "\n"
 
 
@@ -599,11 +682,9 @@ def read_evidence(task_id: str, base: Optional[Path] = None) -> Optional[Dict[st
     return _read_json_obj(state_dir(base) / "evidence" / f"{task_id}.json")
 
 
-def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
-    """Tính verdict CHỈ từ artifact trên đĩa. Model không tự khai 'xong'."""
-    base = base or project_dir()
-    st = read_state(base)
-    if not st or not st.get("active"):
+def _verdict_loop_state(st: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Trạng thái vòng lặp: chưa bật / bị chặn / lỗi lặp / hết ngân sách (vòng, hạn) → verdict dừng; ổn thì None."""
+    if not st.get("active"):
         return {"verdict": "inactive", "reason": "vòng lặp chưa bật"}
     if st.get("blocked"):
         return {"verdict": "blocked", "reason": st.get("blocked_reason", "cần người quyết định")}
@@ -617,6 +698,39 @@ def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
     deadline = st.get("deadline")
     if deadline and now_iso() > deadline:
         return {"verdict": "budget", "reason": f"quá hạn {deadline}"}
+    return None
+
+
+def _verdict_task(t: Dict[str, Any], base: Path) -> Optional[Dict[str, Any]]:
+    """Một task trong PLAN: chưa làm → continue; đã tick mà thiếu/lệch bằng chứng → verify; ổn (hoặc miễn) thì None."""
+    if t["state"] == " ":
+        return {"verdict": "continue", "task": t["id"], "reason": f"làm task {t['id']}: {t['title']}"}
+    if t["state"] != "x":
+        return None
+    ev = read_evidence(t["id"], base)
+    if ev is None or ev.get("exit_code") != 0:
+        return {
+            "verdict": "verify",
+            "task": t["id"],
+            "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>",
+        }
+    if not t["gate"]:
+        return {
+            "verdict": "verify",
+            "task": t["id"],
+            "reason": f"task {t['id']} không có Gate máy kiểm — thêm `Gate:` + lệnh trong backtick vào PLAN rồi `loop record`",
+        }
+    if not same_command(ev.get("cmd") or "", t["gate"]):
+        return {
+            "verdict": "verify",
+            "task": t["id"],
+            "reason": f"task {t['id']} khai Gate `{t['gate']}` nhưng bằng chứng chạy lệnh khác",
+        }
+    return None
+
+
+def _verdict_plan(base: Path, st: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """PLAN phải có và có task; task đầu tiên chưa ổn quyết định verdict; mọi task ổn thì None."""
     plan = base / st.get("plan", "docs/autopilot/PLAN.md")
     if not plan.exists():
         return {"verdict": "blocked", "reason": f"không thấy PLAN: {plan}"}
@@ -624,28 +738,14 @@ def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
     if not tasks:
         return {"verdict": "blocked", "reason": "PLAN không có task dạng - [ ] `T-001` ..."}
     for t in tasks:
-        if t["state"] == " ":
-            return {"verdict": "continue", "task": t["id"], "reason": f"làm task {t['id']}: {t['title']}"}
-        if t["state"] == "x":
-            ev = read_evidence(t["id"], base)
-            if ev is None or ev.get("exit_code") != 0:
-                return {
-                    "verdict": "verify",
-                    "task": t["id"],
-                    "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>",
-                }
-            if not t["gate"]:
-                return {
-                    "verdict": "verify",
-                    "task": t["id"],
-                    "reason": f"task {t['id']} không có Gate máy kiểm — thêm `Gate:` + lệnh trong backtick vào PLAN rồi `loop record`",
-                }
-            if not same_command(ev.get("cmd") or "", t["gate"]):
-                return {
-                    "verdict": "verify",
-                    "task": t["id"],
-                    "reason": f"task {t['id']} khai Gate `{t['gate']}` nhưng bằng chứng chạy lệnh khác",
-                }
+        v = _verdict_task(t, base)
+        if v:
+            return v
+    return None
+
+
+def _verdict_blueprint(base: Path, st: Dict[str, Any]) -> Dict[str, Any]:
+    """Mọi task đã ổn: còn MUST mở / miễn trừ thiếu lý do trong blueprint → continue, không thì done."""
     bp = st.get("blueprint")
     bpp = base / bp if bp else None
     if bpp is None or not bpp.exists():
@@ -662,6 +762,13 @@ def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
     if s["bad_waivers"]:
         return {"verdict": "continue", "reason": "mục miễn trừ thiếu lý do: " + ", ".join(s["bad_waivers"][:5])}
     return {"verdict": "done", "reason": "mọi task có bằng chứng xanh và blueprint không còn MUST mở"}
+
+
+def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
+    """Tính verdict CHỈ từ artifact trên đĩa. Model không tự khai 'xong'."""
+    base = base or project_dir()
+    st = read_state(base) or {}  # không có state ≡ chưa bật: `_verdict_loop_state` trả inactive
+    return _verdict_loop_state(st) or _verdict_plan(base, st) or _verdict_blueprint(base, st)
 
 
 def failure_signature(task: str, code: int, output: str) -> str:
@@ -875,14 +982,8 @@ def _allowed(line: str) -> bool:
     return bool(sep) and bool(reason.strip())
 
 
-def ci_check_text(text: str) -> List[str]:
-    """Fitness function cho một workflow GitHub Actions (đọc theo dòng, chỉ thư viện chuẩn).
-
-    Luật: `permissions:` cấp workflow · không `write-all` · `uses:` ngoài ghim SHA 40 ký tự (`docker://` ghim `@sha256:`) ·
-    mọi job có `timeout-minutes` (trừ job gọi reusable workflow) · không `continue-on-error`.
-    Bỏ qua nội dung block scalar (`run: |`) để script shell không gây báo nhầm.
-    """
-    errors: List[str] = []
+def _ci_lines(text: str) -> List[Tuple[int, str]]:
+    """(số dòng, dòng) có nghĩa: bỏ dòng trống, comment và nội dung block scalar (`run: |`)."""
     lines: List[Tuple[int, str]] = []
     scalar_indent: Optional[int] = None
     for no, line in enumerate(text.splitlines(), 1):
@@ -895,39 +996,78 @@ def ci_check_text(text: str) -> List[str]:
         lines.append((no, line))
         if BLOCK_SCALAR_RE.search(line):
             scalar_indent = _indent(line)
+    return lines
+
+
+def _ci_unpinned_error(no: int, code: str) -> Optional[str]:
+    """`uses:` ngoài chưa ghim: action ghim SHA 40 ký tự, `docker://` ghim `@sha256:`; `./local` miễn."""
+    m = USES_RE.search(code)
+    ref = m.group(1) if m else ""
+    if ref.startswith("docker://"):
+        return None if DOCKER_PINNED_RE.search(ref) else f"dòng {no}: `{ref}` chưa ghim digest `@sha256:`"
+    if ref and not ref.startswith("./") and not PINNED_RE.search(ref):
+        return f"dòng {no}: `{ref}` chưa ghim SHA 40 ký tự"
+    return None
+
+
+def _ci_line_errors(no: int, line: str) -> List[str]:
+    """Luật theo dòng: `write-all`, `continue-on-error`, `uses:` chưa ghim (trừ dòng có `# ci-check-allow: <lý do>`)."""
+    if _allowed(line):
+        return []
+    code = line.split(" #", 1)[0]
+    errors: List[str] = []
+    if WRITE_ALL_RE.search(code):
+        errors.append(f"dòng {no}: `write-all` — khai quyền tối thiểu theo job")
+    coe = COE_RE.search(code)
+    if coe and coe.group(1).strip().strip("'\"") != "false":
+        errors.append(f"dòng {no}: `continue-on-error` trên job/bước — ngoại lệ ghi `# {CI_ALLOW} <lý do + hạn>`")
+    unpinned = _ci_unpinned_error(no, code)
+    if unpinned:
+        errors.append(unpinned)
+    return errors
+
+
+def _ci_jobs(lines: List[Tuple[int, str]]) -> List[Tuple[int, str, List[str]]]:
+    """Job = khoá con trực tiếp của `jobs:`; thân job = các dòng thụt sâu hơn tới khoá job kế tiếp."""
+    jobs_at = next((i for i, (_, ln) in enumerate(lines) if ln.startswith("jobs:")), None)
+    if jobs_at is None:
+        return []
+    body = list(itertools.takewhile(lambda x: _indent(x[1]) > 0, lines[jobs_at + 1 :]))
+    job_indent = _indent(body[0][1]) if body else 0
+    jobs: List[Tuple[int, str, List[str]]] = []
+    for no, ln in body:
+        if _indent(ln) == job_indent:
+            jobs.append((no, ln.strip().rstrip(":"), []))
+        else:  # dòng đầu của body luôn ở job_indent nên jobs đã có phần tử
+            jobs[-1][2].append(ln)
+    return jobs
+
+
+def _ci_timeout_errors(lines: List[Tuple[int, str]]) -> List[str]:
+    """Mọi job phải có `timeout-minutes` (trừ job gọi reusable workflow bằng `uses:`)."""
+    errors: List[str] = []
+    for no, name, job_lines in _ci_jobs(lines):
+        child = min((_indent(x) for x in job_lines), default=0)
+        keys = {x.strip().split(":", 1)[0] for x in job_lines if _indent(x) == child}
+        if not keys & {"uses", "timeout-minutes", "<<"}:  # `<<: *anchor` không giải được theo dòng → bỏ qua
+            errors.append(f"dòng {no}: job `{name}` thiếu `timeout-minutes`")
+    return errors
+
+
+def ci_check_text(text: str) -> List[str]:
+    """Fitness function cho một workflow GitHub Actions (đọc theo dòng, chỉ thư viện chuẩn).
+
+    Luật: `permissions:` cấp workflow · không `write-all` · `uses:` ngoài ghim SHA 40 ký tự (`docker://` ghim `@sha256:`) ·
+    mọi job có `timeout-minutes` (trừ job gọi reusable workflow) · không `continue-on-error`.
+    Bỏ qua nội dung block scalar (`run: |`) để script shell không gây báo nhầm.
+    """
+    lines = _ci_lines(text)
+    errors: List[str] = []
     if not any(ln.startswith("permissions:") for _, ln in lines):
         errors.append("thiếu `permissions:` cấp workflow (mặc định `contents: read`)")
     for no, line in lines:
-        code = line.split(" #", 1)[0]
-        if WRITE_ALL_RE.search(code) and not _allowed(line):
-            errors.append(f"dòng {no}: `write-all` — khai quyền tối thiểu theo job")
-        coe = COE_RE.search(code)
-        if coe and coe.group(1).strip().strip("'\"") != "false" and not _allowed(line):
-            errors.append(f"dòng {no}: `continue-on-error` trên job/bước — ngoại lệ ghi `# {CI_ALLOW} <lý do + hạn>`")
-        m = USES_RE.search(code)
-        ref = m.group(1) if m else ""
-        if ref.startswith("docker://"):
-            if not DOCKER_PINNED_RE.search(ref) and not _allowed(line):
-                errors.append(f"dòng {no}: `{ref}` chưa ghim digest `@sha256:`")
-        elif ref and not ref.startswith("./") and not PINNED_RE.search(ref) and not _allowed(line):
-            errors.append(f"dòng {no}: `{ref}` chưa ghim SHA 40 ký tự")
-    # Job: khoá con trực tiếp của `jobs:`; thân job = các dòng thụt sâu hơn tới khoá job kế tiếp.
-    jobs_at = next((i for i, (_, ln) in enumerate(lines) if ln.startswith("jobs:")), None)
-    if jobs_at is not None:
-        body = list(itertools.takewhile(lambda x: _indent(x[1]) > 0, lines[jobs_at + 1 :]))
-        job_indent = _indent(body[0][1]) if body else 0
-        jobs: List[Tuple[int, str, List[str]]] = []
-        for no, ln in body:
-            if _indent(ln) == job_indent:
-                jobs.append((no, ln.strip().rstrip(":"), []))
-            else:  # dòng đầu của body luôn ở job_indent nên jobs đã có phần tử
-                jobs[-1][2].append(ln)
-        for no, name, job_lines in jobs:
-            child = min((_indent(x) for x in job_lines), default=0)
-            keys = {x.strip().split(":", 1)[0] for x in job_lines if _indent(x) == child}
-            if not keys & {"uses", "timeout-minutes", "<<"}:  # `<<: *anchor` không giải được theo dòng → bỏ qua
-                errors.append(f"dòng {no}: job `{name}` thiếu `timeout-minutes`")
-    return errors
+        errors += _ci_line_errors(no, line)
+    return errors + _ci_timeout_errors(lines)
 
 
 def ci_check(workflows: Path) -> Dict[str, List[str]]:
@@ -1234,6 +1374,27 @@ def _resolve_ref(ref: str, files: List[str]) -> Optional[str]:
     return hits[0] if len(hits) == 1 else None
 
 
+def _line_written_at(root: Path, rel_bp: str, no: int) -> Optional[int]:
+    """Epoch commit của dòng `no` trong blueprint (git blame); None khi chưa commit hoặc không blame được."""
+    blame = _git(root, "blame", "-L", f"{no},{no}", "--porcelain", "--", rel_bp)
+    t = re.search(r"^committer-time (\d+)$", blame.stdout, re.M)
+    if blame.returncode != 0 or not t or blame.stdout.startswith("0000000"):
+        return None
+    return int(t.group(1))
+
+
+def _files_changed_after(root: Path, refs: Iterable[str], written: int, mtime_cache: Dict[str, int]) -> List[str]:
+    """Trong `refs` (đã sắp), file có commit mới nhất muộn hơn `written`; `mtime_cache` giữ thời gian đã hỏi git."""
+    changed = []
+    for ref in refs:
+        if ref not in mtime_cache:
+            ct = _git(root, "log", "-1", "--format=%ct", "--", ref).stdout.strip()
+            mtime_cache[ref] = int(ct) if ct.isdigit() else 0
+        if mtime_cache[ref] > written:
+            changed.append(ref)
+    return changed
+
+
 def blueprint_stale_evidence(root: Path, blueprint: Path, files: List[str]) -> List[Dict[str, Any]]:
     """Mục [x]/[~] trích file mà file đó đổi SAU commit ghi dòng bằng chứng/miễn trừ → cần xác minh lại."""
     try:
@@ -1255,18 +1416,10 @@ def blueprint_stale_evidence(root: Path, blueprint: Path, files: List[str]) -> L
         }
         if not refs:
             continue
-        blame = _git(root, "blame", "-L", f"{no},{no}", "--porcelain", "--", rel_bp)
-        t = re.search(r"^committer-time (\d+)$", blame.stdout, re.M)
-        if blame.returncode != 0 or not t or blame.stdout.startswith("0000000"):
+        written = _line_written_at(root, rel_bp, no)
+        if written is None:
             continue
-        written = int(t.group(1))
-        changed = []
-        for ref in sorted(refs):
-            if ref not in mtime_cache:
-                ct = _git(root, "log", "-1", "--format=%ct", "--", ref).stdout.strip()
-                mtime_cache[ref] = int(ct) if ct.isdigit() else 0
-            if mtime_cache[ref] > written:
-                changed.append(ref)
+        changed = _files_changed_after(root, sorted(refs), written, mtime_cache)
         if changed:
             out.append({"id": m.group("id"), "kind": note.group(1), "files": changed})
     return out
@@ -1302,7 +1455,7 @@ def audit_status_groups(status: Path) -> Dict[int, Dict[str, str]]:
     rows = md_tables(status.read_text(encoding="utf-8")).get("Nhóm", [])
     out: Dict[int, Dict[str, str]] = {}
     for r in rows:
-        if r.get("#", "").isdigit():
+        if r.get("#", "").isdecimal():  # không isdigit: "²" là digit nhưng int() văng ValueError
             out[int(r["#"])] = r
     return out
 
@@ -1359,6 +1512,140 @@ def _sha_ok(root: Path, sha: str) -> Optional[str]:
     return None
 
 
+def _audit_scan_errors(no: int, r: Dict[str, str], root: Path, in_git: bool) -> List[str]:
+    """Nhóm đã quét/rút gọn: có Ngày quét YYYY-MM-DD và SHA (khi ở trong git, SHA phải là tổ tiên HEAD)."""
+    errors: List[str] = []
+    sha = r.get("SHA", "").strip("` ")
+    if not DATE_RE.match(r.get("Ngày", "")):
+        errors.append(f"nhóm {no}: thiếu Ngày quét YYYY-MM-DD")
+    if not sha:
+        errors.append(f"nhóm {no}: thiếu SHA lúc quét")
+    elif in_git and (msg := _sha_ok(root, sha)):
+        errors.append(f"nhóm {no}: {msg}")
+    return errors
+
+
+def _audit_group_row(
+    r: Dict[str, str], strict: bool, root: Path, in_git: bool, seen_no: Dict[int, int], counts: Dict[str, int]
+) -> List[str]:
+    """Một dòng bảng `## Nhóm`: số nhóm, mã, trạng thái, ghi chú, dữ liệu quét. Ghi nhận vào `seen_no`/`counts`."""
+    no_s, code, state, note = r.get("#", ""), r.get("Mã", ""), r.get("Trạng thái", ""), r.get("Ghi chú", "")
+    if not no_s.isdecimal() or int(no_s) not in AUDIT_CODES.values():
+        return [f"nhóm `{no_s}`: số nhóm phải 1–{len(AUDIT_GROUPS)}"]
+    no = int(no_s)
+    seen_no[no] = seen_no.get(no, 0) + 1
+    errors: List[str] = []
+    if AUDIT_CODES.get(code) != no:
+        errors.append(f"nhóm {no}: mã `{code}` phải là `{AUDIT_GROUPS[no - 1][1]}`")
+    if state not in GROUP_STATES:
+        errors.append(f"nhóm {no}: trạng thái `{state}` không thuộc {' · '.join(GROUP_STATES)}")
+        return errors
+    counts[f"nhóm {state}"] = counts.get(f"nhóm {state}", 0) + 1
+    if state in ("N/A", "rút gọn") and not note:
+        errors.append(f"nhóm {no}: `{state}` phải ghi lý do/phạm vi ở Ghi chú")
+    if state in ("đã quét", "rút gọn"):
+        errors += _audit_scan_errors(no, r, root, in_git)
+    if strict and state == "chưa quét":
+        errors.append(f"nhóm {no}: chưa quét (--strict)")
+    return errors
+
+
+def _audit_group_errors(
+    tables: Dict[str, List[Dict[str, str]]], strict: bool, root: Path, in_git: bool, counts: Dict[str, int]
+) -> List[str]:
+    """Bảng `## Nhóm`: từng dòng hợp lệ, rồi mỗi nhóm 1–N phải có đúng một dòng."""
+    errors: List[str] = []
+    seen_no: Dict[int, int] = {}
+    for r in tables.get("Nhóm", []):
+        errors += _audit_group_row(r, strict, root, in_git, seen_no, counts)
+    if "Nhóm" in tables:
+        for no, _, _ in AUDIT_GROUPS:
+            if seen_no.get(no, 0) != 1:
+                errors.append(f"nhóm {no}: phải có đúng 1 dòng (đang có {seen_no.get(no, 0)})")
+    return errors
+
+
+def _audit_finding_form_errors(r: Dict[str, str], where: str) -> List[str]:
+    """Hình thức một phát hiện: không còn chỗ trống của mẫu, ID `AUD-<MÃ>-NNN`, mức, trạng thái, tóm tắt."""
+    errors: List[str] = []
+    fid, lv, st = r.get("ID", ""), r.get("Mức", ""), r.get("Trạng thái", "")
+    # `<x>` trong code là nội dung thật
+    if any(PLACEHOLDER_RE.search(re.sub(r"`[^`]*`", "", v)) for v in r.values()):
+        errors.append(f"{where}: còn chỗ trống của mẫu `<...>`")
+    m = FINDING_ID_RE.match(fid)
+    if not m or m.group(1) not in AUDIT_CODES:
+        errors.append(f"{where}: ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc {', '.join(AUDIT_CODES)}")
+    if lv not in FINDING_LEVELS:
+        errors.append(f"{where}: mức `{lv}` phải là 🔴/🟠/🟢")
+    if st not in FINDING_STATES:
+        errors.append(f"{where}: trạng thái `{st}` không thuộc {' · '.join(FINDING_STATES)}")
+    if not r.get("Tóm tắt"):
+        errors.append(f"{where}: thiếu Tóm tắt")
+    return errors
+
+
+def _audit_finding_evidence_errors(r: Dict[str, str], where: str) -> List[str]:
+    """Bằng chứng mở đầu đúng loại (🔴 không dựa trên `chưa biết:`); 🔴/🟠 chưa bác bỏ phải có Gate."""
+    errors: List[str] = []
+    lv, st, ev, gate = r.get("Mức", ""), r.get("Trạng thái", ""), r.get("Bằng chứng", ""), r.get("Gate", "")
+    if not ev.startswith(EVIDENCE_KINDS):
+        errors.append(f"{where}: Bằng chứng phải mở đầu `đo được:` / `suy luận:` / `chưa biết:`")
+    elif lv == "🔴" and ev.startswith("chưa biết:") and st != "bác bỏ":
+        errors.append(f"{where}: 🔴 không thể dựa trên `chưa biết:` — đo hoặc hạ mức")
+    if lv in ("🔴", "🟠") and st != "bác bỏ" and not ("`" in gate or gate.startswith("tay:")):
+        errors.append(f"{where}: {lv} phải có Gate (lệnh trong backtick hoặc `tay: <bước>`)")
+    return errors
+
+
+def _iso_date(text: str) -> Optional[_dt.date]:
+    """`YYYY-MM-DD` → date; ngày không có thật (2026-13-45) → None thay vì văng ValueError."""
+    try:
+        return _dt.date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _audit_finding_closure_errors(r: Dict[str, str], where: str, today: _dt.date) -> List[str]:
+    """Trạng thái kết thúc phải kèm ghi chú: `đã sửa` có PR/SHA · `chấp nhận` có chủ + hạn chưa quá · `bác bỏ` có lý do."""
+    errors: List[str] = []
+    st, note = r.get("Trạng thái", ""), r.get("Ghi chú", "")
+    if st == "đã sửa" and not re.search(r"#\d+|\b[0-9a-f]{7,40}\b", note):
+        errors.append(f"{where}: `đã sửa` phải ghi PR (#N) hoặc SHA ở Ghi chú")
+    if st == "chấp nhận":
+        owner = re.search(r"chủ:\s*\S", note)
+        due = re.search(r"hạn:\s*(\d{4}-\d{2}-\d{2})", note)
+        due_date = _iso_date(due.group(1)) if due else None
+        if not owner or not due:
+            errors.append(f"{where}: `chấp nhận` phải ghi `chủ: <ai>` và `hạn: YYYY-MM-DD`")
+        elif due_date is None:
+            errors.append(f"{where}: hạn `{due.group(1)}` không phải ngày hợp lệ")
+        elif due_date < today:
+            errors.append(f"{where}: chấp nhận rủi ro đã quá hạn {due.group(1)}")
+    if st == "bác bỏ" and not note:
+        errors.append(f"{where}: `bác bỏ` phải ghi lý do ở Ghi chú")
+    return errors
+
+
+def _audit_finding_errors(
+    tables: Dict[str, List[Dict[str, str]]], strict: bool, today: _dt.date, counts: Dict[str, int]
+) -> List[str]:
+    """Bảng `## Phát hiện`: kiểm từng dòng (hình thức → bằng chứng/Gate → kết thúc), đếm mức×trạng thái, báo ID trùng."""
+    errors: List[str] = []
+    ids: Dict[str, int] = {}
+    for r in tables.get("Phát hiện", []):
+        fid, lv, st = r.get("ID", ""), r.get("Mức", ""), r.get("Trạng thái", "")
+        where = fid or "(dòng thiếu ID)"
+        ids[fid] = ids.get(fid, 0) + 1
+        errors += _audit_finding_form_errors(r, where)
+        errors += _audit_finding_evidence_errors(r, where)
+        errors += _audit_finding_closure_errors(r, where, today)
+        if lv in FINDING_LEVELS and st in FINDING_STATES:
+            counts[f"{lv} {st}"] = counts.get(f"{lv} {st}", 0) + 1
+            if strict and st == "mở" and lv in ("🔴", "🟠"):
+                errors.append(f"{where}: {lv} còn mở (--strict)")
+    return errors + [f"{i}: ID trùng {n} lần" for i, n in ids.items() if i and n > 1]
+
+
 def audit_check(
     status: Path, strict: bool = False, today: Optional[_dt.date] = None
 ) -> Tuple[List[str], Dict[str, int]]:
@@ -1367,82 +1654,10 @@ def audit_check(
     tables = md_tables(status.read_text(encoding="utf-8"))
     root = status.resolve().parent
     in_git = _git(root, "rev-parse", "--git-dir").returncode == 0
-    errors: List[str] = []
     counts: Dict[str, int] = {}
-    if "Nhóm" not in tables:
-        errors.append("thiếu bảng `## Nhóm`")
-    if "Phát hiện" not in tables:
-        errors.append("thiếu bảng `## Phát hiện`")
-    seen_no: Dict[int, int] = {}
-    for r in tables.get("Nhóm", []):
-        no_s, code, state, note = r.get("#", ""), r.get("Mã", ""), r.get("Trạng thái", ""), r.get("Ghi chú", "")
-        if not no_s.isdigit() or int(no_s) not in dict((n, c) for n, c, _ in AUDIT_GROUPS):
-            errors.append(f"nhóm `{no_s}`: số nhóm phải 1–{len(AUDIT_GROUPS)}")
-            continue
-        no = int(no_s)
-        seen_no[no] = seen_no.get(no, 0) + 1
-        if AUDIT_CODES.get(code) != no:
-            errors.append(f"nhóm {no}: mã `{code}` phải là `{AUDIT_GROUPS[no - 1][1]}`")
-        if state not in GROUP_STATES:
-            errors.append(f"nhóm {no}: trạng thái `{state}` không thuộc {' · '.join(GROUP_STATES)}")
-            continue
-        counts[f"nhóm {state}"] = counts.get(f"nhóm {state}", 0) + 1
-        if state in ("N/A", "rút gọn") and not note:
-            errors.append(f"nhóm {no}: `{state}` phải ghi lý do/phạm vi ở Ghi chú")
-        if state in ("đã quét", "rút gọn"):
-            sha = r.get("SHA", "").strip("` ")
-            if not DATE_RE.match(r.get("Ngày", "")):
-                errors.append(f"nhóm {no}: thiếu Ngày quét YYYY-MM-DD")
-            if not sha:
-                errors.append(f"nhóm {no}: thiếu SHA lúc quét")
-            elif in_git and (msg := _sha_ok(root, sha)):
-                errors.append(f"nhóm {no}: {msg}")
-        if strict and state == "chưa quét":
-            errors.append(f"nhóm {no}: chưa quét (--strict)")
-    for no, _, _ in AUDIT_GROUPS:
-        if "Nhóm" in tables and seen_no.get(no, 0) != 1:
-            errors.append(f"nhóm {no}: phải có đúng 1 dòng (đang có {seen_no.get(no, 0)})")
-    ids: Dict[str, int] = {}
-    for r in tables.get("Phát hiện", []):
-        fid, lv, st = r.get("ID", ""), r.get("Mức", ""), r.get("Trạng thái", "")
-        ev, gate, note = r.get("Bằng chứng", ""), r.get("Gate", ""), r.get("Ghi chú", "")
-        where = fid or "(dòng thiếu ID)"
-        if any(
-            PLACEHOLDER_RE.search(re.sub(r"`[^`]*`", "", v)) for v in r.values()
-        ):  # `<x>` trong code là nội dung thật
-            errors.append(f"{where}: còn chỗ trống của mẫu `<...>`")
-        m = FINDING_ID_RE.match(fid)
-        if not m or m.group(1) not in AUDIT_CODES:
-            errors.append(f"{where}: ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc {', '.join(AUDIT_CODES)}")
-        ids[fid] = ids.get(fid, 0) + 1
-        if lv not in FINDING_LEVELS:
-            errors.append(f"{where}: mức `{lv}` phải là 🔴/🟠/🟢")
-        if st not in FINDING_STATES:
-            errors.append(f"{where}: trạng thái `{st}` không thuộc {' · '.join(FINDING_STATES)}")
-        if not r.get("Tóm tắt"):
-            errors.append(f"{where}: thiếu Tóm tắt")
-        if not ev.startswith(EVIDENCE_KINDS):
-            errors.append(f"{where}: Bằng chứng phải mở đầu `đo được:` / `suy luận:` / `chưa biết:`")
-        elif lv == "🔴" and ev.startswith("chưa biết:") and st != "bác bỏ":
-            errors.append(f"{where}: 🔴 không thể dựa trên `chưa biết:` — đo hoặc hạ mức")
-        if lv in ("🔴", "🟠") and st != "bác bỏ" and not ("`" in gate or gate.startswith("tay:")):
-            errors.append(f"{where}: {lv} phải có Gate (lệnh trong backtick hoặc `tay: <bước>`)")
-        if st == "đã sửa" and not re.search(r"#\d+|\b[0-9a-f]{7,40}\b", note):
-            errors.append(f"{where}: `đã sửa` phải ghi PR (#N) hoặc SHA ở Ghi chú")
-        if st == "chấp nhận":
-            owner = re.search(r"chủ:\s*\S", note)
-            due = re.search(r"hạn:\s*(\d{4}-\d{2}-\d{2})", note)
-            if not owner or not due:
-                errors.append(f"{where}: `chấp nhận` phải ghi `chủ: <ai>` và `hạn: YYYY-MM-DD`")
-            elif _dt.date.fromisoformat(due.group(1)) < today:
-                errors.append(f"{where}: chấp nhận rủi ro đã quá hạn {due.group(1)}")
-        if st == "bác bỏ" and not note:
-            errors.append(f"{where}: `bác bỏ` phải ghi lý do ở Ghi chú")
-        if lv in FINDING_LEVELS and st in FINDING_STATES:
-            counts[f"{lv} {st}"] = counts.get(f"{lv} {st}", 0) + 1
-            if strict and st == "mở" and lv in ("🔴", "🟠"):
-                errors.append(f"{where}: {lv} còn mở (--strict)")
-    errors += [f"{i}: ID trùng {n} lần" for i, n in ids.items() if i and n > 1]
+    errors = [f"thiếu bảng `## {name}`" for name in ("Nhóm", "Phát hiện") if name not in tables]
+    errors += _audit_group_errors(tables, strict, root, in_git, counts)
+    errors += _audit_finding_errors(tables, strict, today, counts)
     return errors, counts
 
 
@@ -1504,96 +1719,120 @@ def cmd_blueprint_status(args: argparse.Namespace) -> int:
     return 0 if ok or not args.strict else 1
 
 
+def _loop_init(args: argparse.Namespace, base: Path) -> int:
+    if not (base / args.plan).exists():
+        print(f"✗ Không thấy {args.plan}", file=sys.stderr)
+        return 2
+    deadline = None
+    if args.hours is not None:
+        deadline = (
+            (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=args.hours)).replace(microsecond=0).isoformat()
+        )
+    state = {
+        "active": True,
+        "started": now_iso(),
+        "plan": args.plan,
+        "blueprint": args.blueprint,
+        "max_iterations": args.max_iterations,
+        "max_same_failure": 3,
+        "iterations": 0,
+        "deadline": deadline,
+        "same_failure_count": 0,
+        "blocked": False,
+    }
+    write_state(state, base)
+    print(
+        f"✓ Autopilot bật: plan={args.plan} trần={args.max_iterations} vòng" + (f", hạn {deadline}" if deadline else "")
+    )
+    return 0
+
+
+def _loop_status(args: argparse.Namespace, base: Path) -> int:
+    v = loop_verdict(base)
+    st = read_state(base) or {}
+    v["iterations"] = st.get("iterations", 0)
+    if args.json:
+        print(json.dumps(v, ensure_ascii=False))
+    else:
+        print(f"verdict: {v['verdict']} — {v['reason']}")
+    return 0
+
+
+def _loop_record(args: argparse.Namespace, base: Path) -> int:
+    cmd = args.cmd[1:] if args.cmd[:1] == ["--"] else list(args.cmd)  # chỉ bỏ `--` phân cách đầu tiên
+    if not cmd:
+        print("✗ Thiếu lệnh kiểm sau '--'", file=sys.stderr)
+        return 2
+    return loop_record(args.task, cmd, base)
+
+
+def _loop_block(args: argparse.Namespace, base: Path) -> int:
+    st = read_state(base) or {"active": True}
+    st.update({"blocked": True, "blocked_reason": args.reason, "blocked_at": now_iso()})
+    write_state(st, base)
+    print(f"■ BLOCKED: {args.reason}")
+    return 0
+
+
+def _loop_resume(args: argparse.Namespace, base: Path) -> int:
+    cur = read_state(base)
+    if not cur:
+        print("✗ Chưa có vòng lặp (chạy loop init trước)", file=sys.stderr)
+        return 2
+    cur.update(
+        {
+            "active": True,
+            "blocked": False,
+            "blocked_reason": None,
+            "same_failure_count": 0,
+            "last_failure_signature": None,
+            "resumed_at": now_iso(),
+            "resume_reason": args.reason,
+        }
+    )
+    cur.pop("ended", None)
+    cur.pop("final_verdict", None)
+    write_state(cur, base)
+    print(f"▶ Autopilot tiếp tục (vòng {cur.get('iterations', 0)}/{cur.get('max_iterations', 50)}): {args.reason}")
+    return 0
+
+
+def _loop_stop(args: argparse.Namespace, base: Path) -> int:
+    cur = read_state(base)
+    if cur:
+        cur.update({"active": False, "ended": now_iso(), "stop_reason": args.reason})
+        write_state(cur, base)
+    print("■ Autopilot tắt.")
+    return 0
+
+
+def _loop_hook_stop(args: argparse.Namespace, base: Path) -> int:
+    try:
+        out, code = hook_stop(sys.stdin.read() if not sys.stdin.isatty() else "", base)
+    except Exception as exc:  # fail-open: hook lỗi không được kẹt phiên
+        print(f"[xs hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 0
+    if out:
+        print(out)
+    return code
+
+
+# Bảng tra `loop <lệnh con>` -> hàm xử lý (args, thư mục dự án) -> exit code.
+LOOP_HANDLERS: Dict[str, Callable[[argparse.Namespace, Path], int]] = {
+    "init": _loop_init,
+    "status": _loop_status,
+    "record": _loop_record,
+    "block": _loop_block,
+    "resume": _loop_resume,
+    "stop": _loop_stop,
+    "hook-stop": _loop_hook_stop,
+}
+
+
 def cmd_loop(args: argparse.Namespace) -> int:
     base = project_dir()
-    if args.loop_cmd == "init":
-        if not (base / args.plan).exists():
-            print(f"✗ Không thấy {args.plan}", file=sys.stderr)
-            return 2
-        deadline = None
-        if args.hours is not None:
-            deadline = (
-                (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=args.hours))
-                .replace(microsecond=0)
-                .isoformat()
-            )
-        state = {
-            "active": True,
-            "started": now_iso(),
-            "plan": args.plan,
-            "blueprint": args.blueprint,
-            "max_iterations": args.max_iterations,
-            "max_same_failure": 3,
-            "iterations": 0,
-            "deadline": deadline,
-            "same_failure_count": 0,
-            "blocked": False,
-        }
-        write_state(state, base)
-        print(
-            f"✓ Autopilot bật: plan={args.plan} trần={args.max_iterations} vòng"
-            + (f", hạn {deadline}" if deadline else "")
-        )
-        return 0
-    if args.loop_cmd == "status":
-        v = loop_verdict(base)
-        st = read_state(base) or {}
-        v["iterations"] = st.get("iterations", 0)
-        if args.json:
-            print(json.dumps(v, ensure_ascii=False))
-        else:
-            print(f"verdict: {v['verdict']} — {v['reason']}")
-        return 0
-    if args.loop_cmd == "record":
-        cmd = args.cmd[1:] if args.cmd[:1] == ["--"] else list(args.cmd)  # chỉ bỏ `--` phân cách đầu tiên
-        if not cmd:
-            print("✗ Thiếu lệnh kiểm sau '--'", file=sys.stderr)
-            return 2
-        return loop_record(args.task, cmd, base)
-    if args.loop_cmd == "block":
-        st = read_state(base) or {"active": True}
-        st.update({"blocked": True, "blocked_reason": args.reason, "blocked_at": now_iso()})
-        write_state(st, base)
-        print(f"■ BLOCKED: {args.reason}")
-        return 0
-    if args.loop_cmd == "resume":
-        cur = read_state(base)
-        if not cur:
-            print("✗ Chưa có vòng lặp (chạy loop init trước)", file=sys.stderr)
-            return 2
-        cur.update(
-            {
-                "active": True,
-                "blocked": False,
-                "blocked_reason": None,
-                "same_failure_count": 0,
-                "last_failure_signature": None,
-                "resumed_at": now_iso(),
-                "resume_reason": args.reason,
-            }
-        )
-        cur.pop("ended", None)
-        cur.pop("final_verdict", None)
-        write_state(cur, base)
-        print(f"▶ Autopilot tiếp tục (vòng {cur.get('iterations', 0)}/{cur.get('max_iterations', 50)}): {args.reason}")
-        return 0
-    if args.loop_cmd == "stop":
-        cur = read_state(base)
-        if cur:
-            cur.update({"active": False, "ended": now_iso(), "stop_reason": args.reason})
-            write_state(cur, base)
-        print("■ Autopilot tắt.")
-        return 0
-    if args.loop_cmd == "hook-stop":
-        try:
-            out, code = hook_stop(sys.stdin.read() if not sys.stdin.isatty() else "", base)
-        except Exception as exc:  # fail-open: hook lỗi không được kẹt phiên
-            print(f"[xs hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
-            return 0
-        if out:
-            print(out)
-        return code
-    return 2
+    handler = LOOP_HANDLERS.get(args.loop_cmd)
+    return handler(args, base) if handler else 2
 
 
 def cmd_progress_check(args: argparse.Namespace) -> int:

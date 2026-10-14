@@ -88,7 +88,7 @@ Xong khi `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` e
 
 | ID | Chủ | Hạn | Lý do chưa sửa |
 |---|---|---|---|
-| AUD-CODE-001 | người bảo trì khung | 2027-03-31 | tách hàm khi chạm vùng đó, không refactor riêng |
+| AUD-CODE-001 | người bảo trì khung | 2027-03-31 | **đã trả** (#28): 11 hàm tách về ≤ 10, `ruff.toml` bật C901 |
 | AUD-CODE-002 | người bảo trì khung | 2026-12-31 | **đã trả** (#26): `mypy --strict` 0 lỗi, cổng `typecheck` chạy `--strict` |
 | AUD-TEST-001 | người bảo trì khung | 2026-12-31 | **đã trả** (#26): đo cả subprocess, dòng + nhánh 100%, cổng `test` chặn dưới 100% |
 

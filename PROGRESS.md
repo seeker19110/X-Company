@@ -3,11 +3,11 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- Không có việc dở. Đã trả nợ AUD-CODE-002 + AUD-TEST-001 (#26): `mypy --strict` 0 lỗi; coverage dòng + nhánh 100% (đo cả subprocess, 0 pragma), cổng `test` chặn dưới 100%; 130 → 280 test.
+- PR #28 trả nợ AUD-CODE-001 (PLAN T-301…T-303): 11 hàm C901 tách về ≤ 10, hành vi không đổi; `ruff.toml` bật C901. Sau merge: sổ audit không còn nợ 🟢 nào.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
-2. Nợ 🟢 còn lại: AUD-CODE-001 C901 11 hàm (hạn 2027-03-31) — tách hàm khi chạm vùng đó.
+2. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100% — hàm mới vượt thì tách, không `noqa`/pragma.
 3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
 4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
 
@@ -28,7 +28,7 @@
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `fc1602d` (#26 mypy --strict + coverage 100%); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26).
+- Commit cuối trên `main`: `60ece7b` (#27 PROGRESS sau #26); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không; autopilot PLAN T-201…T-205 xong.
+- Đang chặn: không; autopilot PLAN T-301…T-303 (trả nợ C901).
 - Câu hỏi cần người: mục Tiếp theo 1 và 4.

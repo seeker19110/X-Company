@@ -280,6 +280,56 @@ class ValidateBranchesTest(TmpMixin, unittest.TestCase):
         errors = self.errors_for({"08-backend/x.md": "# không frontmatter\n"})
         self.assertHas(errors, "08-backend/x.md: thiếu frontmatter")
 
+    def test_errors_follow_check_group_order_across_files(self):
+        """Thứ tự lỗi là hợp đồng: file theo đường dẫn; trong file theo nhóm kiểm; README thư mục ở cuối."""
+
+        def profile(**meta: str) -> str:
+            return md({"kind": "profile", **meta}, "# P\n\n## Nguồn\n\n- x\n")
+
+        body_a = (
+            "chữ mở đầu\n\n## Danh sách\n\n"
+            "- [x] `MOD-001` **MUST** a. → Kiểm: t.\n"
+            "- [ ] `MOD-002` **MUST** b. → Kiểm: t.\n"
+            "- [ ] `MOD-003` **MUST** c. → Kiểm: t.\n"
+            "- [ ] `MOD-004` **MUST** d. → Kiểm: t.\n"
+            "- [ ] `MOD-005` **MUST** e. → Kiểm: t.\n\n"
+            "[hỏng](./khong-co.md)\n"
+        )
+        fw = make_fw(
+            self.tmpdir(),
+            {
+                "02-profiles/p.md": md({"kind": "profile", "modules": "[08-backend/nope]"}, "# P\n"),
+                "02-profiles/q.md": profile(slug="s", modules="[]"),
+                "02-profiles/r.md": profile(slug="s", modules="[]"),
+                "08-backend/a.md": md({"title": "", "prefix": "MOD", "applies_to": None}, body_a),
+                "08-backend/b.md": md(
+                    {"prefix": "MOD", "applies_to": "[all, ghost]"}, MODULE_BODY.format(prefix="MOD")
+                ),
+            },
+        )
+        (fw / "09-orphan").mkdir()
+        self.assertEqual(
+            xs.validate(fw),
+            [
+                "02-profiles/p.md: thiếu mục '## Nguồn'",
+                "02-profiles/p.md: thiếu 'slug'",
+                "02-profiles/p.md: module '08-backend/nope' trong 'modules' không tồn tại",
+                "02-profiles/r.md: slug 's' trùng với 02-profiles/q.md",
+                "08-backend/a.md: thiếu khoá frontmatter 'title'",
+                "08-backend/a.md: nội dung phải bắt đầu bằng tiêu đề '# ...' ngay sau frontmatter",
+                "08-backend/a.md:12: mục trong khung phải ở trạng thái '[ ]'",
+                "08-backend/a.md: 5 MUST hiệu lực ở quy mô M, trần 4 — hạ phần vượt thành MUST@L",
+                "08-backend/a.md: thiếu mục '## Checklist'",
+                "08-backend/a.md: thiếu mục '## Nguồn'",
+                "08-backend/a.md: thiếu 'applies_to'",
+                "08-backend/a.md:18: liên kết hỏng -> ./khong-co.md",
+                "08-backend/b.md: prefix 'MOD' đã dùng ở 08-backend/a.md",
+                "08-backend/b.md:13: ID trùng MOD-001 (đã có ở 08-backend/a.md:12)",
+                "08-backend/b.md: applies_to có slug hồ sơ không tồn tại: ghost",
+                "09-orphan/: thiếu README.md (chỉ mục thư mục)",
+            ],
+        )
+
 
 # --------------------------------------------------------------------------- compose
 
@@ -562,6 +612,32 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
         self.assertEqual(v["verdict"], "done")
         self.assertIn("loop init không có --blueprint", v["reason"])
         self.assertNotIn("không còn MUST mở", v["reason"])
+
+    def test_checks_run_in_priority_order(self):
+        """Điều kiện dừng thắng nhau theo thứ tự: bị chặn > lỗi lặp > hết vòng > quá hạn > PLAN > blueprint."""
+        past = "2000-01-01T00:00:00+00:00"
+        self.activate(
+            blocked=True,
+            blocked_reason="r",
+            same_failure_count=3,
+            last_failure_task="T-009",
+            iterations=50,
+            deadline=past,
+        )
+        self.assertEqual(xs.loop_verdict(self.base), {"verdict": "blocked", "reason": "r"})
+        self.activate(same_failure_count=3, last_failure_task="T-009", iterations=50, deadline=past)
+        self.assertIn("cùng một lỗi lặp 3 lần (T-009)", xs.loop_verdict(self.base)["reason"])
+        self.activate(iterations=50, deadline=past)
+        self.assertEqual(xs.loop_verdict(self.base), {"verdict": "budget", "reason": "đã chạm trần 50 vòng"})
+        self.activate(deadline=past)  # PLAN chưa có nhưng hạn đã quá: budget thắng blocked-vì-thiếu-PLAN
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "budget")
+        write(self.base / "BP.md", "- [ ] `AAA-001` **MUST** a → Kiểm: t\n")
+        write(self.plan, "- [x] `T-001` xong — Gate: `true`\n- [ ] `T-002` làm — Gate: `true`\n")
+        self.activate(blueprint="BP.md")  # task tick thiếu bằng chứng đứng trước task chưa làm
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "verify")
+        self.evidence("T-001", 0, "true")  # task chưa làm thắng blueprint còn MUST mở
+        v = xs.loop_verdict(self.base)
+        self.assertEqual((v["verdict"], v["task"]), ("continue", "T-002"))
 
 
 # --------------------------------------------------------------------------- loop record / helpers
