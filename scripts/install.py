@@ -22,10 +22,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent
@@ -76,6 +78,18 @@ def copy_tree_replace(src: Path, dst: Path) -> None:
 
 
 MANIFEST = ".xstored/harness.sha256.json"
+
+
+def write_atomic(path: Path, text: str) -> None:
+    """Ghi qua tệp tạm cùng thư mục rồi đổi tên — lỗi giữa chừng không để settings/manifest dở (BASE-DATA-009)."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def sha256(data: bytes) -> str:
@@ -144,7 +158,7 @@ def merge_hooks(src: Path, dst: Path) -> str:
                 added += 1
     if not added:
         return "kept"
-    dst.write_text(json.dumps(theirs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_atomic(dst, json.dumps(theirs, ensure_ascii=False, indent=2) + "\n")
     return "merged-hooks"
 
 
@@ -219,7 +233,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
                 new_manifest[rel] = sha256(src.read_bytes())
             elif rel in manifest:
                 new_manifest[rel] = manifest[rel]
-        (target / MANIFEST).write_text(json.dumps(new_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        write_atomic(target / MANIFEST, json.dumps(new_manifest, indent=2, sort_keys=True) + "\n")
         log("✓ .claude/: " + " · ".join(f"{k} {v}" for k, v in sorted(stats.items())))
         if stats.get("updated-new"):
             log("  ⚠ có file .xstored-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")

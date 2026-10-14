@@ -1,6 +1,9 @@
 # Công cụ cổng của repo khung (ruff, mypy) — KHOÁ kèm hash, CI cài bằng: pip install --require-hashes -r requirements-dev.txt
 # Sinh lại: printf 'ruff==X\nmypy==Y\n' > req.in && uv pip compile --python-version 3.11 --generate-hashes --universal --no-header req.in -o requirements-dev.txt
 # Dependabot (ecosystem pip) đề xuất nâng; không sửa tay hash.
+# License (xác minh PyPI 2026-10-14): ruff, mypy, mypy-extensions, librt, ast-serialize — MIT; typing-extensions — PSF-2.0;
+# pathspec — MPL-2.0 (copyleft yếu, theo file). Quyết định: chấp nhận — gói chỉ chạy trên runner CI/máy dev, không sửa,
+# không phân phối kèm khung hay dự án đích (BASE-DEP-005).
 ast-serialize==0.13.0 \
     --hash=sha256:017ddd4f22e727ef93e66df2d53340a6ff809b7e34cc2218f67918ae6239aad0 \
     --hash=sha256:12441bc7e41e495db5634c98adc8f8886b619ce2f1e68effe3f792a2adca9f47 \

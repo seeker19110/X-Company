@@ -953,6 +953,21 @@ def audit_status_text(groups=None, findings=()):
     )
 
 
+class GitTimeoutTest(unittest.TestCase):
+    def test_git_timeout_does_not_hang(self):
+        # BASE-ERR-004: lời gọi git không có timeout từng treo progress-check/audit vô hạn.
+        with tempfile.TemporaryDirectory() as d:
+            fake = Path(d) / "git"
+            fake.write_text("#!/bin/sh\nsleep 30\n", encoding="utf-8")
+            fake.chmod(0o755)
+            with (
+                unittest.mock.patch.dict(os.environ, {"PATH": f"{d}:{os.environ['PATH']}"}),
+                unittest.mock.patch.object(xs, "GIT_TIMEOUT", 1),
+            ):
+                r = xs._git(Path(d), "status")
+        self.assertEqual(r.returncode, 124)
+
+
 class WriteAtomicTest(unittest.TestCase):
     def test_write_atomic_does_not_follow_planted_symlink(self):
         # AUD-HAR-009: tên tạm cố định `<file>.tmp` từng đi theo symlink đặt sẵn và ghi đè file ngoài.

@@ -766,8 +766,15 @@ SHA_TOKEN_RE = re.compile(r"`([0-9a-fA-F]{7,40})`")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
+GIT_TIMEOUT = 60  # giây; git treo (ổ mạng, khoá index) không được làm treo cổng — BASE-ERR-004
+
+
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False)
+    cmd = ["git", "-C", str(cwd), *args]
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=GIT_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(cmd, 124, "", f"git quá {GIT_TIMEOUT} s")
 
 
 def progress_sections(text: str) -> List[Tuple[str, List[str]]]:
