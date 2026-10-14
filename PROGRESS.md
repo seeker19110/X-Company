@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- PR #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) chờ merge; autopilot PLAN T-401…T-403. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
+- Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; autopilot BLOCKED chờ admin (Tiếp theo 1). Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
@@ -31,7 +31,7 @@
 - 2026-10-14 `LOOP-HARNESS-012` → 018: không biến tắt hook riêng; tắt có chủ đích qua `disableAllHooks` của Claude Code; test fail-open 5 hook.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `557cf81` (#29); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
+- Commit cuối trên `main`: `474c3fe` (#30); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không; autopilot PLAN T-401…T-403 (nhánh PR #30).
+- Đang chặn: autopilot BLOCKED — 5 MUST cần quyền admin (Tiếp theo 1); người xong chạy `xs.py loop resume --reason ...`. PLAN T-401…T-403 xong.
 - Câu hỏi cần người: mục Tiếp theo 1 và 3.
