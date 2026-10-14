@@ -283,6 +283,48 @@ class ComposeTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["08-backend/khong-co"])
 
+    def test_compose_filters_standards_by_applies_to(self):
+        write(self.fw / "04-standards" / "README.md", "---\ntitle: S\nkind: index\nupdated: 2026-10-14\n---\n\n# S\n")
+        write(self.fw / "04-standards" / "a11y.md", """
+            ---
+            title: A11y
+            kind: standard
+            prefix: STD-A11Y
+            applies_to: [web-app]
+            updated: 2026-10-14
+            ---
+
+            # A11y
+
+            ## Checklist
+
+            - [ ] `STD-A11Y-001` **MUST** WCAG 2.2 AA. → Kiểm: axe.
+
+            ## Nguồn
+
+            - w
+            """)
+        p = self.fw / "02-profiles" / "cli-tool.md"
+        p.write_text(p.read_text(encoding="utf-8").replace("[08-backend/cli-only]", "[08-backend/cli-only, 04-standards/*]"),
+                     encoding="utf-8")
+        self.assertEqual(xs.validate(self.fw), [])
+        self.assertNotIn("STD-A11Y-001", xs.compose(self.fw, "cli-tool", [], "M", include_may=False))
+        self.assertIn("STD-A11Y-001", xs.compose(self.fw, "web-app", [], "M", include_may=False,
+                                                 extra=["04-standards/*"]))
+
+    def test_compose_rebases_relative_links(self):
+        p = self.fw / "08-backend" / "api.md"
+        p.write_text(p.read_text(encoding="utf-8").replace(
+            "→ Kiểm: test contract.", "Xem [`X`](../01-baseline/security.md#a), [web](https://x.y). → Kiểm: test contract."),
+            encoding="utf-8")
+        os.environ["XS_FRAMEWORK_LINK"] = ".xstored/framework"
+        try:
+            out = xs.compose(self.fw, "web-app", [], "M", include_may=False)
+        finally:
+            os.environ.pop("XS_FRAMEWORK_LINK", None)
+        self.assertIn("(.xstored/framework/01-baseline/security.md#a)", out)
+        self.assertIn("(https://x.y)", out)
+
     def test_compose_unknown_profile(self):
         with self.assertRaises(SystemExit):
             xs.compose(self.fw, "khong-co", [], "M", include_may=False)

@@ -28,6 +28,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -51,6 +52,7 @@ ITEM_RE = re.compile(
 ITEM_LIKE_RE = re.compile(r"^- \[[ xX~]\] `[A-Z][A-Z0-9-]*`")
 PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+LINK_SUB_RE = re.compile(r"(\[[^\]]*\])\(([^)\s]+)\)")
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 TASK_RE = re.compile(r"^- \[(?P<state>[ xX~])\] `(?P<id>T-\d{3,})`(?P<rest>.*)$")
@@ -249,7 +251,7 @@ def validate(root: Path) -> List[str]:
                 errors.append(f"{where}: thiếu mục '## Checklist'")
             if not any(h.strip().startswith("Nguồn") for h in d.headings):
                 errors.append(f"{where}: thiếu mục '## Nguồn'")
-        if d.kind in ("module", "baseline"):
+        if d.kind in ("module", "baseline", "standard"):
             at = _as_list(d.meta.get("applies_to"))
             if not at:
                 errors.append(f"{where}: thiếu 'applies_to'")
@@ -359,7 +361,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     for d in [*baseline, *mods, prof, *inds]:
         if d.rel in seen:
             continue
-        if d.kind in ("module", "baseline") and not applies(d):
+        if d.kind in ("module", "baseline", "standard") and not applies(d):
             continue
         seen.add(d.rel)
         ordered.append(d)
@@ -374,7 +376,7 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
             if lv == "MAY" and not include_may:
                 continue
             counts[lv] += 1
-            rows.append(f"- [ ] `{it.id}` **{lv}** {it.text}")
+            rows.append(f"- [ ] `{it.id}` **{lv}** {_rebase_links(it.text, d.rel, _rel_link(root))}")
         if not rows:
             continue
         link = f"{_rel_link(root)}/{d.rel}.md"
@@ -407,6 +409,19 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
         header.append(f"| MAY | {counts['MAY']} |")
     header.append("")
     return "\n".join(header) + "\n" + "\n\n".join(sections) + "\n"
+
+
+def _rebase_links(text: str, doc_rel: str, link_root: str) -> str:
+    """Liên kết tương đối trong mục (tính từ file module) -> tính từ BLUEPRINT.md qua link_root."""
+    base = posixpath.dirname(doc_rel)
+
+    def sub(m: "re.Match[str]") -> str:
+        target = m.group(2)
+        if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith(("#", "/")):
+            return m.group(0)
+        return f"{m.group(1)}({link_root}/{posixpath.normpath(posixpath.join(base, target))})"
+
+    return LINK_SUB_RE.sub(sub, text)
 
 
 def _rel_link(root: Path) -> str:
