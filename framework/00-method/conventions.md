@@ -1,7 +1,7 @@
 ---
 title: Quy ước viết module của khung
 kind: method
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Quy ước viết module của khung
@@ -95,6 +95,35 @@ Gói ngành thêm: **Khung pháp lý** (Việt Nam + quốc tế, số hiệu v�
 
 - Liên kết nội bộ dùng **đường dẫn tương đối** tới file `.md` có thật 🔒.
 - Không trùng lặp nội dung giữa các module: một chủ đề có **một nhà**; nơi khác chỉ trỏ tới.
+- Mục bị gộp vào nhà khác: giữ ID, đổi mức thành `MAY`, ghi `Ngừng dùng <ngày> — gộp vào <ID-nhà kèm liên kết tương đối>`.
+  MAY không vào blueprint mặc định nên dự án không thấy trùng; ID không bao giờ cấp lại.
+
+### Bản đồ "một chủ đề một nhà"
+
+| Chủ đề | Nhà (mục gốc) | Nơi khác chỉ giữ |
+|---|---|---|
+| Xác thực, phiên, phân quyền, IDOR | `08-backend/authn-authz.md` | 12 appsec: lớp lỗ hổng + trỏ |
+| CSRF, header bảo mật, injection | `12-security/appsec-web.md` | 07 client-security: CSP/Trusted Types phía trình duyệt |
+| Bí mật (lưu, xoay, quét, OIDC CI) | `12-security/secrets-management.md` | 01 configuration-and-secrets: tối thiểu + trỏ |
+| Cấu hình, schema env, tiền tố biến công khai | `01-baseline/configuration-and-secrets.md` | 10 environments-and-config: môi trường, preview, flag, gate deploy |
+| Chuỗi cung ứng, ghim SHA, SBOM, SLSA, vendor-lock skill/MCP | `12-security/supply-chain.md` | 01 dependencies: tối thiểu + trỏ |
+| Log ứng dụng, lỗi trả client | `01-baseline/errors-and-logging.md` | — |
+| Nền tảng quan sát, trace_id lan truyền | `15-operations/observability.md` | — |
+| Log/audit bảo mật | `12-security/logging-audit-and-incident.md` | — |
+| Tiền, thời gian, ID, đơn vị, chuẩn hoá chuỗi | `18-cross-cutting/units-time-and-money.md` | 01 data-correctness: tóm tắt; 09 data-modeling: kiểu cột cụ thể |
+| Idempotency, outbox, saga, webhook (ngữ nghĩa), retry | `05-architecture/integration-patterns.md`, `resilience-and-scalability.md` | 08 backend: số vận hành, header HTTP, DLQ |
+| Migration | `09-database/migrations.md` | 15 deployment: migration online + trỏ |
+| Sao lưu CSDL / DR hệ thống | `09-database/backup-and-recovery.md` / `15-operations/backup-and-disaster-recovery.md` | — |
+| Tiếp cận (a11y), vùng chạm | `06-design-ux/accessibility.md` | 04 chuẩn: phiên bản; 14 e2e: cách test |
+| Hiệu năng web / test tải / phương pháp | `07-frontend/performance-web-vitals.md` / `14-testing-quality/performance-and-load.md` / `18-cross-cutting/performance-engineering.md` | — |
+| Bảo mật AI (mối đe doạ) / guardrail sản phẩm | `12-security/ai-security.md` / `13-ai-engineering/guardrails-and-safety.md` | — |
+| Vòng lặp tự động khi PHÁT TRIỂN / hệ agentic là SẢN PHẨM | `11-autonomous-loop/` / `13-ai-engineering/agentic-systems.md` | — |
+| Tài liệu cho AI agent (AGENTS.md, SKILL.md) | `18-cross-cutting/docs-for-ai-agents.md` | — |
+| ADR | `05-architecture/decision-records.md` | — |
+| Spec | `17-product-project/specification.md` | 10 spec-driven: quy trình |
+| Sự cố | `15-operations/incident-response.md` | 12 logging-audit: phần bảo mật |
+| Quyền riêng tư, luật dữ liệu | `16-compliance-privacy/` | 09 sensitive-data: kiểm soát kỹ thuật |
+| Giấy phép | `16-compliance-privacy/licensing-and-ip.md` | 18 open-source: quy trình OSS |
 
 ## 8. Khi nào sửa khung
 
