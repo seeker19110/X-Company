@@ -1,0 +1,6 @@
+# Cấu hình ruff duy nhất của repo (lint + format). Chỉ bật luật bắt lỗi thật; thêm luật phải qua PR có lý do.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E9", "F"]

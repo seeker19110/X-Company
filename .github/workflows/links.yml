@@ -1,0 +1,23 @@
+name: Links
+
+# Kiểm liên kết NGOÀI theo lịch (khung trích hàng trăm nguồn: chuẩn, luật, tài liệu — link chết là nợ ngầm).
+# Liên kết nội bộ đã kiểm ở mỗi PR (scripts/check-links.py). 403/429 chấp nhận: nhiều trang luật/chuẩn chặn bot.
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  external-links:
+    name: external-links
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --no-progress --max-concurrency 8 --accept 200,206,403,429 --exclude-path .git './**/*.md'
+          fail: true

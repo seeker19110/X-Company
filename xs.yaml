@@ -1,7 +1,9 @@
-# xs.yaml — lệnh chuẩn của repo này cho agent và hook (YAML phẳng `task: lệnh`, đọc bởi scripts/dev-task.sh).
-# Agent KHÔNG suy diễn lệnh từ văn xuôi; đọc file này. Thêm khoá mới khi dự án có công cụ mới.
-lint: python3 scripts/xs.py validate && python3 scripts/check-links.py && for f in scripts/dev-task.sh .claude/hooks/*.sh; do bash -n "$f" || exit 1; done
+# xs.yaml — lệnh chuẩn của repo này cho agent, hook và CI (YAML phẳng `task: lệnh`, đọc bởi scripts/dev-task.sh).
+# CI job `quality` chạy `scripts/dev-task.sh gate` = build → typecheck → lint → test bằng ĐÚNG các lệnh dưới đây.
+# Công cụ ghim: ruff==0.17.0, mypy==2.4.0, shellcheck (CI: ubuntu-latest). Agent KHÔNG suy diễn lệnh từ văn xuôi.
+format: python3 -m ruff format scripts tests
+format_file: python3 -m ruff format {}
+lint: python3 scripts/xs.py validate && python3 scripts/check-links.py && python3 -m ruff check scripts tests && python3 -m ruff format --check scripts tests && for f in scripts/*.sh .claude/hooks/*.sh; do bash -n "$f" || exit 1; done && shellcheck --severity=warning scripts/*.sh .claude/hooks/*.sh && python3 -m json.tool .claude/settings.json >/dev/null && python3 -m json.tool .github/rulesets/main.json >/dev/null
+typecheck: python3 -m mypy --python-version 3.11 scripts/xs.py scripts/install.py scripts/check-links.py
 test: python3 -m unittest discover -s tests
-typecheck: python3 -m py_compile scripts/xs.py scripts/install.py scripts/check-links.py
 build: python3 scripts/xs.py stats
-format: ""

@@ -15,3 +15,8 @@ Thumbs.db
 !.env.example
 # Claude Code cục bộ
 .claude/settings.local.json
+
+# Khoá/chứng chỉ
+*.pem
+*.key
+*.p12

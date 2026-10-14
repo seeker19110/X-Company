@@ -1,6 +1,8 @@
 """Test cho scripts/xs.py — chạy: python3 -m unittest discover -s tests -v"""
+
 from __future__ import annotations
 
+import argparse
 import io
 import json
 import os
@@ -24,7 +26,9 @@ def write(path: Path, text: str) -> None:
 
 def make_framework(tmp: Path) -> Path:
     fw = tmp / "framework"
-    write(fw / "README.md", """
+    write(
+        fw / "README.md",
+        """
         ---
         title: Khung
         kind: index
@@ -32,9 +36,12 @@ def make_framework(tmp: Path) -> Path:
         ---
 
         # Khung
-        """)
+        """,
+    )
     for d in ("01-baseline", "02-profiles", "03-industries", "08-backend"):
-        write(fw / d / "README.md", f"""
+        write(
+            fw / d / "README.md",
+            f"""
             ---
             title: {d}
             kind: index
@@ -42,8 +49,11 @@ def make_framework(tmp: Path) -> Path:
             ---
 
             # {d}
-            """)
-    write(fw / "01-baseline" / "security.md", """
+            """,
+        )
+    write(
+        fw / "01-baseline" / "security.md",
+        """
         ---
         title: Bảo mật nền
         kind: baseline
@@ -63,8 +73,11 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - x
-        """)
-    write(fw / "08-backend" / "api.md", """
+        """,
+    )
+    write(
+        fw / "08-backend" / "api.md",
+        """
         ---
         title: API
         kind: module
@@ -86,8 +99,11 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - y
-        """)
-    write(fw / "08-backend" / "cli-only.md", """
+        """,
+    )
+    write(
+        fw / "08-backend" / "cli-only.md",
+        """
         ---
         title: CLI only
         kind: module
@@ -105,8 +121,11 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - z
-        """)
-    write(fw / "02-profiles" / "web-app.md", """
+        """,
+    )
+    write(
+        fw / "02-profiles" / "web-app.md",
+        """
         ---
         title: Web app
         kind: profile
@@ -125,8 +144,11 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - w
-        """)
-    write(fw / "02-profiles" / "cli-tool.md", """
+        """,
+    )
+    write(
+        fw / "02-profiles" / "cli-tool.md",
+        """
         ---
         title: CLI tool
         kind: profile
@@ -140,8 +162,11 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - c
-        """)
-    write(fw / "03-industries" / "fintech.md", """
+        """,
+    )
+    write(
+        fw / "03-industries" / "fintech.md",
+        """
         ---
         title: Fintech
         kind: industry
@@ -160,7 +185,8 @@ def make_framework(tmp: Path) -> Path:
         ## Nguồn
 
         - f
-        """)
+        """,
+    )
     return fw
 
 
@@ -196,8 +222,10 @@ class ValidateTest(unittest.TestCase):
 
     def test_duplicate_id(self):
         p = self.fw / "08-backend" / "api.md"
-        p.write_text(p.read_text(encoding="utf-8").replace(
-            "## Nguồn", "- [ ] `BE-API-001` **SHOULD** trùng.\n\n## Nguồn", 1), encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8").replace("## Nguồn", "- [ ] `BE-API-001` **SHOULD** trùng.\n\n## Nguồn", 1),
+            encoding="utf-8",
+        )
         errs = xs.validate(self.fw)
         self.assertTrue(any("ID trùng BE-API-001" in e for e in errs), errs)
 
@@ -215,8 +243,10 @@ class ValidateTest(unittest.TestCase):
 
     def test_malformed_item_reported(self):
         p = self.fw / "08-backend" / "api.md"
-        p.write_text(p.read_text(encoding="utf-8").replace(
-            "## Nguồn", "- [ ] `BE-API-002` MUST thiếu in đậm.\n\n## Nguồn", 1), encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8").replace("## Nguồn", "- [ ] `BE-API-002` MUST thiếu in đậm.\n\n## Nguồn", 1),
+            encoding="utf-8",
+        )
         errs = xs.validate(self.fw)
         self.assertTrue(any("sai định dạng" in e for e in errs), errs)
 
@@ -228,15 +258,17 @@ class ValidateTest(unittest.TestCase):
 
     def test_missing_module_in_profile(self):
         p = self.fw / "02-profiles" / "cli-tool.md"
-        p.write_text(p.read_text(encoding="utf-8").replace("08-backend/cli-only", "08-backend/khong-co"),
-                     encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8").replace("08-backend/cli-only", "08-backend/khong-co"), encoding="utf-8"
+        )
         errs = xs.validate(self.fw)
         self.assertTrue(any("không tồn tại" in e for e in errs), errs)
 
     def test_missing_readme_in_dir(self):
         (self.fw / "09-database").mkdir()
-        (self.fw / "09-database" / "x.md").write_text("---\ntitle: X\nkind: method\nupdated: 2026-10-13\n---\n# X\n",
-                                                      encoding="utf-8")
+        (self.fw / "09-database" / "x.md").write_text(
+            "---\ntitle: X\nkind: method\nupdated: 2026-10-13\n---\n# X\n", encoding="utf-8"
+        )
         errs = xs.validate(self.fw)
         self.assertTrue(any("thiếu README.md" in e for e in errs), errs)
 
@@ -265,10 +297,10 @@ class ComposeTest(unittest.TestCase):
 
     def test_compose_scale_s_keeps_floor_demotes_modules(self):
         out = xs.compose(self.fw, "web-app", ["fintech"], "S", include_may=False, today="2026-10-13")
-        self.assertIn("`BASE-SEC-001` **MUST**", out)   # baseline: sàn, giữ MUST
-        self.assertIn("`IND-FIN-001` **MUST**", out)    # gói ngành: giữ MUST
-        self.assertIn("`BE-API-001` **SHOULD**", out)   # module chuyên sâu: S hạ SHOULD
-        self.assertIn("`BASE-SEC-002` **SHOULD**", out) # MUST@L vẫn hạ
+        self.assertIn("`BASE-SEC-001` **MUST**", out)  # baseline: sàn, giữ MUST
+        self.assertIn("`IND-FIN-001` **MUST**", out)  # gói ngành: giữ MUST
+        self.assertIn("`BE-API-001` **SHOULD**", out)  # module chuyên sâu: S hạ SHOULD
+        self.assertIn("`BASE-SEC-002` **SHOULD**", out)  # MUST@L vẫn hạ
 
     def test_compose_scale_l_keeps_must(self):
         out = xs.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
@@ -276,8 +308,9 @@ class ComposeTest(unittest.TestCase):
         self.assertIn("`BASE-SEC-003` **MAY**", out)
 
     def test_compose_add_extra_module_bypasses_applies_to(self):
-        out = xs.compose(self.fw, "web-app", [], "M", include_may=False, today="2026-10-13",
-                         extra=["08-backend/cli-only"])
+        out = xs.compose(
+            self.fw, "web-app", [], "M", include_may=False, today="2026-10-13", extra=["08-backend/cli-only"]
+        )
         self.assertIn("`BE-CLI-001`", out)  # applies_to chỉ cli-tool nhưng --add là có chủ đích
         self.assertIn("extra: [08-backend/cli-only]", out)
         with self.assertRaises(SystemExit):
@@ -285,7 +318,9 @@ class ComposeTest(unittest.TestCase):
 
     def test_compose_filters_standards_by_applies_to(self):
         write(self.fw / "04-standards" / "README.md", "---\ntitle: S\nkind: index\nupdated: 2026-10-14\n---\n\n# S\n")
-        write(self.fw / "04-standards" / "a11y.md", """
+        write(
+            self.fw / "04-standards" / "a11y.md",
+            """
             ---
             title: A11y
             kind: standard
@@ -303,20 +338,28 @@ class ComposeTest(unittest.TestCase):
             ## Nguồn
 
             - w
-            """)
+            """,
+        )
         p = self.fw / "02-profiles" / "cli-tool.md"
-        p.write_text(p.read_text(encoding="utf-8").replace("[08-backend/cli-only]", "[08-backend/cli-only, 04-standards/*]"),
-                     encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8").replace("[08-backend/cli-only]", "[08-backend/cli-only, 04-standards/*]"),
+            encoding="utf-8",
+        )
         self.assertEqual(xs.validate(self.fw), [])
         self.assertNotIn("STD-A11Y-001", xs.compose(self.fw, "cli-tool", [], "M", include_may=False))
-        self.assertIn("STD-A11Y-001", xs.compose(self.fw, "web-app", [], "M", include_may=False,
-                                                 extra=["04-standards/*"]))
+        self.assertIn(
+            "STD-A11Y-001", xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["04-standards/*"])
+        )
 
     def test_compose_rebases_relative_links(self):
         p = self.fw / "08-backend" / "api.md"
-        p.write_text(p.read_text(encoding="utf-8").replace(
-            "→ Kiểm: test contract.", "Xem [`X`](../01-baseline/security.md#a), [web](https://x.y). → Kiểm: test contract."),
-            encoding="utf-8")
+        p.write_text(
+            p.read_text(encoding="utf-8").replace(
+                "→ Kiểm: test contract.",
+                "Xem [`X`](../01-baseline/security.md#a), [web](https://x.y). → Kiểm: test contract.",
+            ),
+            encoding="utf-8",
+        )
         os.environ["XS_FRAMEWORK_LINK"] = ".xstored/framework"
         try:
             out = xs.compose(self.fw, "web-app", [], "M", include_may=False)
@@ -347,11 +390,14 @@ class ComposeTest(unittest.TestCase):
 class LoopTest(unittest.TestCase):
     def setUp(self):
         self.base = Path(tempfile.mkdtemp())
-        write(self.base / "docs" / "autopilot" / "PLAN.md", """
+        write(
+            self.base / "docs" / "autopilot" / "PLAN.md",
+            """
             # PLAN
             - [ ] `T-001` Viết hàm cộng — Gate: `python3 -c "import sys; sys.exit(0)"`
             - [ ] `T-002` Viết test
-            """)
+            """,
+        )
         self.env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.base))
         self._old = os.environ.get("CLAUDE_PROJECT_DIR")
         os.environ["CLAUDE_PROJECT_DIR"] = str(self.base)
@@ -446,12 +492,18 @@ class LoopTest(unittest.TestCase):
         self.assertFalse(xs.read_state(self.base)["active"])
         self.assertEqual(self.run_cli("loop", "resume", "--reason", "đã sửa tay"), 0)
         st = xs.read_state(self.base)
-        self.assertTrue(st["active"]); self.assertEqual(st["same_failure_count"], 0)
+        self.assertTrue(st["active"])
+        self.assertEqual(st["same_failure_count"], 0)
         self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
 
     def test_cli_hook_stop_fail_open_on_garbage(self):
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],
-                           input="not json", capture_output=True, text=True, env=self.env)
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],
+            input="not json",
+            capture_output=True,
+            text=True,
+            env=self.env,
+        )
         self.assertEqual(r.returncode, 0)
         self.assertEqual(r.stdout.strip(), "")
 
@@ -464,21 +516,30 @@ class AuditRegressionTest(unittest.TestCase):
         self.fw = make_framework(self.tmp)
 
     def cli(self, *args, env=None) -> subprocess.CompletedProcess:
-        return subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), *args], capture_output=True,
-                              text=True, cwd=self.tmp, env=dict(os.environ, **(env or {})))
+        return subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "xs.py"), *args],
+            capture_output=True,
+            text=True,
+            cwd=self.tmp,
+            env=dict(os.environ, **(env or {})),
+        )
 
     def test_compose_out_keeps_existing_states_by_id(self):
         bp = self.tmp / "BP.md"
-        self.assertEqual(self.cli("--framework", str(self.fw), "compose", "--profile", "web-app",
-                                  "--out", str(bp)).returncode, 0)
+        self.assertEqual(
+            self.cli("--framework", str(self.fw), "compose", "--profile", "web-app", "--out", str(bp)).returncode, 0
+        )
         text = bp.read_text(encoding="utf-8").replace(
             "- [ ] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI.",
-            "- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10")
+            "- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10",
+        )
         bp.write_text(text, encoding="utf-8")
         r = self.cli("--framework", str(self.fw), "compose", "--profile", "web-app", "--out", str(bp))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10",
-                      bp.read_text(encoding="utf-8"))
+        self.assertIn(
+            "- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10",
+            bp.read_text(encoding="utf-8"),
+        )
 
     def test_missing_framework_dir_is_error(self):
         r = self.cli("--framework", str(self.tmp / "khong-co"), "validate")
@@ -492,8 +553,11 @@ class AuditRegressionTest(unittest.TestCase):
 
     def test_waiver_reason_accepts_nfd(self):
         import unicodedata
+
         bp = self.tmp / "BP.md"
-        bp.write_text(unicodedata.normalize("NFD", "- [~] `X-001` **MUST** a — Miễn: không áp dụng\n"), encoding="utf-8")
+        bp.write_text(
+            unicodedata.normalize("NFD", "- [~] `X-001` **MUST** a — Miễn: không áp dụng\n"), encoding="utf-8"
+        )
         self.assertEqual(xs.blueprint_status(bp)["bad_waivers"], [])
 
     def test_record_rejects_path_like_task_id(self):
@@ -519,6 +583,40 @@ class AuditRegressionTest(unittest.TestCase):
         tail = xs.read_evidence("T-001", self.tmp)["output_tail"]
         self.assertNotIn("sk-live-123", tail)
         self.assertNotIn("hunter2", tail)
+
+
+class CliContractTest(unittest.TestCase):
+    def run_xs(self, *args, stdin=None):
+        return subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "xs.py"), *args],
+            input=stdin,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_version_from_version_file(self):
+        r = self.run_xs("--version")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "xs.py " + (ROOT / "VERSION").read_text(encoding="utf-8").strip())
+
+    def test_help_has_examples_and_exit_codes(self):
+        out = self.run_xs("--help").stdout
+        self.assertIn("ví dụ:", out)
+        self.assertIn("mã thoát:", out)
+
+    def test_blueprint_status_json_from_stdin(self):
+        bp = "- [x] `A-001` **MUST** a\n- [ ] `A-002` **MUST** b\n- [~] `A-003` **SHOULD** c\n"
+        r = self.run_xs("blueprint-status", "-", "--json", "--strict", stdin=bp)
+        self.assertEqual(r.returncode, 1)
+        d = json.loads(r.stdout)
+        self.assertEqual((d["ok"], d["open_must"], d["bad_waivers"]), (False, ["A-002"], ["A-003 (dòng 3)"]))
+
+    def test_readme_lists_every_subcommand(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        sub = next(a for a in xs.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
+        missing = [c for c in sub.choices if f"xs.py {c}" not in readme]
+        self.assertEqual(missing, [], "README thiếu lệnh — cập nhật bảng Công cụ")
 
 
 class RealFrameworkTest(unittest.TestCase):

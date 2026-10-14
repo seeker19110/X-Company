@@ -20,6 +20,7 @@ Lệnh:
 
 Thoát: 0 = ổn, 1 = vi phạm/chưa đạt, 2 = lỗi dùng lệnh.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,7 +36,7 @@ import sys
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_FRAMEWORK = (SCRIPT_DIR.parent / "framework").resolve()
@@ -65,6 +66,7 @@ GATE_RE = re.compile(r"Gate:\s*`([^`]+)`")
 
 # --------------------------------------------------------------------------- frontmatter
 
+
 class FrontmatterError(ValueError):
     pass
 
@@ -78,7 +80,7 @@ def parse_frontmatter(text: str) -> Tuple[Dict[str, object], str, int]:
     for i in range(1, len(lines)):
         line = lines[i]
         if line.strip() == "---":
-            body = "\n".join(lines[i + 1:])
+            body = "\n".join(lines[i + 1 :])
             return meta, body, i + 1
         if not line.strip() or line.lstrip().startswith("#"):
             continue
@@ -111,6 +113,7 @@ def _unquote(s: str) -> str:
 
 
 # --------------------------------------------------------------------------- model
+
 
 @dataclass
 class Item:
@@ -203,6 +206,7 @@ def resolve_modules(patterns: Iterable[str], by_rel: Dict[str, Doc]) -> Tuple[Li
 
 # --------------------------------------------------------------------------- validate
 
+
 def validate(root: Path) -> List[str]:
     docs, errors = load_docs(root)
     by_rel = {d.rel: d for d in docs}
@@ -268,10 +272,10 @@ def validate(root: Path) -> List[str]:
             if not slug:
                 errors.append(f"{where}: thiếu 'slug'")
             else:
-                key = (d.kind, str(slug))
-                if key in slugs:
-                    errors.append(f"{where}: slug '{slug}' trùng với {slugs[key]}")
-                slugs[key] = where
+                slug_key = (d.kind, str(slug))
+                if slug_key in slugs:
+                    errors.append(f"{where}: slug '{slug}' trùng với {slugs[slug_key]}")
+                slugs[slug_key] = where
             mods = _as_list(d.meta.get("modules"))
             _, missing = resolve_modules(mods, by_rel)
             for m in missing:
@@ -326,8 +330,15 @@ def find_by_slug(docs: List[Doc], kind: str, slug: str) -> Optional[Doc]:
     return None
 
 
-def compose(root: Path, profile: str, industries: List[str], scale: str, include_may: bool,
-            today: Optional[str] = None, extra: Optional[List[str]] = None) -> str:
+def compose(
+    root: Path,
+    profile: str,
+    industries: List[str],
+    scale: str,
+    include_may: bool,
+    today: Optional[str] = None,
+    extra: Optional[List[str]] = None,
+) -> str:
     docs, errors = load_docs(root)
     if errors:
         raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
@@ -421,8 +432,8 @@ def carry_states(old: str, new: str) -> Tuple[str, int]:
     for line in unicodedata.normalize("NFC", old).splitlines():
         m = ITEM_RE.match(line)
         if m:
-            note = NOTE_RE.search(line)
-            prev[m["id"]] = (m["state"], note.group(0) if note else "")
+            nm = NOTE_RE.search(line)
+            prev[m["id"]] = (m["state"], nm.group(0) if nm else "")
     kept, lines = 0, []
     for line in new.splitlines():
         m = ITEM_RE.match(line)
@@ -454,11 +465,16 @@ def _rel_link(root: Path) -> str:
 
 # --------------------------------------------------------------------------- blueprint-status
 
-def blueprint_status(path: Path) -> Dict[str, object]:
+
+def blueprint_status(path: Path) -> Dict[str, Any]:
+    return blueprint_status_text(path.read_text(encoding="utf-8"))
+
+
+def blueprint_status_text(raw: str) -> Dict[str, Any]:
     total = {lv: {"open": 0, "done": 0, "waived": 0} for lv in LEVELS}
     bad_waivers: List[str] = []
     open_must: List[str] = []
-    text = unicodedata.normalize("NFC", path.read_text(encoding="utf-8"))
+    text = unicodedata.normalize("NFC", raw)
     for n, line in enumerate(text.splitlines(), start=1):
         m = ITEM_RE.match(line)
         if not m:
@@ -479,6 +495,7 @@ def blueprint_status(path: Path) -> Dict[str, object]:
 
 
 # --------------------------------------------------------------------------- loop (autopilot)
+
 
 def project_dir() -> Path:
     return Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
@@ -502,12 +519,16 @@ def read_state(base: Optional[Path] = None) -> Optional[dict]:
         return None
 
 
+def write_atomic(path: Path, text: str) -> None:
+    """Ghi file qua tệp tạm rồi đổi tên: lỗi giữa chừng không để lại file dở."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
 def write_state(state: dict, base: Optional[Path] = None) -> None:
-    d = state_dir(base)
-    d.mkdir(parents=True, exist_ok=True)
-    tmp = d / "state.json.tmp"
-    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(d / "state.json")
+    write_atomic(state_dir(base) / "state.json", json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
 def parse_plan(path: Path) -> List[dict]:
@@ -517,8 +538,14 @@ def parse_plan(path: Path) -> List[dict]:
         if not m:
             continue
         g = GATE_RE.search(m["rest"])
-        tasks.append({"id": m["id"], "state": m["state"].lower(), "gate": g.group(1) if g else None,
-                      "title": m["rest"].strip(" —-")[:120]})
+        tasks.append(
+            {
+                "id": m["id"],
+                "state": m["state"].lower(),
+                "gate": g.group(1) if g else None,
+                "title": m["rest"].strip(" —-")[:120],
+            }
+        )
     return tasks
 
 
@@ -541,8 +568,10 @@ def loop_verdict(base: Optional[Path] = None) -> dict:
     if st.get("blocked"):
         return {"verdict": "blocked", "reason": st.get("blocked_reason", "cần người quyết định")}
     if st.get("same_failure_count", 0) >= st.get("max_same_failure", 3):
-        return {"verdict": "blocked",
-                "reason": f"cùng một lỗi lặp {st.get('same_failure_count')} lần ({st.get('last_failure_task')}) — dừng để người xem"}
+        return {
+            "verdict": "blocked",
+            "reason": f"cùng một lỗi lặp {st.get('same_failure_count')} lần ({st.get('last_failure_task')}) — dừng để người xem",
+        }
     if st.get("iterations", 0) >= st.get("max_iterations", 50):
         return {"verdict": "budget", "reason": f"đã chạm trần {st.get('max_iterations')} vòng"}
     deadline = st.get("deadline")
@@ -560,19 +589,28 @@ def loop_verdict(base: Optional[Path] = None) -> dict:
         if t["state"] == "x":
             ev = read_evidence(t["id"], base)
             if ev is None or ev.get("exit_code") != 0:
-                return {"verdict": "verify", "task": t["id"],
-                        "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>"}
+                return {
+                    "verdict": "verify",
+                    "task": t["id"],
+                    "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>",
+                }
             if t["gate"] and ev.get("cmd") != t["gate"]:
-                return {"verdict": "verify", "task": t["id"],
-                        "reason": f"task {t['id']} khai Gate `{t['gate']}` nhưng bằng chứng chạy lệnh khác"}
+                return {
+                    "verdict": "verify",
+                    "task": t["id"],
+                    "reason": f"task {t['id']} khai Gate `{t['gate']}` nhưng bằng chứng chạy lệnh khác",
+                }
     bp = st.get("blueprint")
     if bp:
         bpp = base / bp
         if bpp.exists():
             s = blueprint_status(bpp)
             if s["open_must"]:
-                return {"verdict": "continue", "task": s["open_must"][0],
-                        "reason": f"còn {len(s['open_must'])} mục MUST của blueprint chưa đạt (đầu tiên: {s['open_must'][0]})"}
+                return {
+                    "verdict": "continue",
+                    "task": s["open_must"][0],
+                    "reason": f"còn {len(s['open_must'])} mục MUST của blueprint chưa đạt (đầu tiên: {s['open_must'][0]})",
+                }
             if s["bad_waivers"]:
                 return {"verdict": "continue", "reason": "mục miễn trừ thiếu lý do: " + ", ".join(s["bad_waivers"][:5])}
     return {"verdict": "done", "reason": "mọi task có bằng chứng xanh và blueprint không còn MUST mở"}
@@ -587,16 +625,27 @@ def failure_signature(task: str, code: int, output: str) -> str:
 def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
     base = base or project_dir()
     st = read_state(base) or {}
+    try:
+        timeout = int(os.environ.get("XS_RECORD_TIMEOUT", "1800"))
+    except ValueError:
+        print("✗ XS_RECORD_TIMEOUT phải là số giây nguyên dương", file=sys.stderr)
+        return 2
     started = now_iso()
     cmd_str = " ".join(cmd)
     try:
-        proc = subprocess.run(cmd_str, shell=True, cwd=base, capture_output=True, text=True,
-                              timeout=int(os.environ.get("XS_RECORD_TIMEOUT", "1800")))
+        proc = subprocess.run(cmd_str, shell=True, cwd=base, capture_output=True, text=True, timeout=timeout)
         code, out = proc.returncode, (proc.stdout or "") + (proc.stderr or "")
     except subprocess.TimeoutExpired as exc:
         code, out = 124, f"timeout: {exc}"
-    ev = {"task": task, "cmd": cmd_str, "exit_code": code, "started": started, "finished": now_iso(),
-          "head": _git_head(base), "output_tail": SECRET_RE.sub(r"\1\2***", "\n".join(out.strip().splitlines()[-40:]))}
+    ev: Dict[str, Any] = {
+        "task": task,
+        "cmd": cmd_str,
+        "exit_code": code,
+        "started": started,
+        "finished": now_iso(),
+        "head": _git_head(base),
+        "output_tail": SECRET_RE.sub(r"\1\2***", "\n".join(out.strip().splitlines()[-40:])),
+    }
     d = state_dir(base) / "evidence"
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{task}.json").write_text(json.dumps(ev, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -636,10 +685,12 @@ def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
         st["iterations"] = st.get("iterations", 0) + 1
         st["last_verdict"] = v
         write_state(st, base)
-        reason = (f"[autopilot vòng {st['iterations']}/{st.get('max_iterations', 50)}] Chưa xong: {v['reason']}. "
-                  "Làm tiếp theo PLAN; chạy `python3 .xstored/scripts/xs.py loop record --task <ID> -- <lệnh kiểm>` "
-                  "để ghi bằng chứng; commit+push sau mỗi task. Nếu cần người quyết (§dừng-bắt-buộc) thì "
-                  "`xs.py loop block --reason ...`.")
+        reason = (
+            f"[autopilot vòng {st['iterations']}/{st.get('max_iterations', 50)}] Chưa xong: {v['reason']}. "
+            "Làm tiếp theo PLAN; chạy `python3 .xstored/scripts/xs.py loop record --task <ID> -- <lệnh kiểm>` "
+            "để ghi bằng chứng; commit+push sau mỗi task. Nếu cần người quyết (§dừng-bắt-buộc) thì "
+            "`xs.py loop block --reason ...`."
+        )
         return json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False), 0
     if st and st.get("active") and v["verdict"] in ("done", "blocked", "budget"):
         st["active"] = False
@@ -650,6 +701,7 @@ def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
 
 
 # --------------------------------------------------------------------------- CLI
+
 
 def cmd_validate(args) -> int:
     errors = validate(args.framework)
@@ -677,14 +729,13 @@ def cmd_list(args) -> int:
 
 
 def cmd_compose(args) -> int:
-    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may,
-                  extra=args.add or [])
+    out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may, extra=args.add or [])
     if args.out:
         out_path = Path(args.out)
         if out_path.exists():  # ghép lại: giữ tick/miễn trừ/bằng chứng theo ID, không mất công audit
             out, kept = carry_states(out_path.read_text(encoding="utf-8"), out)
             print(f"↺ Giữ trạng thái {kept} mục theo ID từ bản cũ", file=sys.stderr)
-        out_path.write_text(out, encoding="utf-8")
+        write_atomic(out_path, out)
         print(f"✓ Đã ghi {args.out}")
     else:
         sys.stdout.write(out)
@@ -692,7 +743,11 @@ def cmd_compose(args) -> int:
 
 
 def cmd_blueprint_status(args) -> int:
-    s = blueprint_status(Path(args.file))
+    s = blueprint_status_text(sys.stdin.read()) if args.file == "-" else blueprint_status(Path(args.file))
+    ok = not s["open_must"] and not s["bad_waivers"]
+    if args.json:  # hợp đồng máy đọc: {"levels", "open_must", "bad_waivers", "ok"}
+        print(json.dumps({**s, "ok": ok}, ensure_ascii=False))
+        return 0 if ok or not args.strict else 1
     for lv in LEVELS:
         c = s["levels"][lv]
         print(f"{lv:<7} đạt {c['done']:>4} · miễn {c['waived']:>4} · chưa {c['open']:>4}")
@@ -700,7 +755,6 @@ def cmd_blueprint_status(args) -> int:
         print("✗ Miễn trừ thiếu lý do: " + ", ".join(s["bad_waivers"]))
     if s["open_must"]:
         print(f"Còn {len(s['open_must'])} mục MUST chưa đạt: " + ", ".join(s["open_must"][:15]))
-    ok = not s["open_must"] and not s["bad_waivers"]
     return 0 if ok or not args.strict else 1
 
 
@@ -712,13 +766,28 @@ def cmd_loop(args) -> int:
             return 2
         deadline = None
         if args.hours is not None:
-            deadline = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=args.hours)).replace(microsecond=0).isoformat()
-        state = {"active": True, "started": now_iso(), "plan": args.plan, "blueprint": args.blueprint,
-                 "max_iterations": args.max_iterations, "max_same_failure": 3, "iterations": 0,
-                 "deadline": deadline, "same_failure_count": 0, "blocked": False}
+            deadline = (
+                (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=args.hours))
+                .replace(microsecond=0)
+                .isoformat()
+            )
+        state = {
+            "active": True,
+            "started": now_iso(),
+            "plan": args.plan,
+            "blueprint": args.blueprint,
+            "max_iterations": args.max_iterations,
+            "max_same_failure": 3,
+            "iterations": 0,
+            "deadline": deadline,
+            "same_failure_count": 0,
+            "blocked": False,
+        }
         write_state(state, base)
-        print(f"✓ Autopilot bật: plan={args.plan} trần={args.max_iterations} vòng"
-              + (f", hạn {deadline}" if deadline else ""))
+        print(
+            f"✓ Autopilot bật: plan={args.plan} trần={args.max_iterations} vòng"
+            + (f", hạn {deadline}" if deadline else "")
+        )
         return 0
     if args.loop_cmd == "status":
         v = loop_verdict(base)
@@ -742,28 +811,38 @@ def cmd_loop(args) -> int:
         print(f"■ BLOCKED: {args.reason}")
         return 0
     if args.loop_cmd == "resume":
-        st = read_state(base)
-        if not st:
+        cur = read_state(base)
+        if not cur:
             print("✗ Chưa có vòng lặp (chạy loop init trước)", file=sys.stderr)
             return 2
-        st.update({"active": True, "blocked": False, "blocked_reason": None, "same_failure_count": 0,
-                   "last_failure_signature": None, "resumed_at": now_iso(), "resume_reason": args.reason})
-        st.pop("ended", None); st.pop("final_verdict", None)
-        write_state(st, base)
-        print(f"▶ Autopilot tiếp tục (vòng {st.get('iterations', 0)}/{st.get('max_iterations', 50)}): {args.reason}")
+        cur.update(
+            {
+                "active": True,
+                "blocked": False,
+                "blocked_reason": None,
+                "same_failure_count": 0,
+                "last_failure_signature": None,
+                "resumed_at": now_iso(),
+                "resume_reason": args.reason,
+            }
+        )
+        cur.pop("ended", None)
+        cur.pop("final_verdict", None)
+        write_state(cur, base)
+        print(f"▶ Autopilot tiếp tục (vòng {cur.get('iterations', 0)}/{cur.get('max_iterations', 50)}): {args.reason}")
         return 0
     if args.loop_cmd == "stop":
-        st = read_state(base)
-        if st:
-            st.update({"active": False, "ended": now_iso(), "stop_reason": args.reason})
-            write_state(st, base)
+        cur = read_state(base)
+        if cur:
+            cur.update({"active": False, "ended": now_iso(), "stop_reason": args.reason})
+            write_state(cur, base)
         print("■ Autopilot tắt.")
         return 0
     if args.loop_cmd == "hook-stop":
         try:
             out, code = hook_stop(sys.stdin.read() if not sys.stdin.isatty() else "", base)
         except Exception as exc:  # fail-open: hook lỗi không được kẹt phiên
-            print(f"[xs hook-stop] lỗi, cho dừng: {exc}", file=sys.stderr)
+            print(f"[xs hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 0
         if out:
             print(out)
@@ -791,10 +870,33 @@ def _task_id(value: str) -> str:
     return value
 
 
+def framework_version() -> str:
+    """Phiên bản khung: file VERSION cạnh thư mục scripts/ (repo khung hoặc .xstored/ của dự án)."""
+    try:
+        return (SCRIPT_DIR.parent / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "unknown"
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="xs.py", description="Công cụ khung X-stored")
-    p.add_argument("--framework", type=Path, default=Path(os.environ.get("XS_FRAMEWORK", DEFAULT_FRAMEWORK)),
-                   help="thư mục framework/ (mặc định: cạnh scripts/)")
+    p = argparse.ArgumentParser(
+        prog="xs.py",
+        description="Công cụ khung X-stored",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="ví dụ:\n"
+        "  xs.py list profiles\n"
+        "  xs.py compose --profile web-app --industry fintech --scale M --out BLUEPRINT.md\n"
+        "  xs.py blueprint-status BLUEPRINT.md --strict\n"
+        "  xs.py loop record --task T-001 -- python3 -m unittest\n\n"
+        "mã thoát: 0 ổn · 1 vi phạm/chưa đạt · 2 sai cách dùng hoặc không đọc được file/thư mục",
+    )
+    p.add_argument("--version", action="version", version=f"%(prog)s {framework_version()}")
+    p.add_argument(
+        "--framework",
+        type=Path,
+        default=Path(os.environ.get("XS_FRAMEWORK", DEFAULT_FRAMEWORK)),
+        help="thư mục framework/ (mặc định: cạnh scripts/)",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("validate").set_defaults(fn=cmd_validate)
     pl = sub.add_parser("list")
@@ -805,13 +907,18 @@ def build_parser() -> argparse.ArgumentParser:
     pc.add_argument("--industry", action="append")
     pc.add_argument("--scale", choices=SCALES, default="M")
     pc.add_argument("--include-may", action="store_true")
-    pc.add_argument("--add", action="append", metavar="MODULE",
-                    help="ghép thêm module/glob ngoài hồ sơ (vd 13-ai-engineering/*), bỏ lọc applies_to")
+    pc.add_argument(
+        "--add",
+        action="append",
+        metavar="MODULE",
+        help="ghép thêm module/glob ngoài hồ sơ (vd 13-ai-engineering/*), bỏ lọc applies_to",
+    )
     pc.add_argument("--out")
     pc.set_defaults(fn=cmd_compose)
     pb = sub.add_parser("blueprint-status")
-    pb.add_argument("file")
-    pb.add_argument("--strict", action="store_true")
+    pb.add_argument("file", help="BLUEPRINT.md, hoặc - để đọc stdin")
+    pb.add_argument("--strict", action="store_true", help="exit 1 khi còn MUST mở hoặc miễn trừ thiếu lý do")
+    pb.add_argument("--json", action="store_true", help="in JSON (levels, open_must, bad_waivers, ok)")
     pb.set_defaults(fn=cmd_blueprint_status)
     plp = sub.add_parser("loop")
     lsub = plp.add_subparsers(dest="loop_cmd", required=True)

@@ -19,6 +19,7 @@
 - [ ] Không trùng nội dung với module khác ("một chủ đề một nhà"); chỗ khác chỉ liên kết
 - [ ] README chỉ mục của mảng đã cập nhật; `CHANGELOG.md` cập nhật nếu đổi mục/ID/công cụ
 - [ ] Không bí mật, không tên model/phiên AI trong nội dung
+- [ ] Phụ thuộc mới (công cụ CI, gói Python): tên · phiên bản ghim · license · lý do · thay thế đã xét — hoặc ghi "không có"
 
 ## Ảnh hưởng
 
