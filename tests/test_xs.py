@@ -877,6 +877,229 @@ class CiCheckTest(unittest.TestCase):
         )
 
 
+def audit_status_text(groups=None, findings=()):
+    groups = groups or {}
+    rows = []
+    for no, code, name in xs.AUDIT_GROUPS:
+        state, sha, day, note = groups.get(no, ("N/A", "", "", "không áp dụng cho repo thử"))
+        rows.append(f"| {no} | {code} | {name} | {state} | {sha} | {day} | {note} |")
+    head = "| ID | Mức | Trạng thái | Tóm tắt | Bằng chứng | Gate | Ghi chú |\n|---|---|---|---|---|---|---|\n"
+    return (
+        "# AUDIT-STATUS — thử\n\n## Nhóm\n\n| # | Mã | Nhóm | Trạng thái | SHA | Ngày | Ghi chú |\n|---|---|---|---|---|---|---|\n"
+        + "\n".join(rows)
+        + "\n\n## Phát hiện\n\n"
+        + head
+        + "".join(f"| {f} |\n" for f in findings)
+    )
+
+
+class GitRepoMixin:
+    def init_repo(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+        self.git("init", "-q", "-b", "main")
+
+    def git(self, *args, env=None) -> str:
+        r = subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+            env={**os.environ, **(env or {})},
+        )
+        return r.stdout.strip()
+
+    def commit_files(self, files: dict, at: int) -> str:
+        for name, text in files.items():
+            f = self.repo / name
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text, encoding="utf-8")
+            self.git("add", name)
+        stamp = f"@{at} +0000"
+        self.git("commit", "-q", "-m", "c", env={"GIT_AUTHOR_DATE": stamp, "GIT_COMMITTER_DATE": stamp})
+        return self.git("rev-parse", "HEAD")
+
+
+class AuditPlanTest(GitRepoMixin, unittest.TestCase):
+    def test_audit_plan_web_signals(self):
+        files = [
+            "package.json",
+            "package-lock.json",
+            "src/app.tsx",
+            "src/app.test.tsx",
+            "db/migrations/001.sql",
+            ".github/workflows/ci.yml",
+            "Dockerfile",
+            "AGENTS.md",
+        ]
+        sig = xs.audit_signals(Path("."), files)
+        a = xs.audit_applicability(sig)
+        self.assertEqual(sig["langs"], {"js/ts": 2})
+        self.assertEqual((a[6][0], a[10][0], a[5][0], a[13][0]), ("áp dụng", "áp dụng", "áp dụng", "áp dụng"))
+        self.assertIn("package-lock.json", a[7][1])
+
+    def test_audit_plan_docs_only_repo(self):
+        a = xs.audit_applicability(xs.audit_signals(Path("."), ["README.md", "docs/x.md"]))
+        self.assertEqual([a[n][0] for n in (1, 3, 4, 6, 10, 12, 13)], ["N/A"] * 7)
+        self.assertIn("KHÔNG có CI", a[8][1])
+
+    def test_audit_plan_stale_evidence(self):
+        self.init_repo()
+        bp = (
+            "- [x] `A-001` **MUST** a → Kiểm: x — Bằng chứng: lib/a.py:1 xử lý\n"
+            "- [~] `A-002` **MUST** b → Kiểm: y — Miễn: b.py không dùng\n"
+            "- [ ] `A-003` **MUST** c → Kiểm: z — Thiếu: lib/a.py\n"
+        )
+        self.commit_files({"lib/a.py": "1", "b.py": "1", "BLUEPRINT.md": bp}, 1_700_000_000)
+        self.commit_files({"lib/a.py": "2"}, 1_700_000_100)
+        files = xs._repo_files(self.repo)
+        stale = xs.blueprint_stale_evidence(self.repo, self.repo / "BLUEPRINT.md", files)
+        self.assertEqual(stale, [{"id": "A-001", "kind": "Bằng chứng", "files": ["lib/a.py"]}])
+
+    def test_audit_plan_rescan_from_status(self):
+        self.init_repo()
+        c1 = self.commit_files({".github/workflows/ci.yml": "a", "README.md": "x"}, 1_700_000_000)
+        groups = {
+            8: ("đã quét", c1, "2026-10-14", ""),
+            9: ("đã quét", c1, "2026-10-14", ""),
+            2: ("đã quét", "deadbeef", "2026-10-14", ""),
+            1: ("chưa quét", "", "", ""),
+        }
+        self.commit_files({"docs/ops/AUDIT-STATUS.md": audit_status_text(groups)}, 1_700_000_050)
+        self.commit_files({".github/workflows/ci.yml": "b"}, 1_700_000_100)
+        r = xs.audit_rescan(self.repo, self.repo / "docs/ops/AUDIT-STATUS.md")
+        self.assertIn("1 file đổi", r[8])
+        self.assertEqual(r[1], "chưa quét")
+        self.assertIn("không còn là tổ tiên", r[2])
+        self.assertIn(9, r)  # AUDIT-STATUS.md là .md đổi sau SHA quét nhóm 9
+        self.assertNotIn(6, r)  # N/A
+
+    def test_audit_plan_cli_json(self):
+        self.init_repo()
+        self.commit_files({"main.py": "print(1)", "tests/test_main.py": "x"}, 1_700_000_000)
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "xs.py"), "audit", "plan", "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "CLAUDE_PROJECT_DIR": str(self.repo)},
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        self.assertEqual(d["signals"]["langs"], {"python": 2})
+        self.assertIsNone(d["rescan"])
+        self.assertEqual(len(d["groups"]), 13)
+
+
+class AuditCheckTest(GitRepoMixin, unittest.TestCase):
+    def check(self, text, strict=False, root=None):
+        d = Path(root or self.enterContext(tempfile.TemporaryDirectory()))
+        f = d / "AUDIT-STATUS.md"
+        f.write_text(text, encoding="utf-8")
+        return xs.audit_check(f, strict=strict, today=xs._dt.date(2026, 10, 14))[0]
+
+    GOOD = "AUD-SEC-001 | 🟠 | mở | lệnh `a \\| b` lọt guard | đo được: chạy hook → exit 0 | `python3 -m unittest` | "
+
+    def test_audit_check_valid(self):
+        self.assertEqual(self.check(audit_status_text(findings=[self.GOOD])), [])
+
+    def test_audit_check_template_body_matches_schema(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import install
+
+        body = install.template_body((ROOT / "framework/templates/AUDIT-STATUS.md").read_text(encoding="utf-8"))
+        self.assertTrue(any("còn chỗ trống" in e for e in self.check(body)))
+        no_example = "\n".join(ln for ln in body.splitlines() if not ln.startswith("| AUD-"))
+        self.assertEqual(self.check(no_example), [])
+        self.assertEqual(len(self.check(no_example, strict=True)), 13)  # 13 nhóm chưa quét
+
+    def test_audit_check_group_errors(self):
+        text = audit_status_text({3: ("N/A", "", "", ""), 4: ("đã quét", "", "", "")}).replace(
+            "| 5 | PERF |", "| 5 | SPEED |"
+        )
+        text = text.replace("| 7 | DEP |", "| 99 | DEP |")
+        errs = "\n".join(self.check(text))
+        for frag in (
+            "nhóm 3: `N/A` phải ghi lý do",
+            "nhóm 4: thiếu Ngày",
+            "nhóm 4: thiếu SHA",
+            "mã `SPEED`",
+            "số nhóm phải 1–13",
+            "nhóm 7: phải có đúng 1 dòng",
+        ):
+            self.assertIn(frag, errs)
+
+    def test_audit_check_finding_errors(self):
+        rows = [
+            "AUD-FOO-001 | 🔴 | mở | x | đo được: a | `t` | ",
+            "AUD-SEC-002 | 🔵 | xong | x | thấy | `t` | ",
+            "AUD-SEC-003 | 🔴 | mở | x | chưa biết: thiếu gitleaks | `t` | ",
+            "AUD-SEC-004 | 🟠 | mở | x | suy luận: a.py:3 | | ",
+            "AUD-SEC-005 | 🟢 | đã sửa | x | đo được: a | | xong rồi",
+            "AUD-SEC-006 | 🟢 | chấp nhận | x | đo được: a | | chủ: An, hạn: 2026-10-01",
+            "AUD-SEC-007 | 🟢 | chấp nhận | x | đo được: a | | để sau",
+            "AUD-SEC-008 | 🟢 | bác bỏ | x | đo được: a | | ",
+            "AUD-SEC-009 | 🟢 | mở | <tóm tắt> | đo được: a | | ",
+            "AUD-SEC-009 | 🟢 | mở | x | đo được: a | | ",
+        ]
+        errs = "\n".join(self.check(audit_status_text(findings=rows)))
+        for frag in (
+            "AUD-FOO-001: ID phải",
+            "mức `🔵`",
+            "trạng thái `xong`",
+            "AUD-SEC-002: Bằng chứng phải",
+            "AUD-SEC-003: 🔴 không thể",
+            "AUD-SEC-004: 🟠 phải có Gate",
+            "AUD-SEC-005: `đã sửa`",
+            "AUD-SEC-006: chấp nhận rủi ro đã quá hạn",
+            "AUD-SEC-007: `chấp nhận` phải ghi",
+            "AUD-SEC-008: `bác bỏ`",
+            "còn chỗ trống",
+            "AUD-SEC-009: ID trùng 2 lần",
+        ):
+            self.assertIn(frag, errs)
+
+    def test_audit_check_fixed_and_accepted_ok(self):
+        rows = [
+            "AUD-CI-001 | 🟠 | đã sửa | x | đo được: a | `t` | #19",
+            "AUD-CI-002 | 🟢 | chấp nhận | x | suy luận: a | | chủ: An · hạn: 2026-12-31",
+            "AUD-CI-003 | 🟠 | bác bỏ | x | suy luận: a | | không tái hiện được",
+        ]
+        self.assertEqual(self.check(audit_status_text(findings=rows), strict=True), [])
+
+    def test_audit_check_strict(self):
+        errs = self.check(audit_status_text({1: ("chưa quét", "", "", "")}, [self.GOOD]), strict=True)
+        self.assertEqual(sorted(errs), ["AUD-SEC-001: 🟠 còn mở (--strict)", "nhóm 1: chưa quét (--strict)"])
+
+    def test_audit_check_sha_must_be_ancestor(self):
+        self.init_repo()
+        c1 = self.commit_files({"a": "1"}, 1_700_000_000)
+        self.git("checkout", "-q", "-b", "side")
+        side = self.commit_files({"b": "1"}, 1_700_000_050)
+        self.git("checkout", "-q", "main")
+        groups = {1: ("đã quét", c1, "2026-10-14", ""), 2: ("đã quét", side, "2026-10-14", "")}
+        errs = self.check(audit_status_text(groups), root=self.repo)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("nhóm 2: SHA", errs[0])
+
+    def test_audit_check_cli_exit_codes(self):
+        d = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        f = d / "S.md"
+        f.write_text(audit_status_text(findings=[self.GOOD]), encoding="utf-8")
+        run = lambda *a: (
+            subprocess.run(  # noqa: E731
+                [sys.executable, str(ROOT / "scripts" / "xs.py"), "audit", "check", *a],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).returncode
+        )
+        self.assertEqual(run(str(f)), 0)
+        self.assertEqual(run(str(f), "--strict"), 1)
+        self.assertEqual(run(str(d / "khong-co.md")), 2)
+
+
 class RealFrameworkTest(unittest.TestCase):
     """Khung thật trong repo phải luôn hợp lệ."""
 
