@@ -1,28 +1,30 @@
-# PLAN.md — Khung X-stored · sửa audit 2026-10-14 (5 đợt)
+# PLAN.md — Khung X-stored · trả nợ mypy --strict và coverage 100%
 
-> Lập ngày 2026-10-14 từ `docs/ops/AUDIT-REPORT-2026-10-14.md` §5. Người dùng duyệt cả 5 đợt ("duyệt cả 5 đợt, làm tự động đi"),
-> gồm cả đợt đổi hook (2) và CI/ruleset (4). PR xanh thì tự merge; CI đỏ/xung đột thì tự sửa.
-> AUD-DOC-004: chọn đề xuất của báo cáo (bỏ điều kiện "nhánh còn trên remote" khỏi WF-DOC-004, ghi lý do).
+> Lập ngày 2026-10-14. Người dùng yêu cầu: "trả nợ mypy --strict và coverage đi, coverage 100%".
+> Trả nợ AUD-CODE-002 (mypy --strict 24 lỗi) và AUD-TEST-001 (không ratchet coverage, 77% in-process),
+> đóng `BASE-GATE-004` và `BASE-GATE-013`. Cổng chỉ được **siết**, không nới.
 
 ## Mục tiêu của kế hoạch này
-`python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` exit 0: không còn 🔴/🟠 mở; nợ 🟢 còn lại có chủ + hạn.
+- `python3 -m mypy --strict` 0 lỗi trên `scripts/*.py` + `.claude/hooks/guard.py`; cổng `typecheck` chạy `--strict`.
+- Coverage dòng + nhánh = 100% trên `scripts/*.py` + `.claude/hooks/guard.py`, tính cả code chạy trong subprocess;
+  cổng `test` chặn dưới 100% (`coverage report --fail-under=100`).
+- `# pragma: no cover` chỉ cho dòng không thể chạy tới trong test (ghi lý do ngay dòng đó); đếm và báo cáo.
 
 ## Ngân sách (4 con số)
 - Số vòng tối đa: 40 (`--max-iterations 40`)
-- Chi phí: 0 đồng ngoài phiên (chỉ thư viện chuẩn + công cụ đã ghim)
+- Chi phí: 0 đồng ngoài phiên (thêm `coverage` ghim kèm hash, Apache-2.0)
 - Timeout mỗi lệnh Gate: 300 giây (`XS_RECORD_TIMEOUT`)
 - Ngày hết hạn: 6 giờ sau `loop init` (`--hours 6`)
 
 ## Điểm dừng bắt buộc (dừng và hỏi người — `xs.py loop block --reason "..."`)
-- Ruleset/quyền repo/tag phát hành trên GitHub (chỉ sửa file ruleset trong repo, không import)
-- Phát hiện mới mức 🔴 trong lúc sửa
-- Hạ ngưỡng, skip test, sửa ADR cũ
+- Muốn hạ ngưỡng dưới 100% hoặc loại file khỏi phạm vi đo
+- Test lộ lỗi hành vi cần đổi giao diện CLI/hook (đổi hành vi người dùng thấy)
+- Phụ thuộc mới ngoài `coverage`
 
 ## Task
 
-- [x] `T-101` Đợt 1: AUD-HAR-001 (gốc dự án của dev-task + no-op không báo xanh), HAR-002 (argv/`--`), CFG-001 (che bí mật + `cmd`), HAR-007, HAR-008 (task phải có Gate), HAR-009 (write_atomic) — Gate: `scripts/dev-task.sh gate`
-- [x] `T-102` Đợt 2: hook tách lệnh bằng shlex (AUD-SEC-001…010), session-start cắt UTF-8 an toàn (HAR-011) — Gate: `python3 -m unittest discover -s tests -k guard`
-- [x] `T-103` Đợt 3: install đăng ký hook vào settings có sẵn (HAR-003), manifest hash cập nhật hook chưa sửa (HAR-004), bỏ qua symlink (HAR-010), cảnh báo ruleset cần workflow (CI-003) — Gate: `python3 -m unittest discover -s tests -k install`
-- [x] `T-104` Đợt 4: requirements-dev có hash + Dependabot pip (DEP-001), nâng action (DEP-002), ruleset strict (CI-002), lychee nhận 202 (CI-004) — Gate: `scripts/dev-task.sh gate`
-- [x] `T-105` Đợt 5: thống nhất tài liệu AUD-DOC-001…019, CI-001, CI-005, HAR-005; xác minh lại 45 bằng chứng blueprint (HAR-006) — Gate: `python3 scripts/xs.py validate`
-- [x] `T-106` Sổ audit: cập nhật trạng thái, quét lại nhóm bị chạm, `--strict` xanh — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict`
+- [x] `T-201` mypy --strict 0 lỗi; `typecheck` trong xs.yaml thêm `--strict` — Gate: `python3 -m mypy --strict --python-version 3.11 scripts/xs.py scripts/install.py scripts/check-links.py .claude/hooks/guard.py`
+- [ ] `T-202` Đo coverage cả subprocess (`.coveragerc`: branch, parallel, `patch = subprocess`); `coverage` vào requirements-dev.txt kèm hash — Gate: `python3 -m coverage run -m unittest discover -s tests`
+- [ ] `T-203` Test tới 100% cho `guard.py`, `install.py`, `check-links.py` — Gate: `python3 -m unittest discover -s tests`
+- [ ] `T-204` Test tới 100% cho `xs.py` — Gate: `python3 -m unittest discover -s tests`
+- [ ] `T-205` Cổng `test` = coverage run + combine + `report --fail-under=100`; cập nhật sổ audit, BLUEPRINT, CHANGELOG, PROGRESS — Gate: `scripts/dev-task.sh gate`

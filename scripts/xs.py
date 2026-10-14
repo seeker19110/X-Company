@@ -546,14 +546,19 @@ def now_iso() -> str:
     return _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat()
 
 
-def read_state(base: Optional[Path] = None) -> Optional[dict]:
-    p = state_dir(base) / "state.json"
+def _read_json_obj(p: Path) -> Optional[Dict[str, Any]]:
+    """Đọc file JSON là object; thiếu, hỏng hoặc không phải object → None (fail-open)."""
     if not p.exists():
         return None
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    return data if isinstance(data, dict) else None
+
+
+def read_state(base: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    return _read_json_obj(state_dir(base) / "state.json")
 
 
 def write_atomic(path: Path, text: str) -> None:
@@ -570,11 +575,11 @@ def write_atomic(path: Path, text: str) -> None:
         raise
 
 
-def write_state(state: dict, base: Optional[Path] = None) -> None:
+def write_state(state: Dict[str, Any], base: Optional[Path] = None) -> None:
     write_atomic(state_dir(base) / "state.json", json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
-def parse_plan(path: Path) -> List[dict]:
+def parse_plan(path: Path) -> List[Dict[str, Any]]:
     tasks = []
     for line in path.read_text(encoding="utf-8").splitlines():
         m = TASK_RE.match(line)
@@ -592,17 +597,11 @@ def parse_plan(path: Path) -> List[dict]:
     return tasks
 
 
-def read_evidence(task_id: str, base: Optional[Path] = None) -> Optional[dict]:
-    p = state_dir(base) / "evidence" / f"{task_id}.json"
-    if not p.exists():
-        return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
+def read_evidence(task_id: str, base: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    return _read_json_obj(state_dir(base) / "evidence" / f"{task_id}.json")
 
 
-def loop_verdict(base: Optional[Path] = None) -> dict:
+def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
     """Tính verdict CHỈ từ artifact trên đĩa. Model không tự khai 'xong'."""
     base = base or project_dir()
     st = read_state(base)
@@ -769,7 +768,7 @@ FENCE_RE = re.compile(r"^\s*(```|~~~)")
 GIT_TIMEOUT = 60  # giây; git treo (ổ mạng, khoá index) không được làm treo cổng — BASE-ERR-004
 
 
-def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+def _git(cwd: Path, *args: str) -> "subprocess.CompletedProcess[str]":
     cmd = ["git", "-C", str(cwd), *args]
     try:
         return subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=GIT_TIMEOUT)
@@ -1450,7 +1449,7 @@ def audit_check(
 # --------------------------------------------------------------------------- CLI
 
 
-def cmd_validate(args) -> int:
+def cmd_validate(args: argparse.Namespace) -> int:
     errors = validate(args.framework)
     if errors:
         for e in errors:
@@ -1463,7 +1462,7 @@ def cmd_validate(args) -> int:
     return 0
 
 
-def cmd_list(args) -> int:
+def cmd_list(args: argparse.Namespace) -> int:
     docs, _ = load_docs(args.framework)
     what = args.what
     kinds = {"profiles": ("profile",), "industries": ("industry",), "modules": ("module", "baseline", "standard")}[what]
@@ -1475,7 +1474,7 @@ def cmd_list(args) -> int:
     return 0
 
 
-def cmd_compose(args) -> int:
+def cmd_compose(args: argparse.Namespace) -> int:
     out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may, extra=args.add or [])
     if args.out:
         out_path = Path(args.out)
@@ -1489,7 +1488,7 @@ def cmd_compose(args) -> int:
     return 0
 
 
-def cmd_blueprint_status(args) -> int:
+def cmd_blueprint_status(args: argparse.Namespace) -> int:
     s = blueprint_status_text(sys.stdin.read()) if args.file == "-" else blueprint_status(Path(args.file))
     ok = not s["open_must"] and not s["bad_waivers"]
     if args.json:  # hợp đồng máy đọc: {"levels", "open_must", "bad_waivers", "ok"}
@@ -1505,7 +1504,7 @@ def cmd_blueprint_status(args) -> int:
     return 0 if ok or not args.strict else 1
 
 
-def cmd_loop(args) -> int:
+def cmd_loop(args: argparse.Namespace) -> int:
     base = project_dir()
     if args.loop_cmd == "init":
         if not (base / args.plan).exists():
@@ -1597,7 +1596,7 @@ def cmd_loop(args) -> int:
     return 2
 
 
-def cmd_progress_check(args) -> int:
+def cmd_progress_check(args: argparse.Namespace) -> int:
     errors = progress_check(Path(args.file))
     for e in errors:
         print(f"✗ {args.file}: {e}")
@@ -1606,7 +1605,7 @@ def cmd_progress_check(args) -> int:
     return 1 if errors else 0
 
 
-def cmd_ci_check(args) -> int:
+def cmd_ci_check(args: argparse.Namespace) -> int:
     d = Path(args.dir or ".github/workflows")
     if not d.is_dir():
         if args.dir:  # chỉ định rõ mà không có → sai cách dùng
@@ -1624,7 +1623,7 @@ def cmd_ci_check(args) -> int:
     return 1 if bad else 0
 
 
-def cmd_audit(args) -> int:
+def cmd_audit(args: argparse.Namespace) -> int:
     root = project_dir()
     if args.audit_cmd == "plan":
         bp = (
@@ -1676,7 +1675,7 @@ def cmd_audit(args) -> int:
     return 1 if errors else 0
 
 
-def cmd_stats(args) -> int:
+def cmd_stats(args: argparse.Namespace) -> int:
     docs, _ = load_docs(args.framework)
     by_kind: Dict[str, int] = {}
     levels = {lv: 0 for lv in LEVELS}
@@ -1793,7 +1792,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"✗ Không thấy thư mục khung: {args.framework}", file=sys.stderr)
         return 2
     try:
-        return args.fn(args)
+        rc: int = args.fn(args)
+        return rc
     except OSError as exc:  # file thiếu/không đọc được: một dòng dễ hiểu; XS_DEBUG=1 để xem traceback
         if os.environ.get("XS_DEBUG"):
             raise

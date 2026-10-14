@@ -4,6 +4,6 @@
 format: python3 -m ruff format scripts tests .claude/hooks
 format_file: python3 -m ruff format {}
 lint: python3 scripts/xs.py validate && python3 scripts/check-links.py && python3 scripts/xs.py progress-check && python3 scripts/xs.py ci-check && python3 -m ruff check scripts tests .claude/hooks && python3 -m ruff format --check scripts tests .claude/hooks && for f in scripts/*.sh .claude/hooks/*.sh; do bash -n "$f" || exit 1; done && shellcheck --severity=warning scripts/*.sh .claude/hooks/*.sh && python3 -m json.tool .claude/settings.json >/dev/null && python3 -m json.tool .github/rulesets/main.json >/dev/null
-typecheck: python3 -m mypy --python-version 3.11 scripts/xs.py scripts/install.py scripts/check-links.py .claude/hooks/guard.py
+typecheck: python3 -m mypy --strict --python-version 3.11 scripts/xs.py scripts/install.py scripts/check-links.py .claude/hooks/guard.py
 test: python3 -m unittest discover -s tests
 build: python3 scripts/xs.py stats

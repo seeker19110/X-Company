@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +23,7 @@ LINK_RE = re.compile(r"\[[^\]]*\]\((<[^>]+>|[^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
-def iter_md(root: Path):
+def iter_md(root: Path) -> Iterator[Path]:
     for p in sorted(root.rglob("*.md")):
         if any(part in SKIP_DIRS for part in p.relative_to(root).parts):
             continue
