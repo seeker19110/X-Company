@@ -3,7 +3,7 @@ title: Chiến lược kiểm thử: tháp, mức bao phủ, cổng, trách nhi�
 kind: module
 prefix: QA-STRAT
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chiến lược kiểm thử: tháp, mức bao phủ, cổng, trách nhiệm
@@ -42,16 +42,16 @@ Mặc định: **tháp** (nhiều unit, vừa integration, ít E2E) cho backend/
 
 - [ ] `QA-STRAT-001` **MUST** Một lệnh chạy toàn bộ test khai trong `xs.yaml` (hoặc `package.json`/`Makefile`) và CI gọi đúng lệnh đó. → Kiểm: `scripts/dev-task.sh test` exit 0; job CI dùng cùng lệnh (grep trong workflow). · Nguồn: P9
 - [ ] `QA-STRAT-002` **MUST** CI chạy test trên mọi PR và là required check; merge bị chặn khi đỏ. → Kiểm: ruleset/branch protection liệt kê job test; không `continue-on-error`. · Nguồn: catalog 23 §2.5
-- [ ] `QA-STRAT-003` **MUST** `PROJECT.md` ghi chiến lược (tầng nào, cổng nào, ngưỡng) theo bảng Quyết định. → Kiểm: mục "Kiểm thử" trong `PROJECT.md` liệt kê ≥ 2 tầng và ngưỡng.
-- [ ] `QA-STRAT-004` **MUST** Mỗi tính năng MVP có ≥ 1 test chấp nhận tự động ánh xạ tiêu chí Given/When/Then trong spec. → Kiểm: tên test/tag chứa ID tính năng; script đối chiếu spec ↔ test không ID nào thiếu. · Nguồn: [`../17-product-project/specification.md`](../17-product-project/specification.md)
+- [ ] `QA-STRAT-003` **MUST@L** `PROJECT.md` ghi chiến lược (tầng nào, cổng nào, ngưỡng) theo bảng Quyết định. → Kiểm: mục "Kiểm thử" trong `PROJECT.md` liệt kê ≥ 2 tầng và ngưỡng.
+- [ ] `QA-STRAT-004` **MUST@L** Mỗi tính năng MVP có ≥ 1 test chấp nhận tự động ánh xạ tiêu chí Given/When/Then trong spec. → Kiểm: tên test/tag chứa ID tính năng; script đối chiếu spec ↔ test không ID nào thiếu. · Nguồn: [`../17-product-project/specification.md`](../17-product-project/specification.md)
 - [ ] `QA-STRAT-005` **MUST** Bug production sửa kèm test tái hiện (đỏ trước khi sửa). → Kiểm: PR `fix:` có file test thay đổi; CI job kiểm `fix:` thiếu test → cảnh báo/đỏ.
-- [ ] `QA-STRAT-006` **MUST** Test tất định: thời gian giả lập, seed ngẫu nhiên cố định, không gọi mạng thật ở unit. → Kiểm: lint/cấu hình chặn `fetch`/socket ở unit (vd `vi.stubGlobal`, `pytest-socket`); test chạy 3 lần cùng kết quả.
-- [ ] `QA-STRAT-007` **MUST** Test cách ly: mỗi test tự tạo và dọn dữ liệu, chạy được song song và theo thứ tự ngẫu nhiên. → Kiểm: `pytest -p randomly`/`vitest --sequence.shuffle`/`go test -shuffle=on` xanh.
+- [ ] `QA-STRAT-006` **MUST@L** Test tất định: thời gian giả lập, seed ngẫu nhiên cố định, không gọi mạng thật ở unit. → Kiểm: lint/cấu hình chặn `fetch`/socket ở unit (vd `vi.stubGlobal`, `pytest-socket`); test chạy 3 lần cùng kết quả.
+- [ ] `QA-STRAT-007` **MUST@L** Test cách ly: mỗi test tự tạo và dọn dữ liệu, chạy được song song và theo thứ tự ngẫu nhiên. → Kiểm: `pytest -p randomly`/`vitest --sequence.shuffle`/`go test -shuffle=on` xanh.
 - [ ] `QA-STRAT-008` **MUST** Không `test.only`/`.skip`/`xit`/`@pytest.mark.skip` không lý do lọt vào nhánh chính. → Kiểm: Playwright `forbidOnly: !!process.env.CI`; lint rule `no-focused-tests`/`no-disabled-tests`; grep skip phải kèm ticket.
-- [ ] `QA-STRAT-009` **MUST@M** Chính sách flaky: test flaky được gắn nhãn `@flaky` + ticket, cách ly khỏi cổng, hạn sửa ≤ 2 tuần; retry CI ≤ 2. → Kiểm: danh sách flaky trong `docs/ops/flaky.md` có ngày; cấu hình `retries` ≤ 2.
-- [ ] `QA-STRAT-010` **MUST@M** Ngân sách thời gian: unit ≤ 2 phút, toàn bộ cổng PR ≤ 15 phút (ghi và điều chỉnh trong `PROJECT.md`). → Kiểm: CI in thời gian job; cảnh báo khi vượt.
-- [ ] `QA-STRAT-011` **MUST@M** Smoke test sau deploy (staging và production) chạy tự động, fail → rollback/cảnh báo. → Kiểm: job post-deploy gọi `run_smoke.sh`/E2E `@smoke`; log có kết quả.
-- [ ] `QA-STRAT-012` **MUST@M** Báo cáo kiểm thử (GO/NO-GO) gắn nhãn bằng chứng `real-path` / `faithful-fixture` / `asserted-not-measured` cho từng claim. → Kiểm: `GO-NO-GO.md` có cột nhãn; 0 claim thiếu nhãn. · Nguồn: catalog 07, 23 §3.1
+- [ ] `QA-STRAT-009` **MUST@L** Chính sách flaky: test flaky được gắn nhãn `@flaky` + ticket, cách ly khỏi cổng, hạn sửa ≤ 2 tuần; retry CI ≤ 2. → Kiểm: danh sách flaky trong `docs/ops/flaky.md` có ngày; cấu hình `retries` ≤ 2.
+- [ ] `QA-STRAT-010` **MUST@L** Ngân sách thời gian: unit ≤ 2 phút, toàn bộ cổng PR ≤ 15 phút (ghi và điều chỉnh trong `PROJECT.md`). → Kiểm: CI in thời gian job; cảnh báo khi vượt.
+- [ ] `QA-STRAT-011` **MUST@L** Smoke test sau deploy (staging và production) chạy tự động, fail → rollback/cảnh báo. → Kiểm: job post-deploy gọi `run_smoke.sh`/E2E `@smoke`; log có kết quả.
+- [ ] `QA-STRAT-012` **MUST@L** Báo cáo kiểm thử (GO/NO-GO) gắn nhãn bằng chứng `real-path` / `faithful-fixture` / `asserted-not-measured` cho từng claim. → Kiểm: `GO-NO-GO.md` có cột nhãn; 0 claim thiếu nhãn. · Nguồn: catalog 07, 23 §3.1
 - [ ] `QA-STRAT-013` **SHOULD** Test gắn tag theo tầng/tốc độ (`@unit`, `@integration`, `@e2e`, `@slow`) để chạy chọn lọc ở pre-commit và đầy đủ ở CI. → Kiểm: lệnh `test:quick` và `test:all` tồn tại.
 - [ ] `QA-STRAT-014` **SHOULD** Mỗi thư mục/module có chủ sở hữu test (CODEOWNERS) và test nằm cạnh code hoặc theo cấu trúc gương. → Kiểm: `CODEOWNERS` phủ `tests/`/`__tests__`.
 - [ ] `QA-STRAT-015` **SHOULD** Lỗi lặp lại tạo hàng rào mới (test, lint rule, hook) ghi trong post-mortem. → Kiểm: post-mortem có mục "hàng rào" trỏ PR. · Nguồn: P12

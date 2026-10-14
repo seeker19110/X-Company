@@ -3,7 +3,7 @@ title: Bàn giao & các bên: tài liệu bàn giao, đào tạo, hỗ trợ, k�
 kind: module
 prefix: PM-HANDOVER
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Bàn giao & các bên: tài liệu bàn giao, đào tạo, hỗ trợ, kết thúc dự án
@@ -35,14 +35,14 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `PM-HANDOVER-001` **MUST** Bản đồ các bên (`docs/STAKEHOLDERS.md` hoặc mục trong `PROJECT.md`): vai trò, tên, quyết định gì, kênh liên hệ, người thay thế. → Kiểm: bảng có ≥1 dòng "quyết định cuối" cho phạm vi, phát hành, bảo mật; không ô trống ở cột "người thay thế" khi dự án ≥ M.
+- [ ] `PM-HANDOVER-001` **MUST@L** Bản đồ các bên (`docs/STAKEHOLDERS.md` hoặc mục trong `PROJECT.md`): vai trò, tên, quyết định gì, kênh liên hệ, người thay thế. → Kiểm: bảng có ≥1 dòng "quyết định cuối" cho phạm vi, phát hành, bảo mật; không ô trống ở cột "người thay thế" khi dự án ≥ M.
 - [ ] `PM-HANDOVER-002` **MUST** Gói tài liệu bàn giao tồn tại trong repo: `README.md` (chạy local từ clone sạch), `RUNBOOK.md`, `docs/adr/`, `PROGRESS.md`, sổ rủi ro, danh sách tài khoản/dịch vụ (không chứa secret). → Kiểm: `test -f README.md -a -f RUNBOOK.md -a -d docs/adr`; CI job "clean clone build" xanh.
-- [ ] `PM-HANDOVER-003` **MUST** Runbook được **người không xây** chạy từ đầu (deploy, rollback, khôi phục backup, xử lý cảnh báo mẫu) và ghi log chỗ vấp; chỗ vấp sửa xong mới ký bàn giao. → Kiểm: `docs/handover/runbook-test-<ngày>.md` ghi tên người chạy, từng bước PASS/FAIL, commit sửa runbook sau đó.
+- [ ] `PM-HANDOVER-003` **MUST@L** Runbook được **người không xây** chạy từ đầu (deploy, rollback, khôi phục backup, xử lý cảnh báo mẫu) và ghi log chỗ vấp; chỗ vấp sửa xong mới ký bàn giao. → Kiểm: `docs/handover/runbook-test-<ngày>.md` ghi tên người chạy, từng bước PASS/FAIL, commit sửa runbook sau đó.
 - [ ] `PM-HANDOVER-004` **MUST** Tài khoản/secret chuyển giao bằng cơ chế nền tảng (chuyển ownership tổ chức, kho secret dùng chung, mời thành viên) — không gửi qua chat/email; mọi secret được xoay sau bàn giao. → Kiểm: `docs/handover/accounts.md` liệt kê dịch vụ · chủ mới · ngày chuyển · ngày xoay; `gitleaks detect` sạch; không có secret trong lịch sử chat đính kèm.
 - [ ] `PM-HANDOVER-005` **MUST** Quyền truy cập của người rời dự án bị thu hồi trong ngày rời (repo, cloud, CSDL, kho secret, dashboard, store, domain) và có danh sách kiểm. → Kiểm: `docs/handover/offboarding-<tên>.md` tick đủ dịch vụ với ngày; `gh api orgs/<org>/members` không còn tên.
-- [ ] `PM-HANDOVER-006` **MUST** Nghiệm thu dùng GO/NO-GO: mỗi tiêu chí chấp nhận có PASS/FAIL/N/A + bằng chứng (file:dòng, link CI, ảnh); người ký cuối ghi tên/ngày. → Kiểm: `docs/GO-NO-GO-<phiên bản>.md` không có BLOCKER FAIL; chữ ký tồn tại.
-- [ ] `PM-HANDOVER-007` **MUST@M** Mức hỗ trợ ghi thành số: kênh, giờ phục vụ, thời gian phản hồi/khắc phục theo SEV, người trực, cách leo thang. → Kiểm: `RUNBOOK.md` mục "Hỗ trợ & liên hệ" đủ cột; cảnh báo thử gửi tới đúng kênh (bằng chứng ở G8).
-- [ ] `PM-HANDOVER-008` **MUST@M** Bus factor ≥ 2 cho mỗi thành phần sống còn (code, hạ tầng, dữ liệu, tài khoản gốc) trước G7. → Kiểm: bảng "Thành phần → người biết" ≥2 tên mỗi dòng; tài khoản gốc có ≥2 người có quyền khôi phục (không dùng chung mật khẩu).
+- [ ] `PM-HANDOVER-006` **MUST@L** Nghiệm thu dùng GO/NO-GO: mỗi tiêu chí chấp nhận có PASS/FAIL/N/A + bằng chứng (file:dòng, link CI, ảnh); người ký cuối ghi tên/ngày. → Kiểm: `docs/GO-NO-GO-<phiên bản>.md` không có BLOCKER FAIL; chữ ký tồn tại.
+- [ ] `PM-HANDOVER-007` **MUST@L** Mức hỗ trợ ghi thành số: kênh, giờ phục vụ, thời gian phản hồi/khắc phục theo SEV, người trực, cách leo thang. → Kiểm: `RUNBOOK.md` mục "Hỗ trợ & liên hệ" đủ cột; cảnh báo thử gửi tới đúng kênh (bằng chứng ở G8).
+- [ ] `PM-HANDOVER-008` **MUST@L** Bus factor ≥ 2 cho mỗi thành phần sống còn (code, hạ tầng, dữ liệu, tài khoản gốc) trước G7. → Kiểm: bảng "Thành phần → người biết" ≥2 tên mỗi dòng; tài khoản gốc có ≥2 người có quyền khôi phục (không dùng chung mật khẩu).
 - [ ] `PM-HANDOVER-009` **MUST@M** Danh sách phụ thuộc có hạn (domain, chứng chỉ, license, gói SaaS, khoá API, thẻ thanh toán) kèm ngày hết hạn, chủ gia hạn, nhắc trước hạn. → Kiểm: `docs/handover/renewals.md`; cảnh báo lịch/CI trước hạn ≥ 30 ngày; chứng chỉ TLS tự động gia hạn có bằng chứng.
 - [ ] `PM-HANDOVER-010` **SHOULD** Đào tạo người nhận: buổi hướng dẫn có ghi hình/ghi chú, FAQ từ câu hỏi thật, bài tập thực hành (deploy thử lên staging, xử lý một cảnh báo giả). → Kiểm: `docs/handover/training.md` + bằng chứng người nhận hoàn thành bài tập.
 - [ ] `PM-HANDOVER-011` **SHOULD** Báo cáo tiến độ cho các bên theo nhịp cố định (tuần/mốc), ngắn, cùng một mẫu: đã xong (bằng chứng) · tiếp theo · rủi ro · cần quyết định. → Kiểm: `docs/status/` hoặc kênh có ≥1 báo cáo mỗi nhịp; mục "cần quyết định" được trả lời có ngày.

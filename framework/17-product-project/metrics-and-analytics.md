@@ -3,7 +3,7 @@ title: Đo lường sản phẩm: sự kiện, funnel, quyền riêng tư trong 
 kind: module
 prefix: PM-METRIC
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo, api-service, ai-agent, agentic-system, data-ml, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Đo lường sản phẩm: sự kiện, funnel, quyền riêng tư trong analytics
@@ -38,14 +38,14 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `PM-METRIC-001` **MUST** Có bảng ánh xạ chỉ số thành công → sự kiện → cách tính; mỗi chỉ số trong `PROJECT.md` có ≥1 sự kiện. → Kiểm: `docs/metrics/METRICS.md` (hoặc mục trong `PROJECT.md`) có đủ cột; script so khớp tên chỉ số với schema sự kiện.
-- [ ] `PM-METRIC-002` **MUST** Mọi sự kiện có schema ở một nơi: tên (quy ước `doi_tuong.hanh_dong`, snake_case), thuộc tính + kiểu, bắt buộc/tuỳ chọn, phiên bản, ngày thêm, chủ. → Kiểm: `analytics/events.schema.json` validate bằng `ajv`/`check-jsonschema`; test gọi `track()` với payload sai phải fail.
+- [ ] `PM-METRIC-001` **MUST@L** Có bảng ánh xạ chỉ số thành công → sự kiện → cách tính; mỗi chỉ số trong `PROJECT.md` có ≥1 sự kiện. → Kiểm: `docs/metrics/METRICS.md` (hoặc mục trong `PROJECT.md`) có đủ cột; script so khớp tên chỉ số với schema sự kiện.
+- [ ] `PM-METRIC-002` **MUST@L** Mọi sự kiện có schema ở một nơi: tên (quy ước `doi_tuong.hanh_dong`, snake_case), thuộc tính + kiểu, bắt buộc/tuỳ chọn, phiên bản, ngày thêm, chủ. → Kiểm: `analytics/events.schema.json` validate bằng `ajv`/`check-jsonschema`; test gọi `track()` với payload sai phải fail.
 - [ ] `PM-METRIC-003` **MUST** Có đúng một điểm gửi sự kiện (`track()`/`emit()`), kiểm schema tại đó; không gọi SDK analytics rải rác. → Kiểm: `rg -n "posthog\.capture|plausible\(|gtag\(|analytics\.track" src/ | rg -v "analytics/track"` rỗng.
 - [ ] `PM-METRIC-004` **MUST** Không gửi sự kiện, không khởi tạo SDK, không đặt cookie/định danh analytics trước khi có căn cứ hợp pháp (đồng ý khi luật yêu cầu); rút đồng ý thì dừng ngay. → Kiểm: E2E (Playwright/Maestro) tải trang lần đầu không có request tới domain analytics và không có cookie analytics; sau khi từ chối vẫn không có. · Nguồn: xem [`../16-compliance-privacy/consent-and-user-rights.md`](../16-compliance-privacy/consent-and-user-rights.md)
 - [ ] `PM-METRIC-005` **MUST** Thuộc tính sự kiện không chứa PII thô (email, số điện thoại, tên, địa chỉ, nội dung nhập tự do, token); định danh người dùng là ID nội bộ hoặc giả danh. → Kiểm: schema cấm tên trường trong danh sách đen; test đơn vị quét payload bằng regex email/số điện thoại; review PR thêm sự kiện.
 - [ ] `PM-METRIC-006` **MUST@M** Thời hạn lưu dữ liệu analytics ghi rõ và được cấu hình (xoá/ẩn danh hoá sau N tháng theo chính sách và luật áp dụng); người dùng xoá tài khoản thì dữ liệu định danh được bị xoá/ngắt liên kết. → Kiểm: cấu hình retention trong công cụ (ảnh chụp/IaC); test luồng xoá tài khoản gọi API xoá của analytics.
-- [ ] `PM-METRIC-007` **MUST@M** Funnel cho mỗi luồng chính được định nghĩa (bước → sự kiện) và có dashboard hiển thị tỷ lệ chuyển đổi từng bước. → Kiểm: `docs/metrics/METRICS.md` mục Funnel; link dashboard mở được; ảnh chụp tại cổng G7.
-- [ ] `PM-METRIC-008` **MUST@M** Baseline của chỉ số thành công được đo và ghi trước mỗi phát hành lớn; so sánh sau phát hành ghi vào `PROGRESS.md`/release notes nội bộ. → Kiểm: bảng "Baseline → sau phát hành" có ngày và số cho mỗi mốc.
+- [ ] `PM-METRIC-007` **MUST@L** Funnel cho mỗi luồng chính được định nghĩa (bước → sự kiện) và có dashboard hiển thị tỷ lệ chuyển đổi từng bước. → Kiểm: `docs/metrics/METRICS.md` mục Funnel; link dashboard mở được; ảnh chụp tại cổng G7.
+- [ ] `PM-METRIC-008` **MUST@L** Baseline của chỉ số thành công được đo và ghi trước mỗi phát hành lớn; so sánh sau phát hành ghi vào `PROGRESS.md`/release notes nội bộ. → Kiểm: bảng "Baseline → sau phát hành" có ngày và số cho mỗi mốc.
 - [ ] `PM-METRIC-009` **SHOULD** North Star và 2–4 chỉ số đầu vào ghi trong `PROJECT.md`, mỗi chỉ số có định nghĩa tính toán rõ (tử số, mẫu số, cửa sổ thời gian). → Kiểm: mục "North Star" có công thức, không chỉ tên.
 - [ ] `PM-METRIC-010` **SHOULD** Thay đổi schema sự kiện tương thích ngược (thêm trường tuỳ chọn; đổi nghĩa thì tạo tên/phiên bản mới), có ghi CHANGELOG của sự kiện. → Kiểm: diff schema trong PR; CI chạy test tương thích ngược (payload cũ vẫn validate).
 - [ ] `PM-METRIC-011` **SHOULD** A/B test có tài liệu trước khi chạy: giả thuyết, chỉ số chính, chỉ số rào chắn, cỡ mẫu/thời gian tính trước, phương pháp kiểm định, tiêu chí dừng; kết quả ghi lại dù thất bại. → Kiểm: `docs/experiments/EXP-NNN.md` có đủ mục trước ngày bật; kết luận có p-value/khoảng tin cậy hoặc phương pháp Bayes đã khai báo.

@@ -1,7 +1,7 @@
 ---
 title: Tuân thủ & quyền riêng tư
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 16 — Tuân thủ & quyền riêng tư
@@ -13,6 +13,10 @@ updated: 2026-10-13
 > xác minh 2026-10-13; **luật Việt Nam thay đổi lớn 2025–2026** (Luật 91/2025/QH15 + NĐ 356/2025 thay NĐ 13/2023 từ
 > 01/01/2026; Luật ANM 116/2025 + NĐ 333/2026; Luật AI 134/2025 + NĐ 142/2026; NĐ 330/2026 xử phạt) — kiểm tra văn bản
 > sửa đổi/thay thế trước khi áp dụng.
+>
+> **Mức trong blueprint không phải miễn trừ pháp lý.** Ở quy mô M mỗi module chỉ giữ 4 MUST (ADR-0004); nghĩa vụ luật khác mang
+> `MUST@L` nên hiện là SHOULD. Khi điều kiện của luật áp dụng cho dự án (có dữ liệu trẻ em, chuyển dữ liệu ra nước ngoài, người
+> dùng EU…), coi mục đó là bắt buộc; bỏ qua chỉ khi ghi được căn cứ "không áp dụng" (vd `— Miễn: không xử lý dữ liệu trẻ em`).
 
 | File | Nội dung | Đọc khi nào |
 |---|---|---|

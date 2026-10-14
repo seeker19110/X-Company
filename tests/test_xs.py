@@ -235,6 +235,15 @@ class ValidateTest(unittest.TestCase):
         errs = xs.validate(self.fw)
         self.assertTrue(any("thiếu '→ Kiểm:'" in e for e in errs), errs)
 
+    def test_module_must_at_m_capped(self):
+        p = self.fw / "08-backend" / "api.md"
+        extra = "".join(f"- [ ] `BE-API-0{n}` **MUST** x. → Kiểm: y.\n" for n in range(10, 10 + xs.MAX_MUST_AT_M))
+        p.write_text(p.read_text(encoding="utf-8").replace("## Nguồn", extra + "\n## Nguồn", 1), encoding="utf-8")
+        errs = xs.validate(self.fw)
+        self.assertTrue(any("MUST hiệu lực ở quy mô M" in e for e in errs), errs)
+        p.write_text(p.read_text(encoding="utf-8").replace("**MUST** x.", "**MUST@L** x."), encoding="utf-8")
+        self.assertEqual(xs.validate(self.fw), [])  # MUST@L không tính vào trần M
+
     def test_prefix_mismatch(self):
         p = self.fw / "08-backend" / "api.md"
         p.write_text(p.read_text(encoding="utf-8").replace("`BE-API-001`", "`BE-XYZ-001`"), encoding="utf-8")

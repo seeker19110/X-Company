@@ -3,7 +3,7 @@ title: Điểm dừng bắt buộc, mức tin cậy T0–T4, leo thang
 kind: module
 prefix: LOOP-STOP
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Điểm dừng bắt buộc, mức tin cậy T0–T4, leo thang
@@ -75,13 +75,13 @@ Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã lu�
 - [ ] `LOOP-STOP-001` **MUST** Lệnh phá huỷ/không đảo ngược bị **deny** ở PreToolUse (không chỉ `ask`), sau khi tách lệnh nối `; && | ||`. → Kiểm: hook trả `permissionDecision: deny` cho `ls; rm -rf /` và `git push --force`; test hook xanh. · Nguồn: stored 12 §4 quy tắc 6
 - [ ] `LOOP-STOP-002` **MUST** Hành động đối ngoại (merge, release, publish, deploy, gửi thông báo) qua `ask` hoặc `loop block`, không bao giờ tự chạy trong autopilot. → Kiểm: `.claude/settings.json` `permissions.ask` có `gh pr merge`, `npm publish`, `docker push`; log phiên không có lệnh đó chạy tự động.
 - [ ] `LOOP-STOP-003` **MUST** Sửa cấu hình cổng (lint/type/coverage/workflows/ruleset/hook) và migration đã tồn tại đi qua `ask` kèm lý do ghi ở PR. → Kiểm: `pre-edit-guard.sh` trả `ask` cho `.github/workflows/x.yml` và file trong `migrations/` đã có; PR mô tả lý do. · Nguồn: stored 23 §4.3
-- [ ] `LOOP-STOP-004` **MUST** Mâu thuẫn spec hoặc yêu cầu nhiều cách hiểu → `xs.py loop block --reason` và dừng; không tự chọn một cách hiểu. → Kiểm: `state.json.blocked_reason` bắt đầu bằng `spec:`; PROGRESS ghi câu hỏi cần người. · Nguồn: stored 23 §2.3
+- [ ] `LOOP-STOP-004` **MUST@L** Mâu thuẫn spec hoặc yêu cầu nhiều cách hiểu → `xs.py loop block --reason` và dừng; không tự chọn một cách hiểu. → Kiểm: `state.json.blocked_reason` bắt đầu bằng `spec:`; PROGRESS ghi câu hỏi cần người. · Nguồn: stored 23 §2.3
 - [ ] `LOOP-STOP-005` **MUST** Việc chạm tiền thật, dữ liệu người dùng thật, xác thực/phân quyền, mật mã luôn có người duyệt trước merge (T4/làn kiến trúc). → Kiểm: PR có nhãn `risk:` tương ứng và required review của người; CI chặn merge khi thiếu.
-- [ ] `LOOP-STOP-006` **MUST** Mỗi task giao cho subagent ghi `model_tier` (T0–T4) và `external_side_effects`; subagent không tự nâng tier. → Kiểm: task pack có hai trường; test từ chối task thiếu trường. · Nguồn: stored 23 §4.5
-- [ ] `LOOP-STOP-007` **MUST** Cổng chờ người có hạn (mặc định 24 h) và nhắc giữa hạn; quá hạn **không tự pass, không tự huỷ**. → Kiểm: cấu hình `gate_timeout_hours: 24`; test quá hạn → trạng thái `escalated`. · Nguồn: spec cũ ASC-FR-14
-- [ ] `LOOP-STOP-008` **MUST** Trần rework 3 vòng/việc; vượt → `escalated` cho người, cấm sửa tiếp máy móc. → Kiểm: `same_failure_count ≥ 3` → `loop status = blocked`; PROGRESS ghi "lần 3". · Nguồn: spec cũ §B6.3
-- [ ] `LOOP-STOP-009` **MUST@M** Làn nhanh (tự merge) chỉ bật ở L2 trở lên và được định nghĩa bằng vị từ máy (5 điều kiện + 3 ngoại lệ cứng); mặc định là "không phải làn nhanh". → Kiểm: script phân làn đọc `git diff --numstat` + đường dẫn + `risk_tags`; test: diff chạm `auth/` → làn kiến trúc. · Nguồn: spec cũ §B3.1a
-- [ ] `LOOP-STOP-010` **MUST@M** Đường lùi tự chủ được đo: lỗi lọt nghiêm trọng qua làn nhanh → về L1 cho tới khi rà xong nguyên nhân. → Kiểm: `docs/ops/` có bảng mức hiện tại + ngày + lý do đổi; chỉ số `escaped_defect_rate` có số.
+- [ ] `LOOP-STOP-006` **MUST@L** Mỗi task giao cho subagent ghi `model_tier` (T0–T4) và `external_side_effects`; subagent không tự nâng tier. → Kiểm: task pack có hai trường; test từ chối task thiếu trường. · Nguồn: stored 23 §4.5
+- [ ] `LOOP-STOP-007` **MUST@L** Cổng chờ người có hạn (mặc định 24 h) và nhắc giữa hạn; quá hạn **không tự pass, không tự huỷ**. → Kiểm: cấu hình `gate_timeout_hours: 24`; test quá hạn → trạng thái `escalated`. · Nguồn: spec cũ ASC-FR-14
+- [ ] `LOOP-STOP-008` **MUST@L** Trần rework 3 vòng/việc; vượt → `escalated` cho người, cấm sửa tiếp máy móc. → Kiểm: `same_failure_count ≥ 3` → `loop status = blocked`; PROGRESS ghi "lần 3". · Nguồn: spec cũ §B6.3
+- [ ] `LOOP-STOP-009` **MUST@L** Làn nhanh (tự merge) chỉ bật ở L2 trở lên và được định nghĩa bằng vị từ máy (5 điều kiện + 3 ngoại lệ cứng); mặc định là "không phải làn nhanh". → Kiểm: script phân làn đọc `git diff --numstat` + đường dẫn + `risk_tags`; test: diff chạm `auth/` → làn kiến trúc. · Nguồn: spec cũ §B3.1a
+- [ ] `LOOP-STOP-010` **MUST@L** Đường lùi tự chủ được đo: lỗi lọt nghiêm trọng qua làn nhanh → về L1 cho tới khi rà xong nguyên nhân. → Kiểm: `docs/ops/` có bảng mức hiện tại + ngày + lý do đổi; chỉ số `escaped_defect_rate` có số.
 - [ ] `LOOP-STOP-011` **SHOULD** Lỗi lần 2 cùng bước → đổi cách tiếp cận trước khi thử lại; ghi vào PROGRESS mục Quyết định. → Kiểm: evidence lần 2 và 3 có `cmd`/diff khác nhau; PROGRESS có dòng "đổi cách". · Nguồn: stored 23 §6.1
 - [ ] `LOOP-STOP-012` **SHOULD** Người giữ review mẫu ≥ 10 % PR ở mọi mức tự chủ để hiệu chuẩn niềm tin vào reviewer máy. → Kiểm: báo cáo tháng có tỉ lệ review mẫu. · Nguồn: spec cũ §B10
 - [ ] `LOOP-STOP-013` **SHOULD** Lần đầu sửa file trong vùng rủi ro (`risk-zones.txt`) trong phiên → hook yêu cầu nêu 4 dữ kiện (mục đích, test phủ, rollback, ảnh hưởng) rồi mới cho sửa. → Kiểm: hook `risk-zone-gate` trả `deny` lần 1 kèm 4 câu hỏi, lần 2 cho qua. · Nguồn: stored 23 §4.3

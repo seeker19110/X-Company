@@ -1,7 +1,7 @@
 ---
 title: Vòng đời dự án và các cổng
 kind: method
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Vòng đời dự án và các cổng
@@ -38,7 +38,7 @@ updated: 2026-10-13
 | Quy mô | Ví dụ | Khác biệt |
 |---|---|---|
 | **S** | Prototype, công cụ nội bộ, MVP chưa có người dùng thật | G2–G4 gộp thành một tài liệu ngắn; chỉ **sàn** bắt buộc: MUST của baseline + hồ sơ + gói ngành; MUST của module chuyên sâu và mọi `MUST@M`/`MUST@L` thành SHOULD (ADR-0003) |
-| **M** | Production có người dùng thật, đội nhỏ | Đủ 9 GĐ; mọi `MUST` và `MUST@M` bắt buộc |
+| **M** | Production có người dùng thật, đội nhỏ | Đủ 9 GĐ; mọi `MUST` và `MUST@M` bắt buộc — tối đa 4 mỗi module (ADR-0004) |
 | **L** | Quy mô lớn, nhiều đội, dữ liệu nhạy cảm, ngành bị quản lý | Thêm `MUST@L`; review bảo mật độc lập; diễn tập DR; tuân thủ có kiểm toán |
 
 ## Ánh xạ sang chế độ tự động

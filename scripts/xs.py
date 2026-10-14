@@ -44,6 +44,8 @@ DEFAULT_FRAMEWORK = (SCRIPT_DIR.parent / "framework").resolve()
 KINDS = {"method", "index", "module", "baseline", "profile", "industry", "standard", "template", "research", "progress"}
 LEVELS = ("MUST", "SHOULD", "MAY")
 SCALES = ("S", "M", "L")
+# Trần MUST hiệu lực ở quy mô M cho mỗi module/chuẩn; phần vượt là MUST@L — ADR-0004.
+MAX_MUST_AT_M = 4
 REQUIRED_KEYS = ("title", "kind", "updated")
 
 ITEM_RE = re.compile(
@@ -253,6 +255,10 @@ def validate(root: Path) -> List[str]:
                 errors.append(f"{where}:{it.line}: mục MUST {it.id} thiếu '→ Kiểm:'")
             if it.scale and it.level != "MUST":
                 errors.append(f"{where}:{it.line}: ngưỡng quy mô '@{it.scale}' chỉ dùng với MUST")
+
+        n_m = sum(effective_level(it, "M", d.kind) == "MUST" for it in d.items)
+        if d.kind in ("module", "standard") and n_m > MAX_MUST_AT_M:
+            errors.append(f"{where}: {n_m} MUST hiệu lực ở quy mô M, trần {MAX_MUST_AT_M} — hạ phần vượt thành MUST@L")
 
         if d.kind in ("module", "baseline", "profile", "industry"):
             if d.items and not any("Checklist" in h for h in d.headings):

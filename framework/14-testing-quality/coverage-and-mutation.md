@@ -3,7 +3,7 @@ title: Coverage ratchet, mutation test, chất lượng test
 kind: module
 prefix: QA-COV
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Coverage ratchet, mutation test, chất lượng test
@@ -36,11 +36,11 @@ Mặc định: **branch coverage ratchet toàn repo + mutation ≥ 70% cho thư 
 
 - [ ] `QA-COV-001` **MUST** Đo coverage **nhánh** (branch) cho unit + integration, báo cáo lưu artifact CI. → Kiểm: cấu hình `--cov-branch`/`coverage.reporter` có `branches`; artifact `coverage/` tồn tại.
 - [ ] `QA-COV-002` **MUST** Ratchet: CI đỏ khi coverage (lines và branches) thấp hơn baseline đã commit; baseline chỉ tăng. → Kiểm: Vitest `coverage.thresholds` (`lines`, `branches`) có giá trị số trong repo; hoặc `--cov-fail-under=<baseline>`; PR hạ baseline bị hook hỏi lý do. · Nguồn: catalog 23 §3.3 (coverage ratchet), Vitest docs `coverage.thresholds`
-- [ ] `QA-COV-003` **MUST** Loại trừ coverage (`/* istanbul ignore */`, `# pragma: no cover`, `exclude`) phải kèm lý do; CI đếm số loại trừ và chặn tăng. → Kiểm: grep loại trừ không có comment lý do = 0; số lượng ≤ baseline.
+- [ ] `QA-COV-003` **MUST@L** Loại trừ coverage (`/* istanbul ignore */`, `# pragma: no cover`, `exclude`) phải kèm lý do; CI đếm số loại trừ và chặn tăng. → Kiểm: grep loại trừ không có comment lý do = 0; số lượng ≤ baseline.
 - [ ] `QA-COV-004` **MUST** Không test nào không có assertion; snapshot không là assertion duy nhất cho logic nghiệp vụ. → Kiểm: lint `expect-expect` (eslint-plugin-vitest/jest), `pytest` plugin/grep `assert` mỗi test; review.
-- [ ] `QA-COV-005` **MUST@M** Mutation test cho thư mục logic nghiệp vụ (danh sách trong `PROJECT.md`) với score ≥ 70%, chạy incremental ở PR cho file đổi và đầy đủ nightly. → Kiểm: StrykerJS `thresholds.break: 70` + `incremental`; mutmut: script đọc `export-cicd-stats` và exit ≠ 0 khi < 70; PIT `mutationThreshold=70`. · Nguồn: catalog 23 §3.3 (mutmut ≥ 70%)
-- [ ] `QA-COV-006` **MUST@M** Mutant sống sót ở vùng tiền/phân quyền/parser được xử lý (thêm test hoặc ghi lý do "equivalent mutant") trước khi merge PR chạm vùng đó. → Kiểm: báo cáo mutation của PR không có mutant `Survived` chưa ghi chú trong các thư mục đánh dấu `critical`.
-- [ ] `QA-COV-007` **MUST** Coverage unit/integration và E2E báo cáo tách riêng; E2E không được gộp để đạt ngưỡng unit. → Kiểm: hai artifact/báo cáo riêng; threshold áp cho báo cáo unit+integration.
+- [ ] `QA-COV-005` **MUST@L** Mutation test cho thư mục logic nghiệp vụ (danh sách trong `PROJECT.md`) với score ≥ 70%, chạy incremental ở PR cho file đổi và đầy đủ nightly. → Kiểm: StrykerJS `thresholds.break: 70` + `incremental`; mutmut: script đọc `export-cicd-stats` và exit ≠ 0 khi < 70; PIT `mutationThreshold=70`. · Nguồn: catalog 23 §3.3 (mutmut ≥ 70%)
+- [ ] `QA-COV-006` **MUST@L** Mutant sống sót ở vùng tiền/phân quyền/parser được xử lý (thêm test hoặc ghi lý do "equivalent mutant") trước khi merge PR chạm vùng đó. → Kiểm: báo cáo mutation của PR không có mutant `Survived` chưa ghi chú trong các thư mục đánh dấu `critical`.
+- [ ] `QA-COV-007` **MUST@L** Coverage unit/integration và E2E báo cáo tách riêng; E2E không được gộp để đạt ngưỡng unit. → Kiểm: hai artifact/báo cáo riêng; threshold áp cho báo cáo unit+integration.
 - [ ] `QA-COV-008` **MUST** Không sửa cấu hình coverage/mutation để "cho xanh" (hạ ngưỡng, thêm exclude, tắt break) mà không có lý do và duyệt. → Kiểm: hook PreToolUse hỏi khi sửa `vitest.config`/`.coveragerc`/`stryker.config`/`pyproject [tool.coverage]`; PR diff cấu hình cổng cần reviewer.
 - [ ] `QA-COV-009` **SHOULD** Per-file threshold cho vùng critical (vd `perFile` hoặc glob `src/domain/**: 100`) thay vì chỉ tổng. → Kiểm: cấu hình glob thresholds trong Vitest hoặc `[tool.coverage.report] fail_under` theo gói.
 - [ ] `QA-COV-010` **SHOULD** Thời gian mutation ở PR ≤ 10 phút nhờ incremental + chỉ file đổi; nightly đầy đủ. → Kiểm: log thời gian; cấu hình `--incremental`/`mutate` theo `git diff`.

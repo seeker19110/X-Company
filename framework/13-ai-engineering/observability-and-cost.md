@@ -3,7 +3,7 @@ title: Quan sát & chi phí: trace OTel GenAI, token, gateway, failover
 kind: module
 prefix: AI-OBS
 applies_to: [ai-agent, agentic-system, data-ml, api-service, web-app]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Quan sát & chi phí: trace OTel GenAI, token, gateway, failover
@@ -56,13 +56,13 @@ instrumentation đang dùng trong ADR và kiểm lại khi nâng.
 ## Checklist
 
 - [ ] `AI-OBS-001` **MUST** Mỗi lời gọi model có span với `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, model phản hồi thực tế, `gen_ai.usage.input_tokens`/`output_tokens` (và token cache nếu có). → Kiểm: trace mẫu trong staging có đủ thuộc tính; test instrumentation. · Nguồn: OTel GenAI semconv
-- [ ] `AI-OBS-002` **MUST** Chi phí tính từ `usage` × bảng giá theo model thực tế đã phục vụ, lưu theo request với `tenant_id`, `feature`, `trace_id`. → Kiểm: truy vấn chi phí theo tenant/ngày khớp hoá đơn nhà cung cấp ±5%.
+- [ ] `AI-OBS-002` **MUST@L** Chi phí tính từ `usage` × bảng giá theo model thực tế đã phục vụ, lưu theo request với `tenant_id`, `feature`, `trace_id`. → Kiểm: truy vấn chi phí theo tenant/ngày khớp hoá đơn nhà cung cấp ±5%.
 - [ ] `AI-OBS-003` **MUST** Ngân sách token/tiền theo tenant và theo tính năng có cảnh báo ở 80% và chặn ở 100% (trả lỗi có mã), cấu hình được. → Kiểm: test vượt hạn mức; dashboard ngân sách. · Nguồn: [`llm-app-foundations.md`](llm-app-foundations.md)
 - [ ] `AI-OBS-004` **MUST** Nội dung prompt/response không ghi vào trace/log mặc định; bật Opt-In theo môi trường, có che PII, thời hạn lưu và quyền xem. → Kiểm: config mặc định tắt; log production không chứa prompt thô. · Nguồn: OTel GenAI semconv (content capture Opt-In); [`../16-compliance-privacy/privacy-by-design.md`](../16-compliance-privacy/privacy-by-design.md)
-- [ ] `AI-OBS-005` **MUST** Failover sang nhà cung cấp khác chỉ trên 401/403/429/quota (và sau khi retry tại chỗ thất bại với 5xx); không failover trên 400; stream đã gửi chunk không failover. → Kiểm: test bảng tín hiệu → hành động; log model/provider thực tế. · Nguồn: stored 10
-- [ ] `AI-OBS-006` **MUST** Nhà cung cấp bị lỗi có cooldown (401 → 300 s; 402/403/429 → 3600 s; `Retry-After` ưu tiên) và endpoint `/health` trả 503 khi không còn nhà cung cấp khả dụng. → Kiểm: test cooldown; probe `/health`. · Nguồn: stored 10
-- [ ] `AI-OBS-007` **MUST** Fallback đổi model/nhà cung cấp được ghi trong span (`gen_ai.response.model` khác request) và có cảnh báo khi tỉ lệ fallback > ngưỡng (vd 5%/giờ). → Kiểm: dashboard tỉ lệ fallback; alert rule.
-- [ ] `AI-OBS-008` **MUST** `trace_id` xuyên suốt từ request người dùng → agent → tool → outbox → nhà cung cấp (qua `traceparent`/`_meta` với MCP). → Kiểm: chọn 1 request, tái dựng chuỗi span. · Nguồn: [`agentic-systems.md`](agentic-systems.md)
+- [ ] `AI-OBS-005` **MUST@L** Failover sang nhà cung cấp khác chỉ trên 401/403/429/quota (và sau khi retry tại chỗ thất bại với 5xx); không failover trên 400; stream đã gửi chunk không failover. → Kiểm: test bảng tín hiệu → hành động; log model/provider thực tế. · Nguồn: stored 10
+- [ ] `AI-OBS-006` **MUST@L** Nhà cung cấp bị lỗi có cooldown (401 → 300 s; 402/403/429 → 3600 s; `Retry-After` ưu tiên) và endpoint `/health` trả 503 khi không còn nhà cung cấp khả dụng. → Kiểm: test cooldown; probe `/health`. · Nguồn: stored 10
+- [ ] `AI-OBS-007` **MUST@L** Fallback đổi model/nhà cung cấp được ghi trong span (`gen_ai.response.model` khác request) và có cảnh báo khi tỉ lệ fallback > ngưỡng (vd 5%/giờ). → Kiểm: dashboard tỉ lệ fallback; alert rule.
+- [ ] `AI-OBS-008` **MUST@L** `trace_id` xuyên suốt từ request người dùng → agent → tool → outbox → nhà cung cấp (qua `traceparent`/`_meta` với MCP). → Kiểm: chọn 1 request, tái dựng chuỗi span. · Nguồn: [`agentic-systems.md`](agentic-systems.md)
 - [ ] `AI-OBS-009` **MUST** Key nhà cung cấp chỉ ở gateway/server; ứng dụng dùng key ảo theo tenant/tính năng có hạn mức, thu hồi được. → Kiểm: không có key gốc ngoài secret manager; thu hồi key ảo có test. · Nguồn: [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
 - [ ] `AI-OBS-010` **SHOULD** Dashboard: token/chi phí theo tenant, tính năng, model; p50/p95 độ trễ; tỉ lệ lỗi theo mã; tỉ lệ cache hit; tỉ lệ guardrail chặn. · Nguồn: [`../15-operations/observability.md`](../15-operations/observability.md)
 - [ ] `AI-OBS-011` **SHOULD** SLO riêng cho tính năng AI (vd p95 thời gian tới token đầu, tỉ lệ lỗi) với alert theo [`../15-operations/slo-and-alerting.md`](../15-operations/slo-and-alerting.md).

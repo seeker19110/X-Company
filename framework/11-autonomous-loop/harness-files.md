@@ -3,7 +3,7 @@ title: File harness: PLAN · PROGRESS · BLUEPRINT · evidence · state
 kind: module
 prefix: LOOP-HARNESS
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # File harness: PLAN · PROGRESS · BLUEPRINT · evidence · state
@@ -64,12 +64,12 @@ Mẫu đầy đủ: [`../templates/PLAN.md`](../templates/PLAN.md); PROGRESS: [`
 - [ ] `LOOP-HARNESS-001` **MUST** `PLAN.md` dùng đúng cú pháp parser: mỗi task một dòng bắt đầu bằng `- [ ]` rồi mã `T-NNN` trong backtick, việc, và `Gate:` theo sau là lệnh trong backtick; không lồng danh sách con. → Kiểm: `python3 scripts/xs.py loop status` không báo "PLAN không có task"; số task parse được = số dòng `T-`.
 - [ ] `LOOP-HARNESS-002` **MUST** Lệnh Gate của mỗi task lấy từ `xs.yaml`/`dev-task.sh` hoặc là lệnh test cụ thể, chạy được trên máy sạch; không ghi "kiểm tay". → Kiểm: `grep -c 'Gate: `' docs/autopilot/PLAN.md` = số task; mỗi Gate chạy được trong CI.
 - [ ] `LOOP-HARNESS-003` **MUST** `PLAN.md` ghi 4 con số (trần vòng, giờ, chi phí, hạn) và danh sách điểm dừng bắt buộc dự kiến trước cổng duyệt. → Kiểm: mục "Ngân sách" và "Điểm dừng" tồn tại; giá trị khớp tham số `loop init`.
-- [ ] `LOOP-HARNESS-004` **MUST** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên); lịch sử dài chuyển sang `CHANGELOG.md`/`docs/`. → Kiểm: `wc -c PROGRESS.md` ≤ 8192; `grep -c '^## ' PROGRESS.md` = 4. · Nguồn: stored 23 §2.1
-- [ ] `LOOP-HARNESS-005` **MUST** Mục Bàn giao ghi SHA commit cuối và nhánh; SHA phải là tổ tiên của HEAD. → Kiểm: `git merge-base --is-ancestor <SHA> HEAD` exit 0 trong CI (job `status-freshness`). · Nguồn: stored 21 §8 điểm 9
-- [ ] `LOOP-HARNESS-006` **MUST** `.autopilot/` nằm trong `.gitignore`; bằng chứng chia sẻ cho người khác là link CI run/PR, không phải file cục bộ. → Kiểm: `git check-ignore .autopilot/state.json` exit 0; PR có link run CI.
-- [ ] `LOOP-HARNESS-007` **MUST** `BLUEPRINT.md` được sinh bằng `xs.py compose`, commit ở G1; chữ của mục không bị sửa tay, chỉ đổi trạng thái. → Kiểm: diff với bản `compose` lại chỉ khác cột trạng thái và `— Miễn:`. · Nguồn: 00-method/composition.md
+- [ ] `LOOP-HARNESS-004` **MUST@L** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên); lịch sử dài chuyển sang `CHANGELOG.md`/`docs/`. → Kiểm: `wc -c PROGRESS.md` ≤ 8192; `grep -c '^## ' PROGRESS.md` = 4. · Nguồn: stored 23 §2.1
+- [ ] `LOOP-HARNESS-005` **MUST@L** Mục Bàn giao ghi SHA commit cuối và nhánh; SHA phải là tổ tiên của HEAD. → Kiểm: `git merge-base --is-ancestor <SHA> HEAD` exit 0 trong CI (job `status-freshness`). · Nguồn: stored 21 §8 điểm 9
+- [ ] `LOOP-HARNESS-006` **MUST@L** `.autopilot/` nằm trong `.gitignore`; bằng chứng chia sẻ cho người khác là link CI run/PR, không phải file cục bộ. → Kiểm: `git check-ignore .autopilot/state.json` exit 0; PR có link run CI.
+- [ ] `LOOP-HARNESS-007` **MUST@L** `BLUEPRINT.md` được sinh bằng `xs.py compose`, commit ở G1; chữ của mục không bị sửa tay, chỉ đổi trạng thái. → Kiểm: diff với bản `compose` lại chỉ khác cột trạng thái và `— Miễn:`. · Nguồn: 00-method/composition.md
 - [ ] `LOOP-HARNESS-008` **MUST** `xs.yaml` khai các khoá `lint`, `test`, `typecheck`, `build` (chuỗi rỗng nếu không áp dụng); agent không suy diễn lệnh từ README. → Kiểm: `scripts/dev-task.sh gate` chạy đúng lệnh khai; `xs.yaml` tồn tại ở gốc. · Nguồn: stored 23 §3.3
-- [ ] `LOOP-HARNESS-009` **MUST** `CLAUDE.md` chứa dòng `@AGENTS.md` (ngoài code block) vì Claude Code chỉ đọc `AGENTS.md` khi không có `CLAUDE.md`. → Kiểm: `grep -q '^@AGENTS.md' CLAUDE.md`. · Nguồn: Claude Code docs memory
+- [ ] `LOOP-HARNESS-009` **MUST@L** `CLAUDE.md` chứa dòng `@AGENTS.md` (ngoài code block) vì Claude Code chỉ đọc `AGENTS.md` khi không có `CLAUDE.md`. → Kiểm: `grep -q '^@AGENTS.md' CLAUDE.md`. · Nguồn: Claude Code docs memory
 - [ ] `LOOP-HARNESS-010` **SHOULD** Bản gốc `AGENTS.md` giữ thêm trong `docs/` và CI so sánh, vì công cụ dev từng ghi đè file này. → Kiểm: job CI `diff docs/AGENTS.source.md AGENTS.md`. · Nguồn: stored 04 §4
 - [ ] `LOOP-HARNESS-011` **SHOULD** File bridge cho harness khác (`GEMINI.md`, `.cursor/rules/*.mdc`, `.github/copilot-instructions.md`) chỉ một dòng trỏ về `AGENTS.md`, không chép nội dung. → Kiểm: mỗi file bridge ≤ 10 dòng và chứa `AGENTS.md`.
 - [ ] `LOOP-HARNESS-012` **SHOULD** Mọi hook có biến môi trường tắt có chủ đích và có test; hook fail-open khi thiếu công cụ (jq/python). → Kiểm: `tests/` có test hook; chạy hook với stdin rỗng → exit 0.

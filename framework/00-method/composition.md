@@ -27,6 +27,7 @@ BLUEPRINT = Baseline (mọi phần mềm)
 - Module có `applies_to` không chứa hồ sơ đã chọn (và không phải `all`) sẽ bị loại.
 - Mục `MUST@M` / `MUST@L` hạ thành `SHOULD` khi quy mô nhỏ hơn ngưỡng.
 - Ở quy mô **S**, MUST của module chuyên sâu (`kind: module`/`standard`) cũng hạ thành `SHOULD`; chỉ MUST của baseline, hồ sơ và gói ngành giữ nguyên — đó là **sàn** của mọi dự án (ADR-0003). Khi dự án lên M, ghép lại blueprint: các mục đó tự trở về MUST.
+- Ở quy mô **M**, mỗi module/chuẩn đóng góp tối đa 4 MUST (validator giữ trần); phần còn lại là `MUST@L` nên ở M thành SHOULD (ADR-0004).
 
 ## Lệnh
 

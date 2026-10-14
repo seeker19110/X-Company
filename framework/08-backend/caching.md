@@ -3,7 +3,7 @@ title: Cache: tầng, key, TTL, vô hiệu hoá, stampede
 kind: module
 prefix: BE-CACHE
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Cache: tầng, key, TTL, vô hiệu hoá, stampede
@@ -41,15 +41,15 @@ Mặc định: bắt đầu bằng cache HTTP đúng header (miễn phí, chuẩ
 
 - [ ] `BE-CACHE-001` **MUST** Phản hồi chứa dữ liệu theo người dùng/phiên có `Cache-Control: private` hoặc `no-store` và không được cache ở CDN/proxy/cache ứng dụng theo key không chứa định danh người dùng. → Kiểm: test E2E đăng nhập 2 user, gọi cùng URL → không nhận dữ liệu của nhau; header kiểm bằng test. · Nguồn: RFC 9111 §5.2.2.5, §5.2.2.7; catalog 09 §1.4
 - [ ] `BE-CACHE-002` **MUST** Mọi entry cache ứng dụng có TTL hữu hạn; không `SET` không có `EX`/`PX` ngoài allowlist có lý do. → Kiểm: grep/lint wrapper cache bắt buộc tham số TTL; `redis-cli --scan` + `TTL` ngẫu nhiên không trả `-1` ngoài allowlist. · Nguồn: P7
-- [ ] `BE-CACHE-003` **MUST** Key có quy ước đặt tên tập trung (`{app}:{entity}:{version}:{id}` hoặc tương đương), có tiền tố phiên bản để đổi hình dạng dữ liệu không phải xoá cache. → Kiểm: hàm sinh key duy nhất trong code; test đổi version → key khác. · Nguồn: P5
-- [ ] `BE-CACHE-004` **MUST** Chống stampede cho key nóng: single-flight trong process (singleflight/`p-memoize`/`async.memoize`) và/hoặc khoá ngắn ở Redis khi tính lại; cho phép serve-stale trong lúc tính lại. → Kiểm: test 100 request đồng thời cùng key miss → nguồn gốc được gọi 1 lần. · Nguồn: RFC 5861 (stale-while-revalidate), golang.org/x/sync/singleflight
+- [ ] `BE-CACHE-003` **MUST@L** Key có quy ước đặt tên tập trung (`{app}:{entity}:{version}:{id}` hoặc tương đương), có tiền tố phiên bản để đổi hình dạng dữ liệu không phải xoá cache. → Kiểm: hàm sinh key duy nhất trong code; test đổi version → key khác. · Nguồn: P5
+- [ ] `BE-CACHE-004` **MUST@L** Chống stampede cho key nóng: single-flight trong process (singleflight/`p-memoize`/`async.memoize`) và/hoặc khoá ngắn ở Redis khi tính lại; cho phép serve-stale trong lúc tính lại. → Kiểm: test 100 request đồng thời cùng key miss → nguồn gốc được gọi 1 lần. · Nguồn: RFC 5861 (stale-while-revalidate), golang.org/x/sync/singleflight
 - [ ] `BE-CACHE-005` **MUST** Cache hỏng/không kết nối được → ứng dụng fallback về nguồn (có giới hạn/circuit breaker), không 500; timeout gọi cache ngắn (vd ≤ 50–100 ms). → Kiểm: test tắt Redis → endpoint vẫn 200; timeout cấu hình rõ. · Nguồn: [`reliability-and-errors.md`](reliability-and-errors.md)
-- [ ] `BE-CACHE-006` **MUST** Tài nguyên tĩnh có hash nội dung trong tên file và `Cache-Control: public, max-age=31536000, immutable`; HTML/entry point không cache dài. → Kiểm: test header của asset build; `index.html` có `no-cache`/`max-age` ngắn. · Nguồn: RFC 9111 §5.2.2
+- [ ] `BE-CACHE-006` **MUST@L** Tài nguyên tĩnh có hash nội dung trong tên file và `Cache-Control: public, max-age=31536000, immutable`; HTML/entry point không cache dài. → Kiểm: test header của asset build; `index.html` có `no-cache`/`max-age` ngắn. · Nguồn: RFC 9111 §5.2.2
 - [ ] `BE-CACHE-007` **MUST** Chiến lược vô hiệu hoá được ghi cho từng loại cache (TTL / sự kiện / phiên bản) và có test: cập nhật dữ liệu → đọc sau đó không nhận bản cũ quá ngưỡng cho phép. → Kiểm: test cập nhật rồi đọc trong cùng test; tài liệu trong spec/ADR. · Nguồn: P5
-- [ ] `BE-CACHE-008` **MUST** `Vary` khai báo đúng header ảnh hưởng phản hồi (`Accept-Encoding`, `Accept-Language`, `Authorization`); không `Vary: *`; không `Vary` theo `Cookie`/`User-Agent` tràn lan. → Kiểm: test header; review số biến thể. · Nguồn: RFC 9111 §4.1, MDN Vary
-- [ ] `BE-CACHE-009` **MUST@M** Metric cache: hit ratio, latency, số key, bộ nhớ, eviction; cảnh báo khi hit ratio tụt đột ngột hoặc eviction tăng (dấu hiệu stampede/thiếu RAM). → Kiểm: dashboard có metric; rule cảnh báo. · Nguồn: P10
-- [ ] `BE-CACHE-010` **MUST@M** Redis/Memcached dùng chung có `maxmemory` + policy eviction rõ (`allkeys-lru` cho cache thuần; `noeviction` cho dữ liệu không được mất) và tách instance cache khỏi instance hàng đợi/phiên. → Kiểm: `CONFIG GET maxmemory-policy`; hai instance/DB index riêng. · Nguồn: Redis docs
-- [ ] `BE-CACHE-011` **MUST@M** Không cache phản hồi lỗi 5xx; 404 cache ngắn có chủ đích; cache negative (không tồn tại) có TTL ngắn hơn cache positive. → Kiểm: test 500 → không có entry; 404 TTL ≤ cấu hình. · Nguồn: RFC 9111 §3
+- [ ] `BE-CACHE-008` **MUST@L** `Vary` khai báo đúng header ảnh hưởng phản hồi (`Accept-Encoding`, `Accept-Language`, `Authorization`); không `Vary: *`; không `Vary` theo `Cookie`/`User-Agent` tràn lan. → Kiểm: test header; review số biến thể. · Nguồn: RFC 9111 §4.1, MDN Vary
+- [ ] `BE-CACHE-009` **MUST@L** Metric cache: hit ratio, latency, số key, bộ nhớ, eviction; cảnh báo khi hit ratio tụt đột ngột hoặc eviction tăng (dấu hiệu stampede/thiếu RAM). → Kiểm: dashboard có metric; rule cảnh báo. · Nguồn: P10
+- [ ] `BE-CACHE-010` **MUST@L** Redis/Memcached dùng chung có `maxmemory` + policy eviction rõ (`allkeys-lru` cho cache thuần; `noeviction` cho dữ liệu không được mất) và tách instance cache khỏi instance hàng đợi/phiên. → Kiểm: `CONFIG GET maxmemory-policy`; hai instance/DB index riêng. · Nguồn: Redis docs
+- [ ] `BE-CACHE-011` **MUST@L** Không cache phản hồi lỗi 5xx; 404 cache ngắn có chủ đích; cache negative (không tồn tại) có TTL ngắn hơn cache positive. → Kiểm: test 500 → không có entry; 404 TTL ≤ cấu hình. · Nguồn: RFC 9111 §3
 - [ ] `BE-CACHE-012` **SHOULD** Dùng `ETag`/`Last-Modified` + `If-None-Match` → 304 cho API đọc nhiều; ETag tính từ nội dung hoặc `updated_at` + version. → Kiểm: test gọi lần hai với ETag → 304 không body. · Nguồn: RFC 9110 §13
 - [ ] `BE-CACHE-013` **SHOULD** `stale-while-revalidate` / `stale-if-error` cho nội dung công khai chấp nhận cũ vài phút để giảm tail latency và chịu lỗi nguồn. → Kiểm: header có directive; test nguồn trả 503 → CDN vẫn 200 bản cũ. · Nguồn: RFC 5861
 - [ ] `BE-CACHE-014` **SHOULD** TTL có jitter (±10–20%) để các key nạp cùng lúc không hết hạn cùng lúc. → Kiểm: hàm tính TTL có jitter, có unit test.

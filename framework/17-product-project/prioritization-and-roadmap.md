@@ -3,7 +3,7 @@ title: Ưu tiên & lộ trình: MVP, lát dọc, RICE/MoSCoW, không phình ph�
 kind: module
 prefix: PM-PRIO
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Ưu tiên & lộ trình: MVP, lát dọc, RICE/MoSCoW, không phình phạm vi
@@ -39,11 +39,11 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `PM-PRIO-001` **MUST** Danh sách tính năng MVP được phân loại MoSCoW, mỗi mục Must có tiêu chí chấp nhận (spec) và ID `F-NNN`. → Kiểm: bảng MoSCoW trong `PROJECT.md` có cột Mức · ID · Spec; mọi Must trỏ file spec tồn tại.
-- [ ] `PM-PRIO-002` **MUST** Nỗ lực của mục Must không vượt 60% tổng nỗ lực mốc (ước lượng theo khoảng, lấy P50). → Kiểm: bảng có cột ước lượng; script/tay tính tổng Must ÷ tổng ≤ 0,6; vượt → cắt hoặc ghi lý do có người duyệt. · Nguồn: DSDM MoSCoW
+- [ ] `PM-PRIO-002` **MUST@L** Nỗ lực của mục Must không vượt 60% tổng nỗ lực mốc (ước lượng theo khoảng, lấy P50). → Kiểm: bảng có cột ước lượng; script/tay tính tổng Must ÷ tổng ≤ 0,6; vượt → cắt hoặc ghi lý do có người duyệt. · Nguồn: DSDM MoSCoW
 - [ ] `PM-PRIO-003` **MUST** Lộ trình chia theo lát dọc demo được; lát đầu là walking skeleton có CI + deploy trước khi làm tính năng. → Kiểm: `PLAN.md` nhóm task theo lát; lát 1 có task `Gate:` là lệnh deploy/smoke; CI xanh trên commit skeleton (cổng G5).
 - [ ] `PM-PRIO-004` **MUST** Phạm vi MVP đóng băng tại cổng G1; thay đổi sau đó đi qua `SCOPE.md` (điều kiện xét) và được ghi ngày, người quyết, mục bị đẩy ra để bù. → Kiểm: `SCOPE.md` tồn tại; mỗi thay đổi phạm vi là một commit sửa `PROJECT.md` có message `docs(scope): …` nêu mục bị đổi.
-- [ ] `PM-PRIO-005` **MUST** Mỗi ý tưởng bị từ chối có file `.out-of-scope/<slug>.md` ghi lý do và ngày; yêu cầu trùng với file đó bị đóng bằng link, không bàn lại. → Kiểm: `ls .out-of-scope/` không rỗng khi dự án ≥ M; issue template có mục "Đã kiểm `.out-of-scope/`".
-- [ ] `PM-PRIO-006` **MUST** Mỗi mốc lộ trình gắn ≥1 chỉ số kết quả có mục tiêu số, không chỉ danh sách tính năng. → Kiểm: bảng lộ trình có cột "Chỉ số & mục tiêu" không rỗng.
+- [ ] `PM-PRIO-005` **MUST@L** Mỗi ý tưởng bị từ chối có file `.out-of-scope/<slug>.md` ghi lý do và ngày; yêu cầu trùng với file đó bị đóng bằng link, không bàn lại. → Kiểm: `ls .out-of-scope/` không rỗng khi dự án ≥ M; issue template có mục "Đã kiểm `.out-of-scope/`".
+- [ ] `PM-PRIO-006` **MUST@L** Mỗi mốc lộ trình gắn ≥1 chỉ số kết quả có mục tiêu số, không chỉ danh sách tính năng. → Kiểm: bảng lộ trình có cột "Chỉ số & mục tiêu" không rỗng.
 - [ ] `PM-PRIO-007` **MUST** Khi trễ hạn thật: cắt Could/Should trước, không hạ cổng chất lượng, không kéo hạn thật mà không có người quyết ghi tên. → Kiểm: `PROGRESS.md` mục Quyết định ghi "cắt X để giữ hạn Y" kèm ngày; CI không có cổng nào bị tắt (`rg -n "continue-on-error: true|--no-verify" .github/`).
 - [ ] `PM-PRIO-008` **SHOULD** Khi dùng RICE: Reach lấy từ sự kiện analytics có nguồn, Confidence < 50% không xếp hạng mà tạo spike. → Kiểm: bảng RICE có cột "Nguồn Reach"; dòng Confidence < 50% có link spike. · Nguồn: Intercom RICE
 - [ ] `PM-PRIO-009` **SHOULD** Thứ tự lát dọc ưu tiên rủi ro cao/giả định nguy hiểm trước giá trị cao; lý do ghi một dòng cho mỗi lát. → Kiểm: `PLAN.md` phần "Thứ tự & lý do".

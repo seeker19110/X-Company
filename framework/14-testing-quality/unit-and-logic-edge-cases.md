@@ -3,7 +3,7 @@ title: Unit test & chống lỗi logic: ca biên, null/0, race, thời gian, ti�
 kind: module
 prefix: QA-UNIT
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Unit test & chống lỗi logic: ca biên, null/0, race, thời gian, tiền
@@ -33,18 +33,18 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `QA-UNIT-001` **MUST** Mỗi hàm xử lý tập hợp có test với danh sách rỗng, đúng 1 phần tử, nhiều phần tử. → Kiểm: test parameterized có 3 ca `[]`, `[x]`, `[x..n]` (grep tên ca `empty|single|many`).
-- [ ] `QA-UNIT-002` **MUST** Phân biệt "không có" (`null`/`undefined`/`None`) với `0`/`""`/`false` — có test cho cả hai. → Kiểm: test truyền `null` và `0` cho cùng hàm, kỳ vọng khác nhau; lint `??` thay `||` cho giá trị số/chuỗi (`@typescript-eslint/prefer-nullish-coalescing`).
-- [ ] `QA-UNIT-003` **MUST** Off-by-one: phân trang, cắt chuỗi, khoảng ngày có test ở biên (0, 1, n−1, n, n+1). → Kiểm: test phân trang với `pageSize` = tổng số, tổng+1, tổng−1; TS bật `noUncheckedIndexedAccess`.
+- [ ] `QA-UNIT-001` **MUST@L** Mỗi hàm xử lý tập hợp có test với danh sách rỗng, đúng 1 phần tử, nhiều phần tử. → Kiểm: test parameterized có 3 ca `[]`, `[x]`, `[x..n]` (grep tên ca `empty|single|many`).
+- [ ] `QA-UNIT-002` **MUST@L** Phân biệt "không có" (`null`/`undefined`/`None`) với `0`/`""`/`false` — có test cho cả hai. → Kiểm: test truyền `null` và `0` cho cùng hàm, kỳ vọng khác nhau; lint `??` thay `||` cho giá trị số/chuỗi (`@typescript-eslint/prefer-nullish-coalescing`).
+- [ ] `QA-UNIT-003` **MUST@L** Off-by-one: phân trang, cắt chuỗi, khoảng ngày có test ở biên (0, 1, n−1, n, n+1). → Kiểm: test phân trang với `pageSize` = tổng số, tổng+1, tổng−1; TS bật `noUncheckedIndexedAccess`.
 - [ ] `QA-UNIT-004` **MUST** Tiền và số lượng không dùng float: test `0.1 + 0.2` tương đương trả đúng bằng kiểu số nguyên nhỏ nhất/decimal; làm tròn theo quy tắc ghi rõ (half-even/half-up). → Kiểm: test tổng 3 × 0.1 = 0.3 bằng decimal; lint cấm `number` cho field tiền (schema `string`/`bigint`). · Nguồn: [`../18-cross-cutting/units-time-and-money.md`](../18-cross-cutting/units-time-and-money.md)
-- [ ] `QA-UNIT-005` **MUST** Chia cho 0, tràn số, số âm, giá trị cực đại có test và hành vi định nghĩa (lỗi hay giá trị mặc định). → Kiểm: test với `0`, `-1`, `Number.MAX_SAFE_INTEGER`/`sys.maxsize`.
-- [ ] `QA-UNIT-006` **MUST** Thời gian lưu/tính bằng UTC; test ca chuyển ngày, cuối tháng (31→28/29), năm nhuận, và DST ở ít nhất một múi giờ có DST. → Kiểm: test với clock giả `2024-02-29T23:59:59Z` và múi `Europe/Berlin`/`America/New_York` tại ngày đổi giờ.
+- [ ] `QA-UNIT-005` **MUST@L** Chia cho 0, tràn số, số âm, giá trị cực đại có test và hành vi định nghĩa (lỗi hay giá trị mặc định). → Kiểm: test với `0`, `-1`, `Number.MAX_SAFE_INTEGER`/`sys.maxsize`.
+- [ ] `QA-UNIT-006` **MUST@L** Thời gian lưu/tính bằng UTC; test ca chuyển ngày, cuối tháng (31→28/29), năm nhuận, và DST ở ít nhất một múi giờ có DST. → Kiểm: test với clock giả `2024-02-29T23:59:59Z` và múi `Europe/Berlin`/`America/New_York` tại ngày đổi giờ.
 - [ ] `QA-UNIT-007` **MUST** Thao tác ghi có idempotency: gửi lại cùng yêu cầu (cùng key) không tạo bản ghi/tính tiền hai lần. → Kiểm: test gọi 2 lần cùng `idempotency_key`, đếm bản ghi = 1.
 - [ ] `QA-UNIT-008` **MUST** Race: hai thao tác đồng thời trên cùng tài nguyên (hai click, hai request) giữ bất biến (số dư không âm, tồn kho không âm). → Kiểm: test `Promise.all([op, op])`/`go test -race`/thread pool, assert bất biến; xem [`../09-database/transactions-and-consistency.md`](../09-database/transactions-and-consistency.md).
-- [ ] `QA-UNIT-009` **MUST** Phản hồi về muộn không ghi đè dữ liệu mới (stale response/closure). → Kiểm: test mô phỏng 2 request, request 1 trả sau request 2, state cuối = kết quả request 2.
+- [ ] `QA-UNIT-009` **MUST@L** Phản hồi về muộn không ghi đè dữ liệu mới (stale response/closure). → Kiểm: test mô phỏng 2 request, request 1 trả sau request 2, state cuối = kết quả request 2.
 - [ ] `QA-UNIT-010` **MUST** Thao tác nhiều bước là all-or-nothing: lỗi ở bước giữa → không còn trạng thái nửa vời. → Kiểm: test ném lỗi ở bước 2, assert bước 1 đã rollback.
-- [ ] `QA-UNIT-011` **MUST** Không promise/future "trôi": mọi `async` được `await` hoặc xử lý. → Kiểm: lint `@typescript-eslint/no-floating-promises`; Python `RUF006` (ruff) / `asyncio` debug mode trong test.
-- [ ] `QA-UNIT-012` **MUST** Unit test không chạm mạng, đĩa ngoài thư mục tạm, hay thời gian thật. → Kiểm: `pytest-socket`/`vi.stubGlobal('fetch')` bật; test xanh khi tắt mạng.
+- [ ] `QA-UNIT-011` **MUST@L** Không promise/future "trôi": mọi `async` được `await` hoặc xử lý. → Kiểm: lint `@typescript-eslint/no-floating-promises`; Python `RUF006` (ruff) / `asyncio` debug mode trong test.
+- [ ] `QA-UNIT-012` **MUST@L** Unit test không chạm mạng, đĩa ngoài thư mục tạm, hay thời gian thật. → Kiểm: `pytest-socket`/`vi.stubGlobal('fetch')` bật; test xanh khi tắt mạng.
 - [ ] `QA-UNIT-013` **SHOULD** Logic có miền đầu vào lớn (parser, chuyển đổi, tính toán) có property-based test với bất biến hoặc round-trip. → Kiểm: file test import `fast-check`/`hypothesis`; ≥ 1 property cho mỗi module parser/serializer.
 - [ ] `QA-UNIT-014` **SHOULD** Chuỗi: test Unicode (dấu tiếng Việt tổ hợp vs dựng sẵn — NFC/NFD), emoji, chuỗi rất dài, khoảng trắng đầu/cuối. → Kiểm: ca test chứa `"Tiếng Việt"` dạng NFD và NFC cho so sánh/tìm kiếm.
 - [ ] `QA-UNIT-015` **SHOULD** Tên test mô tả hành vi và ca (`rejects_withdraw_when_balance_insufficient`), một khái niệm mỗi test. → Kiểm: lint tên test (regex `^(should|when|rejects|returns|…)` hoặc quy ước repo).

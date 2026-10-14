@@ -3,7 +3,7 @@ title: Tiêu chuẩn tiếp cận (WCAG 2.2, EN 301 549, Section 508)
 kind: standard
 prefix: STD-A11Y
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Tiêu chuẩn tiếp cận (WCAG 2.2, EN 301 549, Section 508)
@@ -46,11 +46,11 @@ Mặc định khuyến nghị: **WCAG 2.2 AA**; không chọn A (quá thấp đ�
 
 - [ ] `STD-A11Y-001` **MUST** Khai báo chuẩn và mức nhắm tới (`WCAG 2.2 AA`) trong `PROJECT.md`. → Kiểm: `grep -E "WCAG 2\.2 AA" PROJECT.md` khớp. · Nguồn: WCAG 2.2 Conformance
 - [ ] `STD-A11Y-002` **MUST@M** Quét axe trong E2E với đủ tag tới `wcag22aa`, 0 vi phạm mức critical/serious trên mọi trang/màn chính. → Kiểm: cấu hình `AxeBuilder.withTags([... 'wcag22aa'])` trong test; job CI xanh. · Nguồn: WCAG 2.2 (SC AA)
-- [ ] `STD-A11Y-003` **MUST@M** Có bảng tuân thủ theo SC (`docs/compliance/a11y-conformance.md`) gồm cả 6 SC mới mức A/AA của 2.2: 2.4.11, 2.5.7, 2.5.8, 3.2.6, 3.3.7, 3.3.8, mỗi SC có trạng thái đạt/không/không áp dụng. → Kiểm: `grep -cE "2\.4\.11|2\.5\.7|2\.5\.8|3\.2\.6|3\.3\.7|3\.3\.8" docs/compliance/a11y-conformance.md` ≥ 6. · Nguồn: WCAG 2.2 "New Success Criteria"
+- [ ] `STD-A11Y-003` **MUST@L** Có bảng tuân thủ theo SC (`docs/compliance/a11y-conformance.md`) gồm cả 6 SC mới mức A/AA của 2.2: 2.4.11, 2.5.7, 2.5.8, 3.2.6, 3.3.7, 3.3.8, mỗi SC có trạng thái đạt/không/không áp dụng. → Kiểm: `grep -cE "2\.4\.11|2\.5\.7|2\.5\.8|3\.2\.6|3\.3\.7|3\.3\.8" docs/compliance/a11y-conformance.md` ≥ 6. · Nguồn: WCAG 2.2 "New Success Criteria"
 - [ ] `STD-A11Y-004` **MUST** Luồng chính được kiểm tay bằng bàn phím và ít nhất một trình đọc màn hình, ghi biên bản (người, ngày, luồng, kết quả) trong `GO-NO-GO.md`. → Kiểm: mục "Kiểm tay a11y" trong `GO-NO-GO.md` không trống. · Nguồn: WCAG 2.2 SC 2.1.1, 4.1.2
 - [ ] `STD-A11Y-005` **MUST@M** Sản phẩm cho khu vực công EU có trang tuyên bố tiếp cận công khai ghi phiên bản EN 301 549 áp dụng. → Kiểm: `curl -s https://<domain>/accessibility-statement` trả 200 và chứa "EN 301 549". · Nguồn: Directive (EU) 2016/2102 Art. 7; EN 301 549
-- [ ] `STD-A11Y-006` **MUST@M** Sản phẩm bán cho chính phủ liên bang Mỹ có ACR theo mẫu VPAT, tối thiểu WCAG 2.0 AA. → Kiểm: file `docs/compliance/acr-vpat.md` (hoặc PDF) có bảng SC và ngày. · Nguồn: Section 508 E205.4
-- [ ] `STD-A11Y-007` **MUST** Không khai báo WCAG 3.0 hay bản nháp làm mục tiêu tuân thủ. → Kiểm: `grep -riE "WCAG ?3" PROJECT.md docs/compliance/` không khớp. · Nguồn: W3C WD 2026-09-10 (status)
+- [ ] `STD-A11Y-006` **MUST@L** Sản phẩm bán cho chính phủ liên bang Mỹ có ACR theo mẫu VPAT, tối thiểu WCAG 2.0 AA. → Kiểm: file `docs/compliance/acr-vpat.md` (hoặc PDF) có bảng SC và ngày. · Nguồn: Section 508 E205.4
+- [ ] `STD-A11Y-007` **MUST@L** Không khai báo WCAG 3.0 hay bản nháp làm mục tiêu tuân thủ. → Kiểm: `grep -riE "WCAG ?3" PROJECT.md docs/compliance/` không khớp. · Nguồn: W3C WD 2026-09-10 (status)
 - [ ] `STD-A11Y-008` **SHOULD** Mobile native dùng công cụ nền tảng (Accessibility Inspector/Accessibility Scanner) và đối chiếu WCAG2ICT. → Kiểm: báo cáo scan lưu trong artifact release.
 - [ ] `STD-A11Y-009` **SHOULD** Lint tĩnh a11y bật trong CI (`eslint-plugin-jsx-a11y`, `eslint-plugin-vuejs-accessibility`, hoặc tương đương). → Kiểm: tên plugin xuất hiện trong config lint và job lint chạy.
 - [ ] `STD-A11Y-010` **SHOULD** Điểm Lighthouse Accessibility ≥ 0.9 trên các URL chính (chỉ là chỉ báo, không thay bảng SC). → Kiểm: `lighthouserc` assertion `categories:accessibility` `minScore: 0.9`.

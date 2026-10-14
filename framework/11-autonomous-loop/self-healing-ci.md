@@ -3,7 +3,7 @@ title: Agent tự sửa CI/review: giới hạn, cấm, bằng chứng
 kind: module
 prefix: LOOP-CI
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Agent tự sửa CI/review: giới hạn, cấm, bằng chứng
@@ -54,16 +54,16 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `LOOP-CI-001` **MUST** Không skip/disable/xoá test, không hạ ngưỡng coverage, không tắt rule lint/type để cổng xanh. → Kiểm: diff không chứa `skip(`, `xfail`, `.only(`, `eslint-disable` mới, thay đổi `coverageThreshold`/`strict`; hook `pre-edit-guard.sh` hỏi khi chạm file cấu hình cổng. · Nguồn: `AGENTS.md` §3
-- [ ] `LOOP-CI-002` **MUST** Re-run CI tối đa 1 lần cho mỗi lần đỏ nghi do hạ tầng; đỏ lần hai được xử lý như lỗi thật. → Kiểm: log autopilot/PROGRESS ghi số lần re-run mỗi run ID ≤ 1.
+- [ ] `LOOP-CI-002` **MUST@L** Re-run CI tối đa 1 lần cho mỗi lần đỏ nghi do hạ tầng; đỏ lần hai được xử lý như lỗi thật. → Kiểm: log autopilot/PROGRESS ghi số lần re-run mỗi run ID ≤ 1.
 - [ ] `LOOP-CI-003` **MUST** Cùng một chữ ký lỗi không sửa quá 3 lần; lần 3 máy đặt `blocked` để người xem. → Kiểm: `.autopilot/state.json` `max_same_failure: 3`; `loop status` = `blocked` sau 3 `loop record` cùng chữ ký. · Nguồn: [`loop-design.md`](loop-design.md)
 - [ ] `LOOP-CI-004` **MUST** Không force-push, không rebase/rewrite history nhánh người khác, không empty commit để kích CI. → Kiểm: `.claude/settings.json` deny `git push --force*`; `pre-bash-guard.sh` chặn; `git log` không có commit rỗng (`git log --format=%H --diff-filter=A`… hoặc `git show --stat` rỗng). · Nguồn: [`../10-workflow/git-and-branching.md`](../10-workflow/git-and-branching.md)
-- [ ] `LOOP-CI-005` **MUST** Trước mỗi lần sửa, agent trích đúng dòng lỗi từ log CI (assertion/stack trace) vào PROGRESS hoặc commit message; không sửa theo tên job. → Kiểm: commit `fix:` dẫn dòng lỗi hoặc link job log.
-- [ ] `LOOP-CI-006` **MUST** Secret scan hoặc SAST đỏ → dừng và hỏi người; không thêm allowlist/ignore để qua. → Kiểm: `loop block --reason` được gọi; diff không sửa file cấu hình scanner. · Nguồn: [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
-- [ ] `LOOP-CI-007` **MUST** Không sửa migration đã áp ở môi trường chung; chỉ thêm migration mới. → Kiểm: `pre-edit-guard.sh` hỏi khi sửa file migration có sẵn; diff không chạm migration cũ. · Nguồn: [`../09-database/migrations.md`](../09-database/migrations.md)
+- [ ] `LOOP-CI-005` **MUST@L** Trước mỗi lần sửa, agent trích đúng dòng lỗi từ log CI (assertion/stack trace) vào PROGRESS hoặc commit message; không sửa theo tên job. → Kiểm: commit `fix:` dẫn dòng lỗi hoặc link job log.
+- [ ] `LOOP-CI-006` **MUST@L** Secret scan hoặc SAST đỏ → dừng và hỏi người; không thêm allowlist/ignore để qua. → Kiểm: `loop block --reason` được gọi; diff không sửa file cấu hình scanner. · Nguồn: [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
+- [ ] `LOOP-CI-007` **MUST@L** Không sửa migration đã áp ở môi trường chung; chỉ thêm migration mới. → Kiểm: `pre-edit-guard.sh` hỏi khi sửa file migration có sẵn; diff không chạm migration cũ. · Nguồn: [`../09-database/migrations.md`](../09-database/migrations.md)
 - [ ] `LOOP-CI-008` **MUST** Workflow chạy agent chỉ kích hoạt bởi người (kiểm `author_association` hoặc nhãn do người gắn), không chạy với secret trên PR từ fork. → Kiểm: file workflow có điều kiện `if:` kiểm actor; `pull_request_target` không cấp secret cho code fork. · Nguồn: `research/2026-10-13-ai-agent-research.md` §3; stored 21 §9
-- [ ] `LOOP-CI-009` **MUST** Job có agent dùng `permissions:` tối thiểu; job ghi (commit/comment) tách khỏi job đọc/suy luận. → Kiểm: workflow có khối `permissions:` tường minh; job chạy model không có `contents: write`. · Nguồn: stored 21 §9 (safe-outputs)
-- [ ] `LOOP-CI-010` **MUST** Chạy headless không dùng `--bare`; có `--max-turns` và `--max-budget-usd`. → Kiểm: lệnh trong workflow; JSON kết quả có `total_cost_usd` ≤ trần. · Nguồn: Claude Code headless docs
-- [ ] `LOOP-CI-011` **MUST** PR do agent mở dẫn link run CI xanh và lệnh Gate đã chạy; không ghi "đã test" bằng lời. → Kiểm: mô tả PR có URL run + exit code; `reviewer` từ chối PR thiếu link. · Nguồn: `AGENTS.md` §3
+- [ ] `LOOP-CI-009` **MUST@L** Job có agent dùng `permissions:` tối thiểu; job ghi (commit/comment) tách khỏi job đọc/suy luận. → Kiểm: workflow có khối `permissions:` tường minh; job chạy model không có `contents: write`. · Nguồn: stored 21 §9 (safe-outputs)
+- [ ] `LOOP-CI-010` **MUST@L** Chạy headless không dùng `--bare`; có `--max-turns` và `--max-budget-usd`. → Kiểm: lệnh trong workflow; JSON kết quả có `total_cost_usd` ≤ trần. · Nguồn: Claude Code headless docs
+- [ ] `LOOP-CI-011` **MUST@L** PR do agent mở dẫn link run CI xanh và lệnh Gate đã chạy; không ghi "đã test" bằng lời. → Kiểm: mô tả PR có URL run + exit code; `reviewer` từ chối PR thiếu link. · Nguồn: `AGENTS.md` §3
 - [ ] `LOOP-CI-012` **SHOULD** Test flake được đánh dấu bằng cơ chế của framework test và mở issue trong cùng PR; không retry nhiều lần trong CI để che. · Nguồn: [`../14-testing-quality/test-strategy.md`](../14-testing-quality/test-strategy.md)
 - [ ] `LOOP-CI-013` **SHOULD** Sửa lint/format đi commit riêng `style:`; sửa logic đi commit `fix:` để review tách bạch.
 - [ ] `LOOP-CI-014` **SHOULD** Kiểm `system/init` của phiên headless: `plugin_errors`/`mcp_server_errors` không rỗng → fail job sớm thay vì chạy thiếu cổng. · Nguồn: Claude Code headless docs
