@@ -53,7 +53,7 @@ Mỗi yêu cầu kiểm được là **một dòng**:
   Ở quy mô S, máy còn hạ MUST trơn của module chuyên sâu thành SHOULD (ADR-0003). Vì vậy yêu cầu mà **mọi** phần mềm, kể cả prototype, phải có thì đặt ở `01-baseline/`, không đặt ở module.
   - `S` = thử nghiệm/MVP nội bộ, ít người dùng · `M` = production có người dùng thật · `L` = quy mô lớn, nhiều đội, hoặc ngành bị quản lý.
 - **`→ Kiểm:`** (bắt buộc với `MUST`, nên có với `SHOULD`): cách chứng minh bằng máy hoặc bằng chứng cụ thể (lệnh, test, file, cấu hình). Không viết "đảm bảo X" mà không nói kiểm thế nào.
-- **`· Nguồn:`** (khi yêu cầu đến từ chuẩn/luật): mã chuẩn + mục (`ASVS 5.0 V6`, `WCAG 2.2 SC 2.5.8`, `NĐ 13/2023 Đ.9`).
+- **`· Nguồn:`** (khi yêu cầu đến từ chuẩn/luật): mã chuẩn + mục (`ASVS 5.0 V6`, `WCAG 2.2 SC 2.5.8`, `Luật 91/2025/QH15 Đ.20`).
 - Một ý một dòng. Không lồng danh sách con dưới mục checklist.
 
 Trạng thái trong **blueprint của dự án** (file sinh ra, không phải trong khung): `[ ]` chưa · `[x]` đạt · `[~]` miễn trừ, bắt buộc kèm `— Miễn: <lý do>`.
@@ -97,6 +97,8 @@ Gói ngành thêm: **Khung pháp lý** (Việt Nam + quốc tế, số hiệu v�
 - Không trùng lặp nội dung giữa các module: một chủ đề có **một nhà**; nơi khác chỉ trỏ tới.
 - Mục bị gộp vào nhà khác: giữ ID, đổi mức thành `MAY`, ghi `Ngừng dùng <ngày> — gộp vào <ID-nhà kèm liên kết tương đối>`.
   MAY không vào blueprint mặc định nên dự án không thấy trùng; ID không bao giờ cấp lại.
+- Ngoại lệ có chủ đích: `01-baseline/` được giữ một mục **sàn** ngắn (MUST) cho chủ đề có nhà ở module chuyên sâu, kèm liên kết tới nhà,
+  vì ở quy mô S MUST của module bị hạ thành SHOULD (ADR-0003). Mục sàn chỉ nêu yêu cầu tối thiểu; chi tiết và cách kiểm đầy đủ ở nhà.
 
 ### Bản đồ "một chủ đề một nhà"
 
