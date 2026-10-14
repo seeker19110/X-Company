@@ -24,4 +24,4 @@ argument-hint: "[compose|status|audit] [--profile p --industry i --scale M]"
 3. Phân loại bằng chứng: *đo được* / *suy luận* / *chưa biết* — không trình bày suy luận như đo được.
 
 ## Ghép lại khi khung cập nhật
-`<XS> compose ... --out /tmp/BLUEPRINT.new.md` → so theo **ID** (ổn định) → chuyển trạng thái tick sang file mới → thay thế.
+Chạy lại đúng lệnh `<XS> compose ... --out BLUEPRINT.md`: máy giữ trạng thái + ghi chú `— Bằng chứng/Miễn/Thiếu:` theo **ID**, mục mới vào ở `[ ]`. Xem `git diff BLUEPRINT.md` trước khi commit.

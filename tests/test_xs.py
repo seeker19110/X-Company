@@ -456,6 +456,71 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), "")
 
 
+class AuditRegressionTest(unittest.TestCase):
+    """Lỗi tái hiện khi dogfood khung trên chính repo (2026-10-14)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.fw = make_framework(self.tmp)
+
+    def cli(self, *args, env=None) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, str(ROOT / "scripts" / "xs.py"), *args], capture_output=True,
+                              text=True, cwd=self.tmp, env=dict(os.environ, **(env or {})))
+
+    def test_compose_out_keeps_existing_states_by_id(self):
+        bp = self.tmp / "BP.md"
+        self.assertEqual(self.cli("--framework", str(self.fw), "compose", "--profile", "web-app",
+                                  "--out", str(bp)).returncode, 0)
+        text = bp.read_text(encoding="utf-8").replace(
+            "- [ ] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI.",
+            "- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10")
+        bp.write_text(text, encoding="utf-8")
+        r = self.cli("--framework", str(self.fw), "compose", "--profile", "web-app", "--out", str(bp))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("- [x] `BASE-SEC-001` **MUST** Không commit bí mật. → Kiểm: gitleaks trong CI. — Bằng chứng: ci.yml:10",
+                      bp.read_text(encoding="utf-8"))
+
+    def test_missing_framework_dir_is_error(self):
+        r = self.cli("--framework", str(self.tmp / "khong-co"), "validate")
+        self.assertEqual(r.returncode, 2)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_missing_blueprint_file_is_clean_error(self):
+        r = self.cli("blueprint-status", str(self.tmp / "khong-co.md"))
+        self.assertEqual(r.returncode, 2)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_waiver_reason_accepts_nfd(self):
+        import unicodedata
+        bp = self.tmp / "BP.md"
+        bp.write_text(unicodedata.normalize("NFD", "- [~] `X-001` **MUST** a — Miễn: không áp dụng\n"), encoding="utf-8")
+        self.assertEqual(xs.blueprint_status(bp)["bad_waivers"], [])
+
+    def test_record_rejects_path_like_task_id(self):
+        plan = self.tmp / "docs" / "autopilot" / "PLAN.md"
+        write(plan, "- [ ] `T-001` x — Gate: `true`\n")
+        env = {"CLAUDE_PROJECT_DIR": str(self.tmp)}
+        self.assertEqual(self.cli("loop", "init", env=env).returncode, 0)
+        r = self.cli("loop", "record", "--task", "../../pwned", "--", "true", env=env)
+        self.assertEqual(r.returncode, 2)
+        self.assertFalse((self.tmp / "pwned.json").exists())
+        self.assertEqual(self.cli("loop", "record", "--task", "BASE-SEC-001", "--", "true", env=env).returncode, 0)
+
+    def test_hours_zero_sets_deadline(self):
+        write(self.tmp / "docs" / "autopilot" / "PLAN.md", "- [ ] `T-001` x\n")
+        env = {"CLAUDE_PROJECT_DIR": str(self.tmp)}
+        self.cli("loop", "init", "--hours", "0", env=env)
+        self.assertIsNotNone(xs.read_state(self.tmp)["deadline"])
+
+    def test_evidence_redacts_secret_like_values(self):
+        write(self.tmp / "docs" / "autopilot" / "PLAN.md", "- [ ] `T-001` x\n")
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-001", ["echo API_KEY=sk-live-123 password: hunter2"], self.tmp)
+        tail = xs.read_evidence("T-001", self.tmp)["output_tail"]
+        self.assertNotIn("sk-live-123", tail)
+        self.assertNotIn("hunter2", tail)
+
+
 class RealFrameworkTest(unittest.TestCase):
     """Khung thật trong repo phải luôn hợp lệ."""
 

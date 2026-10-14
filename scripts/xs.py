@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""xs.py — công cụ dòng lệnh của khung X-stored (chỉ dùng thư viện chuẩn Python >= 3.9).
+"""xs.py — công cụ dòng lệnh của khung X-stored (chỉ dùng thư viện chuẩn Python >= 3.11).
 
 Lệnh:
   validate                      Kiểm quy ước toàn khung (frontmatter, ID, liên kết, hồ sơ/gói ngành).
@@ -32,6 +32,7 @@ import posixpath
 import re
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -55,6 +56,9 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 LINK_SUB_RE = re.compile(r"(\[[^\]]*\])\(([^)\s]+)\)")
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+TASK_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{3,}$")
+NOTE_RE = re.compile(r"\s—\s(?:Bằng chứng|Miễn|Thiếu):.*$")
+SECRET_RE = re.compile(r"(?i)\b(\w*(?:token|secret|passw(?:or)?d|api[_-]?key)\w*)(\s*[=:]\s*)\S+")
 TASK_RE = re.compile(r"^- \[(?P<state>[ xX~])\] `(?P<id>T-\d{3,})`(?P<rest>.*)$")
 GATE_RE = re.compile(r"Gate:\s*`([^`]+)`")
 
@@ -411,6 +415,25 @@ def compose(root: Path, profile: str, industries: List[str], scale: str, include
     return "\n".join(header) + "\n" + "\n\n".join(sections) + "\n"
 
 
+def carry_states(old: str, new: str) -> Tuple[str, int]:
+    """Chuyển ô trạng thái + ghi chú (— Bằng chứng/Miễn/Thiếu: …) từ blueprint cũ sang bản ghép mới theo ID."""
+    prev: Dict[str, Tuple[str, str]] = {}
+    for line in unicodedata.normalize("NFC", old).splitlines():
+        m = ITEM_RE.match(line)
+        if m:
+            note = NOTE_RE.search(line)
+            prev[m["id"]] = (m["state"], note.group(0) if note else "")
+    kept, lines = 0, []
+    for line in new.splitlines():
+        m = ITEM_RE.match(line)
+        if m and prev.get(m["id"], (" ", "")) != (" ", ""):
+            state, note = prev[m["id"]]
+            line = f"- [{state}]{line[5:]}{note}"
+            kept += 1
+        lines.append(line)
+    return "\n".join(lines) + "\n", kept
+
+
 def _rebase_links(text: str, doc_rel: str, link_root: str) -> str:
     """Liên kết tương đối trong mục (tính từ file module) -> tính từ BLUEPRINT.md qua link_root."""
     base = posixpath.dirname(doc_rel)
@@ -435,7 +458,8 @@ def blueprint_status(path: Path) -> Dict[str, object]:
     total = {lv: {"open": 0, "done": 0, "waived": 0} for lv in LEVELS}
     bad_waivers: List[str] = []
     open_must: List[str] = []
-    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    text = unicodedata.normalize("NFC", path.read_text(encoding="utf-8"))
+    for n, line in enumerate(text.splitlines(), start=1):
         m = ITEM_RE.match(line)
         if not m:
             continue
@@ -572,7 +596,7 @@ def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
     except subprocess.TimeoutExpired as exc:
         code, out = 124, f"timeout: {exc}"
     ev = {"task": task, "cmd": cmd_str, "exit_code": code, "started": started, "finished": now_iso(),
-          "head": _git_head(base), "output_tail": "\n".join(out.strip().splitlines()[-40:])}
+          "head": _git_head(base), "output_tail": SECRET_RE.sub(r"\1\2***", "\n".join(out.strip().splitlines()[-40:]))}
     d = state_dir(base) / "evidence"
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{task}.json").write_text(json.dumps(ev, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -605,11 +629,7 @@ def _git_head(base: Path) -> Optional[str]:
 
 def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
     """Quyết định của Stop hook. Trả (stdout JSON hoặc '', exit code). Luôn fail-open khi có lỗi."""
-    base = base or project_dir()
-    try:
-        json.loads(stdin_text or "{}")
-    except json.JSONDecodeError:
-        pass
+    base = base or project_dir()  # stdin của Stop hook không cần: verdict chỉ dựa vào file trên đĩa
     v = loop_verdict(base)
     st = read_state(base)
     if v["verdict"] in ("continue", "verify") and st:
@@ -660,7 +680,11 @@ def cmd_compose(args) -> int:
     out = compose(args.framework, args.profile, args.industry or [], args.scale, args.include_may,
                   extra=args.add or [])
     if args.out:
-        Path(args.out).write_text(out, encoding="utf-8")
+        out_path = Path(args.out)
+        if out_path.exists():  # ghép lại: giữ tick/miễn trừ/bằng chứng theo ID, không mất công audit
+            out, kept = carry_states(out_path.read_text(encoding="utf-8"), out)
+            print(f"↺ Giữ trạng thái {kept} mục theo ID từ bản cũ", file=sys.stderr)
+        out_path.write_text(out, encoding="utf-8")
         print(f"✓ Đã ghi {args.out}")
     else:
         sys.stdout.write(out)
@@ -687,7 +711,7 @@ def cmd_loop(args) -> int:
             print(f"✗ Không thấy {args.plan}", file=sys.stderr)
             return 2
         deadline = None
-        if args.hours:
+        if args.hours is not None:
             deadline = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=args.hours)).replace(microsecond=0).isoformat()
         state = {"active": True, "started": now_iso(), "plan": args.plan, "blueprint": args.blueprint,
                  "max_iterations": args.max_iterations, "max_same_failure": 3, "iterations": 0,
@@ -761,6 +785,12 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def _task_id(value: str) -> str:
+    if not TASK_ID_RE.match(value):
+        raise argparse.ArgumentTypeError(f"ID không hợp lệ: {value!r} (dạng T-001 hoặc ID blueprint như BASE-SEC-001)")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="xs.py", description="Công cụ khung X-stored")
     p.add_argument("--framework", type=Path, default=Path(os.environ.get("XS_FRAMEWORK", DEFAULT_FRAMEWORK)),
@@ -793,7 +823,7 @@ def build_parser() -> argparse.ArgumentParser:
     ls = lsub.add_parser("status")
     ls.add_argument("--json", action="store_true")
     lr = lsub.add_parser("record")
-    lr.add_argument("--task", required=True)
+    lr.add_argument("--task", required=True, type=_task_id)
     lr.add_argument("cmd", nargs=argparse.REMAINDER)
     lb = lsub.add_parser("block")
     lb.add_argument("--reason", required=True)
@@ -809,9 +839,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    if hasattr(args, "framework"):
-        args.framework = Path(args.framework).resolve()
-    return args.fn(args)
+    args.framework = Path(args.framework).resolve()
+    if args.cmd in ("validate", "list", "compose", "stats") and not args.framework.is_dir():
+        print(f"✗ Không thấy thư mục khung: {args.framework}", file=sys.stderr)
+        return 2
+    try:
+        return args.fn(args)
+    except OSError as exc:  # file thiếu/không đọc được: một dòng dễ hiểu; XS_DEBUG=1 để xem traceback
+        if os.environ.get("XS_DEBUG"):
+            raise
+        print(f"✗ {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

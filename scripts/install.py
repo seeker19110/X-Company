@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""install.py — cài khung X-stored vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.9).
+"""install.py — cài khung X-stored vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.11).
 
 Kết quả trong dự án đích:
   .xstored/framework/        bản sao thư viện yêu cầu (chỉ đọc; cập nhật bằng cách chạy lại install)
@@ -19,7 +19,6 @@ Thoát 0 = ổn; 2 = lỗi tham số.
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import stat
 import subprocess

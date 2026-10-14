@@ -1,7 +1,7 @@
 ---
 title: Ghép blueprint cho một dự án
 kind: method
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Ghép blueprint cho một dự án
@@ -45,13 +45,15 @@ python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict
 ## Dùng blueprint thế nào
 
 1. **Commit `BLUEPRINT.md` vào repo dự án** (G1). Đây là phạm vi chất lượng đã thống nhất.
-2. **Tick bằng bằng chứng**: chỉ đổi `[ ]` → `[x]` khi có bằng chứng máy (CI job, test, báo cáo scan, file cấu hình).
+2. **Tick bằng bằng chứng**: chỉ đổi `[ ]` → `[x]` khi có bằng chứng máy (CI job, test, báo cáo scan, file cấu hình),
+   ghi ở cuối dòng: `— Bằng chứng: <file:dòng | job CI | lệnh>`. Mục còn thiếu có thể ghi `— Thiếu: <việc cần làm>`.
    Ghi bằng chứng ở PR tương ứng.
 3. **Miễn trừ có lý do**: mục không áp dụng → `[~]` kèm `— Miễn: <lý do>` (vd "không có thanh toán"). Máy chặn miễn
    trừ thiếu lý do.
 4. **Không sửa chữ của mục** trong blueprint dự án; muốn đổi yêu cầu → sửa khung (PR vào X-stored) rồi ghép lại.
-5. **Ghép lại khi khung cập nhật**: chạy lại `compose` ra file tạm, so sánh, chuyển trạng thái tick sang (ID ổn định
-   nên so theo ID).
+5. **Ghép lại khi khung cập nhật**: chạy lại đúng lệnh `compose ... --out BLUEPRINT.md`. Khi file đã có, máy giữ ô trạng thái
+   và ghi chú cuối dòng (`— Bằng chứng:` / `— Miễn:` / `— Thiếu:`) theo **ID**; mục mới vào ở `[ ]`, mục đã bỏ khỏi khung biến mất.
+   Xem diff trước khi commit.
 
 ## Chọn quy mô
 

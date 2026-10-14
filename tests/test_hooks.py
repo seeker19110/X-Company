@@ -141,6 +141,41 @@ class StopAndSessionTest(unittest.TestCase):
         self.assertEqual((code, out.strip()), (0, ""))
 
 
+class DevTaskTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "scripts").mkdir()
+        shutil.copy(ROOT / "scripts" / "dev-task.sh", self.tmp / "scripts" / "dev-task.sh")
+
+    def run_task(self, *args):
+        return subprocess.run(["bash", str(self.tmp / "scripts" / "dev-task.sh"), *args], capture_output=True,
+                              text=True, cwd=self.tmp, env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.tmp)))
+
+    def test_format_file_path_is_not_executed(self):
+        evil = self.tmp / "x$(touch INJECTED).py"
+        evil.write_text("print(1)\n", encoding="utf-8")
+        for tmpl in ('cat {}', 'cat "{}"'):
+            (self.tmp / "xs.yaml").write_text(f"format_file: {tmpl}\n", encoding="utf-8")
+            r = self.run_task("format-file", str(evil))
+            self.assertFalse((self.tmp / "INJECTED").exists(), tmpl)
+            self.assertNotIn("unexpected EOF", r.stderr, tmpl)
+
+    def test_empty_declared_command_skips_autodetect(self):
+        (self.tmp / "xs.yaml").write_text('test: ""\n', encoding="utf-8")
+        (self.tmp / "Makefile").write_text("test:\n\ttouch RAN\n", encoding="utf-8")
+        r = self.run_task("test")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.tmp / "RAN").exists())
+
+
+@unittest.skipIf(shutil.which("bash") is None, "cần bash")
+class PreEditGateFilesTest(unittest.TestCase):
+    def test_ask_when_editing_gate_definitions(self):
+        for rel in ("xs.yaml", "scripts/dev-task.sh"):
+            code, out, _ = run_hook("pre-edit-guard.sh", {"tool_input": {"file_path": str(ROOT / rel)}})
+            self.assertEqual(decision(out), "ask", rel)
+
+
 class SettingsJsonTest(unittest.TestCase):
     def test_settings_valid_and_hooks_exist(self):
         s = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))

@@ -32,7 +32,7 @@ Chỉ mục đầy đủ theo vai đọc: [`framework/README.md`](framework/READ
 ## Dùng cho một dự án
 
 ```bash
-# 1) Cài khung vào dự án (chỉ cần Python >= 3.9; không đè file đã có)
+# 1) Cài khung vào dự án (chỉ cần Python >= 3.11; không đè file đã có)
 git clone https://github.com/seeker19110/X-stored /tmp/x-stored
 python3 /tmp/x-stored/scripts/install.py /đường/dẫn/dự-án --with-github
 
