@@ -18,7 +18,11 @@
 set -uo pipefail
 
 TASK="${1:-}"
-ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+# Gốc dự án: CLAUDE_PROJECT_DIR (hook) > thư mục cha của scripts/ — nhưng khi script nằm ở dự án đích
+# (.xstored/scripts/dev-task.sh) thì gốc là cha của .xstored/, không phải .xstored/ (AUD-HAR-001: từng "xanh giả").
+_parent="$(cd "$(dirname "$0")/.." && pwd)"
+if [ "$(basename "$_parent")" = ".xstored" ]; then _parent="$(dirname "$_parent")"; fi
+ROOT="${CLAUDE_PROJECT_DIR:-$_parent}"
 DECL="$ROOT/.claude/project-commands.sh"
 YAML="$ROOT/xs.yaml"
 
@@ -109,9 +113,11 @@ resolve() { # $1=task -> in lệnh (khai báo ưu tiên), rỗng nếu không c�
   detected_cmd "$1"
 }
 
+RAN=0
 run_task() { # $1=task -> chạy; 0 nếu ok hoặc no-op, khác 0 nếu lệnh fail
   local cmd; cmd="$(resolve "$1")"
   if [ -z "$cmd" ]; then log "skip: chưa cấu hình/dò được '$1'"; return 0; fi
+  RAN=$((RAN + 1))
   log "run [$1]: $cmd"
   ( cd "$ROOT" && bash -c "$cmd" )
 }
@@ -156,7 +162,11 @@ case "$TASK" in
     for t in build typecheck lint test; do
       run_task "$t" || { rc=1; log "GATE ĐỎ ở '$t' → dừng"; break; }
     done
-    [ "$rc" -eq 0 ] && log "GATE XANH (hoặc no-op)"
+    if [ "$rc" -eq 0 ] && [ "$RAN" -eq 0 ]; then
+      log "GATE KHÔNG CHẠY LỆNH NÀO (no-op) — không thấy xs.yaml/lệnh ở $ROOT; đây KHÔNG phải bằng chứng xanh"
+    elif [ "$rc" -eq 0 ]; then
+      log "GATE XANH ($RAN lệnh)"
+    fi
     exit "$rc" ;;
   *)
     log "task không hợp lệ: '$TASK' (format|lint|typecheck|test|build|gate)"; exit 2 ;;
