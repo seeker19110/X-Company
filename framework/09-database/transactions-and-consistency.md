@@ -3,7 +3,7 @@ title: Giao dịch, cô lập, khoá, idempotency, tính nhất quán
 kind: module
 prefix: DB-TX
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Giao dịch, cô lập, khoá, idempotency, tính nhất quán
@@ -49,7 +49,7 @@ updated: 2026-10-13
 
 - [ ] `DB-TX-001` **MUST** Luồng đọc-rồi-ghi có điều kiện (số dư, tồn kho, hạn mức, ghế/slot) được bảo vệ bằng `FOR UPDATE` hoặc `SERIALIZABLE`, chứng minh bằng test đồng thời. → Kiểm: test chạy ≥ 2 giao dịch song song (threads/processes) cùng trừ → tổng đúng, không âm; test đỏ khi bỏ khoá (mutation thủ công ghi trong PR). · Nguồn: PostgreSQL 18 §13.2 (Read Committed không chặn lost update giữa hai read-modify-write)
 - [ ] `DB-TX-002` **MUST** Mọi transaction ở `REPEATABLE READ`/`SERIALIZABLE` được bọc retry toàn bộ khi SQLSTATE `40001` (serialization) và `40P01` (deadlock), có trần số lần + backoff. → Kiểm: helper `run_in_tx(retry_on=['40001','40P01'])` dùng ở mọi nơi (grep không có `BEGIN ISOLATION LEVEL` ngoài helper); test chèn `40001` → chạy lại thành công. · Nguồn: PostgreSQL 18 §13.2.3 (ứng dụng phải retry serialization failure)
-- [ ] `DB-TX-003` **MUST** Không gọi mạng/HTTP/LLM/hàng đợi/chờ người dùng bên trong transaction; tác động phụ qua outbox sau commit. → Kiểm: lint/semgrep rule cấm client HTTP/broker trong khối transaction; `idle_in_transaction_session_timeout` bật (DB-PERF-005). · Nguồn: PostgreSQL 18 §13.3.4 (giữ transaction mở khi chờ người dùng là "bad idea") · ARC-INT-003
+- [ ] `DB-TX-003` **MUST** Không gọi mạng/HTTP/LLM/hàng đợi/chờ người dùng **bên trong transaction CSDL** (giữ khoá, cạn pool, mất bản ghi khi crash sau lời gọi); `idle_in_transaction_session_timeout` bật. Nguyên tắc outbox cho tác động phụ: xem [`ARC-INT-003`](../05-architecture/integration-patterns.md). → Kiểm: lint/semgrep rule cấm client HTTP/broker trong khối transaction; cấu hình `idle_in_transaction_session_timeout` (DB-PERF-005). · Nguồn: PostgreSQL 18 §13.3.4 (giữ transaction mở khi chờ người dùng là "bad idea")
 - [ ] `DB-TX-004` **MUST** Khoá idempotency/mã giao dịch ngoài (mã thanh toán, `webhook-id`) có ràng buộc `UNIQUE` ở CSDL; xử lý trùng bằng `ON CONFLICT`/bắt lỗi unique, không bằng `SELECT` rồi `INSERT`. → Kiểm: schema có UNIQUE; test chèn trùng đồng thời (2 tiến trình) → đúng một bản ghi. · Nguồn: ARC-INT-001 · catalog 23 §4.1 (SePay idempotent)
 - [ ] `DB-TX-005` **MUST** Hàng đợi trong CSDL dùng `FOR UPDATE SKIP LOCKED` với `LIMIT`, worker đánh dấu trạng thái và có `lease_until` để việc của worker chết được lấy lại. → Kiểm: test 2 worker không lấy trùng việc; test worker bị kill → việc được lấy lại sau lease. · Nguồn: PostgreSQL 18 SELECT (SKIP LOCKED cho queue-like table) · [`../08-backend/background-jobs-and-queues.md`](../08-backend/background-jobs-and-queues.md)
 - [ ] `DB-TX-006` **MUST** Mutex nghiệp vụ (job duy nhất, sinh số liên tục) dùng advisory lock **cấp transaction** hoặc hàng khoá trong bảng; không dùng advisory lock cấp phiên qua pooler transaction mode. → Kiểm: grep `pg_advisory_lock(` (cấp phiên) = 0 hoặc có lý do; test 2 tiến trình → một chạy, một chờ/bỏ qua. · Nguồn: PostgreSQL 18 §13.3.5 Advisory Locks (session vs transaction level)

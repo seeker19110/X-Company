@@ -3,7 +3,7 @@ title: Độ tin cậy: timeout, retry, graceful shutdown, health, rate limit
 kind: module
 prefix: BE-REL
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Độ tin cậy: timeout, retry, graceful shutdown, health, rate limit
@@ -41,7 +41,7 @@ updated: 2026-10-13
 
 - [ ] `BE-REL-001` **MUST** Mọi client HTTP/DB/cache/queue có timeout kết nối và timeout request cấu hình rõ, không dùng mặc định vô hạn của thư viện. → Kiểm: lint/grep client tạo không có timeout = 0 (vd `fetch` không `AbortSignal.timeout`, `requests.get` không `timeout=`, `http.Client{}` không `Timeout`, pool DB không `connect_timeout`/`statement_timeout`). · Nguồn: AWS Builders' Library Timeouts, retries and backoff with jitter
 - [ ] `BE-REL-002` **MUST** Server có timeout đọc header/body, timeout ghi, idle timeout và giới hạn kích thước body (mặc định vd 1–2 MB, nâng riêng cho endpoint upload). → Kiểm: cấu hình server có các giá trị; test body vượt giới hạn → 413 trước khi đọc hết. · Nguồn: OWASP REST Security Cheat Sheet; catalog 23 §8.1 (giới hạn body 2 MB, 8 request đồng thời)
-- [ ] `BE-REL-003` **MUST** Retry chỉ cho thao tác idempotent và lỗi tạm; backoff mũ + jitter, trần số lần (mặc định 3) và trần tổng thời gian; tôn trọng `Retry-After`. → Kiểm: unit test chính sách retry; test lỗi 400/409 → không retry; test POST không idempotent timeout → không retry tự động. · Nguồn: RFC 9110 §9.2.2, Google SRE Handling Overload (3 lần/request)
+- [ ] `BE-REL-003` **MUST** Chính sách retry phía dịch vụ: **mặc định 3 lần** mỗi request, trần tổng thời gian, tôn trọng `Retry-After`; POST không idempotent timeout → không retry tự động. Nguyên tắc (chỉ lỗi tạm, chỉ thao tác idempotent, backoff mũ + jitter): xem [`ARC-RES-002`](../05-architecture/resilience-and-scalability.md). → Kiểm: unit test chính sách retry; test lỗi 400/409 → không retry; test POST không idempotent timeout → không retry tự động. · Nguồn: RFC 9110 §9.2.2, Google SRE Handling Overload (3 lần/request)
 - [ ] `BE-REL-004` **MUST** Tắt êm: nhận SIGTERM → readiness trả lỗi/ngừng nhận kết nối mới → chờ request đang chạy xong (trần < grace period của nền tảng, vd 30 s) → đóng pool DB/queue → thoát 0; không `process.exit()` tức thì. → Kiểm: test gửi SIGTERM khi có request chậm đang chạy → request hoàn tất 200, tiến trình thoát trong grace. · Nguồn: Kubernetes Pod lifecycle (SIGTERM → grace 30 s → SIGKILL)
 - [ ] `BE-REL-005` **MUST** Tách liveness (`/healthz`: không phụ thuộc ngoài) và readiness (`/readyz`: kiểm phụ thuộc bắt buộc); readiness trả 503 khi chưa sẵn sàng hoặc đang tắt; endpoint không cần auth nhưng không lộ chi tiết cấu hình ra ngoài mạng nội bộ. → Kiểm: test tắt DB → `/readyz` 503, `/healthz` 200; cấu hình probe trỏ đúng endpoint. · Nguồn: Kubernetes probes (liveness/readiness/startup)
 - [ ] `BE-REL-006` **MUST** Giới hạn tốc độ trên endpoint công khai, xác thực, gửi OTP/email và endpoint đắt: token bucket theo `user_id`/API key, fallback IP; trả 429 + `Retry-After` (+ `RateLimit`/`RateLimit-Policy` nếu dùng); đếm ở store dùng chung khi nhiều instance. → Kiểm: test vượt ngưỡng → 429 có `Retry-After`; test 2 instance chia sẻ bộ đếm. · Nguồn: RFC 6585 §4, draft-ietf-httpapi-ratelimit-headers-11
@@ -64,7 +64,7 @@ updated: 2026-10-13
 
 - **Không timeout → pool cạn → toàn hệ treo.** Một dịch vụ ngoài chậm chiếm hết worker; mọi endpoint khác chết theo. Timeout + bulkhead.
 - **Retry ở mọi tầng.** Client 3 × gateway 3 × service 3 = 27 lần; hệ đang hỏng nhận tải gấp 27. Một tầng + ngân sách.
-- **Retry POST không idempotent sau timeout.** Tạo trùng đơn/thanh toán. Dùng `Idempotency-Key` ([`api-design.md`](api-design.md)) hoặc reconcile.
+- **Retry POST không idempotent sau timeout.** Tạo trùng đơn/thanh toán. Dùng khoá idempotency ([`ARC-INT-001`](../05-architecture/integration-patterns.md); hợp đồng header ở [`api-design.md`](api-design.md) `BE-API-008`) hoặc reconcile.
 - **Liveness probe gọi DB.** DB chậm 10 giây → Kubernetes restart toàn bộ pod → sập hẳn. Liveness chỉ kiểm tiến trình.
 - **Readiness luôn 200.** Pod chưa nạp xong vẫn nhận traffic; khi tắt vẫn nhận request mới rồi rơi. Readiness phản ánh thật, trả 503 khi tắt.
 - **`process.exit()` ngay khi SIGTERM.** Request đang xử lý rơi, kết nối DB không đóng. Drain rồi mới thoát.
@@ -95,5 +95,5 @@ updated: 2026-10-13
 - draft-inadarei-api-health-check-06 — **Expired** (2021-10-16), không dùng làm chuẩn: <https://datatracker.ietf.org/doc/draft-inadarei-api-health-check/> — xác minh 2026-10-13
 - gRPC Deadlines (propagation): <https://grpc.io/docs/guides/deadlines/> — xác minh 2026-10-13
 - OWASP REST Security Cheat Sheet (giới hạn kích thước request 413): <https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html> — xác minh 2026-10-13
-- Phiên bản framework (npm/PyPI/endoflife.date, xác minh 2026-10-13): @nestjs/core 12.1.3, fastify 5.12.6, express 5.3.0, hono 4.13.13, fastapi 0.143.0, django 6.1.2 (5.2 LTS EOL 2028-04-30), Spring Boot 4.1.1 (3.5 EOL 2026-06-30 đã qua), Go 1.27.2 (1.25 EOL 2026-08-19 đã qua), Node 24 LTS (active support tới 2026-10-20), Python 3.15.0 (3.13 hết full support 2026-10-01).
+- Phiên bản framework (npm/PyPI/endoflife.date, xác minh 2026-10-13): @nestjs/core 12.1.3, fastify 5.12.6, express 5.3.0, hono 4.13.13, fastapi 0.143.0, django 6.1.2 (5.2 LTS EOL 2028-04-30), Spring Boot 4.1.1 (3.5 EOL 2026-06-30 đã qua), Go 1.27.2 (1.25 EOL 2026-08-19 đã qua), Node 24 LTS (active support tới 2026-10-20), Python: hồ sơ [`../02-profiles/api-service.md`](../02-profiles/api-service.md) khuyến nghị 3.14.x tới khi có 3.15.1 (3.15.0 ra 2026-10-09; 3.13 hết full support 2026-10-01).
 - `research/2026-10-13-stored-catalog-extraction.md` §4 (body 2 MB, 8 đồng thời; cooldown gateway 401→300 s, 429→3600 s, `Retry-After` thắng); catalog `23-own-repos-lessons` §5, §8.1.

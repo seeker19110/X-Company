@@ -4,7 +4,7 @@ kind: profile
 slug: data-ml
 prefix: PRF-DATA
 modules: [04-standards/*, 05-architecture/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 13-ai-engineering/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Data pipeline / ML system
@@ -67,11 +67,11 @@ Phiên bản xác minh **2026-10-13** (PyPI/endoflife.date) — **xác minh lạ
 - [ ] `PRF-DATA-006` **MUST** Mô hình đi qua **registry** có phiên bản, metric eval, model card; chỉ promote lên production khi qua cổng eval do code kiểm. → Kiểm: bước CD promote đọc metric từ registry và fail khi dưới ngưỡng; model card tồn tại cho model production.
 - [ ] `PRF-DATA-007` **MUST** Tập eval holdout cố định, không rò vào train; eval chạy lại trong CI khi đổi code/data/tham số. → Kiểm: test giao của hash bản ghi train ∩ eval = ∅; job CI `eval` xuất báo cáo metric theo commit.
 - [ ] `PRF-DATA-008` **MUST@M** Giám sát drift đầu vào và phân phối dự đoán, chất lượng (khi có nhãn trễ), kèm cảnh báo ngưỡng đã thử kích. → Kiểm: báo cáo Evidently định kỳ + alert rule; log diễn tập alert.
-- [ ] `PRF-DATA-009` **MUST** PII: phân loại cột, mask/giả danh ở môi trường non-prod, không PII thô trong feature store/log/artifact huấn luyện; kiểm soát truy cập theo [`../09-database/sensitive-data-and-access.md`](../09-database/sensitive-data-and-access.md). → Kiểm: tag cột PII trong catalog + scan artifact xuất (vd Presidio) 0 PII; test môi trường staging chỉ chứa dữ liệu đã mask. · Nguồn: NĐ 13/2023/NĐ-CP (xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md))
+- [ ] `PRF-DATA-009` **MUST** PII: phân loại cột, mask/giả danh ở môi trường non-prod, không PII thô trong feature store/log/artifact huấn luyện; kiểm soát truy cập theo [`../09-database/sensitive-data-and-access.md`](../09-database/sensitive-data-and-access.md). → Kiểm: tag cột PII trong catalog + scan artifact xuất (vd Presidio) 0 PII; test môi trường staging chỉ chứa dữ liệu đã mask. · Nguồn: Luật 91/2025/QH15 + NĐ 356/2025/NĐ-CP (xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md))
 - [ ] `PRF-DATA-010` **MUST** Feature tính bằng **một** đường code cho cả train và serve (feature store hoặc module dùng chung) để tránh train/serve skew. → Kiểm: test so sánh giá trị feature offline vs online cho cùng khoá → bằng nhau trong sai số.
 - [ ] `PRF-DATA-011` **MUST** Backfill/xử lý lại an toàn: theo partition, có giới hạn phạm vi, có `--dry-run`, không khoá bảng production. → Kiểm: lệnh backfill có tham số phạm vi bắt buộc và dry-run in kế hoạch; test dry-run không ghi.
 - [ ] `PRF-DATA-012` **MUST** Notebook không phải code production: logic chuyển vào package có test; notebook commit không chứa output. → Kiểm: hook `nbstripout` trong pre-commit; coverage đo trên package, không trên notebook.
-- [ ] `PRF-DATA-013` **MUST** Mô hình/artifact tải về hoặc phát hành dùng định dạng an toàn (safetensors/ONNX), không `pickle` từ nguồn không tin; quét artifact trước khi nạp. → Kiểm: lint cấm `torch.load` không `weights_only=True`/`pickle.load` trên file ngoài; scanner model trong CI. · Nguồn: OWASP LLM03 Supply Chain (2025)
+- [ ] `PRF-DATA-013` **MUST** Mô hình/artifact tải về hoặc phát hành dùng định dạng an toàn (safetensors/ONNX), không `pickle` từ nguồn không tin; quét artifact trước khi nạp. → Kiểm: lint cấm `torch.load` không `weights_only=True`/`pickle.load` trên file ngoài; scanner model trong CI. · Nguồn: OWASP LLM 2026 LLM04 Supply Chain
 - [ ] `PRF-DATA-014` **SHOULD** DAG có retry + timeout từng task, cảnh báo SLA miss; không cron thủ công ngoài orchestrator. → Kiểm: mọi task khai `retries`, `timeout`; alert SLA cấu hình trong repo.
 - [ ] `PRF-DATA-015` **SHOULD** Chỉ số chất lượng dữ liệu (freshness, completeness, tỷ lệ fail validation) phát ra như metric và có SLO. → Kiểm: dashboard + SLO ở [`../15-operations/slo-and-alerting.md`](../15-operations/slo-and-alerting.md).
 - [ ] `PRF-DATA-016` **SHOULD** Chi phí mỗi lần chạy pipeline/huấn luyện (compute, GPU giờ, lưu trữ) được ghi và có ngân sách. → Kiểm: tag chi phí theo job; báo cáo tháng (phương pháp → [`../15-operations/cost-management.md`](../15-operations/cost-management.md)).
@@ -98,7 +98,7 @@ Phiên bản xác minh **2026-10-13** (PyPI/endoflife.date) — **xác minh lạ
 3. **Train/serve skew** vì feature viết lại bằng SQL ở serving — PRF-DATA-010.
 4. **Notebook là production** — không test, output chứa PII commit lên git (PRF-DATA-012).
 5. **`pickle`/`torch.load` artifact từ hub** — thực thi mã tuỳ ý; dùng safetensors (PRF-DATA-013).
-6. **Dữ liệu production copy nguyên sang dev** — vi phạm NĐ 13/2023; mask trước (PRF-DATA-009).
+6. **Dữ liệu production copy nguyên sang dev** — vi phạm Luật 91/2025/QH15 (xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md)); mask trước (PRF-DATA-009).
 7. **Chỉ đo accuracy lúc release** — không drift monitor; mô hình "mục" âm thầm (PRF-DATA-008).
 8. **Phiên bản `x.0.0`** (polars 2.0.0, dbt 2.0 rc) kéo vào production ngay — chờ bản vá, ghim lock.
 9. **Benchmark tự công bố** của vendor (vector DB, feature store) làm cơ sở chọn — đo trên dữ liệu của mình (luật 11 chống ảo giác).
@@ -108,7 +108,7 @@ Phiên bản xác minh **2026-10-13** (PyPI/endoflife.date) — **xác minh lạ
 
 - Phiên bản gói: <https://pypi.org/project/dbt-core/>, `apache-airflow`, `dagster`, `torch`, `mlflow`, `great-expectations`, `pandera`, `dvc`, `polars`, `scikit-learn`, `feast`, `evidently`, `fastapi`, `uv`, `ruff` (trang project + `/pypi/<pkg>/<ver>/json`) — xác minh 2026-10-13
 - Python/PostgreSQL: <https://endoflife.date/api/python.json>, <https://endoflife.date/api/postgresql.json> — xác minh 2026-10-13
-- OWASP Top 10 for LLM Applications 2025 (LLM03 Supply Chain, LLM04 Data & Model Poisoning): <https://genai.owasp.org/llm-top-10/> — xác minh 2026-10-13 qua `research/2026-10-13-ai-agent-research.md` §5.1
-- EU AI Act + Digital Omnibus (Annex III → 2027-12-02): `research/2026-10-13-ai-agent-research.md` §5.5 — xác minh 2026-10-13 (nguồn thứ cấp uy tín)
-- Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân — xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md) (số hiệu, hiệu lực, văn bản thay thế)
+- OWASP Top 10 for LLM Applications 2026 (LLM04 Supply Chain, LLM05 Data and Model Poisoning; bản 2025 là LLM03/LLM04 — bảng đổi mã ở [`../12-security/ai-security.md`](../12-security/ai-security.md)): <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> — xác minh 2026-10-14
+- EU AI Act + Digital Omnibus (EU) 2026/1744 (Annex III → 02/12/2027): mốc ở nhà [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md)
+- Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15 + NĐ 356/2025/NĐ-CP (hiệu lực 01/01/2026, thay NĐ 13/2023/NĐ-CP) — xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md) (số hiệu, hiệu lực, điều khoản)
 - Khung cũ X-stored PHẦN C7 (commit `1b80fe4`); `research/2026-10-13-stored-catalog-extraction.md` §2.13 (benchmark vendor không đáng tin), §3 (công cụ nên dùng/tránh).

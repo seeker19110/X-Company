@@ -4,7 +4,7 @@ kind: industry
 slug: fintech
 prefix: IND-FIN
 modules: [12-security/*, 16-compliance-privacy/*, 09-database/transactions-and-consistency, 09-database/sensitive-data-and-access, 09-database/backup-and-recovery, 08-backend/authn-authz, 08-backend/integrations-and-webhooks, 08-backend/background-jobs-and-queues, 08-backend/reliability-and-errors, 18-cross-cutting/units-time-and-money, 14-testing-quality/unit-and-logic-edge-cases, 14-testing-quality/integration-and-contract, 15-operations/incident-response, 15-operations/slo-and-alerting, 15-operations/backup-and-disaster-recovery]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Gói ngành: Tài chính · thanh toán · ví điện tử
@@ -132,7 +132,7 @@ R.15 cho VASP · GDPR 2016/679 · ISO 20022 · EMV 3DS 2.3.1.1.
 | Cổng chung | Tương đương fintech | Ngưỡng |
 |---|---|---|
 | Hiệu năng web CWV | p95 authorize ≤ 2 s; p99 ghi sổ ≤ 500 ms; webhook ack ≤ 1 s | Đo bằng k6 + trace |
-| Độ phủ test | 100% nhánh của module tiền/ledger/state machine; mutation score ≥ 80% ở module tiền | Stryker/mutmut |
+| Độ phủ test | 100% nhánh của module tiền/ledger/state machine; mutation score ≥ 80% ở module tiền (nâng từ 70% của [`QA-COV-005`](../14-testing-quality/coverage-and-mutation.md)) | Stryker/mutmut |
 | Bảo mật | ASVS 5.0 L2 (L3 cho ví/ngân hàng); PCI SAQ đúng loại; pentest độc lập hằng năm | Báo cáo scan + pentest |
 | Đúng dữ liệu | Đối soát T+1 = 0 break chưa xử lý quá 24 h; số dư dẫn xuất = Σ posting | Job + alert |
 | Phát hành | GO/NO-GO có mục pháp lý (KYC, hạn mức, hoá đơn, ĐGTĐ) ✅ | `blueprint-status --strict` |

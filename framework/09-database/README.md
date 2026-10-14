@@ -1,7 +1,7 @@
 ---
 title: Cơ sở dữ liệu
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 09 — Cơ sở dữ liệu
@@ -13,7 +13,7 @@ updated: 2026-10-13
 
 | File | Nội dung | Đọc khi nào |
 |---|---|---|
-| [`data-modeling.md`](data-modeling.md) | Chọn CSDL, PK `bigint identity`/UUIDv7, `timestamptz`, tiền số nguyên/`numeric`, ràng buộc ở CSDL, soft-delete có điều kiện, audit cột, JSONB có kiểm | G4 khi thiết kế schema; review mọi migration tạo bảng mới; brownfield khi audit schema |
+| [`data-modeling.md`](data-modeling.md) | Chọn CSDL, PK `bigint identity`/UUIDv7, `timestamptz`, tiền số nguyên (`numeric` chỉ khi có ADR), ràng buộc ở CSDL, soft-delete có điều kiện, audit cột, JSONB có kiểm | G4 khi thiết kế schema; review mọi migration tạo bảng mới; brownfield khi audit schema |
 | [`migrations.md`](migrations.md) | Migration có phiên bản, lũy đẳng, `lock_timeout`, `CONCURRENTLY`, `NOT VALID`, expand/contract, đường lùi, công cụ theo stack (Atlas, Flyway, Liquibase, Prisma, Drizzle, Alembic, golang-migrate, Supabase CLI) | G5 khi dựng pipeline migrate; mỗi PR đổi schema; trước deploy chạm dữ liệu |
 | [`indexing-and-query-performance.md`](indexing-and-query-performance.md) | `EXPLAIN (ANALYZE, BUFFERS)`, index composite/partial/covering, N+1, pool và PgBouncer, `pg_stat_statements`, vacuum, keyset | G6 cho endpoint lõi; khi p95 vượt SLO; trước kiểm tải |
 | [`transactions-and-consistency.md`](transactions-and-consistency.md) | Mức cô lập, retry `40001`, `FOR UPDATE`/`SKIP LOCKED`, advisory lock, UNIQUE cho idempotency, nhất quán cuối | Mọi luồng tiền/kho/hạn mức/hàng đợi; khi có bug "trùng"/"âm" |

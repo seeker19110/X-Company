@@ -3,7 +3,7 @@ title: Responsive, mobile-first, vùng chạm, bố cục
 kind: module
 prefix: UX-RESP
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Responsive, mobile-first, vùng chạm, bố cục
@@ -38,8 +38,8 @@ updated: 2026-10-13
 
 - [ ] `UX-RESP-001` **MUST** Không cuộn ngang ở bề rộng 320 CSS px trên mọi trang/màn hình; không mất nội dung/chức năng. → Kiểm: Playwright viewport 320×800 cho mỗi route trong sitemap: `scrollWidth <= clientWidth`. · Nguồn: WCAG 2.2 SC 1.4.10
 - [ ] `UX-RESP-002` **MUST** Thẻ viewport `width=device-width, initial-scale=1` và không `user-scalable=no`/`maximum-scale<2`. → Kiểm: grep meta viewport trong layout; axe rule `meta-viewport`. · Nguồn: WCAG 2.2 SC 1.4.4
-- [ ] `UX-RESP-003` **MUST** Phần tử tương tác web có vùng chạm ≥ 24×24 CSS px (trừ ngoại lệ spacing/inline); hành động chính ≥ 44×44 px. → Kiểm: axe rule `target-size`; script đo `getBoundingClientRect` cho `button, a, [role=button]` trên viewport mobile. · Nguồn: WCAG 2.2 SC 2.5.8; Apple HIG Buttons (44 pt)
-- [ ] `UX-RESP-004` **MUST** Mobile native: vùng chạm ≥ 44×44 pt (iOS) / 48×48 dp (Android), khoảng cách giữa các mục tiêu đủ để không bấm nhầm. → Kiểm: Xcode Accessibility Inspector / Android Accessibility Scanner 0 cảnh báo touch target. · Nguồn: Apple HIG Buttons; Android Accessibility
+- [ ] `UX-RESP-003` **MUST** Bố cục mobile: hành động chính ≥ 44×44 CSS px (web) và khoảng cách giữa các mục tiêu chạm đủ để không bấm nhầm. Ngưỡng tối thiểu vùng chạm mọi phần tử (web 24×24 CSS px; native 44 pt / 48 dp): xem [`UX-A11Y-006`](accessibility.md). → Kiểm: script đo `getBoundingClientRect` cho hành động chính trên viewport mobile ≥ 44×44; E2E không có hai mục tiêu chồng vùng chạm. · Nguồn: WCAG 2.2 SC 2.5.5 (AAA); Apple HIG Buttons (44 pt)
+- [ ] `UX-RESP-004` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`UX-A11Y-006`](accessibility.md): vùng chạm native ≥ 44×44 pt (iOS) / 48×48 dp (Android); khoảng cách mục tiêu ở `UX-RESP-003`.
 - [ ] `UX-RESP-005` **MUST** Chức năng không phụ thuộc hover: mọi menu/tooltip/hành động mở được bằng chạm hoặc focus. → Kiểm: E2E project mobile (touch) mở được mọi menu; CSS hover chỉ bọc trong `@media (hover: hover)`. · Nguồn: MDN `@media (hover)`; WCAG 2.2 SC 1.4.13
 - [ ] `UX-RESP-006` **MUST** Header/footer/nút cố định tôn trọng safe area: `padding` cộng `env(safe-area-inset-*)`, viewport `viewport-fit=cover` khi tràn cạnh. → Kiểm: Playwright thiết bị iPhone (có home indicator) chụp ảnh; nút dưới cùng không bị che; grep `safe-area-inset` trong CSS phần tử `position: fixed|sticky`. · Nguồn: MDN `env()`
 - [ ] `UX-RESP-007` **MUST** Bàn phím ảo không che ô đang nhập và nút gửi; trang cuộn tới ô focus. → Kiểm: E2E mobile: focus ô cuối form → `scrollIntoViewIfNeeded` → ô và nút Gửi nằm trong viewport (tính `visualViewport.height`). · Nguồn: MDN `env(keyboard-inset-*)` / VirtualKeyboard API

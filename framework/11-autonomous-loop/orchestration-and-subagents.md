@@ -3,7 +3,7 @@ title: Điều phối: subagent, worktree, song song, không lồng
 kind: module
 prefix: LOOP-ORCH
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Điều phối: subagent, worktree, song song, không lồng
@@ -11,6 +11,10 @@ updated: 2026-10-13
 > Phiên chính là **người điều phối duy nhất**: chia task, giao cho subagent chuyên biệt (`researcher`, `executor`,
 > `reviewer`), gom kết quả có bằng chứng, giữ ngân sách. Module này quy định khi nào tách subagent, cách giao
 > việc an toàn, cách chạy song song không giẫm file, và vì sao subagent không được lồng subagent.
+>
+> **Phạm vi:** áp cho **vòng lặp phát triển** — coding agent (Claude Code, Codex…) làm việc trên repo: subagent không
+> lồng (độ sâu 1). Hệ đa agent là **sản phẩm** (agentic system chạy cho người dùng cuối) theo
+> [`../13-ai-engineering/agentic-systems.md`](../13-ai-engineering/agentic-systems.md) `AI-AGENTIC-007`: khuyến nghị độ sâu 2, trần 3.
 
 ## Nguyên tắc
 
@@ -58,7 +62,7 @@ lệnh + exit code · còn treo). Thiếu `acceptance_criteria` → không giao.
 
 ## Checklist
 
-- [ ] `LOOP-ORCH-001` **MUST** Chỉ phiên chính điều phối; subagent không gọi subagent. → Kiểm: `.claude/agents/*.md` không có `Agent` trong `tools:` **hoặc** môi trường đặt `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`. · Nguồn: stored 23 §4.4; Claude Code env-vars
+- [ ] `LOOP-ORCH-001` **MUST** Chỉ phiên chính điều phối; subagent không gọi subagent (vòng lặp phát triển; sản phẩm agentic theo [`AI-AGENTIC-007`](../13-ai-engineering/agentic-systems.md)). → Kiểm: `.claude/agents/*.md` không có `Agent` trong `tools:` **hoặc** môi trường đặt `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`. · Nguồn: stored 23 §4.4; Claude Code env-vars
 - [ ] `LOOP-ORCH-002` **MUST** Mỗi lần giao việc có gói handoff tối thiểu: mục tiêu, tiêu chí chấp nhận là lệnh máy, file trong phạm vi, ngân sách, phạm vi quyền ⊆ phiên chính. → Kiểm: prompt giao việc chứa đủ 5 trường; thiếu Gate → từ chối giao. · Nguồn: `research/2026-10-13-ai-agent-research.md` §2.3
 - [ ] `LOOP-ORCH-003` **MUST** Subagent không được cấp quyền/tool rộng hơn phiên chính và không tự nâng mức tin cậy T0–T4 của hành động. → Kiểm: `tools:` của agent là tập con; hành động T3–T4 trong output subagent bị phiên chính đưa về điểm dừng (`xs.py loop block`). · Nguồn: [`stop-points-and-escalation.md`](stop-points-and-escalation.md)
 - [ ] `LOOP-ORCH-004` **MUST** Kết quả "xanh" do subagent khai chỉ được tick task sau khi phiên chính chạy lại Gate bằng `xs.py loop record`. → Kiểm: `.autopilot/evidence/T-xxx.json` tồn tại cho task đã tick; `loop status` không trả `verify`.

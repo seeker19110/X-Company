@@ -3,14 +3,14 @@ title: Dữ liệu nhạy cảm: mã hoá, RLS, quyền tối thiểu, mặt n�
 kind: module
 prefix: DB-SEC
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Dữ liệu nhạy cảm: mã hoá, RLS, quyền tối thiểu, mặt nạ, xoá
 
 > **Kiểm soát kỹ thuật ở tầng CSDL** cho dữ liệu nhạy cảm: phân loại cột, tài khoản tối thiểu theo dịch vụ, TLS bắt
 > buộc, Row-Level Security cho đa tenant, mã hoá cột có quản lý khoá, mặt nạ cho môi trường không phải production,
-> xoá/ẩn danh theo yêu cầu, audit truy cập. Nghĩa vụ pháp lý (NĐ 13/2023, GDPR, quyền chủ thể) là của
+> xoá/ẩn danh theo yêu cầu, audit truy cập. Nghĩa vụ pháp lý (Luật 91/2025/QH15 + NĐ 356/2025/NĐ-CP, GDPR, quyền chủ thể) là của
 > [`../16-compliance-privacy/`](../16-compliance-privacy/README.md); bí mật kết nối là của
 > [`../12-security/secrets-management.md`](../12-security/secrets-management.md); log sự kiện bảo mật ở
 > [`../12-security/logging-audit-and-incident.md`](../12-security/logging-audit-and-incident.md).
@@ -105,5 +105,5 @@ updated: 2026-10-13
 - OWASP ASVS 5.0 V14 Data Protection (14.1.1 phân loại L2; 14.1.2 bảo vệ at rest L2; 14.2.2 cache; 14.2.4; 14.2.7 lưu giữ/xoá L3): <https://github.com/OWASP/ASVS/blob/master/5.0/en/0x23-V14-Data-Protection.md> — xác minh 2026-10-13.
 - CIS Benchmarks PostgreSQL (18 v1.0.0, 17 v1.1.0, 16 v1.1.0): <https://www.cisecurity.org/benchmark/postgresql> — xác minh 2026-10-13.
 - PgBouncer transaction mode và `SET` rò giữa client: <https://www.pgbouncer.org/config.html> — xác minh 2026-10-13.
-- Pháp lý: NĐ 13/2023/NĐ-CP, quyền chủ thể, DPIA — xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md) (số hiệu, hiệu lực và văn bản sửa đổi xác minh ở đó); `research/2026-10-13-stored-catalog-extraction.md` (NĐ 217/2026, 207/2026, 70/2025 ghi theo docs nội bộ, **chưa xác minh**).
-- Catalog `seeker19110/stored` 13 §6b (thiếu xoá dữ liệu cá nhân/GDPR/NĐ13 trong ảnh CRM), 23 §4.1 (`validateAuth()` + user_id từ token chống IDOR) — đọc 2026-10-13.
+- Pháp lý: Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15 + NĐ 356/2025/NĐ-CP (hiệu lực 01/01/2026), quyền chủ thể, DPIA — xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md) (số hiệu, hiệu lực và văn bản sửa đổi xác minh ở đó); `research/2026-10-13-stored-catalog-extraction.md` (NĐ 217/2026, 207/2026, 70/2025 ghi theo docs nội bộ, **chưa xác minh**).
+- Catalog `seeker19110/stored` 13 §6b (thiếu xoá dữ liệu cá nhân/GDPR/nghị định dữ liệu cá nhân VN cũ trong ảnh CRM), 23 §4.1 (`validateAuth()` + user_id từ token chống IDOR) — đọc 2026-10-13.

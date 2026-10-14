@@ -3,7 +3,7 @@ title: License mã nguồn mở, IP, dữ liệu huấn luyện, thương hiệu
 kind: module
 prefix: CMP-LIC
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # License mã nguồn mở, IP, dữ liệu huấn luyện, thương hiệu, điều khoản dịch vụ
@@ -48,7 +48,7 @@ updated: 2026-10-13
 
 - [ ] `CMP-LIC-001` **MUST** Sản phẩm có file `LICENSE` (mở nguồn: license OSI; nội bộ: ghi "proprietary" + chủ sở hữu) và `NOTICE`/`THIRD_PARTY_NOTICES` sinh tự động từ SBOM cho phụ thuộc yêu cầu ghi công. → Kiểm: file tồn tại; CI sinh NOTICE và diff = 0. · Nguồn: Apache-2.0 §4(d); MIT; BSD-3-Clause; Luật SHTT 50/2005/QH11 (sửa đổi 2022, 2025)
 - [ ] `CMP-LIC-002` **MUST** Chính sách license phụ thuộc dạng file (`license-policy.yaml`: allow/deny/review theo SPDX id; ngoại lệ có `package, reason, approved_by, expires`); cổng CI chặn license cấm hoặc không xác định. → Kiểm: job CI chạy license check trên lockfile/SBOM; PR thêm gói AGPL/unknown bị chặn; ngoại lệ hết hạn → fail. · Nguồn: SPDX License List 3.29.0 (16/09/2026); OSI Approved Licenses; `research/…catalog-extraction.md` §2.6
-- [ ] `CMP-LIC-003` **MUST** SBOM (CycloneDX hoặc SPDX) sinh mỗi build cho mọi thành phần (code, container, model) với trường license; lưu cùng artifact phát hành. → Kiểm: artifact có `sbom.cdx.json`/`.spdx.json`; license không null ≥ 99%; xem [`../12-security/supply-chain.md`](../12-security/supply-chain.md). · Nguồn: NTIA Minimum Elements for SBOM; CycloneDX 1.6; SPDX 3.0
+- [ ] `CMP-LIC-003` **MUST** SBOM (CycloneDX hoặc SPDX) sinh mỗi build cho mọi thành phần (code, container, model) với trường license; lưu cùng artifact phát hành. → Kiểm: artifact có `sbom.cdx.json`/`.spdx.json`; license không null ≥ 99%; xem [`../12-security/supply-chain.md`](../12-security/supply-chain.md). · Nguồn: NTIA Minimum Elements for SBOM; CycloneDX 1.7 (ECMA-424); SPDX 3.0 (phiên bản theo nhà [`../12-security/supply-chain.md`](../12-security/supply-chain.md))
 - [ ] `CMP-LIC-004` **MUST** Không dùng gói/model/dataset/asset không có license rõ ràng; "source-available" (BSL, SSPL, ELv2, Commons Clause) được phân loại riêng và chỉ dùng với quyết định có ghi. → Kiểm: SBOM không có `NOASSERTION`/`UNKNOWN` ngoài danh sách ngoại lệ; ADR cho mỗi thành phần source-available. · Nguồn: OSI Open Source Definition; Elastic License 2.0; SSPL
 - [ ] `CMP-LIC-005` **MUST** Model AI dùng trong sản phẩm có license trọng số cho phép mục đích thương mại và điều kiện (quy mô người dùng, ghi công, use policy) được ghi trong `docs/ai/<tên>.md`; dataset huấn luyện/fine-tune có license + nguồn gốc. → Kiểm: system card có mục License với SPDX/URL; CI kiểm trường không rỗng. · Nguồn: EU AI Act Art. 53(1)(c)–(d); Luật SHTT sửa đổi 131/2025/QH15 (TDM cho AI, hiệu lực 01/04/2026)
 - [ ] `CMP-LIC-006` **MUST** Dữ liệu thu thập để huấn luyện tôn trọng điều khoản nguồn, robots.txt/TDM opt-out (EU) và không chứa dữ liệu cá nhân trái mục đích; nguồn gốc (provenance) ghi theo dataset. → Kiểm: crawler log tuân thủ robots; `datasets/<tên>/PROVENANCE.md`; quét PII. · Nguồn: Directive (EU) 2019/790 Art. 4; EU AI Act Art. 53(1)(c); Luật 91/2025/QH15 Đ.30

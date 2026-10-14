@@ -3,14 +3,15 @@ title: Bảo mật phía client: XSS, CSP, token, storage, dependency
 kind: module
 prefix: FE-SEC
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Bảo mật phía client: XSS, CSP, token, storage, dependency
 
 > Trình duyệt là môi trường thù địch: mọi thứ trong bundle là công khai, mọi DOM sink là cửa XSS. Module này là phần
-> **client** của bảo mật web: escape/sanitize, CSP strict cho script, Trusted Types, nơi giữ token, bí mật không vào bundle,
-> SRI, clickjacking. Toàn bộ header bảo mật và lớp lỗ hổng server → [`../12-security/appsec-web.md`](../12-security/appsec-web.md);
+> **client** của bảo mật web và là **nhà của CSP strict cho script và Trusted Types**: escape/sanitize, CSP, Trusted Types, nơi giữ
+> token, SRI, clickjacking. CSRF, các header bảo mật khác, injection và lớp lỗ hổng server → [`../12-security/appsec-web.md`](../12-security/appsec-web.md);
+> phân loại biến môi trường công khai/bí mật → [`../01-baseline/configuration-and-secrets.md`](../01-baseline/configuration-and-secrets.md);
 > phiên/token/cookie → [`../08-backend/authn-authz.md`](../08-backend/authn-authz.md); chuỗi cung ứng → [`../12-security/supply-chain.md`](../12-security/supply-chain.md).
 
 ## Nguyên tắc
@@ -43,7 +44,7 @@ updated: 2026-10-13
 - [ ] `FE-SEC-003` **MUST** CSP cho script là strict: nonce (per-response, không do middleware gắn tự động vào mọi `<script>`) hoặc hash + `'strict-dynamic'`; `object-src 'none'`; `base-uri 'none'`; không `'unsafe-inline'`/`'unsafe-eval'` cho `script-src`; `frame-ancestors` đặt. → Kiểm: `curl -I` có header; E2E Playwright không có lỗi console `Refused to execute`; test cấu hình parse header và assert các directive. · Nguồn: OWASP CSP Cheat Sheet
 - [ ] `FE-SEC-004` **MUST** CSP có `report-to` (và `report-uri` để tương thích) tới endpoint thu vi phạm; triển khai `Content-Security-Policy-Report-Only` ở staging ≥ 1 chu kỳ trước khi enforce. → Kiểm: endpoint nhận báo cáo có trong observability; changelog ghi ngày chuyển enforce. · Nguồn: OWASP CSP Cheat Sheet
 - [ ] `FE-SEC-005` **MUST** Token phiên/refresh không lưu trong localStorage/sessionStorage/IndexedDB/cookie đọc được bằng JS. → Kiểm: E2E sau đăng nhập: `Object.keys(localStorage)` và `document.cookie` không chứa token (regex JWT `^eyJ`); cookie phiên có `HttpOnly; Secure; SameSite`. · Nguồn: OWASP HTML5 Security Cheat Sheet; [`../08-backend/authn-authz.md`](../08-backend/authn-authz.md)
-- [ ] `FE-SEC-006` **MUST** Chỉ biến môi trường có tiền tố công khai (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`, `EXPO_PUBLIC_`) vào bundle, và chúng không chứa bí mật; biến bí mật không có tiền tố này. → Kiểm: schema env tách `client`/`server` (vd `@t3-oss/env-nextjs` 0.13.11) fail build khi lệch; quét `dist/`/`.next/static` bằng gitleaks/pattern (`sk_live|AKIA|-----BEGIN`) = 0. · Nguồn: Next.js env docs; Vite env docs
+- [ ] `FE-SEC-006` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-008`](../01-baseline/configuration-and-secrets.md): chỉ biến có tiền tố công khai (`NEXT_PUBLIC_`/`VITE_`/`PUBLIC_`/`EXPO_PUBLIC_`) vào bundle và không chứa bí mật; schema env tách client/server, quét bundle.
 - [ ] `FE-SEC-007` **MUST** Source map production không phục vụ công khai (`productionBrowserSourceMaps: false` mặc định Next; Vite `build.sourcemap: 'hidden'` nếu cần upload cho error tracker rồi xoá khỏi artifact public). → Kiểm: `curl -I <asset>.js.map` → 404 trên production; CI upload map cho Sentry rồi `rm`. · Nguồn: Next.js `productionBrowserSourceMaps`; Vite build options
 - [ ] `FE-SEC-008` **MUST** Script/stylesheet từ CDN bên thứ ba có URL ghim phiên bản + `integrity` (sha384/sha512) + `crossorigin="anonymous"`; ưu tiên self-host. → Kiểm: script quét HTML build: mọi `<script src="https://…">` ngoài origin có `integrity`; E2E không lỗi SRI. · Nguồn: MDN Subresource Integrity
 - [ ] `FE-SEC-009` **MUST** Chống clickjacking: `frame-ancestors` trong CSP (+ `X-Frame-Options: DENY` fallback); trang hành động nhạy cảm không nhúng được. → Kiểm: test tải trang trong iframe origin khác → bị chặn; header có mặt. · Nguồn: OWASP Clickjacking Defense Cheat Sheet
@@ -53,11 +54,11 @@ updated: 2026-10-13
 - [ ] `FE-SEC-013` **SHOULD** Nội dung AI/Markdown render thành element (không qua HTML string) hoặc qua DOMPurify với allowlist hẹp; link ngoài hiện domain, `rel="noopener noreferrer"`, mở tab mới có cảnh báo khi domain lạ. → Kiểm: test fixture output độc; E2E link ngoài có domain hiển thị. · Nguồn: [`../06-design-ux/ai-ux.md`](../06-design-ux/ai-ux.md)
 - [ ] `FE-SEC-014` **SHOULD** Không gửi PII/token cho analytics, error tracker, RUM; scrub trước khi gửi (`beforeSend`). → Kiểm: test `beforeSend` loại `email|phone|token`; review payload mẫu. · Nguồn: [`../16-compliance-privacy/privacy-by-design.md`](../16-compliance-privacy/privacy-by-design.md)
 - [ ] `FE-SEC-015` **SHOULD** Dữ liệu nhạy cảm không vào URL (query/hash), không vào `console`, không vào `window.name`/`localStorage` log. → Kiểm: grep `console.log` ở production build = 0 (minifier `drop_console` hoặc lint); E2E URL sau luồng chính không chứa `token|otp|password`.
-- [ ] `FE-SEC-016` **SHOULD** CSRF cho form/fetch mutation: cookie `SameSite` + token/`Origin` check phía server; fetch gửi `credentials: 'same-origin'` mặc định. → Kiểm: xem [`../12-security/appsec-web.md`](../12-security/appsec-web.md); E2E request mutation không kèm token CSRF → 403.
+- [ ] `FE-SEC-016` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-WEB-007`](../12-security/appsec-web.md): chống CSRF cho request đổi trạng thái dùng cookie (`SameSite` + token hoặc kiểm `Origin`/`Sec-Fetch-Site` phía server).
 - [ ] `FE-SEC-017` **SHOULD** Mobile/desktop shell (WebView/Electron/Tauri): tắt `nodeIntegration`, bật `contextIsolation`/sandbox; WebView chỉ tải origin allowlist; deep link validate. → Kiểm: cấu hình shell có các cờ; test deep link lạ bị từ chối. · Nguồn: hồ sơ desktop/mobile tương ứng
 - [ ] `FE-SEC-018` **SHOULD** Header phụ trợ phía client do server đặt và kiểm: `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` tắt API không dùng, `X-Content-Type-Options: nosniff` (danh sách đầy đủ ở appsec-web). → Kiểm: test header trong CI smoke.
 - [ ] `FE-SEC-019` **MAY** Quét CSP bằng công cụ đánh giá (CSP Evaluator) trong CI; ghi điểm. → Kiểm: báo cáo không "High severity".
-- [ ] `FE-SEC-020` **MAY** Tách tài nguyên người dùng tải lên sang origin riêng (sandbox domain) để tránh XSS qua file. → Kiểm: URL file tải lên không cùng origin app (xem [`../08-backend/files-and-media.md`](../08-backend/files-and-media.md)).
+- [ ] `FE-SEC-020` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-WEB-021`](../12-security/appsec-web.md): HTML/SVG người dùng tải lên phục vụ từ origin riêng (sandbox domain) hoặc `Content-Disposition: attachment`.
 
 ## Bẫy thường gặp
 

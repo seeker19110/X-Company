@@ -3,7 +3,7 @@ title: UX cho tính năng AI: minh bạch, streaming, xác nhận, sửa sai
 kind: module
 prefix: UX-AI
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo, ai-agent, agentic-system, data-ml]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # UX cho tính năng AI: minh bạch, streaming, xác nhận, sửa sai
@@ -18,7 +18,7 @@ updated: 2026-10-13
 ## Nguyên tắc
 
 1. **Không giả vờ là người.** Người dùng biết mình đang tương tác với AI ngay lần đầu; nội dung AI tạo được gắn nhãn
-   (EU AI Act Art. 50, áp dụng từ 02/08/2026; P11).
+   (EU AI Act Art. 50 — mốc áp dụng ở [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md); P11).
 2. **Đặt kỳ vọng đúng** (HAX G1–G2): nói hệ thống làm được gì, tốt đến đâu, không hứa "luôn đúng".
 3. **Thấy được tiến trình:** streaming từng phần, trạng thái `submitted → streaming → ready | error`, nút Dừng luôn có.
 4. **Người dùng cầm lái** (HAX G7–G9, G17): gọi/tắt dễ, sửa kết quả tại chỗ, hoàn tác, quy về chế độ không AI.
@@ -88,7 +88,7 @@ updated: 2026-10-13
 
 ## Nguồn
 
-- EU AI Act — Regulation (EU) 2024/1689 Article 50 (minh bạch: chatbot phải cho biết là AI; nội dung tổng hợp đánh dấu máy đọc được; deepfake gắn nhãn; thông tin rõ ràng tại lần tương tác đầu; áp dụng từ 02/08/2026): <https://artificialintelligenceact.eu/article/50/> — xác minh 2026-10-13 (nguồn thứ cấp uy tín; bản eur-lex <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> **không truy cập được nội dung ngày 2026-10-13**). Digital Omnibus Reg. (EU) 2026/1744 — ân hạn Art. 50(2) tới 02/12/2026 cho hệ thống đã lên thị trường trước 02/08/2026: theo `research/2026-10-13-ai-agent-research.md` §4 (nguồn thứ cấp); kiểm bản gốc trước khi áp dụng.
+- EU AI Act — Regulation (EU) 2024/1689 Article 50 (minh bạch: chatbot phải cho biết là AI; nội dung tổng hợp đánh dấu máy đọc được; deepfake gắn nhãn; thông tin rõ ràng tại lần tương tác đầu; áp dụng từ 02/08/2026): <https://artificialintelligenceact.eu/article/50/> — xác minh 2026-10-13 (nguồn thứ cấp uy tín; bản eur-lex <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> **không truy cập được nội dung ngày 2026-10-13**). Mốc áp dụng (Art. 50 từ 02/08/2026; đánh dấu Art. 50(2) cho hệ đã lưu hành trước mốc tới 02/12/2026 theo Omnibus 2026/1744): nhà là [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md).
 - Microsoft HAX Toolkit — 18 Guidelines for Human-AI Interaction (CHI 2019; G1 Make clear what the system can do … G18 Notify users about changes): <https://www.microsoft.com/en-us/haxtoolkit/library/> — xác minh 2026-10-13.
 - Vercel AI SDK — `useChat` (status `submitted/streaming/ready/error`, `stop()`, `regenerate()`, message parts): <https://ai-sdk.dev/docs/ai-sdk-ui/chatbot> — xác minh 2026-10-13; phiên bản `ai` 7.0.138 (npm, 2026-10-13).
 - AG-UI protocol (sự kiện agent↔UI; `@ag-ui/core` 1.0.2 npm 2026-10-13): <https://docs.ag-ui.com> — theo `research/2026-10-13-ai-agent-research.md` §2.3 (release `release/2026-10-12`; "1.0 spec ổn định" **chưa xác minh trên docs**).

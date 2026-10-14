@@ -1,7 +1,7 @@
 ---
 title: Workflow phát triển
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 10 — Workflow phát triển
@@ -17,7 +17,7 @@ updated: 2026-10-13
 | [`code-review.md`](code-review.md) | Checklist review, AI reviewer khác model (claim), SLA 24h leo thang, vùng nhạy cảm luôn người, fast-lane 5 điều kiện fail-closed | Trước khi bật AI review/auto-merge; khi review nghẽn |
 | [`ci-cd-pipeline.md`](ci-cd-pipeline.md) | Job `quality` gom làm required check duy nhất, cache theo lockfile, `permissions` tối thiểu, ghim SHA, chống script injection, environment gate cho CD | G5 viết `ci.yml`; audit vệ sinh workflow; khi CI chậm > 10 phút |
 | [`release-and-versioning.md`](release-and-versioning.md) | release-please/changesets, SemVer, Keep a Changelog, tag ký bất biến, artefact một lần, rollback đã diễn tập | Trước release đầu tiên; khi đổi cách phát hành; monorepo nhiều package |
-| [`environments-and-config.md`](environments-and-config.md) | dev/preview/staging/prod, 12-factor config, schema env fail-fast, tiền tố public, secrets theo môi trường, feature flag, parity | G5; khi thêm môi trường/flag; khi lộ key qua bundle |
+| [`environments-and-config.md`](environments-and-config.md) | dev/preview/staging/prod, parity, preview env, feature flag, gate deploy prod (cấu hình → `01-baseline/configuration-and-secrets`, bí mật → `12-security/secrets-management`) | G5; khi thêm môi trường/flag; khi lộ key qua bundle |
 | [`spec-driven-development.md`](spec-driven-development.md) | Spec approved mới code, AC có ID ↔ test viết từ spec, spec hở thì dừng, version spec, tiêu chí dừng cho agent | G3 trước mỗi tính năng; khi chạy agent/autopilot; bug sửa lần 3 |
 | [`documentation-workflow.md`](documentation-workflow.md) | Docs-as-code, link check, docs-consistency, PROGRESS SHA tổ tiên HEAD, ADR không sửa, reference sinh từ nguồn, runbook có diễn tập | G5 (CI docs); mỗi khi đổi tên file/API; bàn giao phiên |
 | [`team-and-wip.md`](team-and-wip.md) | WIP cap 3 bằng máy, FIFO, DoR/DoD có bằng chứng, bàn giao qua PROGRESS, onboarding ≤ 1 ngày, 1 người vs đội, người + agent | Bắt đầu dự án/thêm người; khi nhiều việc dở; khi bot lấp hàng đợi |

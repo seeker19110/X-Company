@@ -3,7 +3,7 @@ title: Quản lý bí mật: lưu, xoay, quét, phạm vi
 kind: module
 prefix: SEC-SECRET
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Quản lý bí mật: lưu, xoay, quét, phạm vi
@@ -38,7 +38,7 @@ updated: 2026-10-13
 
 - [ ] `SEC-SECRET-001` **MUST** Không có bí mật trong repo, kể cả lịch sử: quét toàn bộ lịch sử git bằng gitleaks ở CI; phát hiện = đỏ. → Kiểm: job `gitleaks detect --source . --log-opts="--all" --redact --exit-code 1` với `fetch-depth: 0`; báo cáo = 0 finding (false positive ghi `.gitleaksignore` có lý do). · Nguồn: OWASP Secrets Mgmt CS §Detection; Top 10:2025 A02
 - [ ] `SEC-SECRET-002` **MUST** Hook pre-commit chặn commit chứa bí mật (gitleaks protect) — và CI chạy lại vì hook có thể bị `--no-verify`. → Kiểm: `.pre-commit-config.yaml`/husky có gitleaks; test cố commit chuỗi `AKIA…` giả → bị chặn. · Nguồn: OWASP Secrets Mgmt CS §Detection
-- [ ] `SEC-SECRET-003` **MUST** `.env*` (trừ `.env.example`) nằm trong `.gitignore`; `.env.example` chỉ có tên biến + mô tả, không giá trị thật. → Kiểm: `git ls-files | grep -E '^\.env'` chỉ trả `.env.example`; grep giá trị dạng khoá trong `.env.example` = 0. · Nguồn: catalog stored 07/12 (key chỉ ghi file đã gitignore)
+- [ ] `SEC-SECRET-003` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-003`](../01-baseline/configuration-and-secrets.md): `.env*` trong `.gitignore`, `.env.example` liệt kê mọi biến với giá trị giả.
 - [ ] `SEC-SECRET-004` **MUST** Ứng dụng từ chối khởi động khi thiếu bí mật bắt buộc (fail-closed), không dùng giá trị mặc định rỗng/"changeme". → Kiểm: test khởi động không có biến → exit ≠ 0 với thông báo tên biến; grep default `SECRET_KEY = "..."` = 0. · Nguồn: P7; catalog stored 23 §8.1 (ai-gateway fail-open)
 - [ ] `SEC-SECRET-005` **MUST** Production lấy bí mật từ kho tập trung (managed secrets/vault) lúc chạy, không từ file trong image hay biến hard-code trong IaC. → Kiểm: `docker history`/`dive` image không có bí mật; IaC không có giá trị thật (checkov `CKV_SECRET_*` = 0); cấu hình runtime trỏ ARN/đường dẫn vault. · Nguồn: OWASP Secrets Mgmt CS §Centralization; NIST SSDF PS.1
 - [ ] `SEC-SECRET-006` **MUST** Mỗi dịch vụ × môi trường có credential riêng, quyền tối thiểu; không dùng chung một khoá admin cho mọi thứ. → Kiểm: danh sách credential trong `docs/security/secrets-inventory.md` (tên, chủ, phạm vi, ngày xoay, TTL) khớp kho; không có khoá "shared". · Nguồn: OWASP Secrets Mgmt CS §Least privilege; ASVS 5.0 V13

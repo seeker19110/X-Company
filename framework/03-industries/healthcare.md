@@ -4,7 +4,7 @@ kind: industry
 slug: healthcare
 prefix: IND-HEALTH
 modules: [12-security/*, 16-compliance-privacy/*, 09-database/sensitive-data-and-access, 09-database/backup-and-recovery, 09-database/transactions-and-consistency, 08-backend/authn-authz, 08-backend/files-and-media, 08-backend/integrations-and-webhooks, 08-backend/reliability-and-errors, 06-design-ux/accessibility, 06-design-ux/ui-states-and-feedback, 14-testing-quality/unit-and-logic-edge-cases, 14-testing-quality/integration-and-contract, 15-operations/backup-and-disaster-recovery, 15-operations/incident-response, 18-cross-cutting/units-time-and-money, 13-ai-engineering/guardrails-and-safety]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Gói ngành: Y tế · sức khoẻ · dữ liệu bệnh nhân
@@ -124,7 +124,7 @@ DICOM, ICD-10/11, LOINC, SNOMED CT.
 | Cổng chung | Tương đương y tế | Ngưỡng |
 |---|---|---|
 | CWV/hiệu năng | Màn hình kê đơn/khám tải ≤ 2 s p95 trên mạng bệnh viện; API tra cứu bệnh nhân ≤ 300 ms p95 | k6 + RUM |
-| Độ phủ test | 100% nhánh của tính liều, ghép bệnh nhân, phân quyền; test ca biên có bảng | coverage + mutation ≥ 80% |
+| Độ phủ test | 100% nhánh của tính liều, ghép bệnh nhân, phân quyền; test ca biên có bảng | coverage + mutation ≥ 80% (nâng từ 70% của [`QA-COV-005`](../14-testing-quality/coverage-and-mutation.md)) |
 | Bảo mật | ASVS 5.0 L2+; pentest hằng năm; 0 PHI trong log | scan + pentest |
 | Đúng dữ liệu | 0 lỗi schema khi gửi BHYT; đối chiếu lượt gửi = nhận | job + alert |
 | Sẵn sàng | Diễn tập khôi phục ≤ 6 tháng; RTO đạt công bố | biên bản |

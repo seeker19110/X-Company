@@ -3,7 +3,7 @@ title: Design system, token, typography, spacing, theme sáng/tối
 kind: module
 prefix: UX-DS
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Design system, token, typography, spacing, theme sáng/tối
@@ -93,7 +93,7 @@ Ngưỡng và cách chứng minh a11y → [`accessibility.md`](accessibility.md)
 ## Nguồn
 
 - W3C Design Tokens Community Group — Design Tokens Specification 2025.10 (final, 28/10/2025): <https://www.designtokens.org/tr/2025.10/> và <https://www.w3.org/community/reports/design-tokens/CG-FINAL-format-20251028/> — xác minh 2026-10-13.
-- WCAG 2.2 (W3C Recommendation 12/12/2024) SC 1.4.1, 1.4.3, 1.4.11, 2.4.7: <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
+- WCAG 2.2 (W3C Recommendation 05/10/2023, bản cập nhật 12/12/2024) SC 1.4.1, 1.4.3, 1.4.11, 2.4.7: <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
 - MDN `prefers-color-scheme` (giá trị, `color-scheme` cho embedded content): <https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme> — xác minh 2026-10-13.
 - MDN `unicode-range` (subset font theo dải ký tự): <https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/unicode-range> — xác minh 2026-10-13.
 - Tailwind CSS v4.3 — `@theme` vs `@theme inline`: <https://tailwindcss.com/docs/theme> — xác minh 2026-10-13.

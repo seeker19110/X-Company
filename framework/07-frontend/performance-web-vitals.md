@@ -3,7 +3,7 @@ title: Hiệu năng: Core Web Vitals, bundle, ảnh, font, ngân sách
 kind: module
 prefix: FE-PERF
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hiệu năng: Core Web Vitals, bundle, ảnh, font, ngân sách
@@ -37,7 +37,7 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `FE-PERF-001` **MUST** Core Web Vitals field đạt "tốt" ở p75: LCP ≤ 2 500 ms, INP ≤ 200 ms, CLS ≤ 0,1, tách mobile và desktop, trên trang chính. → Kiểm: dashboard RUM p75 theo 28 ngày (hoặc CrUX nếu đủ lưu lượng) cho ≥ 3 URL chính. · Nguồn: web.dev Web Vitals
-- [ ] `FE-PERF-002` **MUST** Lighthouse mobile trên PR: Performance ≥ 0,9; audit `largest-contentful-paint` ≤ 2 500 ms, `cumulative-layout-shift` ≤ 0,1, `total-blocking-time` theo ngưỡng dự án (lab proxy cho INP); 3 lần chạy, lấy median. → Kiểm: `lighthouserc` có `numberOfRuns: 3`, `aggregationMethod: median`, assert `error`; CI fail khi vi phạm. · Nguồn: Lighthouse CI configuration; Lighthouse scoring
+- [ ] `FE-PERF-002` **MUST** Lighthouse mobile trên PR cho ≥ 3 URL chính: Performance ≥ 0,9; audit `largest-contentful-paint` ≤ 2 500 ms, `cumulative-layout-shift` ≤ 0,1, `total-blocking-time` theo ngưỡng dự án (lab proxy cho INP); 3 lần chạy, lấy median. → Kiểm: `lighthouserc` có `numberOfRuns: 3`, `aggregationMethod: median`, assert `error`; CI fail khi vi phạm. · Nguồn: Lighthouse CI configuration; Lighthouse scoring
 - [ ] `FE-PERF-003` **MUST** RUM thu CLS/INP/LCP/FCP/TTFB bằng `web-vitals` (bản attribution ở staging) gửi qua `sendBeacon`, gắn route và loại thiết bị, không PII. → Kiểm: request beacon có mặt trong E2E production-like; payload không có email/id người dùng; dữ liệu xuất hiện trên dashboard. · Nguồn: web-vitals README
 - [ ] `FE-PERF-004` **MUST** Ngân sách bundle ghi trong repo và chặn: entry JS gzip ≤ ngân sách đã chốt (đặt trong `.size-limit.json`), chunk route không vượt trần. → Kiểm: `size-limit` chạy trong CI, fail khi vượt; ngân sách ghi lý do trong `docs/PERF-BUDGET.md`.
 - [ ] `FE-PERF-005` **MUST** Ảnh LCP (hero/sản phẩm) nằm trong HTML đầu (`<img src/srcset>`, không CSS background, không chèn bằng JS), có `fetchpriority="high"`, **không** `loading="lazy"`. → Kiểm: Lighthouse audit `lcp-lazy-loaded`, `prioritize-lcp-image` = pass; E2E kiểm thuộc tính ảnh LCP. · Nguồn: web.dev Optimize LCP

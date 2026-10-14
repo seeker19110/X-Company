@@ -4,7 +4,7 @@ kind: industry
 slug: media-content
 prefix: IND-MEDIA
 modules: [16-compliance-privacy/*, 12-security/appsec-web, 12-security/ai-security, 12-security/logging-audit-and-incident, 08-backend/files-and-media, 08-backend/realtime-and-streaming, 08-backend/caching, 08-backend/background-jobs-and-queues, 08-backend/authn-authz, 09-database/search-and-vector, 09-database/indexing-and-query-performance, 07-frontend/performance-web-vitals, 07-frontend/rendering-and-routing, 06-design-ux/accessibility, 06-design-ux/content-and-microcopy, 13-ai-engineering/guardrails-and-safety, 18-cross-cutting/i18n-and-l10n, 15-operations/cost-management, 15-operations/observability, 17-product-project/metrics-and-analytics]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Gói ngành: Truyền thông · nội dung · xuất bản · UGC
@@ -60,7 +60,7 @@ static-site/web-app.
 **Quốc tế (xác minh 2026-10-13):** EU DSA Regulation (EU) 2022/2065 (áp dụng chung 17/02/2024: notice-and-action Art. 16,
 lý do quyết định Art. 17, khiếu nại nội bộ Art. 20, minh bạch đề xuất Art. 27, bảo vệ trẻ em Art. 28; VLOP từ 08/2023) ·
 UK Online Safety Act 2023 (nội dung bất hợp pháp từ 17/03/2025; bộ quy tắc trẻ em 25/07/2025) · US DMCA 17 U.S.C. §512
-(safe harbor, notice-and-takedown) · COPPA (nền tảng có trẻ em < 13) · GDPR · EU AI Act Art. 50 (nhãn AI từ 02/12/2026) ·
+(safe harbor, notice-and-takedown) · COPPA (nền tảng có trẻ em < 13) · GDPR · EU AI Act Art. 50 (nhãn/đánh dấu nội dung AI — mốc áp dụng ở [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md)) ·
 Directive (EU) 2019/790 (bản quyền thị trường số, Art. 17) · WCAG 2.2.
 
 ## Mô hình dữ liệu / nghiệp vụ đặc trưng

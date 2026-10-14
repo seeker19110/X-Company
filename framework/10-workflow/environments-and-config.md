@@ -3,15 +3,18 @@ title: Môi trường dev/staging/prod, cấu hình, secrets theo môi trường
 kind: module
 prefix: WF-ENV
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, static-site, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Môi trường dev/staging/prod, cấu hình, secrets theo môi trường
 
 > Một build chạy ở mọi môi trường; chỉ **cấu hình** khác nhau, đọc từ biến môi trường (12-factor III), validate
 > lúc khởi động, không có nhánh `if env == "prod"` trong nghiệp vụ. Staging giống prod về loại/phiên bản backing
-> service (12-factor X); preview env cho mỗi PR; feature flag tách deploy khỏi release. Bí mật (vault, xoay,
-> quét) là nhà của [`../12-security/secrets-management.md`](../12-security/secrets-management.md).
+> service (12-factor X); preview env cho mỗi PR; feature flag tách deploy khỏi release; deploy prod qua gate. **Cấu hình**
+> (schema env, validate lúc khởi động, `.env.example`, tiền tố biến công khai, tài liệu cấu hình) là nhà của
+> [`../01-baseline/configuration-and-secrets.md`](../01-baseline/configuration-and-secrets.md); bí mật (vault, xoay, quét)
+> là nhà của [`../12-security/secrets-management.md`](../12-security/secrets-management.md). File này chỉ giữ môi trường,
+> preview, flag, parity và gate deploy.
 
 ## Nguyên tắc
 
@@ -30,19 +33,17 @@ updated: 2026-10-13
 | Câu hỏi | Chọn | Ghi chú |
 |---|---|---|
 | Bao nhiêu môi trường | **dev (local) · preview (mỗi PR) · staging · prod** là mặc định M+; S có thể gộp preview = staging | Thêm `qa`/`uat` chỉ khi có đội kiểm thử/khách hàng nghiệm thu riêng |
-| Nguồn cấu hình | Env var (nền tảng/orchestrator/secret manager inject) + file `.env` chỉ cho local, không commit | File cấu hình theo môi trường commit kèm giá trị |
-| Validate cấu hình | Schema ở một module (`env.ts`/`settings.py` pydantic-settings/`envconfig`/Spring `@ConfigurationProperties` + `@Validated`) | `process.env.X` rải rác |
-| Public vs private | Chỉ giá trị thật sự công khai mới có tiền tố client (`NEXT_PUBLIC_`, `VITE_`, `EXPO_PUBLIC_`) | Đặt key có quyền vào biến public |
+| Nguồn, schema, tiền tố công khai của cấu hình | Theo nhà [`configuration-and-secrets.md`](../01-baseline/configuration-and-secrets.md) (`BASE-CFG-001`…`008`) | — |
 | Feature flag | Env/boolean đơn giản (S) → OpenFeature SDK + provider (M+, bật dần theo %/tenant, kill switch) | Flag là bảng DB tự viết không có TTL/dọn |
 | Preview env | Tự động mỗi PR (Vercel/Netlify/Render/k8s namespace), dữ liệu giả/seed, secrets sandbox, tự huỷ khi đóng PR | Preview trỏ DB prod |
 | Staging data | Seed/synthetic hoặc bản ẩn danh hoá theo [`../09-database/sensitive-data-and-access.md`](../09-database/sensitive-data-and-access.md) | Copy prod thô |
 
 ## Checklist
 
-- [ ] `WF-ENV-001` **MUST** Cấu hình đọc từ biến môi trường qua **một** module có schema (kiểu, bắt buộc/tuỳ chọn, mặc định an toàn); khởi động thiếu/sai → thoát ≠ 0 với tên biến thiếu. → Kiểm: test khởi động không có `DATABASE_URL` → exit ≠ 0 + thông báo; grep `process.env.`/`os.environ[` ngoài module env = 0. · Nguồn: 12-factor III Config; catalog 09 §1.4 (validate env bằng zod)
-- [ ] `WF-ENV-002` **MUST** Không commit `.env`/giá trị bí mật; có `.env.example` liệt kê **mọi** biến với mô tả và giá trị giả; `.env*` trong `.gitignore` (trừ `.env.example`). → Kiểm: `git ls-files | grep -E '^\.env($|\.)'` chỉ ra `.env.example`; script so khớp schema env ↔ `.env.example` = khớp. · Nguồn: [`../01-baseline/configuration-and-secrets.md`](../01-baseline/configuration-and-secrets.md)
-- [ ] `WF-ENV-003` **MUST** Chỉ giá trị công khai dùng tiền tố client (`NEXT_PUBLIC_`/`VITE_`/`EXPO_PUBLIC_`…); biến có quyền (service key, secret, DB URL) không bao giờ có tiền tố đó; bundle client được quét. → Kiểm: lint tên biến: tiền tố public + tên chứa `SECRET|KEY|TOKEN|PASSWORD|URL` (trừ allowlist) → đỏ; `grep -r "service_role\|sk_live" dist/` = 0. · Nguồn: catalog 09 §1.4
-- [ ] `WF-ENV-004` **MUST** Mỗi môi trường có secrets riêng (không dùng chung key prod/staging), nằm trong secret manager/`environment` của nền tảng; prod không ai đọc trực tiếp; xoay theo [`../12-security/secrets-management.md`](../12-security/secrets-management.md). → Kiểm: inventory secret theo môi trường; test staging không gọi được API prod bằng key staging. · Nguồn: GitHub Managing environments (environment secrets)
+- [ ] `WF-ENV-001` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-002`](../01-baseline/configuration-and-secrets.md): cấu hình đọc qua một module có schema, validate lúc khởi động, thiếu/sai → exit ≠ 0 nêu tên biến.
+- [ ] `WF-ENV-002` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-003`](../01-baseline/configuration-and-secrets.md): `.env.example` liệt kê mọi biến, `.env*` trong `.gitignore`; không bí mật trong repo theo `SEC-SECRET-001`.
+- [ ] `WF-ENV-003` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-008`](../01-baseline/configuration-and-secrets.md): chỉ giá trị công khai mang tiền tố client (`NEXT_PUBLIC_`/`VITE_`/`EXPO_PUBLIC_`), bundle được quét.
+- [ ] `WF-ENV-004` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-005`](../12-security/secrets-management.md): bí mật prod ở kho tập trung; mỗi dịch vụ × môi trường credential riêng, quyền tối thiểu (`SEC-SECRET-006`).
 - [ ] `WF-ENV-005` **MUST** Không rẽ nhánh nghiệp vụ theo tên môi trường (`if (env === 'production')`) trong code nghiệp vụ; khác biệt hành vi phải là biến cấu hình/flag riêng. → Kiểm: grep `=== 'production'`/`== "prod"` ngoài module env/bootstrap = 0 (allowlist có lý do). · Nguồn: 12-factor III (không nhóm theo môi trường)
 - [ ] `WF-ENV-006` **MUST** Cùng artefact/image cho staging và prod (tag theo commit SHA), chỉ cấu hình khác; không build riêng cho prod. → Kiểm: digest image staging == prod cho cùng release; log deploy ghi digest. · Nguồn: 12-factor V
 - [ ] `WF-ENV-007` **MUST** Staging dùng cùng loại + major version backing service (DB, cache, queue, object storage) với prod; local dev có Docker Compose/devcontainer dựng cùng loại. → Kiểm: `docker-compose.yml`/IaC ghi image version; bảng so sánh phiên bản staging ↔ prod trong `docs/ops/`. · Nguồn: 12-factor X Dev/prod parity
@@ -53,7 +54,7 @@ updated: 2026-10-13
 - [ ] `WF-ENV-012` **MUST@M** Thay đổi cấu hình prod có dấu vết (ai, khi nào, giá trị cũ/mới đã che bí mật) và đảo ngược được; cấu hình hạ tầng là code ([`../15-operations/infrastructure-as-code.md`](../15-operations/infrastructure-as-code.md)). → Kiểm: audit log secret manager/IaC history; không sửa tay trên console không qua PR (policy).
 - [ ] `WF-ENV-013` **MUST@L** Tách tài khoản/project cloud theo môi trường (prod riêng), quyền tối thiểu, không credential prod trên máy dev. → Kiểm: inventory account; IAM policy; xem [`../12-security/infrastructure-and-network.md`](../12-security/infrastructure-and-network.md).
 - [ ] `WF-ENV-014` **SHOULD** Local dev: một lệnh dựng (`make dev`/`docker compose up`/devcontainer), `.env.example` đủ để chạy, seed dữ liệu mẫu; không cần tài khoản cloud để chạy luồng chính. → Kiểm: onboarding mới chạy được app ≤ 30 phút theo [`../18-cross-cutting/developer-experience.md`](../18-cross-cutting/developer-experience.md).
-- [ ] `WF-ENV-015` **SHOULD** Tài liệu bảng cấu hình sinh từ schema env (tên, kiểu, bắt buộc, mặc định, mô tả) — không viết tay hai nơi. → Kiểm: script sinh `docs/CONFIG.md` từ schema; CI kiểm tươi.
+- [ ] `WF-ENV-015` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`BASE-CFG-012`](../01-baseline/configuration-and-secrets.md): bảng tài liệu cấu hình sinh từ schema env, CI kiểm tươi.
 - [ ] `WF-ENV-016` **SHOULD** Cấu hình có thể reload nóng chỉ cho giá trị thiết kế để reload (flag, ngưỡng); phần còn lại cần restart có kiểm soát; không đọc env mỗi request. → Kiểm: module env parse một lần; flag qua provider.
 - [ ] `WF-ENV-017` **SHOULD** Môi trường ghi rõ trong mọi log/metric (`env=staging`) và banner UI ở non-prod để tránh thao tác nhầm. → Kiểm: log có trường `env`; UI non-prod có badge.
 - [ ] `WF-ENV-018` **MAY** Ephemeral environment theo nhánh cho test E2E nặng/perf; huỷ sau N giờ. → Kiểm: job tạo/huỷ có TTL.
@@ -75,10 +76,7 @@ updated: 2026-10-13
 
 | Công cụ | Lệnh / cấu hình | Đặt ở | Ngưỡng |
 |---|---|---|---|
-| Schema env | zod 4.6.7 (`env.ts`) · pydantic-settings (pydantic 2.14.1) · Go `envconfig`/`koanf` · Spring `@Validated` (xác minh 2026-10-13, xác minh lại trước khi dùng) | khởi động app | Thiếu biến → exit ≠ 0 |
-| env ↔ example | script so khoá trong schema với `.env.example` | CI | Khớp 100% |
-| Lint biến public | script regex tiền tố public × từ khoá bí mật; quét `dist/`/bundle tìm pattern key | CI | 0 |
-| Secret scan | gitleaks v8.30.1 toàn lịch sử | hook + CI | 0 |
+| Schema env, `.env.example`, tiền tố công khai, secret scan | Theo bảng Cổng tự động của [`configuration-and-secrets.md`](../01-baseline/configuration-and-secrets.md) và [`secrets-management.md`](../12-security/secrets-management.md) | — | — |
 | Guard preview/staging | script so `DATABASE_URL`/bucket host với danh sách prod | CI deploy | Khác prod |
 | Environment gate | GitHub `environment: production` required reviewers + prevent self-review + deployment branches | GitHub | Bắt buộc |
 | Flag hygiene | script liệt kê flag quá hạn dọn | CI schedule | Cảnh báo |

@@ -4,7 +4,7 @@ kind: profile
 slug: cli-tool
 prefix: PRF-CLI
 modules: [04-standards/*, 05-architecture/*, 08-backend/reliability-and-errors, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/observability, 15-operations/maintenance-and-lifecycle, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Công cụ dòng lệnh
@@ -103,7 +103,7 @@ Xác minh ngày **2026-10-13** — **xác minh lại trước khi dùng**. Chọ
 
 - Command Line Interface Guidelines (exit code, help, output, NO_COLOR, config precedence, < 100 ms, confirm/dry-run, XDG): <https://clig.dev/> — xác minh 2026-10-13.
 - NO_COLOR: <https://no-color.org/> — xác minh 2026-10-13. XDG Base Directory 0.8: <https://specifications.freedesktop.org/basedir/latest/> — xác minh 2026-10-13.
-- SLSA v1.2 (levels): <https://slsa.dev/spec/v1.1/levels> (trang ghi v1.2 là bản hiện hành) — xác minh 2026-10-13.
+- SLSA v1.2: <https://slsa.dev/spec/v1.2/> (mức Build theo nhà [`../12-security/supply-chain.md`](../12-security/supply-chain.md): L2 @M, L3 @L) — xác minh 2026-10-13.
 - npm provenance / trusted publishing: <https://docs.npmjs.com/generating-provenance-statements> — xác minh 2026-10-13. PyPI Trusted Publishers: <https://docs.pypi.org/trusted-publishers/> — xác minh 2026-10-13.
 - GoReleaser checksums (SHA-256 mặc định): <https://goreleaser.com/customization/checksum/> — xác minh 2026-10-13; GoReleaser v2.18.3, cosign v3.1.3 (GitHub releases, không hiển thị năm) — xác minh 2026-10-13.
 - Phiên bản: endoflife.date `go`, `rust`, `python`, `nodejs`; crates.io `clap`, `cargo-dist`, `cargo-deny`; npm `commander`, `@oclif/core`, `tsdown`, `tsup`, `size-limit`, `vitest`, `@biomejs/biome`; PyPI `typer`, `click`, `uv`, `hatch`, `pip-audit` — xác minh 2026-10-13.

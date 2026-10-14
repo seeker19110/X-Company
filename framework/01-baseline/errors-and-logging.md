@@ -3,7 +3,7 @@ title: Xử lý lỗi và ghi log có cấu trúc
 kind: baseline
 prefix: BASE-ERR
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Xử lý lỗi và ghi log có cấu trúc
@@ -50,13 +50,13 @@ updated: 2026-10-13
 - [ ] `BASE-ERR-010` **MUST** Lỗi ở **cổng bảo mật** (auth, authz, validate, chữ ký) → **thất bại đóng**: từ chối, không fallback cho qua; lỗi phụ thuộc không quan trọng → degrade có kiểm soát và ghi log. → Kiểm: test giả lỗi backend auth → 401/403, không 200; danh sách điểm fail-open (nếu có) ghi trong THREAT-MODEL kèm lý do. · Nguồn: P7 (principles.md)
 - [ ] `BASE-ERR-011` **MUST@M** Lỗi mức `ERROR`/`FATAL` được **thu thập và cảnh báo** (Sentry/GlitchTip/OTel collector → alert) trong vòng phút; không "mù" trên production. → Kiểm: tạo lỗi thử trên staging → alert đến kênh trực; chi tiết ở [`../15-operations/slo-and-alerting.md`](../15-operations/slo-and-alerting.md). · Nguồn: P10
 - [ ] `BASE-ERR-012` **SHOULD** Lỗi nghiệp vụ có **mã ổn định** (enum/`type` URI) và thông điệp người dùng có thể dịch; mã không đổi khi đổi câu chữ. → Kiểm: bảng mã lỗi trong tài liệu/`errors.ts`/`errors.py`; test snapshot mã lỗi. · Nguồn: RFC 9457 §3.1
-- [ ] `BASE-ERR-013` **SHOULD** Retry chỉ cho lỗi tạm thời, có backoff mũ + jitter, trần số lần và tổng thời gian; thao tác được retry là idempotent (idempotency key). → Kiểm: test: lỗi 400 không retry; lỗi 503 retry ≤ N lần rồi bỏ cuộc với lỗi tổng hợp. · Nguồn: [`../08-backend/reliability-and-errors.md`](../08-backend/reliability-and-errors.md); catalog 21 §8 (outbox, `outcome_unknown`)
+- [ ] `BASE-ERR-013` **SHOULD** Retry theo nguyên tắc của [`ARC-RES-002`](../05-architecture/resilience-and-scalability.md) (chỉ lỗi tạm, chỉ thao tác idempotent, backoff mũ + jitter, trần số lần) áp cho **mọi loại phần mềm**, kể cả client mobile/desktop, CLI, SDK nằm ngoài phạm vi module đó; số mặc định phía dịch vụ ở `BE-REL-003`, job ở `BE-JOB-003`. → Kiểm: test: lỗi 400 không retry; lỗi 503 retry ≤ N lần rồi bỏ cuộc với lỗi tổng hợp. · Nguồn: [`ARC-RES-002`](../05-architecture/resilience-and-scalability.md); catalog 21 §8 (outbox, `outcome_unknown`)
 - [ ] `BASE-ERR-014` **SHOULD** CLI/batch: exit code 0 = thành công, ≠ 0 = thất bại, mã khác nhau cho lớp lỗi chính; thông điệp lỗi gợi ý cách sửa; kết quả ra stdout, chẩn đoán ra stderr. → Kiểm: test chạy lệnh với input sai → exit ≠ 0, stderr có gợi ý, stdout rỗng. · Nguồn: clig.dev (Errors, Output)
 - [ ] `BASE-ERR-015` **SHOULD** Mức log cấu hình được qua biến môi trường (`LOG_LEVEL`) mà không build lại; mặc định prod `INFO`, dev `DEBUG`; `DEBUG` không bao giờ bật ở prod kèm payload đầy đủ. → Kiểm: khởi động với `LOG_LEVEL=debug` thấy bản ghi DEBUG; cấu hình prod ghi `INFO`. · Nguồn: 12-factor III
 - [ ] `BASE-ERR-016` **SHOULD** Log có **ngân sách**: không log trong vòng lặp nóng ở mức ≥ INFO, không log payload > 1 KB mặc định, có sampling cho sự kiện lặp; disk/chi phí không bị cạn vì log. → Kiểm: test tải → tốc độ log < ngưỡng (vd 100 dòng/s/instance) ghi trong RUNBOOK. · Nguồn: OWASP Logging CS (resource exhaustion)
 - [ ] `BASE-ERR-017` **SHOULD** Thời gian trong log và trong hệ thống là **UTC**; đồng hồ máy chủ đồng bộ NTP; thời gian hiển thị cho người mới đổi múi giờ. → Kiểm: mẫu log có hậu tố `Z`; chi tiết ở [`../18-cross-cutting/units-time-and-money.md`](../18-cross-cutting/units-time-and-money.md). · Nguồn: RFC 3339
-- [ ] `BASE-ERR-018` **MAY** Trace id lan truyền qua ranh giới (W3C `traceparent`) để log của nhiều dịch vụ/tool nối thành một chuỗi; với MCP dùng `_meta.traceparent`. → Kiểm: request xuyên 2 dịch vụ → cùng `trace_id` trong log cả hai. · Nguồn: OTel Logs Data Model (TraceId/SpanId); MCP 2026-07-28
-- [ ] `BASE-ERR-019` **MAY** Log sự kiện bảo mật gắn cờ `security: true` để định tuyến riêng và giữ lâu hơn. → Kiểm: query log backend lọc được theo cờ. · Nguồn: OWASP Logging CS; [`../12-security/logging-audit-and-incident.md`](../12-security/logging-audit-and-incident.md)
+- [ ] `BASE-ERR-018` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`OPS-OBS-002`](../15-operations/observability.md): `trace_id` W3C Trace Context lan truyền qua HTTP/queue/job/tool call (MCP `_meta.traceparent`).
+- [ ] `BASE-ERR-019` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-LOG-015`](../12-security/logging-audit-and-incident.md): sự kiện bảo mật gắn nhãn `security` để định tuyến và giữ lâu hơn.
 
 ## Bẫy thường gặp
 

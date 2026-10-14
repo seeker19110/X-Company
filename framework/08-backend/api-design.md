@@ -3,7 +3,7 @@ title: Thiết kế API: REST/GraphQL/gRPC, lỗi RFC 9457, phân trang, version
 kind: module
 prefix: BE-API
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Thiết kế API: REST/GraphQL/gRPC, lỗi RFC 9457, phân trang, versioning, OpenAPI
@@ -37,7 +37,7 @@ updated: 2026-10-13
 | Versioning | **Không version khi chỉ thêm**; khi phá vỡ: version theo URL (`/v2/`) hoặc header ngày (`API-Version: 2026-10-13`) có bảng thời hạn | Version theo query string (khó cache, dễ quên) |
 | Spec ↔ code | **Spec-first** khi nhiều đội/ngôn ngữ cùng dùng; **code-first có sinh spec + test so khớp** khi một đội TS/Python | Viết spec tay rời code, không có cổng so khớp |
 
-Mặc định khuyến nghị: REST + OpenAPI 3.1/3.2 + validate bằng schema của ngôn ngữ (zod / pydantic / validator).
+Mặc định khuyến nghị: REST + OpenAPI **3.1.x** + validate bằng schema của ngôn ngữ (zod / pydantic / validator); OpenAPI 3.2.x chỉ khi toàn chuỗi tool (lint → codegen → mock) đã kiểm — xem bẫy ở [`../04-standards/api-and-web-standards.md`](../04-standards/api-and-web-standards.md).
 Chỉ đổi khi có điều kiện ở cột "Chọn" rõ ràng và ghi ADR ([`../05-architecture/decision-records.md`](../05-architecture/decision-records.md)).
 
 ## Checklist
@@ -49,7 +49,7 @@ Chỉ đổi khi có điều kiện ở cột "Chọn" rõ ràng và ghi ADR ([`
 - [ ] `BE-API-005` **MUST** Validate `Content-Type` của request có body (415 nếu không hỗ trợ) và `Accept` (406); giới hạn kích thước body (413) ở mức cấu hình được. → Kiểm: test gửi `Content-Type: text/plain` vào endpoint JSON → 415; body vượt giới hạn → 413. · Nguồn: OWASP REST Security Cheat Sheet, RFC 9110
 - [ ] `BE-API-006` **MUST** Endpoint danh sách có phân trang từ ngày đầu, token mờ (không phải offset lộ), có `page_size` tối đa và sắp xếp ổn định (khoá tie-break duy nhất). → Kiểm: test gọi không có `page_size` → mặc định; `page_size` vượt max → bị kẹp; chèn bản ghi giữa hai trang không trùng/mất phần tử. · Nguồn: Google AIP-158
 - [ ] `BE-API-007` **MUST** Thay đổi phá vỡ (bỏ/đổi nghĩa trường, đổi mã lỗi) đi qua phiên bản mới kèm ngày ngừng hỗ trợ bản cũ ghi trong spec và CHANGELOG; không sửa tại chỗ bản đang dùng. → Kiểm: `openapi diff --fail-on-incompatible` trong CI đỏ khi diff breaking trên cùng version. · Nguồn: SemVer 2.0.0 §8
-- [ ] `BE-API-008` **MUST** POST tạo tài nguyên có thể bị gửi lại (thanh toán, đặt hàng, gửi tin) nhận `Idempotency-Key`; cùng key + cùng payload trả lại kết quả cũ, cùng key + payload khác → 422/400; key lưu ≥ 24 giờ. → Kiểm: test gửi 2 lần cùng key → 1 bản ghi; payload khác → lỗi. · Nguồn: draft-ietf-httpapi-idempotency-key-header-07, Stripe Idempotent requests
+- [ ] `BE-API-008` **MUST** Hợp đồng HTTP của idempotency cho POST có thể bị gửi lại (thanh toán, đặt hàng, gửi tin): header `Idempotency-Key`; thiếu key ở endpoint bắt buộc → 400; cùng key + cùng payload → trả lại response cũ; cùng key + payload khác → 422; request cùng key đang xử lý → 409; key lưu ở store dùng chung **≥ 24 giờ**; ghi trong OpenAPI. Nguyên tắc: xem [`ARC-INT-001`](../05-architecture/integration-patterns.md) và `ARC-INT-002`. → Kiểm: test gửi 2 lần cùng key → 1 bản ghi, cùng response; payload khác → 422; gửi đồng thời → 409. · Nguồn: draft-ietf-httpapi-idempotency-key-header-07, Stripe Idempotent requests
 - [ ] `BE-API-009` **MUST** Mọi endpoint không công khai kiểm xác thực + phân quyền ở server theo [`authn-authz.md`](authn-authz.md); endpoint công khai được liệt kê rõ trong spec (`security: []`). → Kiểm: test gọi không token → 401; token người khác → 403/404; script liệt kê route không có guard = danh sách công khai đã duyệt. · Nguồn: ASVS 5.0 V4, V8
 - [ ] `BE-API-010` **MUST** Chỉ cho phép phương thức HTTP cần thiết trên mỗi route (405 cho phần còn lại); GET/HEAD không gây tác dụng phụ. → Kiểm: test `DELETE` lên route chỉ GET → 405; review không có GET làm thay đổi dữ liệu. · Nguồn: RFC 9110 §9.2.1, OWASP REST Security Cheat Sheet
 - [ ] `BE-API-011` **MUST@M** Giới hạn tốc độ (429 + `Retry-After`) trên endpoint công khai và endpoint đắt; chi tiết ở [`reliability-and-errors.md`](reliability-and-errors.md). → Kiểm: test bắn vượt ngưỡng → 429 có `Retry-After`. · Nguồn: RFC 6585 §4

@@ -3,15 +3,16 @@ title: Cấu hình, biến môi trường và bí mật
 kind: baseline
 prefix: BASE-CFG
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Cấu hình, biến môi trường và bí mật
 
 > Sàn cho mọi phần mềm: cấu hình tách khỏi mã (12-factor III), được **validate lúc khởi động**, có `.env.example` làm
-> hợp đồng, và bí mật **không bao giờ** nằm trong repo/log/artefact. Lưu trữ, xoay, phạm vi và quét bí mật sâu là nhà của
-> [`../12-security/secrets-management.md`](../12-security/secrets-management.md); môi trường dev/staging/prod và
-> cấu hình theo môi trường ở [`../10-workflow/environments-and-config.md`](../10-workflow/environments-and-config.md).
+> hợp đồng, và bí mật **không bao giờ** nằm trong repo/log/artefact. File này là **nhà của cấu hình** (schema env, validate
+> lúc khởi động, `.env.example`, tiền tố biến công khai, tài liệu cấu hình). Bí mật (lưu trữ, xoay, phạm vi, quét, OIDC CI) là nhà của
+> [`../12-security/secrets-management.md`](../12-security/secrets-management.md) — ở đây chỉ giữ phần thuộc cấu hình và trỏ; môi trường
+> dev/staging/preview/prod, feature flag và gate deploy ở [`../10-workflow/environments-and-config.md`](../10-workflow/environments-and-config.md).
 
 ## Nguyên tắc
 
@@ -36,22 +37,22 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `BASE-CFG-001` **MUST** Mọi giá trị thay đổi theo môi trường (URL, cổng, khoá, cờ) đọc từ **biến môi trường** (hoặc file được inject lúc chạy), không hard-code trong mã hay commit vào repo. → Kiểm: grep mã không có URL CSDL/host nội bộ/khoá dạng literal; app chạy được chỉ với env + mã. · Nguồn: 12-factor III
-- [ ] `BASE-CFG-002` **MUST** Cấu hình được **validate lúc khởi động** bằng schema (kiểu, bắt buộc/tuỳ chọn, phạm vi, định dạng URL); thiếu hoặc sai → thoát với mã ≠ 0 và thông báo nêu **tên biến** (không in giá trị). → Kiểm: khởi động với env trống → exit ≠ 0, stderr liệt kê biến thiếu; test đơn vị cho schema. · Nguồn: catalog 09 §1.4 (validate env bằng zod); ASVS 5.0 V13
+- [ ] `BASE-CFG-002` **MUST** Cấu hình được **validate lúc khởi động** bằng schema (kiểu, bắt buộc/tuỳ chọn, phạm vi, định dạng URL); thiếu hoặc sai → thoát với mã ≠ 0 và thông báo nêu **tên biến** (không in giá trị). → Kiểm: khởi động với env trống → exit ≠ 0, stderr liệt kê biến thiếu; test đơn vị cho schema; grep `process.env.`/`os.environ[` ngoài module env = 0. · Nguồn: catalog 09 §1.4 (validate env bằng zod); ASVS 5.0 V13; 12-factor III
 - [ ] `BASE-CFG-003` **MUST** Có `.env.example` (hoặc file tương đương) commit, liệt kê **mọi** biến với mô tả và giá trị giả; `.env`, `.env.*.local`, `*.pem`, `*.key` nằm trong `.gitignore`. → Kiểm: CI so khớp tập khoá trong `.env.example` với schema (lệch = đỏ); `git ls-files .env` rỗng; `git check-ignore .env` trả `.env`. · Nguồn: 12-factor III; OWASP Secrets Management CS
-- [ ] `BASE-CFG-004` **MUST** Không có bí mật trong repo, lịch sử, Dockerfile (`ENV`/`ARG`), image layer, workflow CI dạng plaintext, hay artefact build. → Kiểm: gitleaks toàn lịch sử = 0; `docker history --no-trunc <image>` không có khoá; workflow dùng `${{ secrets.* }}`. · Nguồn: OWASP Secrets Management CS; chi tiết [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
-- [ ] `BASE-CFG-005` **MUST** Bí mật không bao giờ xuất hiện trong log, thông báo lỗi, trang debug, dump cấu hình, hay URL (query string); object cấu hình khi in ra phải che trường bí mật. → Kiểm: test `JSON.stringify(config)`/`repr(settings)` cho `***`; grep log CI bằng gitleaks. · Nguồn: OWASP Logging CS; [`errors-and-logging.md`](errors-and-logging.md)
+- [ ] `BASE-CFG-004` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-001`](../12-security/secrets-management.md): không bí mật trong repo, lịch sử git, Dockerfile/image, workflow CI, artefact (sàn mọi quy mô giữ ở [`BASE-SEC-002`](security-minimum.md)).
+- [ ] `BASE-CFG-005` **MUST** Object cấu hình khi in/dump (`--print-config`, log khởi động, trang debug, `repr`/`toString`) **che trường bí mật**; schema đánh dấu trường nào là bí mật. Nguyên tắc "bí mật không vào log/lỗi/URL": xem [`SEC-SECRET-007`](../12-security/secrets-management.md) và [`BASE-ERR-007`](errors-and-logging.md). → Kiểm: test `JSON.stringify(config)`/`repr(settings)` cho `***` ở mọi trường bí mật. · Nguồn: OWASP Logging CS
 - [ ] `BASE-CFG-006` **MUST** Bí mật không truyền qua **tham số dòng lệnh** (lộ trong `ps`, lịch sử shell); nhận qua env, file (`--token-file`), hoặc stdin. → Kiểm: CLI không có cờ `--password <value>`; tài liệu nêu cách truyền an toàn. · Nguồn: clig.dev (Secrets); OWASP Secrets Management CS
 - [ ] `BASE-CFG-007` **MUST** Giá trị mặc định là **an toàn**: `DEBUG` tắt, bind `127.0.0.1`, TLS verify bật, CORS đóng, không khoá mặc định; prod không phụ thuộc "ai đó nhớ đổi". → Kiểm: khởi động không đặt biến tuỳ chọn → cấu hình hiệu lực được in (đã che) khớp bảng mặc định an toàn trong tài liệu. · Nguồn: P7; catalog 12 §3i
-- [ ] `BASE-CFG-008` **MUST** Biến môi trường được **phân loại** hai lớp: công khai (được nhúng vào client/bundle, vd tiền tố `NEXT_PUBLIC_`/`VITE_`/`EXPO_PUBLIC_`) và bí mật (chỉ server); không bí mật nào có tiền tố công khai. → Kiểm: lint/grep schema: biến có tiền tố công khai không nằm trong danh sách bí mật; kiểm bundle client không chứa giá trị bí mật. · Nguồn: catalog 09 §1.4
-- [ ] `BASE-CFG-009` **MUST@M** Bí mật prod lưu ở **secret manager** hoặc file mã hoá (SOPS/age) với quyền tối thiểu theo môi trường; dev không có quyền đọc bí mật prod. → Kiểm: danh sách bí mật + nơi lưu + người có quyền trong RUNBOOK; không có file `.env.production` trong repo/chat. · Nguồn: OWASP Secrets Management CS (centralized store, least privilege)
-- [ ] `BASE-CFG-010` **MUST@M** Mỗi bí mật có **chủ sở hữu, ngày tạo, lịch xoay** và quy trình xoay đã chạy thử; bí mật bị lộ → xoay ngay, rồi mới dọn lịch sử. → Kiểm: bảng bí mật trong RUNBOOK có cột `rotated_at`; diễn tập xoay có ghi ngày. · Nguồn: OWASP Secrets Management CS (rotation)
+- [ ] `BASE-CFG-008` **MUST** Biến môi trường được **phân loại** hai lớp: công khai (được nhúng vào client/bundle, vd tiền tố `NEXT_PUBLIC_`/`VITE_`/`PUBLIC_`/`EXPO_PUBLIC_`) và bí mật (chỉ server); không bí mật nào (service key, secret, token, mật khẩu) có tiền tố công khai. → Kiểm: schema env tách `client`/`server` (vd `@t3-oss/env-nextjs`) làm build đỏ khi lệch; lint tên: tiền tố công khai + tên chứa `SECRET|KEY|TOKEN|PASSWORD` (trừ allowlist) → đỏ; quét bundle `dist/`/`.next/static` bằng gitleaks/pattern (`sk_live|service_role|AKIA|-----BEGIN`) = 0. · Nguồn: catalog 09 §1.4; Next.js env docs; Vite env docs
+- [ ] `BASE-CFG-009` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-005`](../12-security/secrets-management.md): bí mật prod ở kho tập trung, mỗi dịch vụ × môi trường credential riêng (`SEC-SECRET-006`).
+- [ ] `BASE-CFG-010` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-008`](../12-security/secrets-management.md): bí mật có chủ, lịch xoay, quy trình xoay đã diễn tập (inventory ở `SEC-SECRET-006`, lộ → `SEC-SECRET-011`).
 - [ ] `BASE-CFG-011` **SHOULD** Cấu hình theo môi trường **không nhóm** thành bộ `development/test/production` cố định; mỗi deploy (review app, staging, prod, máy dev) tự khai biến riêng từ cùng schema. → Kiểm: không có file `config/<env>.json` chứa giá trị theo deploy; cùng image chạy ở staging và prod chỉ khác env. · Nguồn: 12-factor III, V (build/release/run)
 - [ ] `BASE-CFG-012` **SHOULD** Tài liệu cấu hình sinh từ schema (bảng biến: tên, kiểu, bắt buộc, mặc định, mô tả) để không lệch; thay schema mà không cập nhật `.env.example`/docs → CI đỏ. → Kiểm: script sinh `docs/CONFIG.md` chạy trong CI, `git diff --exit-code`. · Nguồn: P5
-- [ ] `BASE-CFG-013` **SHOULD** Pipeline CI/CD coi là production: bí mật CI scope theo job/environment, fork không nhận bí mật, log CI mask giá trị, bí mật dẫn xuất (JWT ký, base64) cũng đăng ký mask. → Kiểm: workflow dùng `environment:` có reviewer cho bí mật prod; `pull_request` từ fork không có bước dùng secrets. · Nguồn: OWASP Secrets Management CS (CI/CD); GitHub Actions security hardening
+- [ ] `BASE-CFG-013` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-010`](../12-security/secrets-management.md): secret CI gắn environment có người duyệt, PR từ fork không nhận secret.
 - [ ] `BASE-CFG-014` **SHOULD** Cấu hình **hiệu lực** (effective config, đã che bí mật) được ghi log một lần lúc khởi động và/hoặc xuất qua lệnh `--print-config` để chẩn đoán. → Kiểm: log khởi động có bản ghi `config.loaded` với các khoá và nguồn (env/file/default). · Nguồn: clig.dev; P10
-- [ ] `BASE-CFG-015` **SHOULD** Quét bí mật ở **pre-commit** (staged) và CI (toàn lịch sử); hook chặn commit chứa pattern khoá. → Kiểm: `.pre-commit-config.yaml`/`lefthook.yml` có gitleaks hoặc detect-secrets; commit thử chứa `AKIA...` bị chặn. · Nguồn: OWASP Secrets Management CS (detection)
+- [ ] `BASE-CFG-015` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-002`](../12-security/secrets-management.md): pre-commit chặn commit chứa bí mật, CI quét lại toàn lịch sử.
 - [ ] `BASE-CFG-016` **MAY** Dùng OpenFeature (chuẩn mở, CNCF) cho feature flag khi số cờ > ~10 hoặc cần bật theo đối tượng; cờ có ngày hết hạn và chủ sở hữu. → Kiểm: danh sách cờ trong repo có `owner`, `expires`; cổng CI cảnh báo cờ quá hạn. · Nguồn: P8 (feature flag cho thay đổi rủi ro)
-- [ ] `BASE-CFG-017` **MAY** Bí mật dạng **động/ngắn hạn** (OIDC federation từ CI tới cloud, token lease) thay cho khoá tĩnh dài hạn. → Kiểm: workflow dùng `id-token: write` + `aws-actions/configure-aws-credentials`/tương đương, không có `AWS_SECRET_ACCESS_KEY` trong secrets. · Nguồn: OWASP Secrets Management CS (dynamic secrets)
+- [ ] `BASE-CFG-017` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SECRET-009`](../12-security/secrets-management.md): CI/CD dùng OIDC/workload identity thay khoá tĩnh dài hạn.
 
 ## Bẫy thường gặp
 

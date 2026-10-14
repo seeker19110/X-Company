@@ -3,7 +3,7 @@ title: Ngân sách context/token, compaction, bàn giao phiên
 kind: module
 prefix: LOOP-CTX
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Ngân sách context/token, compaction, bàn giao phiên
@@ -44,7 +44,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 
 | Vào context | Ở ngoài (đọc khi cần, qua script/subagent) |
 |---|---|
-| `AGENTS.md` (< 200 dòng), 4 mục PROGRESS (≤ 8 KB), task hiện tại + Gate, SPEC của task | README dài, tài liệu khung (`.xstored/framework/**`, đọc đúng module), log CI, lockfile, dữ liệu mẫu |
+| `AGENTS.md` (≤ 200 dòng), 4 mục PROGRESS (≤ 8 KB), task hiện tại + Gate, SPEC của task | README dài, tài liệu khung (`.xstored/framework/**`, đọc đúng module), log CI, lockfile, dữ liệu mẫu |
 | Diff đang sửa, 20–40 dòng output lệnh | Output lệnh > 40 dòng → ghi file, grep; file > 1 MB không `cat` |
 | Kết quả tóm tắt của subagent (≤ 25 dòng) | Transcript subagent, nội dung web nguyên văn |
 
@@ -65,7 +65,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 - [ ] `LOOP-CTX-004` **MUST** Không `cat` file > 1 MB hoặc đổ output lệnh > 40 dòng vào context; lọc bằng script rồi đọc phần cần. → Kiểm: `.claude/settings.json`/hook chặn `cat` file lớn hoặc quy ước trong `AGENTS.md`; `xs.py loop record` giữ `output_tail` 40 dòng. · Nguồn: stored 03 §8b
 - [ ] `LOOP-CTX-005` **MUST** Kế hoạch lập một lần và ghi `PLAN.md`; mỗi vòng chỉ đọc task kế tiếp, không lập lại kế hoạch. → Kiểm: `git log` của `PLAN.md` chỉ đổi dấu tick/ghi chú sau cổng duyệt; thay đổi danh sách task phải có lý do trong PROGRESS. · Nguồn: old framework `models-and-automation.md` §5
 - [ ] `LOOP-CTX-006` **MUST** Mọi thứ cần cho phiên sau nằm trong repo (PLAN, PROGRESS, SPEC, ADR, evidence hoặc link CI), không phụ thuộc trí nhớ phiên trước. → Kiểm: phiên mới với chỉ `AGENTS.md` + PROGRESS tiếp tục được đúng task (test bằng phiên thật). · Nguồn: stored 03 §6
-- [ ] `LOOP-CTX-007` **MUST** `AGENTS.md`/`CLAUDE.md` của dự án < 200 dòng; chi tiết để trong module khung và link tới. → Kiểm: `wc -l AGENTS.md` < 200. · Nguồn: [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md)
+- [ ] `LOOP-CTX-007` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-006`](../18-cross-cutting/docs-for-ai-agents.md): `AGENTS.md`/`CLAUDE.md` của dự án ≤ 200 dòng, chi tiết để trong module và link tới.
 - [ ] `LOOP-CTX-008` **SHOULD** Xong một mảng (nhóm task cùng tính năng) → gate → commit → cập nhật PROGRESS → mở phiên mới thay vì chạy tiếp trong phiên đã dài. · Nguồn: old framework `models-and-automation.md` §5
 - [ ] `LOOP-CTX-009` **SHOULD** Đặt PreCompact hook ghi checkpoint (task hiện tại, lệnh vừa chạy, lỗi đang xử lý) vào PROGRESS trước khi nén. · Nguồn: Claude Code hooks docs
 - [ ] `LOOP-CTX-010` **SHOULD** Việc đọc dài (tài liệu, repo lạ, log CI) giao subagent `researcher`; phiên chính nhận tóm tắt có đường dẫn/URL. · Nguồn: [`orchestration-and-subagents.md`](orchestration-and-subagents.md)
@@ -86,7 +86,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 | Lập lại kế hoạch mỗi lượt | Drift khỏi PLAN đã duyệt, tốn token | PLAN là nguồn; đổi task phải ghi lý do |
 | Tin rằng compaction giữ đủ | Mất lệnh đã chạy, lỗi đang sửa | PreCompact checkpoint + PROGRESS |
 | Đặt `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` cao hơn mặc định để "ít nén" | Biến chỉ hạ, không nâng → không tác dụng | Đọc docs; đo thực tế |
-| Nhét toàn bộ khung vào `CLAUDE.md` | Mỗi lượt tốn hàng nghìn token cố định | < 200 dòng; link module |
+| Nhét toàn bộ khung vào `CLAUDE.md` | Mỗi lượt tốn hàng nghìn token cố định | ≤ 200 dòng (`XC-DOCAI-006`); link module |
 | Đo cache bằng "thấy nhanh hơn" | Cache không hit vì prefix đổi | Đo `cache_read_input_tokens` |
 
 ## Cổng tự động
@@ -94,7 +94,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 | Việc | Công cụ → lệnh | Đặt ở đâu | Ngưỡng |
 |---|---|---|---|
 | Kích thước PROGRESS | `wc -c PROGRESS.md` | Cổng commit / CI | ≤ 8192 byte |
-| Kích thước AGENTS.md | `wc -l AGENTS.md` | Cổng commit | < 200 dòng |
+| Kích thước AGENTS.md | `wc -l AGENTS.md` | Cổng commit | ≤ 200 dòng |
 | Trần vòng/giờ | `python3 scripts/xs.py loop status --json` | Stop hook | `budget` khi `iterations ≥ max_iterations` hoặc quá `deadline` |
 | Trần chi phí headless | `claude -p … --max-turns N --max-budget-usd X --output-format json` | Workflow CI | `total_cost_usd` ≤ X |
 | Output lệnh trong bằng chứng | `xs.py loop record` (giữ 40 dòng cuối) | Mọi Gate | `output_tail` ≤ 40 dòng |

@@ -3,7 +3,7 @@ title: Chuẩn quy trình & chất lượng (ISO 25010, SemVer, Conventional Com
 kind: standard
 prefix: STD-PROC
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chuẩn quy trình & chất lượng (ISO 25010, SemVer, Conventional Commits, SLSA, SBOM, DORA)
@@ -17,7 +17,7 @@ updated: 2026-10-13
 - **Chuẩn quy trình chỉ có nghĩa khi máy thực thi.** Conventional Commits không có commitlint là văn hoá; có commitlint + release-please là hợp đồng.
 - **Chất lượng là yêu cầu đo được, không phải tính từ.** ISO/IEC 25010 cho từ vựng (9 đặc tính); dự án phải gán số đo cho đặc tính nào quan trọng.
 - **Phiên bản là lời hứa tương thích.** SemVer: major = phá vỡ; mọi API công khai (HTTP, thư viện, CLI, schema sự kiện) đều theo.
-- **Chuỗi cung ứng có mức, tăng dần.** SLSA Build L1 (provenance) cho M; L2–L3 cho L. SBOM sinh tự động mỗi release.
+- **Chuỗi cung ứng có mức, tăng dần.** SLSA Build L1 (provenance) cho S, **L2 cho M, L3 cho L** — nhà là [`SEC-SUPPLY-014/015`](../12-security/supply-chain.md). SBOM sinh tự động mỗi release.
 - **Đo trước khi tự động hoá.** DORA baseline trước khi bật agent/autopilot để biết tự động hoá có giúp hay không (catalog 21 §8).
 
 ## Quyết định
@@ -27,8 +27,8 @@ updated: 2026-10-13
 | Từ vựng/khung yêu cầu chất lượng | ISO/IEC 25010:2023 | S: chọn ≤ 3 đặc tính có số đo; M/L: bảng đủ 9 đặc tính, "không áp dụng" có lý do | — |
 | Đánh số phiên bản sản phẩm/thư viện/API | SemVer 2.0.0 | mọi quy mô | App tiêu dùng chỉ hiển thị → vẫn SemVer nội bộ, tên marketing riêng |
 | Thông điệp commit, sinh changelog | Conventional Commits 1.0.0 + release-please | mọi quy mô | — |
-| Chuỗi cung ứng build | SLSA v1.2 Build track | S: L1 (provenance); M: L2 (hosted build, provenance ký); L: L3 | Repo tài liệu thuần |
-| SBOM | CycloneDX 1.7 (mặc định; ECMA-424) hoặc SPDX 3.0 (khi đối tác yêu cầu ISO/IEC 5962) | M+: sinh mỗi release | S nội bộ: MAY |
+| Chuỗi cung ứng build | SLSA v1.2 Build track | S: L1 (provenance); M: L2 (hosted build, provenance ký); L: L3 — theo [`SEC-SUPPLY-014/015`](../12-security/supply-chain.md) | Repo tài liệu thuần |
+| SBOM | CycloneDX 1.7 (mặc định; ECMA-424) hoặc SPDX 3.0 (khi đối tác yêu cầu; bản ISO/IEC 5962:2021 tương ứng SPDX 2.2.1) | M+: sinh mỗi release | S nội bộ: MAY |
 | Đo giao hàng | DORA 5 chỉ số (2025) | M+: đo tự động từ Git/CI/incident | S: ghi tay 2 chỉ số (lead time, deploy frequency) |
 | Changelog | Keep a Changelog (phiên bản **chưa xác minh**) sinh từ commit | mọi quy mô | — |
 
@@ -41,7 +41,7 @@ updated: 2026-10-13
 | Conventional Commits | **1.0.0** | — | <https://www.conventionalcommits.org/en/v1.0.0/> | Mọi repo | commitlint trong CI; changelog sinh tự động |
 | SLSA | **v1.2** (Approved; thêm Source Track) | ngày phát hành **chưa xác minh** (trang không ghi) | <https://slsa.dev/spec/> | Build artifact phát hành | Provenance attestation xác minh được (`slsa-verifier`) |
 | CycloneDX | **1.7** (ECMA-424) | 2025-10-21 | <https://cyclonedx.org/specification/overview/> | SBOM | File `sbom.cdx.json` mỗi release, `specVersion: "1.7"` |
-| SPDX | **3.0** (ISO/IEC 5962:2021 là SPDX 2.2.1) | — | <https://spdx.dev/use/specifications/> | SBOM khi đối tác yêu cầu | File `.spdx.json` hợp lệ |
+| SPDX | **3.0**; ISO/IEC 5962:2021 tương ứng SPDX 2.2.1 | — | <https://spdx.dev/use/specifications/> | SBOM khi đối tác yêu cầu | File `.spdx.json` hợp lệ |
 | DORA metrics | 5 chỉ số: change lead time, deployment frequency, failed deployment recovery time, change fail rate, deployment rework rate (báo cáo mới nhất 2025) | — | <https://dora.dev/guides/dora-metrics-four-keys/> | M+ | Dashboard tính từ Git/CI/incident |
 | NIST SSDF | xem [`security-standards.md`](security-standards.md) | — | — | — | — |
 
@@ -53,13 +53,13 @@ updated: 2026-10-13
 - [ ] `STD-PROC-004` **MUST** Mọi commit vào nhánh chính (và tiêu đề PR khi squash) theo Conventional Commits, subject ≤ 72 ký tự. → Kiểm: commitlint (`@commitlint/config-conventional`) chạy trong CI job `pr-policy`, exit 0. · Nguồn: Conventional Commits 1.0.0
 - [ ] `STD-PROC-005` **MUST@M** Changelog và tag release sinh tự động từ commit (release-please hoặc tương đương), không viết tay. → Kiểm: workflow release tồn tại; `CHANGELOG.md` có header do công cụ sinh. · Nguồn: Conventional Commits 1.0.0; Keep a Changelog
 - [ ] `STD-PROC-006` **MUST@M** Mỗi release sinh SBOM CycloneDX 1.7 (hoặc SPDX 3.0) và đính kèm artifact. → Kiểm: `jq -r .specVersion sbom.cdx.json` = `1.7`; file có trong release assets. · Nguồn: CycloneDX 1.7 (ECMA-424)
-- [ ] `STD-PROC-007` **MUST@M** Artifact phát hành có provenance SLSA Build L1 trở lên, xác minh được. → Kiểm: `slsa-verifier verify-artifact <file> --provenance-path <att> --source-uri github.com/<org>/<repo>` exit 0. · Nguồn: SLSA v1.2 Build track
-- [ ] `STD-PROC-008` **MUST@L** Build đạt SLSA Build L3 (hosted, cách ly, provenance không giả mạo được) cho artifact giao khách hàng. → Kiểm: provenance ghi builder hosted được tin cậy (vd `slsa-github-generator`), `slsa-verifier` xác nhận L3. · Nguồn: SLSA v1.2 Build L3
+- [ ] `STD-PROC-007` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SUPPLY-014`](../12-security/supply-chain.md): SLSA Build L2 cho M (bản cũ ghi L1, lệch nhà).
+- [ ] `STD-PROC-008` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`SEC-SUPPLY-015`](../12-security/supply-chain.md): SLSA Build L3 cho L.
 - [ ] `STD-PROC-009` **MUST@M** Đo 5 chỉ số DORA tự động từ Git/CI/incident, có baseline trước khi bật tự động hoá bằng agent. → Kiểm: dashboard/CSV `docs/ops/dora.csv` cập nhật theo lịch; file baseline có ngày. · Nguồn: DORA (dora.dev)
 - [ ] `STD-PROC-010` **SHOULD** Nhánh chính chỉ nhận squash merge với tiêu đề PR dạng conventional (một PR = một commit). → Kiểm: ruleset/branch protection `squash` only (`.github/rulesets/main.json`).
 - [ ] `STD-PROC-011` **SHOULD** Thư viện/SDK công khai công bố chính sách hỗ trợ phiên bản (major cũ được vá bao lâu) trong README. → Kiểm: mục "Versioning"/"Support policy" tồn tại.
 - [ ] `STD-PROC-012` **SHOULD** Deployment rework rate (DORA 2025) được đếm từ PR/hotfix gắn nhãn `rework` để phát hiện tự động hoá tạo việc làm lại. → Kiểm: truy vấn PR nhãn `rework` trong dashboard DORA.
-- [ ] `STD-PROC-013` **MAY** Dùng SPDX 3.0 song song CycloneDX khi khách hàng yêu cầu ISO/IEC 5962.
+- [ ] `STD-PROC-013` **MAY** Dùng SPDX 3.0 song song CycloneDX khi khách hàng yêu cầu ISO/IEC 5962 (bản ISO 2021 tương ứng SPDX 2.2.1 — hỏi khách cần bản nào).
 - [ ] `STD-PROC-014` **MAY** Áp SLSA Source Track (v1.2) cho repo có nhiều đội/kiểm toán.
 
 ## Bẫy thường gặp
@@ -95,6 +95,6 @@ Phiên bản commitlint, syft, slsa-verifier: **chưa xác minh** ngày 2026-10-
 - Conventional Commits 1.0.0: <https://www.conventionalcommits.org/en/v1.0.0/> — xác minh 2026-10-13
 - SLSA v1.2 (Approved): <https://slsa.dev/spec/> · <https://slsa.dev/spec/v1.2/whats-new> — xác minh 2026-10-13 (ngày phát hành không ghi)
 - CycloneDX 1.7 (2025-10-21, ECMA-424): <https://cyclonedx.org/specification/overview/> — xác minh 2026-10-13
-- SPDX 3.0 / ISO/IEC 5962:2021: <https://spdx.dev/use/specifications/> — xác minh 2026-10-13
+- SPDX 3.0; ISO/IEC 5962:2021 tương ứng SPDX 2.2.1: <https://spdx.dev/use/specifications/> — xác minh 2026-10-13
 - DORA metrics (5 chỉ số; báo cáo 2025): <https://dora.dev/guides/dora-metrics-four-keys/> · <https://dora.dev/research/> — xác minh 2026-10-13
 - release-please v17.11.2 (24/08/2026): catalog `seeker19110/stored` 13 §4c — đọc 2026-10-13; bài học WIP cap/squash: 23 §2.5.

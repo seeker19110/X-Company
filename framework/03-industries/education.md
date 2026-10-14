@@ -4,7 +4,7 @@ kind: industry
 slug: education
 prefix: IND-EDU
 modules: [16-compliance-privacy/*, 12-security/appsec-web, 12-security/ai-security, 12-security/logging-audit-and-incident, 08-backend/authn-authz, 08-backend/files-and-media, 08-backend/realtime-and-streaming, 09-database/sensitive-data-and-access, 09-database/data-modeling, 06-design-ux/accessibility, 06-design-ux/content-and-microcopy, 06-design-ux/responsive-and-mobile-first, 07-frontend/performance-web-vitals, 13-ai-engineering/guardrails-and-safety, 14-testing-quality/e2e-and-accessibility, 14-testing-quality/unit-and-logic-edge-cases, 18-cross-cutting/i18n-and-l10n]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Gói ngành: Giáo dục · edtech · trẻ em
@@ -151,5 +151,5 @@ từ 02/12/2027) · WCAG 2.2; EN 301 549 V3.2.1; Section 508 (US) · 1EdTech LTI
 - COPPA 16 CFR Part 312 (bản sửa 22/04/2025, hiệu lực 23/06/2025, tuân thủ 22/04/2026): <https://www.ftc.gov/legal-library/browse/rules/childrens-online-privacy-protection-rule-coppa> — xác minh 2026-10-13.
 - UK Online Safety Act 2023 (17/03/2025; 25/07/2025): <https://www.ofcom.org.uk/online-safety/illegal-and-harmful-content/statement-protecting-children-from-harms-online> — xác minh 2026-10-13.
 - 1EdTech LTI 1.3 Advantage: <https://standards.1edtech.org/lti/specifications/guides/implementation_guide/implementation-guide> — xác minh 2026-10-13; (chưa xác minh) phiên bản QTI 3.0, Caliper 1.2, Open Badges 3.0.
-- WCAG 2.2 (W3C Recommendation 12/12/2024): <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
+- WCAG 2.2 (W3C Recommendation 05/10/2023, bản cập nhật 12/12/2024): <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
 - EU AI Act Annex III(3) + Omnibus 2026/1744: xem [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md).

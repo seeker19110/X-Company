@@ -4,7 +4,7 @@ kind: profile
 slug: library-sdk
 prefix: PRF-LIB
 modules: [04-standards/*, 05-architecture/*, 08-backend/reliability-and-errors, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/maintenance-and-lifecycle, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Thư viện / SDK / package
@@ -103,7 +103,7 @@ Xác minh ngày **2026-10-13** — **xác minh lại trước khi dùng**.
 
 - Semantic Versioning 2.0.0: <https://semver.org/> — xác minh 2026-10-13. Keep a Changelog 1.1.0: <https://keepachangelog.com/en/1.1.0/> — xác minh 2026-10-13.
 - npm provenance & trusted publishing (`--provenance`, `id-token: write`, `npm audit signatures`): <https://docs.npmjs.com/generating-provenance-statements> — xác minh 2026-10-13. PyPI Trusted Publishers: <https://docs.pypi.org/trusted-publishers/> — xác minh 2026-10-13.
-- SLSA v1.2: <https://slsa.dev/spec/v1.1/levels> (ghi v1.2 hiện hành) — xác minh 2026-10-13.
+- SLSA v1.2: <https://slsa.dev/spec/v1.2/> (mức Build theo nhà [`../12-security/supply-chain.md`](../12-security/supply-chain.md): L2 @M, L3 @L) — xác minh 2026-10-13.
 - Node.js LTS: <https://endoflife.date/api/nodejs.json>; Python: <https://endoflife.date/api/python.json>; Go, Rust tương tự — xác minh 2026-10-13.
 - Phiên bản npm: `tsdown`, `tsup`, `publint`, `@arethetypeswrong/cli`, `@microsoft/api-extractor`, `typedoc`, `vitest`, `@changesets/cli`, `release-please`, `semantic-release`, `size-limit`, `@biomejs/biome`, `knip`, `typescript`; PyPI `hatch`, `uv`, `mkdocs-material`; crates.io `cargo-deny` — xác minh 2026-10-13.
 - Changesets workflow (`add` → `version` → `publish`): <https://github.com/changesets/changesets/blob/main/docs/intro-to-using-changesets.md> (trang ghi "outdated", trỏ changesets.dev) — xác minh 2026-10-13.

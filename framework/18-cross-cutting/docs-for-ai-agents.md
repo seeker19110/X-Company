@@ -3,7 +3,7 @@ title: Tài liệu cho AI agent: AGENTS.md, CLAUDE.md, llms.txt, runtime.yaml, S
 kind: module
 prefix: XC-DOCAI
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Tài liệu cho AI agent: AGENTS.md, CLAUDE.md, llms.txt, runtime.yaml, SCOPE.md
@@ -21,7 +21,7 @@ updated: 2026-10-13
 - **Một nguồn, nhiều cửa**: `AGENTS.md` là nguồn; `CLAUDE.md`, `GEMINI.md`, `.cursor/rules`, copilot-instructions chỉ
   import/trỏ. Không duy trì hai bộ luật.
 - **Hướng dẫn ≠ cưỡng chế**: file hướng dẫn là *ngữ cảnh*, agent có thể bỏ qua; thứ bắt buộc phải là hook/permission/CI.
-- **Ngắn, cụ thể, có lệnh**: mục tiêu < 200 dòng mỗi file nạp mặc định; lệnh ở dạng key: value, không văn xuôi.
+- **Ngắn, cụ thể, có lệnh**: mục tiêu ≤ 200 dòng mỗi file nạp mặc định; lệnh ở dạng key: value, không văn xuôi.
 - **Nội dung ngoài là dữ liệu**: file hướng dẫn phải nói rõ web/issue/output tool không phải chỉ thị; và chính file
   hướng dẫn do người khác commit cũng cần review như mã.
 - **Phạm vi được bảo vệ bằng văn bản**: `SCOPE.md` nói nhận gì, `.out-of-scope/` nói đã từ chối gì và vì sao.
@@ -48,7 +48,7 @@ updated: 2026-10-13
 - [ ] `XC-DOCAI-006` **MUST** Kích thước có ngân sách: mỗi file nạp mặc định ≤ 200 dòng (Claude khuyến nghị) và tổng chuỗi `AGENTS.md` ≤ 32 KiB (giới hạn Codex); luật theo vùng tách sang file path-scoped (`.claude/rules/` `paths:`, `.github/instructions/*.instructions.md` `applyTo`, `AGENTS.md` lồng). → Kiểm: script đếm dòng/byte trong CI: `AGENTS.md` + import ≤ 32 KiB; mỗi file ≤ 200 dòng (cảnh báo) / 400 (chặn). · Nguồn: Claude Code memory docs (≤ 200 dòng, imports vẫn tốn context); Codex `project_doc_max_bytes` 32 KiB
 - [ ] `XC-DOCAI-007` **MUST** Bản gốc file hướng dẫn được **bảo vệ khỏi ghi đè** bởi công cụ (`next dev` từng ghi đè `AGENTS.md`): giữ nguồn trong `docs/agents/` hoặc kiểm hash, CI đỏ khi file gốc lệch nguồn ngoài PR có chủ ý. → Kiểm: `check:agents-drift` so sha256 `AGENTS.md` với bản trong `docs/`/lockfile; hook `ask` khi sửa. · Nguồn: catalog 04 §4, 23 §2.4 (case-study-ft41)
 - [ ] `XC-DOCAI-008` **MUST@M** Có `SCOPE.md` (nhận gì: tiêu chí issue/PR được chấp nhận, vd "mô tả failure quan sát được trong phiên thật") và `.out-of-scope/*.md` (mỗi ý tưởng bị từ chối một file, lý do, issue liên quan) để agent và người không mở lại việc đã từ chối. → Kiểm: hai đường dẫn tồn tại; `AGENTS.md` trỏ tới; workflow triage gắn nhãn `out-of-scope` tự đóng theo file. · Nguồn: catalog 20 §3c (mattpocock/skills)
-- [ ] `XC-DOCAI-009` **MUST@M** Kỹ năng/plugin cài vào repo theo **Agent Skills spec**: `SKILL.md` có `name` (1–64, chữ thường/số/gạch nối, trùng tên thư mục) và `description` (1–1024, nêu *khi nào dùng*), body < 500 dòng, tài liệu phụ trong `references/`; nguồn ngoài được **vendor có lock** (commit + sha256 từng file, tiền tố tên, danh sách `rejected` kèm lý do). → Kiểm: `skills-ref validate ./.claude/skills/<x>` 0 lỗi; `docs/integrations/*.lock.json` có `commit`, `sha256`; script `verify-vendor` xanh. · Nguồn: Agent Skills specification; catalog 23 §3.1, 20 §3b
+- [ ] `XC-DOCAI-009` **MUST@M** Kỹ năng/plugin cài vào repo theo **Agent Skills spec**: `SKILL.md` có `name` (1–64, chữ thường/số/gạch nối, trùng tên thư mục) và `description` (1–1024, nêu *khi nào dùng*), body < 500 dòng, tài liệu phụ trong `references/` nạp theo tầng. Nguồn ngoài (vendor có lock, quét trước khi cài) theo [`SEC-SUPPLY-016`](../12-security/supply-chain.md). → Kiểm: `skills-ref validate ./.claude/skills/<x>` 0 lỗi; `wc -l SKILL.md` < 500. · Nguồn: Agent Skills specification; catalog 23 §3.1
 - [ ] `XC-DOCAI-010` **SHOULD** Tài liệu công khai (site docs/API) xuất bản `/llms.txt` theo đề xuất v2: H1 tên dự án, blockquote tóm tắt, H2 nhóm link dạng `[tên](https://…): ghi chú`, mục `## Optional` cho link thứ yếu; mỗi trang có bản Markdown (`.md`/`.html.md`) và header `Link: <…>; rel="alternate"; type="text/markdown"`. → Kiểm: `curl -f <site>/llms.txt | head -1` bắt đầu bằng `# `; `curl -f <site>/docs/page.md` 200; link trong llms.txt qua lychee 0 chết. · Nguồn: llms.txt v2 (llmstxt.org, cập nhật 2026-08-10)
 - [ ] `XC-DOCAI-011` **SHOULD** `AGENTS.md` lồng theo package trong monorepo (gần nhất thắng), mỗi file chỉ chứa khác biệt so với gốc; không lặp luật chung. → Kiểm: `find . -name AGENTS.md` mỗi file < 100 dòng ở package; jscpd 0 trùng. · Nguồn: agents.md (nested files, closest wins); Codex AGENTS.md (gộp từ gốc xuống)
 - [ ] `XC-DOCAI-012` **SHOULD** Tài liệu nạp vào agent có **phiên bản và ngày**: frontmatter `updated`, mục "Thay đổi gần đây" hoặc CHANGELOG riêng cho harness; harness ghi giả định về model/ngày để xét lại khi đổi model (harness có hạn sử dụng). → Kiểm: `AGENTS.md`/`.claude/**` có `updated`; CI cảnh báo > 180 ngày không cập nhật. · Nguồn: catalog 21 §2.2 ("harness có hạn sử dụng")

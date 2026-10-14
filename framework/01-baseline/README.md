@@ -1,7 +1,7 @@
 ---
 title: Nền tảng chung — mọi phần mềm đều cần
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 01 — Nền tảng chung — mọi phần mềm đều cần
@@ -17,7 +17,7 @@ updated: 2026-10-13
 | [`quality-gates.md`](quality-gates.md) | Năm cổng máy (format · lint · type · test · build), hook cục bộ + CI lặp lại, required check, không nới cấu hình để xanh | G5 dựng nền; khi CI "xanh rỗng" hoặc hook bị bỏ qua; khi thêm công cụ chất lượng |
 | [`security-minimum.md`](security-minimum.md) | Sàn bảo mật mọi loại phần mềm: validate allowlist, không bí mật, SCA/SAST, TLS, quyền tối thiểu, fail-closed, kênh báo lỗ hổng | G4 threat model; G5; trước G7 phát hành; khi thêm tích hợp/ranh giới mới |
 | [`errors-and-logging.md`](errors-and-logging.md) | Nhà của log ứng dụng: nhánh lỗi tường minh, handler toàn cục, không lộ nội bộ, log JSON stdout, mức OTel, redaction, timeout, retry có idempotency | G5–G6 khi viết mã; khi thiết kế API lỗi; khi alert nhiễu hoặc log có bí mật |
-| [`configuration-and-secrets.md`](configuration-and-secrets.md) | 12-factor config: biến môi trường, schema validate lúc khởi động, `.env.example`, mặc định an toàn, bí mật không qua repo/log/CLI/image | G5 dựng nền; khi thêm biến/bí mật mới; khi lên môi trường mới |
+| [`configuration-and-secrets.md`](configuration-and-secrets.md) | **Nhà của cấu hình**: biến môi trường, schema validate lúc khởi động, `.env.example`, tiền tố biến công khai, mặc định an toàn; bí mật chỉ phần tối thiểu, trỏ `12-security/secrets-management` | G5 dựng nền; khi thêm biến/bí mật mới; khi lên môi trường mới |
 | [`documentation-minimum.md`](documentation-minimum.md) | README đủ chạy–kiểm, CHANGELOG, ADR, runbook, docs-as-code tươi bằng máy (link, smoke lệnh README, freshness) | G2 (ADR stack); G5; trước G7; khi bàn giao/onboarding |
 | [`data-correctness.md`](data-correctness.md) | UTF-8 + NFC, null/rỗng/0, validate cú pháp + ngữ nghĩa, số lớn, tiền/thời gian (tóm tắt, trỏ 18), idempotency, giao dịch, ràng buộc CSDL, ca biên | G3 đặc tả ca biên; G6 khi viết logic nghiệp vụ; khi review bug "đúng kiểu nhưng sai việc" |
 | [`dependencies.md`](dependencies.md) | Lockfile + cài đóng băng, runtime trong cửa sổ hỗ trợ (EOL), quét lỗ hổng theo lịch, allowlist license, cập nhật tự động gom nhóm | G2 chọn stack; G5; mỗi tuần (cron); trước khi thêm phụ thuộc mới |

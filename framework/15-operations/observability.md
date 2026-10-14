@@ -3,7 +3,7 @@ title: Quan sát: log · metric · trace, OpenTelemetry, dashboard
 kind: module
 prefix: OPS-OBS
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, static-site, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Quan sát: log · metric · trace, OpenTelemetry, dashboard
@@ -47,7 +47,7 @@ updated: 2026-10-13
 - [ ] `OPS-OBS-009` **MUST@M** Theo dõi lỗi có grouping + thông báo lỗi mới (Sentry hoặc tương đương) với source map/symbol, release tag, che PII. → Kiểm: lỗi thử nghiệm xuất hiện với stack đúng dòng; `send_default_pii=false`. · Nguồn: Sentry docs (chưa xác minh phiên bản)
 - [ ] `OPS-OBS-010` **MUST@M** Retention và chi phí quan sát có ngân sách: log hot ≤ 30 ngày (trừ bảo mật/audit), sampling trace tail-based, giới hạn cardinality; chi phí observability theo dõi như một dòng ngân sách. → Kiểm: cấu hình retention trong IaC; dashboard chi phí/ingest GB/ngày; alert ingest tăng > 50% tuần. · Nguồn: [`cost-management.md`](cost-management.md)
 - [ ] `OPS-OBS-011` **MUST@M** Synthetic/uptime check từ ngoài cho luồng chính (trang chủ, login, API health) mỗi ≤ 5 phút từ ≥ 2 vị trí; là nguồn SLI availability bên ngoài. → Kiểm: cấu hình checker (Blackbox exporter/Uptime Kuma/dịch vụ); alert khi 2 lần liên tiếp fail. · Nguồn: Google SRE Workbook (SLI từ góc nhìn người dùng)
-- [ ] `OPS-OBS-012` **MUST@M** Frontend web/mobile: RUM/Core Web Vitals + lỗi JS gửi về với sampling; không gửi PII. → Kiểm: cấu hình web-vitals/OTel browser SDK; dashboard LCP/INP/CLS p75 (ngưỡng ở [`../07-frontend/performance-web-vitals.md`](../07-frontend/performance-web-vitals.md)). · Nguồn: web.dev CWV (trỏ 07)
+- [ ] `OPS-OBS-012` **MUST@M** Frontend web/mobile: lỗi JS/crash client gửi về hệ quan sát với sampling, gắn `release`/phiên bản app, không PII; dữ liệu RUM đưa vào cùng backend quan sát để nối với trace server. Thu RUM Core Web Vitals web: xem [`FE-PERF-003`](../07-frontend/performance-web-vitals.md) (nhà, kèm ngưỡng). → Kiểm: cấu hình OTel browser/mobile SDK hoặc Sentry có `sampleRate` + scrub PII; lỗi thử trên staging xuất hiện trong backend; dashboard có panel lỗi client theo phiên bản. · Nguồn: OTel client SDK; [`../07-frontend/performance-web-vitals.md`](../07-frontend/performance-web-vitals.md)
 - [ ] `OPS-OBS-013` **MUST@L** OTel Collector chạy HA (≥ 2 replica), có queue/retry, giới hạn bộ nhớ (`memory_limiter`), và metric của chính Collector được giám sát (drop, queue). → Kiểm: deployment ≥ 2; processor `memory_limiter` + `batch`; alert `otelcol_exporter_send_failed_*`. · Nguồn: OTel Collector docs (chưa fetch lại 2026-10-13)
 - [ ] `OPS-OBS-014` **SHOULD** Deploy marker/annotation (phiên bản, commit, người/CI) được ghi vào hệ quan sát để nối thay đổi ↔ sự cố. → Kiểm: mỗi deploy tạo annotation/event; dashboard hiện vạch deploy. · Nguồn: DORA (change lead time/CFR); [`deployment-strategies.md`](deployment-strategies.md)
 - [ ] `OPS-OBS-015` **SHOULD** Business metric tối thiểu (đăng ký, đơn hàng, thanh toán thành công, job hoàn tất) đo cạnh metric kỹ thuật để phát hiện "hệ thống xanh nhưng nghiệp vụ đỏ". → Kiểm: ≥ 3 business counter; alert "0 đơn trong X phút giờ cao điểm". · Nguồn: Google SRE Workbook (SLI theo người dùng)

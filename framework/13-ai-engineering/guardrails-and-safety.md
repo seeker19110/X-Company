@@ -3,7 +3,7 @@ title: Guardrail runtime, chính sách nội dung, fallback, an toàn người d
 kind: module
 prefix: AI-GUARD
 applies_to: [ai-agent, agentic-system, data-ml, api-service, web-app]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Guardrail runtime, chính sách nội dung, fallback, an toàn người dùng
@@ -60,7 +60,7 @@ updated: 2026-10-13
 - [ ] `AI-GUARD-004` **MUST** PII trong input được phát hiện và che/băm trước khi ghi log/trace/dataset; PII trong output được kiểm theo quyền của người nhận. → Kiểm: test log không chứa PII mẫu; xem [`../16-compliance-privacy/privacy-by-design.md`](../16-compliance-privacy/privacy-by-design.md).
 - [ ] `AI-GUARD-005` **MUST** Guardrail chạy ở server; client không thể tắt hay bỏ qua; cấu hình guardrail là cấu hình cổng (đổi phải qua review). → Kiểm: endpoint không có tham số tắt kiểm; thay đổi config có PR.
 - [ ] `AI-GUARD-006` **MUST** Mọi lần chặn/hạ cấp được log với lý do, luật khớp, trace id (không log nội dung PII thô); có dashboard tỉ lệ chặn. → Kiểm: log mẫu; dashboard tồn tại. · Nguồn: [`observability-and-cost.md`](observability-and-cost.md)
-- [ ] `AI-GUARD-007` **MUST** Người dùng được cho biết đang tương tác với AI, có đường tới người thật và cách báo cáo nội dung sai; nội dung AI tạo được gắn nhãn khi luật yêu cầu. → Kiểm: test UI; đối chiếu [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md).
+- [ ] `AI-GUARD-007` **MUST** Tính năng AI hướng người dùng có đường tới người thật và cách báo cáo nội dung AI sai/có hại; báo cáo đi vào hàng đợi xử lý có người nhận. Thông báo "đang tương tác với AI" và nhãn nội dung AI: xem [`CMP-AI-003`](../16-compliance-privacy/ai-regulation.md), `CMP-AI-004`. → Kiểm: E2E: nút báo cáo và lối gặp người thật hiện trong UI AI; gửi báo cáo → tạo bản ghi trong hàng đợi.
 - [ ] `AI-GUARD-008` **MUST** Mức rủi ro cao (y tế, tài chính, pháp lý, trẻ em, tiền) có HITL hoặc chuyển người cho ca bị phân loại nhạy cảm; không để model "tự xử". → Kiểm: test ca nhạy cảm → trạng thái chuyển người.
 - [ ] `AI-GUARD-009` **MUST** Bộ test guardrail (cấm, injection, PII, negative) chạy trong CI mỗi khi đổi prompt, model, hay config guardrail. → Kiểm: job CI; xem [`evaluation.md`](evaluation.md).
 - [ ] `AI-GUARD-010` **SHOULD** Tầng 2 dùng model phân loại nhỏ chuyên biệt (độ trễ thấp) với eval riêng; không dùng cùng model sinh để tự chấm mình. · Nguồn: stored 12 §2
@@ -100,5 +100,5 @@ updated: 2026-10-13
 - PyPI: `guardrails-ai` 0.11.0 (2026-08-14) <https://pypi.org/project/guardrails-ai/> · `nemoguardrails` 0.24.1 (2026-09-16) <https://pypi.org/project/nemoguardrails/> · `llm-guard` 0.3.16 (2025-05-19) <https://pypi.org/project/llm-guard/> · `presidio-analyzer` 2.2.364 (2026-07-22) <https://pypi.org/project/presidio-analyzer/> — xác minh 2026-10-13.
 - Presidio (Data Privacy Stack: analyzer, anonymizer, image redactor, structured): <https://presidio.dataprivacystack.org/> — xác minh 2026-10-13 (đính chính: tài liệu cũ trỏ microsoft.github.io/presidio đã chuyển hướng).
 - NIST AI RMF 1.0 (2023-01-26) và AI 600-1 Generative AI Profile (2024-07-26): <https://www.nist.gov/itl/ai-risk-management-framework> — xác minh 2026-10-13 (`research/2026-10-13-ai-agent-research.md` §5).
-- OWASP LLM Top 10 2025 / Agentic Top 10 2026: <https://genai.owasp.org/> — (chưa xác minh — không truy cập được ngày 2026-10-13, 403).
+- OWASP Top 10 for LLM Applications 2026 (04/08/2026; mã đổi so với 2025 — bảng ở [`../12-security/ai-security.md`](../12-security/ai-security.md)): <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> — xác minh 2026-10-14. Agentic Top 10 2026: <https://genai.owasp.org/> — (chưa xác minh — 403 ngày 2026-10-13).
 - `seeker19110/stored` mục 12 §2 (hai tầng: từ khoá tất định + model nhỏ; fallback khi model lỗi; fail-closed) — đọc 2026-10-13 (`research/2026-10-13-stored-catalog-extraction.md`).

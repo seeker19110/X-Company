@@ -3,7 +3,7 @@ title: Chuỗi cung ứng: ghim, SBOM, chữ ký, SLSA, Scorecard, Dependabot
 kind: module
 prefix: SEC-SUPPLY
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chuỗi cung ứng: ghim, SBOM, chữ ký, SLSA, Scorecard, Dependabot
@@ -33,7 +33,7 @@ updated: 2026-10-13
 | Cập nhật dependency tự động | **Dependabot** (có sẵn GitHub; gom nhóm `groups`, `open-pull-requests-limit` mặc định 5) | **Renovate** (AGPL-3.0, v44.x) khi cần đa nền tảng/đa registry/quy tắc phức tạp; AGPL không ảnh hưởng sản phẩm vì chạy như dịch vụ riêng — vẫn ghi vào license review |
 | Quét lỗ hổng dependency | **OSV-Scanner** v2.7.0 (Apache-2.0, offline được, quét cả lockfile + image) | `npm audit`/`pip-audit` 2.10.1/`govulncheck`/`cargo audit` theo hệ sinh thái khi chỉ một ngôn ngữ; Trivy (Apache-2.0) khi cần quét image + IaC một tool — **ghim SHA + kiểm checksum** (từng có sự cố CVE-2026-33634) |
 | Chặn lỗ hổng mới trong PR | `actions/dependency-review-action` với `fail-on-severity: high` + `deny-licenses` | Ngoài GitHub → OSV-Scanner diff mode hoặc Renovate vulnerability alerts |
-| SBOM | **syft** v1.54.1 (Apache-2.0) xuất **CycloneDX 1.7** (ECMA-424) | SPDX 3.0 (ISO/IEC 5962:2021) khi đối tác yêu cầu; `cyclonedx-*` plugin của build tool khi cần SBOM từ bước build |
+| SBOM | **syft** v1.54.1 (Apache-2.0) xuất **CycloneDX 1.7** (ECMA-424) | SPDX 3.0 (bản ISO/IEC 5962:2021 tương ứng SPDX 2.2.1) khi đối tác yêu cầu; `cyclonedx-*` plugin của build tool khi cần SBOM từ bước build |
 | Ký artifact/image | **cosign** v3.1.3 (Sigstore, keyless qua OIDC) + attestation SLSA provenance | Ký bằng khoá KMS khi không có OIDC identity ổn định; npm provenance (`--provenance`) cho package npm |
 | Mức SLSA | Build **L2** (hosted builder ký provenance) cho M; **L3** cho L hoặc thư viện nhiều người dùng | L1 (chỉ sinh provenance) cho S |
 | Đánh giá dependency trước khi thêm | OpenSSF Scorecard v5.6.0 (check Maintained, Vulnerabilities, Pinned-Dependencies, Dangerous-Workflow…) + `deps.dev` | Repo archive/đổi tên/không license → không thêm; vendor có lock nếu bắt buộc |
@@ -58,7 +58,7 @@ updated: 2026-10-13
 - [ ] `SEC-SUPPLY-013` **MUST@M** Image/artifact phát hành được ký (cosign keyless qua OIDC) kèm attestation provenance; môi trường deploy **chỉ chạy artifact có chữ ký hợp lệ**. → Kiểm: `cosign sign` + `cosign attest --predicate provenance.json` trong release; admission policy (Kyverno/Sigstore policy-controller/`cosign verify` trong deploy script) chặn image không ký. · Nguồn: SLSA v1.2 Build L2; Sigstore docs
 - [ ] `SEC-SUPPLY-014` **MUST@M** Đạt SLSA Build L2: build trên hosted builder, provenance do builder sinh và ký, người tiêu thụ xác minh. → Kiểm: `slsa-framework/slsa-github-generator` (hoặc tương đương) sinh provenance; `slsa-verifier`/`cosign verify-attestation` trong pipeline deploy. · Nguồn: SLSA v1.2 spec
 - [ ] `SEC-SUPPLY-015` **MUST@L** Đạt SLSA Build L3 (builder cách ly, khoá ký không truy cập được từ bước build do người dùng định nghĩa) cho artifact phân phối rộng (thư viện, image public, installer). → Kiểm: provenance ghi builder id đạt L3; chính sách verify yêu cầu L3. · Nguồn: SLSA v1.2 Build L3
-- [ ] `SEC-SUPPLY-016` **MUST** Skill/MCP server/plugin cho agent được **vendor có lock** (pin commit, `sha256` từng file, prefix tên) hoặc cài từ nguồn kiểm duyệt; quét tĩnh (SkillSpector/skill-scanner/agent-scan) **trong sandbox** trước khi cài; tự đọc `install.sh`, hook, lệnh sửa `~/.claude/settings.json`. → Kiểm: file lock (`skills.lock.json`) có hash; CI so hash thực tế với lock; log quét lưu `docs/security/`. · Nguồn: catalog stored 12 §3e, 20 §3b; OWASP MCP Top 10 MCP03/MCP04; ASI04
+- [ ] `SEC-SUPPLY-016` **MUST** (nhà của vendor-lock skill/MCP/plugin) Skill/MCP server/plugin cho agent được **vendor có lock** (pin commit, `sha256` từng file, prefix tên) hoặc cài từ nguồn kiểm duyệt; quét tĩnh (SkillSpector/skill-scanner/agent-scan) **trong sandbox** trước khi cài; tự đọc `install.sh`, hook, lệnh sửa `~/.claude/settings.json`. → Kiểm: file lock (`skills.lock.json`) có hash; CI so hash thực tế với lock; log quét lưu `docs/security/`. · Nguồn: catalog stored 12 §3e, 20 §3b; OWASP MCP Top 10 MCP03/MCP04; ASI04; OWASP LLM 2026 LLM04
 - [ ] `SEC-SUPPLY-017` **MUST** Tool list/mô tả của MCP server được ghim (hash mô tả + phiên bản server); mô tả đổi → chặn và báo (chống tool poisoning/rug pull). → Kiểm: test khởi động so hash `tools/list` với lock; thay đổi = fail. · Nguồn: MCP spec (tool description là untrusted); OWASP MCP Top 10 MCP03; khung cũ spec C2-FR-07
 - [ ] `SEC-SUPPLY-018` **SHOULD** Dependabot/Renovate bật cho **mọi** hệ sinh thái trong repo (npm/pip/go/docker/github-actions), gom nhóm minor+patch, giới hạn PR mở theo WIP cap, bỏ qua major (xử lý có kế hoạch). → Kiểm: `dependabot.yml` có đủ `package-ecosystem` theo file manifest tồn tại; `groups` + `open-pull-requests-limit` đặt rõ. · Nguồn: GitHub Dependabot options reference; catalog stored 23 §2.5
 - [ ] `SEC-SUPPLY-019` **SHOULD** Workflow CI qua policy-as-code (conftest với rule Rego: ghim SHA, permissions, không `curl|sh`, không `continue-on-error` ở job cổng). → Kiểm: `conftest test .github/workflows -p policy/ci` trong CI; rule có test riêng. · Nguồn: catalog stored 12 §3 (OPA/conftest), 23 §3.3 (fitness function cho CI)
@@ -107,6 +107,6 @@ updated: 2026-10-13
 - NIST SP 800-218 SSDF v1.1 (PS.3, PW.4): <https://csrc.nist.gov/pubs/sp/800/218/final> — xác minh 2026-10-13.
 - OWASP Top 10:2025 A03 Software Supply Chain Failures, A08 Integrity Failures: <https://top10.owasp.org/2025> — xác minh 2026-10-13.
 - OWASP MCP Top 10 (MCP01–MCP10, living document, CC BY-NC-SA 4.0): <https://github.com/OWASP/www-project-mcp-top-10> — xác minh 2026-10-13.
-- CycloneDX 1.7 (2025-10-21; ECMA-424): <https://cyclonedx.org/specification/overview/>; SPDX 3.0 (ISO/IEC 5962:2021): <https://spdx.dev/use/specifications/> — xác minh 2026-10-13.
+- CycloneDX 1.7 (2025-10-21; ECMA-424): <https://cyclonedx.org/specification/overview/>; SPDX 3.0; ISO/IEC 5962:2021 tương ứng SPDX 2.2.1: <https://spdx.dev/use/specifications/> — xác minh 2026-10-13 (đính chính 2026-10-14: bản trước ghi như thể ISO/IEC 5962:2021 là SPDX 3.0).
 - Phiên bản tool (tag xác minh 2026-10-13, trang GitHub không hiện năm): syft v1.54.1, cosign v3.1.3, conftest v0.71.1, OSV-Scanner v2.7.0 (12/10/2026 theo catalog 12 §3d), checkov 3.3.28 + pip-audit 2.10.1 + zizmor 1.30.1 (PyPI, 2026-10-13); Renovate AGPL-3.0 (LICENSE fetch 2026-10-13), 44.151.5 theo catalog 13 (2026-10-12).
 - Catalog `seeker19110/stored` 12 §3 (7 quy tắc, supply chain, CI có AI), 23 §8.1 (ma trận vệ sinh), 20 §3b (vendor-with-lock), đọc 2026-10-13. Sự cố tj-actions/changed-files 2025 và Trivy CVE-2026-33634: ghi theo catalog, (chưa xác minh lại nguồn gốc ngày 2026-10-13).

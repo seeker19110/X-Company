@@ -1,14 +1,14 @@
 ---
 title: Mẫu API-CONTRACT
 kind: template
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Mẫu API-CONTRACT.md — hợp đồng API trước khi chia việc
 
 > **Ai viết:** người thiết kế API cùng hai bên tiêu thụ/cung cấp (front–back, service–service, agent–tool); duyệt **trước** khi hai bên làm song song. **Giai đoạn:** G3–G4.
 > **Cổng dùng:** `PM-SPEC-005` (contract trước khi chia việc), `BE-API-*` ở [`../08-backend/api-design.md`](../08-backend/api-design.md), contract test ở [`../14-testing-quality/integration-and-contract.md`](../14-testing-quality/integration-and-contract.md).
-> **Nguồn sự thật là file máy đọc** (`openapi.yaml` theo OpenAPI 3.2.1 — xác minh 2026-10-13; schema JSON Schema 2020-12; gRPC `.proto`; sự kiện AsyncAPI); file Markdown này là bản tóm tắt + quyết định, trỏ tới file máy đọc. Lỗi theo **RFC 9457** (`application/problem+json`); ngừng hỗ trợ báo bằng header `Deprecation` (RFC 9745) và `Sunset` (RFC 8594).
+> **Nguồn sự thật là file máy đọc** (`openapi.yaml` theo OpenAPI **3.1.x** mặc định; 3.2.1 chỉ khi toàn chuỗi tool lint → codegen → mock đã kiểm — xem bẫy ở [`../04-standards/api-and-web-standards.md`](../04-standards/api-and-web-standards.md); schema JSON Schema 2020-12; gRPC `.proto`; sự kiện AsyncAPI); file Markdown này là bản tóm tắt + quyết định, trỏ tới file máy đọc. Lỗi theo **RFC 9457** (`application/problem+json`); ngừng hỗ trợ báo bằng header `Deprecation` (RFC 9745) và `Sunset` (RFC 8594).
 
 ````markdown
 # API-CONTRACT — <Tên API> · phiên bản API v<N> · hợp đồng phiên bản <n> · <YYYY-MM-DD>

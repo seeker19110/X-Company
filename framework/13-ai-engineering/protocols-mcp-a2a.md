@@ -3,7 +3,7 @@ title: Giao thức: MCP, A2A, AG-UI, Agent Skills, AGENTS.md
 kind: module
 prefix: AI-PROTO
 applies_to: [ai-agent, agentic-system, data-ml]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Giao thức: MCP, A2A, AG-UI, Agent Skills, AGENTS.md
@@ -64,11 +64,11 @@ passthrough · scope tối thiểu. Server phát `WWW-Authenticate` chuẩn; cli
 - [ ] `AI-PROTO-006` **MUST** Server MCP tự xuất bản kiểm tham số lúc chạy (schema + quyền) và không tin client; log có `traceparent` từ `_meta` khi có. → Kiểm: test tham số sai bị từ chối; trace nối được.
 - [ ] `AI-PROTO-007` **MUST** A2A: Agent Card có chữ ký kiểm được, auth scheme khai rõ; task/artefact từ agent ngoài là untrusted và qua guardrail trước khi dùng. → Kiểm: test card chữ ký sai bị từ chối. · Nguồn: A2A v1.0.1 spec
 - [ ] `AI-PROTO-008` **MUST** Skill (SKILL.md + script) được review như code, có chủ sở hữu, không nạp từ nguồn không kiểm; script không được cấp quyền rộng hơn agent. → Kiểm: skill nằm trong repo, có PR review; không `curl | sh` trong skill. · Nguồn: Agent Skills spec
-- [ ] `AI-PROTO-009` **MUST** `AGENTS.md` < 200 dòng, lệnh thật (trỏ `xs.yaml`/script), link module thay vì chép; `CLAUDE.md` chỉ import `@AGENTS.md` + phần riêng cho Claude Code. → Kiểm: `wc -l`; diff lệnh với `xs.yaml`. · Nguồn: [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md)
+- [ ] `AI-PROTO-009` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-006`](../18-cross-cutting/docs-for-ai-agents.md) (`AGENTS.md` ≤ 200 dòng), `XC-DOCAI-002` (`CLAUDE.md` import `@AGENTS.md`) và `XC-DOCAI-003` (lệnh trong file máy đọc).
 - [ ] `AI-PROTO-010` **SHOULD** Chạy MCP Inspector (2.10.1) trong CI/pre-merge cho server tự xuất bản: liệt kê tool, gọi thử với tham số biên, so snapshot. · Nguồn: MCP Inspector
 - [ ] `AI-PROTO-011` **SHOULD** Chọn dòng SDK có chủ đích (TS: `@modelcontextprotocol/server`/`client` 2.x hay `sdk` 1.x) và ghi ADR; không để `latest` quyết.
 - [ ] `AI-PROTO-012` **SHOULD** Server MCP từ xa là stateless theo spec mới (handle thay vì session dài), hỗ trợ `CacheableResult` khi phù hợp; eval lại khi nâng spec. · Nguồn: MCP spec 2026-07-28
-- [ ] `AI-PROTO-013` **SHOULD** SKILL.md có `name`, `description` rõ (ngắn, nói khi nào dùng), nội dung < 500 dòng, tài liệu phụ nạp theo tầng. · Nguồn: Agent Skills spec
+- [ ] `AI-PROTO-013` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-009`](../18-cross-cutting/docs-for-ai-agents.md): cấu trúc `SKILL.md` theo Agent Skills spec (`name`, `description`, body < 500 dòng, tài liệu phụ theo tầng).
 - [ ] `AI-PROTO-014` **SHOULD** AG-UI hoặc giao thức sự kiện riêng: sự kiện có `run_id`, trạng thái bước, lý do dừng; giao diện hiển thị theo [`../06-design-ux/ai-ux.md`](../06-design-ux/ai-ux.md).
 - [ ] `AI-PROTO-015` **SHOULD** Giới hạn số MCP server bật đồng thời (mỗi server thêm tool vào context); đo token của `tools/list` tổng. · Nguồn: [`../11-autonomous-loop/context-and-token-budget.md`](../11-autonomous-loop/context-and-token-budget.md)
 - [ ] `AI-PROTO-016` **MAY** Xuất bản MCP server của sản phẩm cho khách: kèm PRM, tài liệu scope, rate limit, changelog tool; coi như API công khai. · Nguồn: [`../08-backend/api-design.md`](../08-backend/api-design.md)
@@ -85,7 +85,7 @@ passthrough · scope tối thiểu. Server phát `WWW-Authenticate` chuẩn; cli
 | `npm i @modelcontextprotocol/sdk@latest` nghĩ là mới nhất | Dòng 1.x, API khác 2.x | Chọn dòng có chủ đích |
 | 15 MCP server bật cùng lúc | Context đầy tool, chọn sai | Giới hạn; nạp theo ngữ cảnh |
 | Skill tải từ internet lúc chạy | Supply chain | Skill trong repo, review |
-| `AGENTS.md` 800 dòng | Agent bỏ qua, tốn token | < 200 dòng, link |
+| `AGENTS.md` 800 dòng | Agent bỏ qua, tốn token | ≤ 200 dòng, link (`XC-DOCAI-006`) |
 
 ## Cổng tự động
 
@@ -94,7 +94,7 @@ passthrough · scope tối thiểu. Server phát `WWW-Authenticate` chuẩn; cli
 | Snapshot tool | `npx @modelcontextprotocol/inspector --cli <server> --method tools/list` so snapshot | CI | Diff = 0 hoặc có changelog |
 | Auth remote MCP | Test PRM endpoint, token sai audience | CI | Từ chối đúng |
 | Dependency MCP | Bảng server có ngày xác minh; pin SHA | Review PR | Thiếu → đỏ |
-| AGENTS.md | `wc -l AGENTS.md` < 200; lệnh khớp `xs.yaml` | Cổng commit | Xanh |
+| AGENTS.md | `wc -l AGENTS.md` ≤ 200; lệnh khớp `xs.yaml` (theo [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md)) | Cổng commit | Xanh |
 | Skill | Review PR + lint không có tải mã lúc chạy | Repo | Bắt buộc |
 
 ## Nguồn

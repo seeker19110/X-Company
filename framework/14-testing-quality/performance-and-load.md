@@ -3,14 +3,15 @@ title: Hiệu năng & tải: k6/Locust, ngưỡng p95, Lighthouse, ngân sách
 kind: module
 prefix: QA-PERF
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, static-site, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hiệu năng & tải: k6/Locust, ngưỡng p95, Lighthouse, ngân sách
 
-> **Cách đo và chặn** hiệu năng bằng test: load test backend (k6/Locust) với ngưỡng p95/lỗi, Lighthouse CI cho web,
-> benchmark cho thư viện/CLI. Phương pháp tối ưu ở [`../18-cross-cutting/performance-engineering.md`](../18-cross-cutting/performance-engineering.md);
-> Core Web Vitals và tối ưu frontend ở [`../07-frontend/performance-web-vitals.md`](../07-frontend/performance-web-vitals.md).
+> **Cách đo và chặn** hiệu năng bằng test: load test backend (k6/Locust) với ngưỡng p95/lỗi, benchmark cho thư viện/CLI,
+> số đo hiệu năng trong GO/NO-GO, và vận hành công cụ Lighthouse CI. Phương pháp (chỉ số, baseline, ngân sách) ở
+> [`../18-cross-cutting/performance-engineering.md`](../18-cross-cutting/performance-engineering.md); **ngưỡng và cổng hiệu năng web**
+> (Lighthouse trên PR, ngân sách bundle, RUM/CWV) là nhà của [`../07-frontend/performance-web-vitals.md`](../07-frontend/performance-web-vitals.md).
 
 ## Nguyên tắc
 
@@ -34,11 +35,11 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `QA-PERF-001` **MUST** `PROJECT.md` ghi ngân sách hiệu năng bằng số cho loại dự án (p95/CWV/thời gian chạy/kích thước) và điều kiện đo. → Kiểm: mục "Hiệu năng" có ≥ 2 ngưỡng số + điều kiện (thiết bị/mạng/VU). · Nguồn: ISO/IEC 25010:2023 performance efficiency
+- [ ] `QA-PERF-001` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-PERF-001`](../18-cross-cutting/performance-engineering.md): `PROJECT.md` ghi chỉ số/ngân sách hiệu năng bằng số kèm điều kiện đo.
 - [ ] `QA-PERF-002` **MUST@M** Backend có load test tự động (k6/Locust) với `thresholds` p95 và tỷ lệ lỗi; chạy ít nhất nightly trên staging, fail khi vượt. → Kiểm: script k6 có `thresholds: { http_req_duration: ['p(95)<…'], http_req_failed: ['rate<0.01'] }`; job nightly exit ≠ 0 khi vượt. · Nguồn: k6 docs thresholds
-- [ ] `QA-PERF-003` **MUST@M** Web: Lighthouse CI chạy trên PR cho ≥ 3 URL chính (hoặc 5 theo mẫu Xgold), `numberOfRuns ≥ 3`, assert `categories:performance ≥ 0.9` và LCP/CLS/TBT. → Kiểm: `lighthouserc.json` có `collect.numberOfRuns ≥ 3`, `assert.assertions['categories:performance']` mức `error` `minScore 0.9`. · Nguồn: web.dev Core Web Vitals; catalog 23 §2.5
-- [ ] `QA-PERF-004` **MUST@M** Dữ liệu CWV thật (RUM, p75 theo mobile/desktop) được thu và so với ngưỡng tốt; lab (Lighthouse) không thay RUM. → Kiểm: dashboard RUM có LCP/INP/CLS p75; cảnh báo khi vượt. · Nguồn: web.dev (p75)
-- [ ] `QA-PERF-005` **MUST@M** Ngân sách bundle theo route được chặn ở PR. → Kiểm: `size-limit`/`bundlesize` cấu hình theo route, job PR đỏ khi vượt.
+- [ ] `QA-PERF-003` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`FE-PERF-002`](../07-frontend/performance-web-vitals.md): Lighthouse CI mobile trên PR cho ≥ 3 URL chính, `numberOfRuns ≥ 3`, median, Performance ≥ 0,9 + LCP/CLS/TBT.
+- [ ] `QA-PERF-004` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`FE-PERF-003`](../07-frontend/performance-web-vitals.md): RUM thu CWV người dùng thật, so p75 với ngưỡng `FE-PERF-001`; lab không thay RUM.
+- [ ] `QA-PERF-005` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`FE-PERF-004`](../07-frontend/performance-web-vitals.md): ngân sách bundle theo route (`size-limit`) chặn ở PR.
 - [ ] `QA-PERF-006` **MUST** Mọi số đo hiệu năng trong báo cáo GO/NO-GO kèm: commit, môi trường, thiết bị/mạng mô phỏng, VU/thời lượng, ngày. → Kiểm: `GO-NO-GO.md` mục hiệu năng có 5 trường; thiếu → NO-GO.
 - [ ] `QA-PERF-007` **MUST@M** Load test không chạy vào production trừ game day có lịch và cảnh báo; cấu hình CI cấm target production. → Kiểm: script k6 lấy `BASE_URL` từ env; CI deny giá trị domain production (grep).
 - [ ] `QA-PERF-008` **MUST@M** Thư viện/CLI: benchmark trong CI so với baseline đã commit; chậm hơn > 10% → đỏ (ngưỡng đổi được). → Kiểm: `benchstat`/`pytest-benchmark --benchmark-compare-fail=mean:10%`/Vitest `bench` với so sánh; file baseline trong repo.
@@ -54,9 +55,9 @@ updated: 2026-10-13
 
 ## Bẫy thường gặp
 
-- **"Lighthouse 95 trên laptop" làm bằng chứng.** Không mô phỏng mobile/4G, một lần chạy. Cách tránh: LHCI mobile preset, `numberOfRuns ≥ 3`, median; RUM p75 (QA-PERF-004).
+- **"Lighthouse 95 trên laptop" làm bằng chứng.** Không mô phỏng mobile/4G, một lần chạy. Cách tránh: LHCI mobile preset, `numberOfRuns ≥ 3`, median (FE-PERF-002); RUM p75 (FE-PERF-003).
 - **Load test một endpoint GET cache được** → đẹp giả. Cách tránh: scenario theo luồng, có ghi (QA-PERF-010).
-- **Ngưỡng p95 không có điều kiện** (bao nhiêu VU? dữ liệu bao nhiêu hàng?). Cách tránh: QA-PERF-001/006.
+- **Ngưỡng p95 không có điều kiện** (bao nhiêu VU? dữ liệu bao nhiêu hàng?). Cách tránh: XC-PERF-001, QA-PERF-006.
 - **Load test đánh vào production** gây sự cố thật. Cách tránh: QA-PERF-007 cấm ở CI.
 - **Hạ ngưỡng cho xanh** thay vì sửa. Cách tránh: hook hỏi khi sửa `lighthouserc`/`thresholds`; QA-PERF-015 chỉ cho `warn` có hạn.
 - **Benchmark trên runner chia sẻ** nhiễu lớn → đỏ/xanh ngẫu nhiên. Cách tránh: so tương đối với baseline chạy cùng runner, ngưỡng 10%, lặp nhiều lần; runner riêng cho benchmark quan trọng.

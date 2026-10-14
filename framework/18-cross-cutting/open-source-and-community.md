@@ -3,7 +3,7 @@ title: Mã nguồn mở & cộng đồng: CONTRIBUTING, CoC, SECURITY.md, phát 
 kind: module
 prefix: XC-OSS
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Mã nguồn mở & cộng đồng: CONTRIBUTING, CoC, SECURITY.md, phát hành công khai
@@ -33,7 +33,7 @@ updated: 2026-10-13
 | Code of Conduct | **Contributor Covenant 3.0** (hoặc 2.1 đang dùng) + kênh báo cáo có ≥ 2 người nhận độc lập. | Tự viết CoC từ đầu. |
 | Báo lỗ hổng | `SECURITY.md` + GitHub private vulnerability reporting (hoặc email PGP) + `security.txt`; SLA phản hồi ban đầu ≤ 14 ngày (OpenSSF Badge); phối hợp công bố 90 ngày mặc định. | Issue công khai cho lỗ hổng. |
 | Quản trị | Dự án 1–3 maintainer: `GOVERNANCE.md` ngắn (ai quyết, cách thêm maintainer, bus factor); lớn hơn: mô hình rõ (BDFL/steering/meritocracy), `MAINTAINERS.md`. | Không ghi gì → tranh chấp khi có người thứ hai. |
-| Phát hành | Tự động từ Conventional Commits (release-please/git-cliff/changesets), tag ký, artefact có SBOM + provenance (SLSA L2–L3 qua hosted build), trusted publishing. | Phát hành từ máy cá nhân bằng token dài hạn. |
+| Phát hành | Tự động từ Conventional Commits (release-please/git-cliff/changesets), tag ký, artefact có SBOM + provenance (SLSA Build L2 từ M, L3 từ L — [`SEC-SUPPLY-014`/`015`](../12-security/supply-chain.md)), trusted publishing. | Phát hành từ máy cá nhân bằng token dài hạn. |
 
 ## Checklist
 

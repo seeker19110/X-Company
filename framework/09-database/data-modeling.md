@@ -3,13 +3,13 @@ title: Mô hình dữ liệu, chuẩn hoá, khoá, kiểu dữ liệu, soft-dele
 kind: module
 prefix: DB-MODEL
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Mô hình dữ liệu, chuẩn hoá, khoá, kiểu dữ liệu, soft-delete, audit
 
 > Quy tắc thiết kế schema để dữ liệu **đúng ngay từ kiểu**: chọn CSDL theo nhu cầu (PostgreSQL mặc định), khoá chính
-> `bigint identity` hoặc UUIDv7, `timestamptz` UTC, tiền là số nguyên/`numeric`, ràng buộc ở CSDL, soft-delete chỉ khi
+> `bigint identity` hoặc UUIDv7, `timestamptz` UTC, tiền mặc định là số nguyên (`numeric` chỉ khi có ADR), ràng buộc ở CSDL, soft-delete chỉ khi
 > có lý do, cột audit tối thiểu. Quy ước thời gian/tiền/đơn vị ở mức ứng dụng là của
 > [`../18-cross-cutting/units-time-and-money.md`](../18-cross-cutting/units-time-and-money.md); đây là cách **thể hiện
 > trong CSDL**.
@@ -18,7 +18,7 @@ updated: 2026-10-13
 
 1. **Ràng buộc ở CSDL, không chỉ ở code.** `NOT NULL`, `UNIQUE`, `CHECK`, `FOREIGN KEY` là hàng rào cuối cùng; ứng
    dụng (và AI agent) có thể sai, CSDL thì không bỏ qua ràng buộc.
-2. **Kiểu đúng trước, tối ưu sau.** `timestamptz` cho mọi mốc thời gian; `numeric`/số nguyên đơn vị nhỏ nhất cho tiền;
+2. **Kiểu đúng trước, tối ưu sau.** `timestamptz` cho mọi mốc thời gian; số nguyên đơn vị nhỏ nhất cho tiền (`numeric` khi có ADR);
    không `float` cho tiền, không `money` (phụ thuộc locale, hỏng khi dump/restore khác `lc_monetary`); `text` thay
    `varchar(n)` trừ khi độ dài là ràng buộc nghiệp vụ.
 3. **Chuẩn hoá đến 3NF cho dữ liệu giao dịch**; phi chuẩn hoá có chủ đích (cột tính sẵn, JSONB) phải ghi lý do và
@@ -36,7 +36,7 @@ updated: 2026-10-13
 | CSDL chính | **PostgreSQL 18.6** (major 18 hiện hành; 14 hết hỗ trợ 2026-11-12) | **MySQL 8.4 LTS** (8.4.11; endoflife.date đánh dấu 9.7 cũng LTS — xác minh trang MySQL trước khi chọn 9.x) khi đội/hạ tầng đã chuẩn MySQL · **SQLite 3.54.0** khi dữ liệu cùng máy với ứng dụng, một writer, < ~1 TB (embedded, desktop, mobile, công cụ nội bộ) · **MongoDB 8.3/9.0** chỉ khi tài liệu thật sự không có schema cố định; giấy phép **SSPL** (không OSI) — tránh khi cung cấp dịch vụ quản lý |
 | Khoá chính | **`bigint GENERATED ALWAYS AS IDENTITY`** khi id không lộ ra ngoài và không cần sinh ở client | **UUIDv7** (`uuidv7()` có sẵn PostgreSQL 18) khi id sinh ở client/offline, gộp từ nhiều nguồn, hoặc lộ ra URL công khai · **không** UUIDv4 làm PK bảng lớn (index locality kém) · không UUID dạng `text` (lưu 128-bit) |
 | Thời gian | `timestamptz` (lưu UTC), `date` cho ngày thuần | `timestamp` (không tz) **chỉ** cho "giờ tường" cố ý (lịch hẹn địa phương) kèm cột `tz` IANA |
-| Tiền | **số nguyên đơn vị nhỏ nhất** (`bigint` VND/cent) + cột `currency` ISO 4217 | `numeric(p,s)` khi cần phần lẻ (tỷ giá, lãi); **không** `float/double`, **không** `money` |
+| Tiền | **số nguyên đơn vị nhỏ nhất** (`bigint` VND/cent) + cột `currency` ISO 4217 — quy tắc ở [`XC-UNITS-005`](../18-cross-cutting/units-time-and-money.md) | `numeric(p,s)` scale cố định **chỉ khi** cần độ chính xác dưới đơn vị nhỏ nhất (tỷ giá, đơn giá theo gram/kWh) và có ADR; **không** `float/double`, **không** `money` |
 | Chuỗi | `text` + `CHECK (length(...) <= n)` khi cần | `varchar(n)` khi chuẩn ngành cố định; `citext`/`lower()` index cho so sánh không phân biệt hoa thường |
 | Liệt kê | **bảng tra cứu** (FK) khi giá trị có thuộc tính/đổi theo thời gian | `CHECK (col IN (...))` hoặc enum PostgreSQL khi tập nhỏ, ổn định; enum khó đổi tên/xoá giá trị |
 | Dữ liệu bán cấu trúc | Cột thường + JSONB cho phần thật sự biến thiên, có `CHECK (jsonb_typeof(...))` và GIN index khi truy vấn | Không nhét toàn bộ bản ghi vào một cột JSON |
@@ -46,9 +46,9 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `DB-MODEL-001` **MUST** Mọi cột mốc thời gian là `timestamptz` (PostgreSQL) / `TIMESTAMP` lưu UTC + ứng dụng đặt `time_zone='+00:00'` (MySQL) / ISO-8601 UTC `TEXT` hoặc epoch ms `INTEGER` (SQLite); không `timestamp without time zone` trừ cột "giờ tường" có ghi lý do. → Kiểm: lint schema (grep `timestamp without time zone`/`timestamp(` trong migration) = 0 ngoài allowlist có comment; test chèn `'2026-01-01T00:00:00+07:00'` đọc ra đúng tức thời. · Nguồn: PostgreSQL 18 §8.5.1.3 (timestamptz lưu UTC) · [`../18-cross-cutting/units-time-and-money.md`](../18-cross-cutting/units-time-and-money.md)
-- [ ] `DB-MODEL-002` **MUST** Tiền lưu bằng số nguyên đơn vị nhỏ nhất hoặc `numeric`; có cột `currency`; không `real/double/float`, không kiểu `money`. → Kiểm: lint schema cấm kiểu `real|double precision|float|money` ở cột có tên/nghĩa tiền; test `0.1 + 0.2` ở tầng CSDL trả đúng. · Nguồn: PostgreSQL 18 §8.1.2 numeric ("especially recommended for monetary amounts"), §8.2 money (locale/lc_monetary)
-- [ ] `DB-MODEL-003` **MUST** Khoá chính là `bigint identity` hoặc UUIDv7 lưu kiểu `uuid`; không dùng trường nghiệp vụ (email, mã) làm PK; UUIDv4 không làm PK bảng lớn. → Kiểm: `pg_dump --schema-only` + script kiểm kiểu PK; ADR nếu ngoại lệ. · Nguồn: RFC 9562 §2.1, §5.7, §6.11, §6.13 · PostgreSQL 18 `uuidv7()`
+- [ ] `DB-MODEL-001` **MUST** Kiểu cột mốc thời gian theo CSDL: `timestamptz` (PostgreSQL) / `TIMESTAMP` lưu UTC + ứng dụng đặt `time_zone='+00:00'` (MySQL) / RFC 3339 UTC `TEXT` hoặc epoch ms `INTEGER` (SQLite); `timestamp without time zone` chỉ cho cột "giờ tường" có ghi lý do. Nguyên tắc (UTC, tz IANA): xem [`XC-UNITS-001`](../18-cross-cutting/units-time-and-money.md). → Kiểm: lint schema (grep `timestamp without time zone`/`timestamp(` trong migration) = 0 ngoài allowlist có comment; test chèn `'2026-01-01T00:00:00+07:00'` đọc ra đúng tức thời. · Nguồn: PostgreSQL 18 §8.5.1.3 (timestamptz lưu UTC)
+- [ ] `DB-MODEL-002` **MUST** Kiểu cột tiền: `bigint` (số nguyên đơn vị nhỏ nhất) + cột `currency char(3)` ISO 4217; `numeric(p,s)` scale cố định chỉ ở cột có ADR (tỷ giá, đơn giá dưới đơn vị nhỏ nhất); không `real`/`double precision`/`float`, không kiểu `money` (phụ thuộc `lc_monetary`). Nguyên tắc: xem [`XC-UNITS-005`](../18-cross-cutting/units-time-and-money.md). → Kiểm: lint schema cấm kiểu `real|double precision|float|money` ở cột có tên/nghĩa tiền; mọi cột tiền `numeric` có trong danh sách của ADR. · Nguồn: PostgreSQL 18 §8.1.2 numeric, §8.2 money (locale/lc_monetary)
+- [ ] `DB-MODEL-003` **MUST** Khoá chính là `bigint GENERATED ALWAYS AS IDENTITY` (id nội bộ) hoặc UUIDv7 lưu kiểu `uuid` (không `text`); không dùng trường nghiệp vụ (email, mã) làm PK; UUIDv4 không làm PK bảng lớn. Nguyên tắc ID công khai/token: xem [`XC-UNITS-011`](../18-cross-cutting/units-time-and-money.md). → Kiểm: `pg_dump --schema-only` + script kiểm kiểu PK; ADR nếu ngoại lệ. · Nguồn: RFC 9562 §2.1, §5.7, §6.11, §6.13 · PostgreSQL 18 `uuidv7()`
 - [ ] `DB-MODEL-004` **MUST** Mọi FK khai báo `ON DELETE` tường minh (`RESTRICT`/`CASCADE`/`SET NULL`), có index trên cột FK. → Kiểm: truy vấn catalog liệt kê FK không có index / FK không ghi hành động; CI đỏ khi > 0. · Nguồn: PostgreSQL 18 CREATE TABLE (referential actions; `NO ACTION` mặc định)
 - [ ] `DB-MODEL-005` **MUST** Cột không được rỗng là `NOT NULL`; bất biến nghiệp vụ đơn giản là `CHECK` (số lượng ≥ 0, `ends_at > starts_at`, trạng thái ∈ tập); tính duy nhất là `UNIQUE` (kể cả duy nhất theo tenant). → Kiểm: test chèn dữ liệu xấu ở tầng CSDL bị từ chối (không qua ORM); script đếm cột nullable không có lý do. · Nguồn: P6 · P7
 - [ ] `DB-MODEL-006` **MUST** Soft-delete (nếu dùng) có `deleted_at timestamptz NULL`; mọi UNIQUE liên quan là partial index `WHERE deleted_at IS NULL`; truy vấn mặc định lọc bản ghi đã xoá qua view/scope duy nhất. → Kiểm: test tạo lại bản ghi trùng khoá sau khi soft-delete thành công; test truy vấn công khai không trả bản ghi đã xoá; grep scope/view dùng ở mọi repository. · Nguồn: PostgreSQL 18 CREATE INDEX (partial + UNIQUE)
@@ -73,7 +73,7 @@ updated: 2026-10-13
 - **`float` cho tiền** → `0.1 + 0.2 ≠ 0.3`, tổng sổ cái lệch vài đồng; **`money`** vỡ khi restore ở locale khác. Tránh: DB-MODEL-002.
 - **UUIDv4 làm PK bảng hàng trăm triệu dòng** → index phân mảnh, chèn chậm; RFC 9562 ghi khác biệt có thể tới một bậc. Tránh: UUIDv7/bigint (DB-MODEL-003).
 - **Soft-delete nửa vời**: UNIQUE(email) chặn đăng ký lại sau khi "xoá"; truy vấn quên lọc `deleted_at`. Tránh: DB-MODEL-006.
-- **Xoá theo yêu cầu người dùng chỉ soft-delete** → không đạt quyền xoá (NĐ 13/2023, GDPR). Tránh: xoá thật/ẩn danh hoá — xem [`sensitive-data-and-access.md`](sensitive-data-and-access.md) và [`../16-compliance-privacy/consent-and-user-rights.md`](../16-compliance-privacy/consent-and-user-rights.md).
+- **Xoá theo yêu cầu người dùng chỉ soft-delete** → không đạt quyền xoá (Luật 91/2025/QH15 Đ.14 + NĐ 356/2025/NĐ-CP — xem [`../16-compliance-privacy/vietnam-data-law.md`](../16-compliance-privacy/vietnam-data-law.md); GDPR Art. 17). Tránh: xoá thật/ẩn danh hoá — xem [`sensitive-data-and-access.md`](sensitive-data-and-access.md) và [`../16-compliance-privacy/consent-and-user-rights.md`](../16-compliance-privacy/consent-and-user-rights.md).
 - **FK không index** → `DELETE` cha quét toàn bảng con, khoá lâu. Tránh: DB-MODEL-004.
 - **Enum PostgreSQL cho trạng thái hay đổi** → không xoá/đổi tên giá trị được, migration khó. Tránh: bảng tra cứu hoặc CHECK (bảng Quyết định).
 - **Mọi thứ vào JSONB** → mất ràng buộc, không index, ứng dụng tự parse. Tránh: DB-MODEL-014.

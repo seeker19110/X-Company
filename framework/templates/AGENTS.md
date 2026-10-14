@@ -1,7 +1,7 @@
 ---
 title: Mẫu AGENTS.md cho dự án
 kind: template
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # AGENTS.md — luật vận hành cho AI agent trong dự án này
@@ -48,7 +48,7 @@ Ngoài các điểm trên, **sau khi kế hoạch được duyệt thì không h
 - **Phát hành (G7):** `python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict` = 0 MUST mở + `GO-NO-GO.md` không còn BLOCKER.
 
 ## 7. Skill và subagent (Claude Code)
-`/autopilot` · `/blueprint` · `/gate` · `/research` · `/audit` · `/review` · `/adr` · `/handover`. Subagent: `researcher` (tra cứu) · `executor` (task rõ phạm vi) · `reviewer` (model khác). Phiên chính điều phối; subagent không lồng subagent.
+`/autopilot` · `/blueprint` · `/gate` · `/research` · `/audit` · `/review` · `/adr` · `/handover`. Subagent: `researcher` (tra cứu) · `executor` (task rõ phạm vi) · `reviewer` (model khác). Phiên chính điều phối; subagent không lồng subagent (độ sâu 1). Phạm vi: luật này áp cho **vòng lặp phát triển** bằng agent lập trình (`.xstored/framework/11-autonomous-loop/`); độ sâu lồng agent **trong sản phẩm agentic** của dự án theo `AI-AGENTIC-007` (`.xstored/framework/13-ai-engineering/agentic-systems.md`: khuyến nghị 2, trần 3).
 
 ## 8. Quy ước riêng của dự án
 - Cấu trúc thư mục: [ĐIỀN]

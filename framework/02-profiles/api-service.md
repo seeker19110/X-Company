@@ -4,7 +4,7 @@ kind: profile
 slug: api-service
 prefix: PRF-API
 modules: [04-standards/*, 05-architecture/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Backend / API / dịch vụ
@@ -46,7 +46,7 @@ Quy tắc chọn phiên bản (né `x.0.0` mới ra, ưu tiên LTS): xem [`../01
 
 | Thành phần | Mặc định | Phiên bản (xác minh 2026-10-13) | Thay thế + điều kiện |
 |---|---|---|---|
-| Ngôn ngữ/runtime | Python (đội data/AI) · Node.js LTS (đội JS) · Go (hiệu năng, binary tĩnh) | Python 3.14.8 (3.15.0 ra 2026-10-09 — chờ bản vá); Node 24 LTS 24.21.0 (22 LTS tới 2027-04); Go 1.27.2 | Java/Spring Boot 4.1.1 khi doanh nghiệp đã chuẩn Java; .NET/Rust khi đội có sẵn |
+| Ngôn ngữ/runtime | Python (đội data/AI) · Node.js LTS (đội JS) · Go (hiệu năng, binary tĩnh) | Python 3.14.8 (3.15.0 ra 2026-10-09 — khuyến nghị 3.14.x tới khi có 3.15.1); Node 24 LTS 24.21.0 (22 LTS tới 2027-04); Go 1.27.2 | Java/Spring Boot 4.1.1 khi doanh nghiệp đã chuẩn Java; .NET/Rust khi đội có sẵn |
 | Khung API | FastAPI (Py) · NestJS hoặc Hono/Fastify (TS) · net/http + chi (Go) | fastapi 0.143.0 (2026-10-08) · `@nestjs/core` 12.1.3 · hono 4.13.13 · fastify 5.12.6 | Django 5.2 LTS (5.2.18) khi cần admin/ORM đầy đủ; Django 6.1.2 không LTS |
 | Hợp đồng API | OpenAPI (sinh từ code có kiểm, hoặc contract-first) | OAS 3.2.1 (2026-09-10); tối thiểu 3.1 | gRPC/protobuf cho nội bộ hiệu năng cao; AsyncAPI cho event |
 | Định dạng lỗi | RFC 9457 `application/problem+json` | RFC 9457 (obsoletes 7807) | — (bắt buộc) |
@@ -88,7 +88,7 @@ Quy tắc chọn phiên bản (né `x.0.0` mới ra, ưu tiên LTS): xem [`../01
 
 | Cổng chung (web) | Tương đương cho API/dịch vụ | Công cụ / lệnh |
 |---|---|---|
-| Core Web Vitals (LCP/INP/CLS) | p95 latency theo nhóm endpoint + error rate + throughput | k6 thresholds; SLO ở [`../15-operations/slo-and-alerting.md`](../15-operations/slo-and-alerting.md) |
+| Core Web Vitals (LCP/INP/CLS) | p95 latency theo nhóm endpoint + error rate + throughput | k6 thresholds theo [`../14-testing-quality/performance-and-load.md`](../14-testing-quality/performance-and-load.md); SLO ở [`../15-operations/slo-and-alerting.md`](../15-operations/slo-and-alerting.md) |
 | E2E trình duyệt | Contract test (Schemathesis/Pact) + integration Testcontainers | CI job `contract`, `integration` |
 | A11y WCAG | Hợp đồng API rõ ràng, lỗi RFC 9457, tài liệu OpenAPI render được | Spectral lint, docs build |
 | Theme / design tokens | Quy ước đặt tên tài nguyên, phiên bản, phân trang thống nhất | Spectral ruleset riêng của dự án |

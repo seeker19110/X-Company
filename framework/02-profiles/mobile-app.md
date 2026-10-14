@@ -4,7 +4,7 @@ kind: profile
 slug: mobile-app
 prefix: PRF-MOB
 modules: [04-standards/*, 05-architecture/*, 06-design-ux/*, 07-frontend/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Ứng dụng di động (iOS/Android, native & cross-platform)
@@ -68,7 +68,7 @@ Xác minh ngày **2026-10-13** — **xác minh lại trước khi dùng**; mốc
 - [ ] `PRF-MOB-008` **MUST@M** Crash reporting bật từ bản đầu, symbol (dSYM, ProGuard/R8 mapping, Hermes sourcemap) upload tự động trong CI; crash thử nghiệm hiện stack trace đọc được. → Kiểm: bước CI upload symbol; sự kiện crash test được symbolicate.
 - [ ] `PRF-MOB-009` **MUST@M** Theo dõi và cảnh báo theo ngưỡng Android vitals: user-perceived crash rate ≤ 1.09 %, ANR rate ≤ 0.47 %; iOS theo Xcode Organizer/MetricKit. → Kiểm: dashboard + rule cảnh báo; GO/NO-GO phát hành có số này. · Nguồn: Android vitals
 - [ ] `PRF-MOB-010` **MUST** Pin toolchain: Gradle wrapper có `distributionSha256Sum`, JDK và Node ghim; lockfile (`pnpm-lock`, `Podfile.lock`, `gradle.lockfile`) commit. → Kiểm: `gradle/wrapper/gradle-wrapper.properties` có checksum; lockfile trong `git ls-files`.
-- [ ] `PRF-MOB-011` **MUST** A11y theo nền tảng: VoiceOver/TalkBack đi hết luồng chính; mọi control tương tác có label; vùng chạm ≥ 48 dp (Android) và ≥ 44 pt (iOS, theo HIG — chưa xác minh trực tiếp ngày 2026-10-13); font scale 200 % không cắt chữ/chồng layout. → Kiểm: Accessibility Scanner (Android) và Xcode Accessibility Inspector 0 lỗi trên màn hình chính; E2E Maestro chạy với font scale lớn. · Nguồn: Android accessibility apps; nguyên tắc ở [`../06-design-ux/accessibility.md`](../06-design-ux/accessibility.md)
+- [ ] `PRF-MOB-011` **MUST** A11y theo nền tảng: VoiceOver/TalkBack đi hết luồng chính; mọi control tương tác có label; vùng chạm ≥ 48 dp (Android) và ≥ 44 pt (iOS, Apple HIG Buttons) theo [`UX-A11Y-006`](../06-design-ux/accessibility.md); font scale 200 % không cắt chữ/chồng layout. → Kiểm: Accessibility Scanner (Android) và Xcode Accessibility Inspector 0 lỗi trên màn hình chính; E2E Maestro chạy với font scale lớn. · Nguồn: Android accessibility apps; Apple HIG Buttons (44×44 pt — xác minh 2026-10-14 qua developer.apple.com); nguyên tắc ở [`../06-design-ux/accessibility.md`](../06-design-ux/accessibility.md)
 - [ ] `PRF-MOB-012` **SHOULD** Offline: màn hình chính đọc được từ cache khi mất mạng; thao tác ghi xếp hàng với idempotency key và retry; UI hiện trạng thái offline/đang đồng bộ. → Kiểm: E2E tắt mạng (`adb shell svc wifi disable`/`svc data disable`) rồi bật lại, không mất và không nhân đôi bản ghi.
 - [ ] `PRF-MOB-013` **SHOULD** Push: token đăng ký/huỷ ở server theo đăng nhập/đăng xuất; payload không chứa dữ liệu nhạy cảm (chỉ id); deep link từ notification có test; xin quyền push sau khi người dùng thấy giá trị. → Kiểm: test API vòng đời token; test deep link mở đúng màn hình.
 - [ ] `PRF-MOB-014` **SHOULD** Kích thước tải có ngân sách trong `PROJECT.md`; bật R8/ProGuard + resource shrinking + AAB; CI in kích thước AAB/IPA mỗi bản và đỏ khi vượt ngân sách; không vượt giới hạn store (Play: base module 500 MB, tổng 4 GB; iOS: 4 GB, `__TEXT` 500 MB). → Kiểm: bước CI đo size + so ngân sách. · Nguồn: Play size limits; App Store Connect max build sizes
@@ -119,5 +119,6 @@ Xác minh ngày **2026-10-13** — **xác minh lại trước khi dùng**; mốc
 - OWASP MASVS v2.1.0 (8 nhóm): <https://mas.owasp.org/MASVS/> và <https://github.com/OWASP/owasp-masvs/releases/latest> — xác minh 2026-10-13; MASTG: <https://mas.owasp.org/MASTG/> — xác minh 2026-10-13.
 - Expo EAS Update và code signing: <https://docs.expo.dev/eas-update/introduction/>, <https://docs.expo.dev/eas-update/code-signing/> — xác minh 2026-10-13. Flutter Android deployment: <https://docs.flutter.dev/deployment/android> — xác minh 2026-10-13; Flutter 3.47: <https://docs.flutter.dev/release/release-notes> — xác minh 2026-10-13.
 - Phiên bản: npm (`react-native`, `expo`, `expo-updates`, `detox`, `jest`, `@sentry/react-native`, `@react-native-community/cli`, `@capacitor/core`, `@tanstack/react-query`), RubyGems `fastlane`, endoflife.date `kotlin`/`ios`/`android`, swift.org (6.4.1), GitHub releases Maestro — xác minh 2026-10-13.
-- (chưa xác minh) HIG 44 pt (trang HIG không trả nội dung ngày 2026-10-13); Apple launch time 400 ms; ngưỡng cold start Android vitals (5 s); phiên bản Crashlytics, expo-secure-store, Zustand, WatermelonDB, Shorebird, Codemagic.
+- Apple HIG Buttons — vùng chạm ≥ 44×44 pt: <https://developer.apple.com/design/human-interface-guidelines/buttons> — xác minh 2026-10-14 (đọc qua dữ liệu JSON của trang; đính chính: bản trước ghi "chưa xác minh").
+- (chưa xác minh) Apple launch time 400 ms; ngưỡng cold start Android vitals (5 s); phiên bản Crashlytics, expo-secure-store, Zustand, WatermelonDB, Shorebird, Codemagic.
 - Catalog: 09 (mục Mobile: release key, Keystore, permission, cleartext), 13 §3 — `research/2026-10-13-stored-catalog-extraction.md`; khung cũ KHUNG-3 C2 (commit `1b80fe4`).

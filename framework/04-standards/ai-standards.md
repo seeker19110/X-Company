@@ -3,7 +3,7 @@ title: Chuẩn AI (ISO/IEC 42001, NIST AI RMF, EU AI Act, OWASP LLM/Agentic, MCP
 kind: standard
 prefix: STD-AI
 applies_to: [ai-agent, agentic-system, data-ml]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chuẩn AI (ISO/IEC 42001, NIST AI RMF, EU AI Act, OWASP LLM/Agentic, MCP, A2A)
@@ -31,7 +31,7 @@ updated: 2026-10-13
 | Dùng/phát hành MCP server hoặc client | + MCP spec 2026-07-28 + MCP Top 10 (beta) | M: ghim/diff tool list, sandbox server local | — |
 | Agent giao tiếp agent (đa tổ chức) | + A2A 1.0.1 (Agent Card ký, security schemes) | L: mTLS/OIDC giữa agent | — |
 | Hệ thống "rủi ro cao" theo Annex III AI Act (tuyển dụng, tín dụng, giáo dục, y tế…) | AI Act Ch. III (áp từ 2027-12-02 cho Annex III) | ISO/IEC 42001 + hồ sơ kỹ thuật, giám sát con người | — |
-| Chatbot/tạo nội dung cho người dùng EU | AI Act Art. 50 (minh bạch; áp từ 2026-08-02, ân hạn hệ thống cũ tới 2026-12-02) | — | — |
+| Chatbot/tạo nội dung cho người dùng EU | AI Act Art. 50 (minh bạch; áp dụng từ 02/08/2026; riêng đánh dấu máy đọc được Art. 50(2) cho hệ thống đã đưa ra thị trường EU trước 02/08/2026: tới 02/12/2026 — nhà mốc: [`ai-regulation.md`](../16-compliance-privacy/ai-regulation.md)) | — | — |
 | Chỉ dùng AI để viết code nội bộ (không có AI trong sản phẩm) | không áp file này; xem [`../11-autonomous-loop/`](../11-autonomous-loop/README.md) | — | — |
 
 Mặc định: **OWASP LLM Top 10 2026 + Agentic Top 10 + phân loại AI Act + NIST AI RMF profile (M+)**; ISO/IEC 42001 chỉ khi L hoặc khách hàng yêu cầu.
@@ -43,8 +43,8 @@ Mặc định: **OWASP LLM Top 10 2026 + Agentic Top 10 + phân loại AI Act + 
 | ISO/IEC 42001 | **2023** (ấn bản 1) | 2023-12-18 (theo IEC webstore — iso.org 403) | <https://www.iso.org/standard/42001> | L, chứng nhận AIMS | SoA AI + hồ sơ rủi ro; **không phải harmonised standard của AI Act** (nguồn thứ cấp) |
 | NIST AI RMF | **1.0** (đang sửa đổi theo AI Action Plan) | 2023-01-26 | <https://www.nist.gov/itl/ai-risk-management-framework> | M+ | Profile Govern/Map/Measure/Manage có bảng ánh xạ |
 | NIST AI 600-1 Generative AI Profile | bản 1 | 2024-07-26 | <https://www.nist.gov/itl/ai-risk-management-framework> | Có GenAI | Hàng bổ sung trong profile |
-| EU AI Act | **Regulation (EU) 2024/1689** | OJ 2024-07-12; hiệu lực 2024-08-01; cấm & AI literacy 2025-02-02; GPAI 2025-08-02; phần còn lại 2026-08-02; Annex III high-risk 2027-12-02; Annex I 2028-08-02 | <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> (eur-lex không trả nội dung ngày 2026-10-13; mốc theo <https://artificialintelligenceact.eu/implementation-timeline/>) | Người dùng/thị trường EU | Hồ sơ phân loại rủi ro; Art. 50 test tiết lộ AI/đánh dấu nội dung |
-| OWASP Top 10 for LLM Applications | **2026** | 2026-08-04 (README repo OWASP; genai.owasp.org 403) | <https://github.com/OWASP/www-project-top-10-for-large-language-model-applications> | Có LLM | Bảng LLM01–10 → biện pháp + eval |
+| EU AI Act | **Regulation (EU) 2024/1689** | OJ 2024-07-12; hiệu lực 2024-08-01; cấm & AI literacy 2025-02-02; GPAI 2025-08-02; phần còn lại (gồm Art. 50) 2026-08-02; Annex III high-risk 2027-12-02, Annex I 2028-08-02 (Omnibus (EU) 2026/1744) | <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> (eur-lex không trả nội dung ngày 2026-10-13); mốc chi tiết ở nhà [`ai-regulation.md`](../16-compliance-privacy/ai-regulation.md) | Người dùng/thị trường EU | Hồ sơ phân loại rủi ro; Art. 50 test tiết lộ AI/đánh dấu nội dung |
+| OWASP Top 10 for LLM Applications | **2026** (mã đổi so với 2025 — bảng ánh xạ ở [`ai-security.md`](../12-security/ai-security.md)) | 2026-08-04 | <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> | Có LLM | Bảng LLM01–10 → biện pháp + eval |
 | OWASP Top 10 for Agentic Applications | 2026 (ASI01–ASI10) | 2025-12-09 (theo research 2026-10-13) | <https://genai.owasp.org/> | Agent có tool | Bảng ASI01–10 → biện pháp + eval |
 | OWASP MCP Top 10 | MCP01–10:2025, **beta (Phase 3)** | chưa final | <https://owasp.org/www-project-mcp-top-10/> | MCP | Checklist tham khảo, không ghim ID |
 | Model Context Protocol | **2026-07-28** (stateless, `server/discover`, MRTR, Tasks extension) | 2026-07-28 | <https://modelcontextprotocol.io/specification/latest> | MCP server/client | Phiên bản khai trong `_meta`; test tool list deterministic |
@@ -72,13 +72,13 @@ Mặc định: **OWASP LLM Top 10 2026 + Agentic Top 10 + phân loại AI Act + 
 ## Bẫy thường gặp
 
 - **Ghi "MCP mới nhất".** 2026-07-28 bỏ `initialize`/`Mcp-Session-Id`, đổi sang stateless; code viết cho 2025-11-25 không chạy. Cách tránh: ghim ngày, test tương thích khi nâng.
-- **Dùng bản LLM Top 10 2025 vì "2026 chưa có".** Repo OWASP ghi bản 2026 (2026-08-04); `research/2026-10-13-ai-agent-research.md` §5.1 ghi ngược lại — **đính chính** trong file này; trang genai.owasp.org chặn bot nên không phân xử được bằng trang gốc. Cách tránh: xác minh qua repo GitHub OWASP, ghi nguồn thay thế.
+- **Dùng bản LLM Top 10 2025 vì "2026 chưa có", hoặc giữ mã 2025 sau khi nâng.** Bản 2026 công bố 04/08/2026 và **đổi mã** (vd Excessive Agency 06→03, Supply Chain 03→04, Output Handling 05→10, Unbounded Consumption 10→06); `research/2026-10-13-ai-agent-research.md` §5.1 ghi "chưa có 2026" — đã đính chính. Cách tránh: xác minh qua repo GitHub chính chủ (trang genai.owasp.org chặn bot); đổi mã theo bảng ở [`ai-security.md`](../12-security/ai-security.md).
 - **Coi ISO 42001 là "đạt AI Act".** Không phải harmonised standard (theo nguồn thứ cấp 2026) → không có presumption of conformity. Cách tránh: ánh xạ trực tiếp điều khoản AI Act.
 - **Tin mô tả tool MCP / Agent Card.** Mô tả là untrusted; tool poisoning và rug pull xảy ra qua đó. Cách tránh: STD-AI-006 snapshot + diff; sandbox server local.
 - **Eval pass@k thay cho pass^k.** Agent production cần đúng cả k lần. Cách tránh: eval theo pass^k cho luồng hành động (catalog 07, 23 §4.3).
 - **Judge cùng họ model.** Thiên lệch khi model chấm chính nó. Cách tránh: judge khác họ hoặc rubric người (catalog 03 §8).
 - **Ghi prompt/completion vào trace mặc định** → PII vào hệ quan sát. Cách tránh: opt-in theo OTel GenAI; redact trước khi lưu.
-- **Quên mốc Art. 50 đã áp dụng (2026-08-02)** trong khi chờ 2027 cho high-risk. Cách tránh: STD-AI-003 là MUST ngay.
+- **Quên mốc Art. 50 đã áp dụng (02/08/2026)** trong khi chờ 2027 cho high-risk, hoặc tưởng Omnibus hoãn cả Art. 50 tới 02/12/2026 (chỉ phần đánh dấu 50(2) cho hệ đã lưu hành trước mốc). Cách tránh: STD-AI-003 là MUST ngay; mốc ở [`ai-regulation.md`](../16-compliance-privacy/ai-regulation.md).
 
 ## Cổng tự động
 
@@ -95,8 +95,8 @@ Mặc định: **OWASP LLM Top 10 2026 + Agentic Top 10 + phân loại AI Act + 
 
 - ISO/IEC 42001:2023: <https://www.iso.org/standard/42001> — **(iso.org trả 403 ngày 2026-10-13; ngày 2023-12-18 theo IEC webstore <https://webstore.iec.ch/publication/90574>)**
 - NIST AI RMF 1.0 (2023-01-26) & AI 600-1 (2024-07-26): <https://www.nist.gov/itl/ai-risk-management-framework> — xác minh 2026-10-13
-- EU AI Act Regulation (EU) 2024/1689: <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> — **(eur-lex không trả nội dung ngày 2026-10-13)**; mốc thời gian: <https://artificialintelligenceact.eu/implementation-timeline/> — xác minh 2026-10-13; Digital Omnibus: `research/2026-10-13-ai-agent-research.md` §5.5
-- OWASP Top 10 for LLM Applications (repo, bản 2026 ngày 2026-08-04): <https://github.com/OWASP/www-project-top-10-for-large-language-model-applications> — xác minh 2026-10-13; danh mục LLM01–10 bản 2026 theo nguồn thứ cấp (**chưa xác minh** trên trang gốc)
+- EU AI Act Regulation (EU) 2024/1689: <https://eur-lex.europa.eu/eli/reg/2024/1689/oj> — **(eur-lex không trả nội dung ngày 2026-10-13)**; mốc thời gian và Digital Omnibus (EU) 2026/1744: theo nhà [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md) (xác minh qua nguồn thứ cấp nhất quán; đối chiếu EUR-Lex 2026/1744 trước khi áp dụng)
+- OWASP Top 10 for LLM Applications 2026 (công bố 04/08/2026): <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> (README "Current release: 2026", thư mục `2026/final/`) — xác minh 2026-10-14; danh mục LLM01–10 và bảng đổi mã 2025 → 2026: [`../12-security/ai-security.md`](../12-security/ai-security.md). Đính chính 2026-10-14: bản trước trỏ repo cũ `OWASP/www-project-top-10-for-large-language-model-applications` (nay là lưu trữ) và ghi danh mục "chưa xác minh".
 - OWASP Agentic Top 10 (2025-12-09): `research/2026-10-13-ai-agent-research.md` §5.1 [F ngày]; trang gốc <https://genai.owasp.org/> trả 403 ngày 2026-10-13
 - OWASP MCP Top 10 (beta): <https://owasp.org/www-project-mcp-top-10/> — xác minh 2026-10-13
 - MCP specification 2026-07-28: <https://modelcontextprotocol.io/specification/latest> — xác minh 2026-10-13

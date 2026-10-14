@@ -3,7 +3,7 @@ title: Phụ thuộc: lockfile, cập nhật, license, lỗ hổng
 kind: baseline
 prefix: BASE-DEP
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Phụ thuộc: lockfile, cập nhật, license, lỗ hổng
@@ -51,7 +51,7 @@ updated: 2026-10-13
 - [ ] `BASE-DEP-014` **SHOULD** Có **danh sách phụ thuộc có chủ** (ít nhất SBOM sinh tự động CycloneDX/SPDX mỗi bản phát hành) để trả lời "có dùng gói X phiên bản Y không" trong vài phút khi có CVE. → Kiểm: artefact `sbom.cdx.json`/`sbom.spdx.json` kèm mỗi release (syft 1.54.x). · Nguồn: [`../12-security/supply-chain.md`](../12-security/supply-chain.md)
 - [ ] `BASE-DEP-015` **SHOULD** Cài phụ thuộc trong CI có **cache theo hash lockfile** để nhanh nhưng không bao giờ cache thay cho lockfile (cache hỏng → cài lại, không đổi kết quả). → Kiểm: `actions/cache`/`setup-*` `cache-dependency-path` trỏ lockfile; job vẫn xanh khi xoá cache. · Nguồn: [`quality-gates.md`](quality-gates.md) BASE-GATE-011
 - [ ] `BASE-DEP-016` **MAY** `cooldown` cho cập nhật tự động (vd 3–7 ngày sau khi upstream phát hành) để tránh nhận bản vừa bị rút/tiêm mã. → Kiểm: `dependabot.yml` có `cooldown.default-days` hoặc Renovate `minimumReleaseAge`. · Nguồn: Dependabot `cooldown`
-- [ ] `BASE-DEP-017` **MAY** Vendor (sao chép có lock) phụ thuộc nhỏ, nhạy cảm hoặc skill/plugin của agent: ghim commit, sha256 từng file, tiền tố tên, ghi lý do `rejected` cho phần bỏ. → Kiểm: `docs/integrations/*.lock.json` có commit + sha256; script `verify-vendor` chạy trong CI. · Nguồn: catalog 23 §3.1, 20 §3b (vendor-with-lock)
+- [ ] `BASE-DEP-017` **MAY** Vendor (sao chép có lock: ghim commit, sha256 từng file, ghi lý do `rejected` cho phần bỏ) phụ thuộc nhỏ hoặc nhạy cảm của **mã ứng dụng**. Skill/MCP server/plugin của agent không thuộc mục này — bắt buộc theo [`SEC-SUPPLY-016`](../12-security/supply-chain.md). → Kiểm: `docs/integrations/*.lock.json` có commit + sha256; script `verify-vendor` chạy trong CI. · Nguồn: catalog 23 §3.1, 20 §3b (vendor-with-lock)
 - [ ] `BASE-DEP-018` **MAY** Kiểm điểm **Scorecard** của phụ thuộc quan trọng (`scorecard --repo=github.com/<o>/<r>`) trước khi thêm; điểm Maintained/Vulnerabilities thấp là tín hiệu cân nhắc. → Kiểm: ghi điểm trong PR thêm phụ thuộc. · Nguồn: OpenSSF Scorecard
 
 ## Bẫy thường gặp

@@ -3,7 +3,7 @@ title: Tiếp cận (a11y) theo WCAG 2.2 AA và nền tảng mobile
 kind: module
 prefix: UX-A11Y
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Tiếp cận (a11y) theo WCAG 2.2 AA và nền tảng mobile
@@ -94,7 +94,7 @@ chỉ ví dụ tới `wcag21aa`).
 
 ## Nguồn
 
-- WCAG 2.2, W3C Recommendation 12/12/2024 (9 SC mới; đã bỏ 4.1.1 Parsing): <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
+- WCAG 2.2, W3C Recommendation 05/10/2023, bản cập nhật 12/12/2024 (9 SC mới; đã bỏ 4.1.1 Parsing): <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
 - Understanding WCAG 2.2: SC 2.5.8 Target Size (Minimum) <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>; SC 2.4.11 <https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html>; SC 2.5.7 <https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html>; SC 3.3.7 <https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html>; SC 3.3.8 <https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html>; SC 1.4.10 <https://www.w3.org/WAI/WCAG22/Understanding/reflow.html>; SC 2.2.2 <https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html> — xác minh 2026-10-13.
 - WAI-ARIA Authoring Practices Guide — Dialog (Modal) <https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/>, Alert <https://www.w3.org/WAI/ARIA/apg/patterns/alert/>; WAI tutorial Form notifications <https://www.w3.org/WAI/tutorials/forms/notifications/> — xác minh 2026-10-13.
 - Apple HIG — Buttons ("hit region of at least 44x44 pt; visionOS 60x60 pt"): <https://developer.apple.com/design/human-interface-guidelines/buttons>; HIG Accessibility (Reduce Motion, Dynamic Type ≥ 200%; bảng cỡ điều khiển mặc định 44×44 pt / tối thiểu 28×28 pt): <https://developer.apple.com/design/human-interface-guidelines/accessibility> — xác minh 2026-10-13 qua dữ liệu JSON của trang.

@@ -3,7 +3,7 @@ title: RAG & tri thức: chunking, hybrid search, rerank, quyền, eval
 kind: module
 prefix: AI-RAG
 applies_to: [ai-agent, agentic-system, data-ml, api-service, web-app]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # RAG & tri thức: chunking, hybrid search, rerank, quyền, eval
@@ -97,5 +97,5 @@ Context Precision · Context Recall · Context Entities Recall · Noise Sensitiv
 - Ragas — metrics (Context Precision, Context Recall, Context Entities Recall, Noise Sensitivity, Response Relevancy, Faithfulness): <https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/> · PyPI `ragas` 0.4.3 (2026-01-13) <https://pypi.org/project/ragas/> — xác minh 2026-10-13.
 - DeepEval — PyPI `deepeval` 4.2.8 (2026-10-02) <https://pypi.org/project/deepeval/> · docs <https://deepeval.com/docs/getting-started> — xác minh 2026-10-13.
 - Anthropic, *Introducing Contextual Retrieval* (2024-09-19): <https://www.anthropic.com/news/contextual-retrieval> — xác minh 2026-10-13.
-- OWASP Top 10 for LLM Applications 2025 (LLM08 Vector and Embedding Weaknesses, LLM01 Prompt Injection): <https://genai.owasp.org/llm-top-10/> — (chưa xác minh — không truy cập được trang ngày 2026-10-13, 403; dùng theo `research/2026-10-13-ai-agent-research.md` §5).
+- OWASP Top 10 for LLM Applications 2026 (LLM09 Vector and Embedding Weaknesses — bản 2025 là LLM08; LLM01 Prompt Injection): <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> — xác minh 2026-10-14; bảng đổi mã ở [`../12-security/ai-security.md`](../12-security/ai-security.md).
 - `seeker19110/stored` mục 04 (chunking, hybrid RRF, rerank 20–100 → 3–5, contextual retrieval, GraphRAG chỉ multi-hop, pgvector tới ~10–50M, lọc quyền trước) — đọc 2026-10-13 (`research/2026-10-13-stored-catalog-extraction.md`).

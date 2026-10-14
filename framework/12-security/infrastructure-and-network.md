@@ -3,7 +3,7 @@ title: Hạ tầng & mạng: least privilege, egress, TLS, sandbox, container
 kind: module
 prefix: SEC-INFRA
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, static-site, mobile-app, desktop-app, embedded-iot]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hạ tầng & mạng: least privilege, egress, TLS, sandbox, container
@@ -52,7 +52,7 @@ updated: 2026-10-13
 - [ ] `SEC-INFRA-010` **MUST** Không tài khoản/mật khẩu mặc định (admin/admin, `postgres` không mật khẩu, dashboard không auth); dịch vụ quản trị (Grafana, pgAdmin, queue UI, `/metrics`) đứng sau xác thực và không public. → Kiểm: scan cấu hình: mọi dịch vụ quản trị có auth; test đăng nhập mặc định thất bại; `/metrics` trả 401/403 từ ngoài. · Nguồn: OWASP Top 10:2025 A02; catalog stored 23 §8.1
 - [ ] `SEC-INFRA-011` **MUST** Daemon/bridge cục bộ (dev server của agent, MCP bridge, hot-reload) bind `127.0.0.1` mặc định, yêu cầu token, kiểm `Host` (chống DNS rebinding) và `Origin`/`Sec-Fetch-Site` lạ → 403; bind ra `0.0.0.0` chỉ khi có auth và cờ tường minh. → Kiểm: test khởi động mặc định → chỉ lắng nghe loopback (`ss -ltnp`); request với `Host: evil.example` → 403; thiếu token → 401. · Nguồn: catalog stored 12 §3b, 23 §8.1 (Hermes-Agents mẫu tốt; ai-gateway fail-open)
 - [ ] `SEC-INFRA-012` **MUST** Image container tối giản (distroless/alpine/slim), chỉ chứa runtime cần; không shell/compiler/package manager trong image production khi không cần; không secret trong layer. → Kiểm: `dive`/`syft` liệt kê package; `docker history` không có `.env`; scan image = 0 critical. · Nguồn: NIST SP 800-190 §4.1
-- [ ] `SEC-INFRA-013` **MUST@M** Giới hạn tài nguyên (CPU/RAM/PID/disk) cho mọi container/job để một tiến trình lỗi hoặc vòng lặp agent không hạ cả node. → Kiểm: manifest có `resources.limits`/compose `deploy.resources`; kube-score/checkov = 0 thiếu limits. · Nguồn: NIST SP 800-190; OWASP LLM10 Unbounded Consumption
+- [ ] `SEC-INFRA-013` **MUST@M** Giới hạn tài nguyên (CPU/RAM/PID/disk) cho mọi container/job để một tiến trình lỗi hoặc vòng lặp agent không hạ cả node. → Kiểm: manifest có `resources.limits`/compose `deploy.resources`; kube-score/checkov = 0 thiếu limits. · Nguồn: NIST SP 800-190; OWASP LLM 2026 LLM06 Unbounded Consumption
 - [ ] `SEC-INFRA-014` **MUST@M** WAF với rule managed (OWASP CRS hoặc tương đương) và rate limit ở edge cho mọi endpoint public; bắt đầu ở chế độ log 1–2 tuần rồi chuyển chặn. → Kiểm: cấu hình WAF trong IaC; test payload mẫu (`' OR 1=1`, `<script>`) → bị chặn/log; dashboard WAF có dữ liệu. · Nguồn: OWASP CRS docs (chưa fetch lại 2026-10-13); OWASP Top 10:2025 A05
 - [ ] `SEC-INFRA-015` **MUST@M** Truy cập quản trị (SSH, console, kubectl) qua bastion/SSO + MFA, không mật khẩu, có phiên ghi log; không SSH key dùng chung. → Kiểm: `PasswordAuthentication no`; IAM yêu cầu MFA cho vai trò admin; session log (SSM/Teleport) bật. · Nguồn: CIS Benchmark OS/cloud; NIST SP 800-207
 - [ ] `SEC-INFRA-016` **MUST@L** mTLS hoặc xác thực OIDC cho mọi gọi service↔service nội bộ; network policy K8s deny-all mặc định giữa namespace. → Kiểm: `NetworkPolicy` default-deny tồn tại mỗi namespace; mesh/`PeerAuthentication STRICT`; test pod lạ gọi service → bị từ chối. · Nguồn: NIST SP 800-207; K8s NetworkPolicy docs
@@ -76,7 +76,7 @@ updated: 2026-10-13
 7. **WAF bật chế độ chặn ngày đầu** → chặn người dùng thật, đội tắt WAF luôn. Tránh: log trước, chặn sau (`SEC-INFRA-014`).
 8. **`/metrics`, dashboard queue, pgAdmin public không auth** — thấy nhiều ở repo cá nhân. Tránh: `SEC-INFRA-010`.
 9. **Telemetry mặc định** của tool dev gửi task/URL ra ngoài (ví dụ `chrome-devtools-mcp`, codegraph theo catalog 11/16). Tránh: `SEC-INFRA-018`.
-10. **Resource limit không đặt** → vòng lặp agent/leak bộ nhớ hạ cả node, kéo theo dịch vụ khác (OWASP LLM10). Tránh: `SEC-INFRA-013`.
+10. **Resource limit không đặt** → vòng lặp agent/leak bộ nhớ hạ cả node, kéo theo dịch vụ khác (OWASP LLM 2026 LLM06). Tránh: `SEC-INFRA-013`.
 
 ## Cổng tự động
 

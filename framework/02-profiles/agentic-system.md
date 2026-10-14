@@ -4,7 +4,7 @@ kind: profile
 slug: agentic-system
 prefix: PRF-AGENTIC
 modules: [04-standards/*, 05-architecture/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 13-ai-engineering/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Hệ agentic (đa agent, tự trị có giới hạn, chạy dài)
@@ -37,7 +37,7 @@ nhỏ, kiểm từng bước, resume thay vì chạy lại.
 [Durable runtime: Temporal / Restate / DBOS / LangGraph checkpoint (sync)]
    │ workflow state ngoài process · resume từ bước lỗi · 4 số giới hạn/run
    ▼
-[Orchestrator agent] ──assign_task(mission, acceptance, assignee)──► [Worker agent A] [Worker agent B] ... (depth ≤ 2)
+[Orchestrator agent] ──assign_task(mission, acceptance, assignee)──► [Worker agent A] [Worker agent B] ... (depth khuyến nghị 2, trần 3 — AI-AGENTIC-007)
    │   topology.yaml = ai được gọi ai, tool nào thuộc ai                │ identity riêng · scope riêng · message có schema + chữ ký
    │                                                                     ▼
    │                                               [Evaluator (model khác)] → verified_by do code điền
@@ -57,7 +57,7 @@ Phiên bản xác minh **2026-10-13** — **xác minh lại trước khi dùng**
 | Thành phần | Mặc định | Phiên bản (xác minh 2026-10-13) | Thay thế + điều kiện |
 |---|---|---|---|
 | Durable execution | Temporal (Signals/Updates, đa ngôn ngữ, worker sống lâu) | server v1.32.1 (2026-10-08) · `temporalio` 1.34.0 (ngày phát hành chưa xác minh) | Restate v1.7.13 (2026-10-01) khi muốn một binary tự host; DBOS khi Postgres là sổ cái; LangGraph 1.2.15 checkpointer (đặt **sync**) khi agent đã là graph; Vercel `@ai-sdk/workflow` (AI SDK 7) khi ở Vercel |
-| Điều phối đa agent | Claude Agent SDK subagents (depth ≤ 3) hoặc LangGraph supervisor | Agent SDK 0.2.165 · LangGraph 1.2.15 | Microsoft Agent Framework 1.21.0 (.NET/Azure); Google ADK 2.x (Gemini); CrewAI Flows (event-driven) |
+| Điều phối đa agent | Claude Agent SDK subagents hoặc LangGraph supervisor (độ sâu lồng theo `AI-AGENTIC-007`: khuyến nghị 2, trần 3) | Agent SDK 0.2.165 · LangGraph 1.2.15 | Microsoft Agent Framework 1.21.0 (.NET/Azure); Google ADK 2.x (Gemini); CrewAI Flows (event-driven) |
 | Giao tiếp agent–agent xuyên hệ | A2A (Agent Card ký số, Task state, Artifact) | v1.0.1 (2026-05-26) | Message queue nội bộ có schema khi cùng một hệ |
 | Tool | MCP spec 2026-07-28 (stateless, handle server cấp, Tasks extension) | `mcp` 2.3.0 | — |
 | Outbox/queue | PostgreSQL outbox table + worker (hoặc Temporal Activity lũy đẳng) | PostgreSQL 18.6 | Kafka/NATS khi khối lượng lớn |
@@ -67,11 +67,11 @@ Phiên bản xác minh **2026-10-13** — **xác minh lại trước khi dùng**
 
 ## Checklist
 
-- [ ] `PRF-AGENTIC-001` **MUST** Topology là ranh giới ủy quyền, khai báo trong file (`topology.yaml`): agent nào gọi agent nào, mỗi tool có đúng **một** agent sở hữu, độ sâu ≤ 2 (tối đa 3), tool ủy quyền ẩn khỏi model (chỉ thấy roster). → Kiểm: test static đọc topology: không tool hai chủ, không chu trình, depth ≤ giới hạn; runtime từ chối lời gọi ngoài topology (test). · Nguồn: OWASP ASI03, ASI07; catalog 02 §4 (OpenCompany), 23 §2.3
+- [ ] `PRF-AGENTIC-001` **MUST** Topology là ranh giới ủy quyền, khai báo trong file (`topology.yaml`): agent nào gọi agent nào, mỗi tool có đúng **một** agent sở hữu, độ sâu lồng khuyến nghị 2, trần 3 (theo [`AI-AGENTIC-007`](../13-ai-engineering/agentic-systems.md)), tool ủy quyền ẩn khỏi model (chỉ thấy roster). → Kiểm: test static đọc topology: không tool hai chủ, không chu trình, depth ≤ giới hạn; runtime từ chối lời gọi ngoài topology (test). · Nguồn: OWASP ASI03, ASI07; catalog 02 §4 (OpenCompany), 23 §2.3
 - [ ] `PRF-AGENTIC-002` **MUST** Trạng thái workflow nằm ngoài tiến trình (durable runtime hoặc checkpoint sync); crash/deploy giữa chừng → resume đúng bước, không lặp side effect đã xong. → Kiểm: test kill worker sau bước k → khởi động lại tiếp từ k+1; số side effect = 1; checkpoint LangGraph (nếu dùng) cấu hình sync. · Nguồn: Anthropic multi-agent research (resume thay vì chạy lại); catalog 21 §5
 - [ ] `PRF-AGENTIC-003` **MUST** Mọi side effect đối ngoại đi qua **outbox**: ghi intent trước khi gọi, lease + fencing token, kết quả `outcome_unknown` → reconcile bằng đọc lại (read-back), không retry mù; "đã gửi" chỉ tính khi có receipt. → Kiểm: test crash sau gọi API nhưng trước ghi receipt → không gửi lần hai, trạng thái `outcome_unknown` rồi reconcile; test 504 → không retry tự động. · Nguồn: catalog 21 §8 mục 8 (Sales-Hunter ADR-0010), 23 §4.5
 - [ ] `PRF-AGENTIC-004` **MUST** HITL theo mức rủi ro T0–T4 (enum `external_side_effects` trong schema hành động): tiền, publish, xoá, đổi quyền, gửi ra ngoài ≥ T3 cần người duyệt; cổng là code; subagent không tự nâng tier; gate quá hạn → **leo thang**, không tự pass. → Kiểm: test action T3 không approval → chờ, không thực thi; test sau timeout → sự kiện escalation, trạng thái WAITING; test subagent gửi tier thấp hơn thực tế → bị validator nâng lại. · Nguồn: OWASP ASI09; catalog 23 §4.5 (T0–T4, human gate 24h)
-- [ ] `PRF-AGENTIC-005` **MUST** Mỗi run có 4 số (max vòng, ngân sách tiền, timeout, hạn) và toàn hệ có **spend circuit breaker** 80 % cảnh báo / 90 % bóp / 100 % dừng, sống qua restart. → Kiểm: cấu hình 4 số bắt buộc (run không có → từ chối khởi động); test chi tiêu giả vượt 100 % → mọi agent dừng, trạng thái lưu trên đĩa/DB. · Nguồn: OWASP LLM10, ASI08; catalog 21 §8, §10
+- [ ] `PRF-AGENTIC-005` **MUST** Mỗi run có 4 số (max vòng, ngân sách tiền, timeout, hạn) và toàn hệ có **spend circuit breaker** 80 % cảnh báo / 90 % bóp / 100 % dừng, sống qua restart. → Kiểm: cấu hình 4 số bắt buộc (run không có → từ chối khởi động); test chi tiêu giả vượt 100 % → mọi agent dừng, trạng thái lưu trên đĩa/DB. · Nguồn: OWASP LLM 2026 LLM06, ASI08; catalog 21 §8, §10
 - [ ] `PRF-AGENTIC-006` **MUST** Kill switch toàn hệ: một lệnh dừng mọi agent/subagent, thu hồi credential ngắn hạn, dừng trigger; đã diễn tập và ghi log. → Kiểm: runbook `KILL.md` + log diễn tập có ngày; test `interrupt` lan tới subagent trong ≤ thời gian ADR; trigger (cron/routine) bị vô hiệu sau kill. · Nguồn: OWASP ASI10 Rogue Agents
 - [ ] `PRF-AGENTIC-007` **MUST** Thông điệp giữa agent có schema, có danh tính nguồn xác thực được (credential riêng từng agent; Agent Card ký số/mTLS khi xuyên hệ); nội dung từ agent khác là **untrusted** như tool output. → Kiểm: test message giả mạo nguồn → từ chối; test message sai schema → từ chối; handoff hai chiều qua classifier injection (nếu có). · Nguồn: OWASP ASI07; A2A v1.0.1 (security schemes, Agent Card)
 - [ ] `PRF-AGENTIC-008` **MUST** Phát hiện không-tiến-triển: cùng chữ ký lỗi ≥ 3 lần → BLOCKED; lặp tool call/vòng không sinh thông tin mới → dừng; chuỗi đỏ lần 2 cảnh báo, lần 3 chặn. → Kiểm: test task trả cùng lỗi 3 lần → trạng thái `blocked`, cần người; không có vòng thứ 4. · Nguồn: OWASP ASI08; catalog 23 §2.2 (ba cổng máy)
@@ -96,7 +96,7 @@ Phiên bản xác minh **2026-10-13** — **xác minh lại trước khi dùng**
 | ASI01 Goal Hijack | 007, 014 | PRF-AGENT-003 |
 | ASI02 Tool Misuse | 001, 005 | PRF-AGENT-002/004 |
 | ASI03 Identity & Privilege Abuse | 001, 013 | PRF-AGENT-006 |
-| ASI04 Agentic Supply Chain | — | PRF-AGENT-015 |
+| ASI04 Agentic Supply Chain | — | `SEC-SUPPLY-016/017` (PRF-AGENT-015 ngừng dùng) |
 | ASI05 Unexpected Code Execution | — | PRF-AGENT-007 |
 | ASI06 Memory & Context Poisoning | 014 | PRF-AGENT-013 |
 | ASI07 Insecure Inter-Agent Communication | 001, 007 | — |
@@ -120,7 +120,7 @@ Phiên bản xác minh **2026-10-13** — **xác minh lại trước khi dùng**
 1. **Cổng duyệt trong prompt của agent điều phối** ("tune the prompt, not the code") — injection thì hành động phá huỷ vẫn chạy (catalog 02 §4b).
 2. **Retry mù sau 504/timeout** — gửi mail/đăng bài hai lần; `outcome_unknown` phải reconcile (003).
 3. **Checkpoint async** — crash cứng mất checkpoint mới nhất; đặt sync (002).
-4. **Subagent lồng subagent, tool ủy quyền lộ cho model** — mất kiểm soát ủy quyền; depth ≤ 2, roster thay tool (001).
+4. **Lồng agent không trần, tool ủy quyền lộ cho model** — mất kiểm soát ủy quyền; độ sâu khuyến nghị 2, trần 3 (`AI-AGENTIC-007`), roster thay tool (001). Luật "subagent không lồng" của vòng lặp phát triển ([`../11-autonomous-loop/orchestration-and-subagents.md`](../11-autonomous-loop/orchestration-and-subagents.md)) không áp cho sản phẩm.
 5. **Multi-agent cho việc cần chia sẻ context chặt (đa số coding)** — tốn ~15× token, chất lượng không hơn; chỉ dùng breadth-first (Anthropic multi-agent research).
 6. **Judge/evaluator cùng model với generator** — thiên lệch; khác model, tách tiến trình (010).
 7. **"Goal met?" do model tự khai** — dừng theo ngân sách + kiểm máy (010; catalog 03 §8c).

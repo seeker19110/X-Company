@@ -3,7 +3,7 @@ title: Bốn trạng thái UI, phản hồi, lỗi, loading, rỗng
 kind: module
 prefix: UX-STATE
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Bốn trạng thái UI, phản hồi, lỗi, loading, rỗng
@@ -42,7 +42,7 @@ updated: 2026-10-13
 - [ ] `UX-STATE-003` **MUST** Trạng thái tải không gây dịch chuyển bố cục: skeleton/khoảng giữ chỗ có kích thước gần đúng nội dung. → Kiểm: Lighthouse CLS ≤ 0.1 trên trang có dữ liệu động; ảnh skeleton và ảnh có dữ liệu cùng chiều cao khối ± 10%. · Nguồn: web.dev Core Web Vitals (CLS)
 - [ ] `UX-STATE-004` **MUST** Trạng thái rỗng có thông điệp nói rõ "chưa có gì" và hành động tiếp theo (nút tạo/nhập/hướng dẫn), phân biệt "rỗng do lọc" với "rỗng thật". → Kiểm: E2E tài khoản mới thấy empty state có nút hành động; E2E lọc không kết quả thấy nút "Xoá bộ lọc".
 - [ ] `UX-STATE-005` **MUST** Thông báo lỗi không chứa stack trace, SQL, tên bảng, mã lỗi thư viện; có nút "Thử lại" hoặc đường đi khác. → Kiểm: E2E mock API trả 500 → text lỗi không khớp regex `(Error:|at .*\.js|SELECT|Exception|TypeError)`; có nút Thử lại hoạt động. · Nguồn: OWASP (không lộ chi tiết nội bộ); [`../01-baseline/errors-and-logging.md`](../01-baseline/errors-and-logging.md)
-- [ ] `UX-STATE-006` **MUST** Nút gửi bị vô hiệu + hiện trạng thái đang gửi trong khi request chạy; không thể double-submit. → Kiểm: E2E click nhanh 2 lần → chỉ 1 request (đếm qua `page.waitForRequest`); API có idempotency key cho tạo mới (xem [`../08-backend/api-design.md`](../08-backend/api-design.md)).
+- [ ] `UX-STATE-006` **MUST** Nút gửi bị vô hiệu + hiện trạng thái đang gửi trong khi request chạy; không thể double-submit. → Kiểm: E2E click nhanh 2 lần → chỉ 1 request (đếm qua `page.waitForRequest`); API có idempotency key cho tạo mới (nguyên tắc: [`ARC-INT-001`](../05-architecture/integration-patterns.md); hợp đồng header `Idempotency-Key`: [`../08-backend/api-design.md`](../08-backend/api-design.md)).
 - [ ] `UX-STATE-007` **MUST** Thất bại không xoá dữ liệu đã nhập; form giữ nguyên giá trị và focus về lỗi đầu tiên. → Kiểm: E2E mock lỗi mạng khi submit → giá trị input còn nguyên. · Nguồn: WCAG 2.2 SC 3.3.7 (tinh thần)
 - [ ] `UX-STATE-008` **MUST** Hành động không thể hoàn tác có dialog xác nhận nêu rõ đối tượng và hậu quả; nút xác nhận ghi đúng động từ; nút huỷ là mặc định khi nhấn Esc. → Kiểm: E2E xoá vĩnh viễn → dialog có tên đối tượng; Esc đóng không xoá. · Nguồn: WAI-ARIA APG Dialog
 - [ ] `UX-STATE-009` **MUST** Optimistic update có rollback khi server lỗi và thông báo cho người dùng; không dùng cho tiền, quyền, xoá vĩnh viễn. → Kiểm: test đơn vị/E2E mock lỗi mutation → UI trở về trạng thái trước + thông báo lỗi; grep `useOptimistic|onMutate` không xuất hiện trong module thanh toán/phân quyền. · Nguồn: React `useOptimistic`; TanStack Query Optimistic Updates

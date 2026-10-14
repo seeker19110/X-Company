@@ -4,7 +4,7 @@ kind: profile
 slug: web-app
 prefix: PRF-WEB
 modules: [04-standards/*, 05-architecture/*, 06-design-ux/*, 07-frontend/*, 08-backend/*, 09-database/*, 10-workflow/*, 11-autonomous-loop/*, 12-security/*, 14-testing-quality/*, 15-operations/*, 16-compliance-privacy/*, 17-product-project/*, 18-cross-cutting/*]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Hồ sơ: Ứng dụng web
@@ -108,7 +108,7 @@ Cột "Cổng chung" là cổng nền của khung ([`../01-baseline/quality-gate
 ## Nguồn
 
 - Core Web Vitals và ngưỡng p75: <https://web.dev/articles/vitals> — xác minh 2026-10-13.
-- WCAG 2.2 (Recommendation 2024-12-12), SC 1.4.10 Reflow 320 CSS px: <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
+- WCAG 2.2 (W3C Recommendation 2023-10-05, bản cập nhật 2024-12-12), SC 1.4.10 Reflow 320 CSS px: <https://www.w3.org/TR/WCAG22/> — xác minh 2026-10-13.
 - CSP quick reference (trỏ W3C CSP Level 3): <https://content-security-policy.com/> — xác minh 2026-10-13.
 - Node.js lịch LTS: <https://endoflife.date/api/nodejs.json> — xác minh 2026-10-13. Next.js EOL: <https://endoflife.date/api/nextjs.json> — xác minh 2026-10-13.
 - Phiên bản npm (`next`, `react`, `vue`, `nuxt`, `@sveltejs/kit`, `svelte`, `vite`, `typescript`, `tailwindcss`, `zod`, `@tanstack/react-query`, `vitest`, `@playwright/test`, `@axe-core/playwright`, `@lhci/cli`, `lighthouse`, `@biomejs/biome`, `oxlint`, `eslint`, `prettier`, `knip`, `size-limit`, `pnpm`, `npm`, `react-router`): `https://registry.npmjs.org/<pkg>/latest` — xác minh 2026-10-13.
