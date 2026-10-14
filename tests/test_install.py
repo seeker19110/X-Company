@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import io
+import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,14 +99,58 @@ class InstallTest(unittest.TestCase):
         self.run_install()
         agents = self.target / "AGENTS.md"
         agents.write_text("của tôi\n", encoding="utf-8")
-        settings = self.target / ".claude" / "settings.json"
-        settings.write_text("{}\n", encoding="utf-8")
+        hook = self.target / ".claude" / "hooks" / "stop-guard.sh"
+        hook.write_text("# hook tôi đã sửa\n", encoding="utf-8")
         self.run_install()
         self.assertEqual(agents.read_text(encoding="utf-8"), "của tôi\n")
-        self.assertEqual(settings.read_text(encoding="utf-8"), "{}\n")
-        self.assertTrue((self.target / ".claude" / "settings.json.xstored-new").exists())
+        self.assertEqual(hook.read_text(encoding="utf-8"), "# hook tôi đã sửa\n")
+        self.assertTrue(hook.with_name("stop-guard.sh.xstored-new").exists())
         self.run_install("--force-harness")
-        self.assertNotEqual(settings.read_text(encoding="utf-8"), "{}\n")
+        self.assertNotEqual(hook.read_text(encoding="utf-8"), "# hook tôi đã sửa\n")
+
+    def test_install_merges_hooks_into_existing_settings(self):
+        # AUD-HAR-003: settings.json có sẵn từng chỉ sinh .xstored-new → hook copy mà không chạy.
+        settings = self.target / ".claude" / "settings.json"
+        settings.parent.mkdir(parents=True)
+        settings.write_text('{"permissions": {"allow": ["Bash(make *)"]}}\n', encoding="utf-8")
+        self.run_install()
+        d = json.loads(settings.read_text(encoding="utf-8"))
+        self.assertEqual(d["permissions"], {"allow": ["Bash(make *)"]})
+        self.assertIn("PreToolUse", d["hooks"])
+        before = settings.read_text(encoding="utf-8")
+        self.run_install()  # chạy lại: không nhân đôi hook
+        self.assertEqual(settings.read_text(encoding="utf-8"), before)
+
+    def test_install_updates_pristine_harness(self):
+        # AUD-HAR-004: hook đã cài mà người dùng chưa sửa phải được cập nhật khi khung có bản mới.
+        self.run_install()
+        hook = self.target / ".claude" / "hooks" / "stop-guard.sh"
+        manifest = json.loads((self.target / ".xstored" / "harness.sha256.json").read_text(encoding="utf-8"))
+        self.assertIn(".claude/hooks/stop-guard.sh", manifest)
+        old = "# bản khung cũ\n"
+        hook.write_text(old, encoding="utf-8")
+        manifest[".claude/hooks/stop-guard.sh"] = install.sha256(old.encode())  # giả lập: lần cài trước là bản cũ
+        (self.target / ".xstored" / "harness.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+        self.run_install()
+        self.assertEqual(
+            hook.read_text(encoding="utf-8"), (ROOT / ".claude/hooks/stop-guard.sh").read_text(encoding="utf-8")
+        )
+        self.assertFalse(hook.with_name("stop-guard.sh.xstored-new").exists())
+
+    def test_install_symlink_not_followed(self):
+        # AUD-HAR-010: symlink treo ở đích không được đi theo ra ngoài dự án.
+        outside = Path(tempfile.mkdtemp())
+        (self.target / "CLAUDE.md").symlink_to(outside / "pwn.md")
+        self.run_install()
+        self.assertFalse((outside / "pwn.md").exists())
+        self.assertTrue((self.target / "CLAUDE.md").is_symlink())
+
+    def test_with_github_warns_required_checks(self):
+        # AUD-CI-003: ruleset mẫu đòi check mà workflow không được copy.
+        err = io.StringIO()
+        with redirect_stderr(err):
+            self.assertEqual(self.run_install("--with-github"), 0)
+        self.assertIn("required check: quality", err.getvalue())
 
     def test_with_github_copies_guardrails_without_overwrite(self):
         self.assertEqual(self.run_install(), 0)

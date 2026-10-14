@@ -20,6 +20,8 @@ Thoát 0 = ổn; 2 = lỗi tham số.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import shutil
 import stat
 import subprocess
@@ -73,22 +75,77 @@ def copy_tree_replace(src: Path, dst: Path) -> None:
     tmp.rename(dst)
 
 
-def copy_if_absent(src: Path, dst: Path, force: bool = False, transform=None) -> str:
-    """Trả 'copied' | 'kept' | 'updated-new'. Không bao giờ đè file người dùng đã sửa (trừ force)."""
+MANIFEST = ".xstored/harness.sha256.json"
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def load_manifest(target: Path) -> dict:
+    try:
+        return json.loads((target / MANIFEST).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def copy_if_absent(src: Path, dst: Path, force: bool = False, transform=None, installed_hash: str | None = None) -> str:
+    """Trả 'copied' | 'kept' | 'updated' | 'updated-new' | 'skipped-symlink'.
+
+    Không bao giờ đè file người dùng đã sửa (trừ force). File còn đúng hash bản khung đã cài lần trước
+    (`installed_hash`, người dùng chưa sửa) thì cập nhật tại chỗ — bản sửa hook tới được dự án đã cài (AUD-HAR-004).
+    Đích là symlink → bỏ qua, không đi theo (AUD-HAR-010).
+    """
     data = src.read_bytes()
     if transform:
         data = transform(data.decode("utf-8")).encode("utf-8")
     dst.parent.mkdir(parents=True, exist_ok=True)
+    new = dst.with_name(dst.name + ".xstored-new")
+    if dst.is_symlink() or new.is_symlink():
+        log(f"  ⚠ bỏ qua symlink {dst} (không ghi qua liên kết)")
+        return "skipped-symlink"
+    status = "copied"
     if dst.exists() and not force:
-        if dst.read_bytes() == data:
+        current = dst.read_bytes()
+        if current == data:
             return "kept"
-        new = dst.with_name(dst.name + ".xstored-new")
-        new.write_bytes(data)
-        return "updated-new"
+        if installed_hash is None or sha256(current) != installed_hash:
+            new.write_bytes(data)
+            return "updated-new"
+        status = "updated"
     dst.write_bytes(data)
     if src.suffix == ".sh":
         dst.chmod(dst.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP)
-    return "copied"
+    return status
+
+
+def merge_hooks(src: Path, dst: Path) -> str:
+    """settings.json của dự án đã có: thêm khoá `hooks` của khung còn thiếu (giữ nguyên permissions và hook riêng).
+
+    Trước đây file có sẵn chỉ sinh `.xstored-new` nên hook đã copy mà không chạy (AUD-HAR-003).
+    """
+    if dst.is_symlink():
+        log(f"  ⚠ bỏ qua symlink {dst}")
+        return "skipped-symlink"
+    try:
+        ours = json.loads(src.read_text(encoding="utf-8"))
+        theirs = json.loads(dst.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log(f"  ⚠ {dst}: không đọc được JSON ({exc}) — HOOK CHƯA ĐĂNG KÝ, gộp tay từ .claude/settings.json.xstored-new")
+        return "invalid-json"
+    hooks = theirs.setdefault("hooks", {})
+    added = 0
+    for event, entries in ours.get("hooks", {}).items():
+        have = {h.get("command") for e in hooks.get(event, []) for h in e.get("hooks", [])}
+        for entry in entries:
+            cmds = [h.get("command") for h in entry.get("hooks", [])]
+            if not any(c in have for c in cmds):
+                hooks.setdefault(event, []).append(entry)
+                added += 1
+    if not added:
+        return "kept"
+    dst.write_text(json.dumps(theirs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return "merged-hooks"
 
 
 def framework_label(explicit: str | None) -> str:
@@ -136,18 +193,36 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     log(f"✓ .xstored/framework + scripts (phiên bản {framework_label(label)})")
 
     # 2) harness .claude/ — copy-if-absent
-    stats = {"copied": 0, "kept": 0, "updated-new": 0}
+    stats: dict = {}
     if not no_harness:
-        for f in HARNESS_FILES:
-            stats[copy_if_absent(SRC / ".claude" / f, target / ".claude" / f, force_harness)] += 1
+        manifest = load_manifest(target)
+        new_manifest = {}
+        settings = target / ".claude" / "settings.json"
+        if settings.exists() and not force_harness:
+            r = merge_hooks(SRC / ".claude" / "settings.json", settings)
+            stats[r] = stats.get(r, 0) + 1
+            if r == "merged-hooks":
+                log("  .claude/settings.json: đã thêm khoá hooks của khung (giữ nguyên quyền và hook riêng)")
+        else:
+            r = copy_if_absent(SRC / ".claude" / "settings.json", settings, force_harness)
+            stats[r] = stats.get(r, 0) + 1
+        sources = [SRC / ".claude" / f for f in HARNESS_FILES if f != "settings.json"]
         for d in HARNESS_DIRS:
-            for src in sorted((SRC / ".claude" / d).rglob("*")):
-                if src.is_file():
-                    rel = src.relative_to(SRC / ".claude")
-                    stats[copy_if_absent(src, target / ".claude" / rel, force_harness)] += 1
-        log(
-            f"✓ .claude/: copy {stats['copied']} · giữ nguyên {stats['kept']} · có bản mới (.xstored-new) {stats['updated-new']}"
-        )
+            sources += [
+                p for p in sorted((SRC / ".claude" / d).rglob("*")) if p.is_file() and "__pycache__" not in p.parts
+            ]
+        for src in sources:
+            rel = src.relative_to(SRC).as_posix()
+            r = copy_if_absent(src, target / rel, force_harness, installed_hash=manifest.get(rel))
+            stats[r] = stats.get(r, 0) + 1
+            if r in ("copied", "updated", "kept"):
+                new_manifest[rel] = sha256(src.read_bytes())
+            elif rel in manifest:
+                new_manifest[rel] = manifest[rel]
+        (target / MANIFEST).write_text(json.dumps(new_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        log("✓ .claude/: " + " · ".join(f"{k} {v}" for k, v in sorted(stats.items())))
+        if stats.get("updated-new"):
+            log("  ⚠ có file .xstored-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")
 
     # 3) file gốc từ templates — copy-if-absent, bỏ frontmatter
     for name, tmpl in ROOT_TEMPLATES.items():
@@ -162,6 +237,23 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
         for gh in GITHUB_FILES:
             r = copy_if_absent(SRC / gh, target / gh, False)
             log(f"  {gh}: {r}")
+        try:
+            rules = json.loads((SRC / ".github/rulesets/main.json").read_text(encoding="utf-8"))["rules"]
+            checks = [
+                c["context"]
+                for r in rules
+                if r["type"] == "required_status_checks"
+                for c in r["parameters"]["required_status_checks"]
+            ]
+        except (OSError, ValueError, KeyError):
+            checks = []
+        if (
+            checks
+        ):  # AUD-CI-003: workflow không được copy (phụ thuộc stack) → import ruleset trước khi có job sẽ khoá merge
+            log(
+                f"  ⚠ ruleset mẫu đòi required check: {', '.join(checks)} — tạo workflow có job ĐÚNG tên trước khi import, "
+                "hoặc sửa danh sách check trong .github/rulesets/main.json; nếu không, mọi PR sẽ treo chờ check"
+            )
 
     # 4) .gitignore: thêm .autopilot/ nếu thiếu
     gi = target / ".gitignore"
