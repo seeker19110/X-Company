@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- PR #26 trả nợ AUD-CODE-002 + AUD-TEST-001 (PLAN T-201…T-205): `mypy --strict` 0 lỗi; coverage dòng + nhánh 100% (đo cả subprocess, 0 pragma), cổng `test` chặn dưới 100%; 130 → 280 test.
+- Không có việc dở. Đã trả nợ AUD-CODE-002 + AUD-TEST-001 (#26): `mypy --strict` 0 lỗi; coverage dòng + nhánh 100% (đo cả subprocess, 0 pragma), cổng `test` chặn dưới 100%; 130 → 280 test.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
@@ -28,7 +28,7 @@
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `6490f7b` (#24 audit đợt 5) — SHA quét lại trong `docs/ops/AUDIT-STATUS.md`.
+- Commit cuối trên `main`: `fc1602d` (#26 mypy --strict + coverage 100%); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không; autopilot PLAN T-101…T-106 xong.
+- Đang chặn: không; autopilot PLAN T-201…T-205 xong.
 - Câu hỏi cần người: mục Tiếp theo 1 và 4.
