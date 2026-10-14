@@ -12,8 +12,8 @@ if [ -f "$XS_ROOT/PROGRESS.md" ]; then
   prog="$(awk '
     /^## /{keep = ($0 ~ /Đang làm|Tiếp theo|Quyết định|Bàn giao|Kế hoạch/)}
     NR==1 || keep {print}
-  ' "$XS_ROOT/PROGRESS.md" | head -c 8192)"
-  [ -n "$prog" ] || prog="$(head -c 8192 "$XS_ROOT/PROGRESS.md")"
+  ' "$XS_ROOT/PROGRESS.md" | utf8_head 8192)"
+  [ -n "$prog" ] || prog="$(utf8_head 8192 < "$XS_ROOT/PROGRESS.md")"
   ctx+="===== PROGRESS.md (trạng thái phiên trước) =====
 $prog
 

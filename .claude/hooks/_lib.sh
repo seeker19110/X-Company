@@ -38,6 +38,11 @@ print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
   exit 0
 }
 
+# Cắt stdin tối đa $1 byte KHÔNG cắt giữa ký tự UTF-8 (head -c từng làm hỏng tiếng Việt — AUD-HAR-011).
+utf8_head() {
+  python3 -c 'import sys; sys.stdout.write(sys.stdin.buffer.read()[: int(sys.argv[1])].decode("utf-8", "ignore"))' "$1" 2>/dev/null
+}
+
 # In JSON additionalContext cho SessionStart/UserPromptSubmit.
 context_output() { # $1=hookEventName $2=nội dung
   python3 -c '
