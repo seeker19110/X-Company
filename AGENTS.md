@@ -46,7 +46,7 @@ Cổng commit: `/gate` đạt hết (validate · test · link · shell syntax) +
 - Hook/skill/agent trong `.claude/`: là harness được dự án đích copy — giữ fail-open, không hard-code stack, test bằng payload giả (xem `tests/test_hooks.py`).
 
 ## 7. Skill và subagent
-`/autopilot` (tự động đến khi xong) · `/blueprint` (ghép/audit checklist) · `/gate` (cổng + báo cáo) · `/research` (xác minh nguồn sống) · `/audit` (rà 12 nhóm, dừng chờ duyệt) · `/review` (review theo checklist) · `/adr` · `/handover` (bàn giao phiên).
+`/autopilot` (tự động đến khi xong) · `/blueprint` (ghép/audit checklist) · `/gate` (cổng + báo cáo) · `/research` (xác minh nguồn sống) · `/audit` (rà 13 nhóm có máy đỡ `xs.py audit plan/check`, dừng chờ duyệt) · `/review` (review theo checklist) · `/adr` · `/handover` (bàn giao phiên).
 Subagent: `researcher` (tra cứu, read-only) · `executor` (task rõ phạm vi) · `reviewer` (model khác, read-only). Phiên chính điều phối; **subagent không lồng subagent**; song song chỉ khi việc độc lập về file.
 
 ## 8. Giao tiếp

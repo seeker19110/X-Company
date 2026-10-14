@@ -1,40 +1,53 @@
 ---
 name: audit
-description: Audit toàn diện dự án theo blueprint + 12 nhóm (kiến trúc, bảo mật, chất lượng mã, test, hiệu năng, a11y/UX, dependency, CI/CD, tài liệu, dữ liệu, cấu hình, thống nhất chéo tính năng); lưu tiến độ để quét lại hoặc tiếp tục; DỪNG CHỜ DUYỆT trước khi sửa. Dùng khi người dùng muốn rà lỗi toàn diện, kiểm tra toàn bộ, hoàn thiện dự án, hoặc gõ /audit.
-argument-hint: "[full|group:<tên>|resume]"
+description: Audit toàn diện dự án (hoặc chính repo khung) theo blueprint + 13 nhóm (kiến trúc, bảo mật, chất lượng mã, test, hiệu năng, a11y/UX, phụ thuộc, CI/CD, tài liệu, dữ liệu, cấu hình, thống nhất chéo tính năng, harness agent) với máy đỡ — `xs.py audit plan` dò phạm vi/công cụ/bằng chứng cũ, `xs.py audit check` kiểm sổ; xác minh đối kháng mọi 🔴/🟠; quét lại theo diff; DỪNG CHỜ DUYỆT trước khi sửa. Dùng khi người dùng muốn rà lỗi toàn diện, kiểm tra toàn bộ, hoàn thiện dự án, nhận dự án có sẵn, trước phát hành, hoặc gõ /audit.
+argument-hint: "[full|delta|group:<MÃ>|resume]"
 ---
 
-# /audit — rà toàn diện, bằng chứng trước, sửa sau khi duyệt
+# /audit — bằng chứng trước, sửa sau khi duyệt
 
-## Bước -1 — Chống audit "khung trống"
-Đọc repo thật: có code chưa? stack gì? CI chạy gì? test có không? Nếu repo chỉ có khung/tài liệu → nói rõ, audit tài liệu + cấu hình, không bịa phát hiện về code không tồn tại.
+Phương pháp đầy đủ (nhóm, mức, schema phát hiện, Definition of Complete): `<FW>/00-method/audit.md`.
+`<FW>` = `.xstored/framework` ở dự án đích, `framework` ở repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+Sổ máy đọc: `docs/ops/AUDIT-STATUS.md` (mẫu `<FW>/templates/AUDIT-STATUS.md`); báo cáo: `docs/ops/AUDIT-REPORT-<ngày>.md` (mẫu `<FW>/templates/AUDIT-REPORT.md`).
 
-## Bước 0 — Tiến độ
-File `docs/ops/AUDIT-STATUS.md`: nhóm nào đã quét, SHA lúc quét, phát hiện mở/đóng. Có file → hỏi/ quyết "quét lại từ đầu" hay "tiếp tục nhóm chưa xong"; SHA cũ phải là tổ tiên HEAD, không thì quét lại.
+## 0. Chọn chế độ
+- Chưa có `AUDIT-STATUS.md` hoặc người dùng nói `full` → quét toàn bộ.
+- Có sổ → `delta` mặc định: chỉ nhóm mà `<XS> audit plan` liệt kê ở "Quét lại" (chưa quét / SHA không còn tổ tiên HEAD / có file đổi).
+- `group:<MÃ>` → một nhóm (vd `group:SEC`). `resume` → tiếp nhóm đang `chưa quét`.
 
-## Bước 1 — Theo blueprint
-`/blueprint audit`: mỗi mục MUST/SHOULD mở → phát hiện có ID (vd `SEC-WEB-004`), bằng chứng *đo được/suy luận/chưa biết*.
+## 1. Plan — đọc repo thật, không audit "khung trống"
+Chạy `<XS> audit plan` (thêm `--json` khi cần xử lý máy). Từ output:
+- Ghi nhóm `N/A`/`rút gọn` kèm lý do vào sổ; **không** quét nhóm N/A, không bịa phát hiện cho mã không tồn tại.
+- Công cụ **thiếu** của nhóm áp dụng: cài được nhanh (pip/npm/binary chính chủ, phiên bản ghim) thì cài và chạy; không được → bằng chứng nhóm đó là `chưa biết:` + cần gì để đo.
+- Mục "Bằng chứng/miễn trừ blueprint trỏ file đã đổi" → mở từng mục, xác minh lại; sai → phát hiện nhóm 13 (HAR).
+- Repo khung (`REPO KHUNG`): trọng tâm nhóm 9 (quy ước, ID, link, nguồn có ngày, tài liệu lệch mã) và 13 (hook, install, lệnh `xs.py`).
 
-## Bước 2 — 12 nhóm (mỗi nhóm: lệnh chạy thật → phát hiện → mức)
-| # | Nhóm | Chạy/đọc gì |
-|---|---|---|
-| 1 | Kiến trúc & ranh giới | dependency-cruiser/import-linter/ArchUnit; C4 vs code; module vòng |
-| 2 | Bảo mật | SAST (CodeQL/Semgrep), gitleaks full history, dependency audit, header, authz từng route, SSRF/IDOR, threat model còn hợp lệ |
-| 3 | Chất lượng mã | lint 0 cảnh báo, type strict, complexity, dead code (knip), trùng lặp (jscpd), TODO/FIXME |
-| 4 | Test | coverage theo module quan trọng, ca biên, flaky, mutation nếu có, test có assert thật |
-| 5 | Hiệu năng | CWV/Lighthouse hoặc p95/k6, N+1, index, bundle, cache |
-| 6 | A11y & UX | axe 0 critical, bàn phím, tương phản 2 theme, 4 trạng thái, mobile |
-| 7 | Dependency | lockfile, EOL (endoflife.date), license, major lạc hậu, ghim SHA action |
-| 8 | CI/CD | required check thật, permissions, secret, cache, thời gian, fail-open |
-| 9 | Tài liệu | README chạy được, ADR cập nhật, runbook, link gãy, SHA PROGRESS là tổ tiên HEAD |
-| 10 | Dữ liệu | migration có đường lùi, backup đã thử khôi phục, PII map, xoá theo yêu cầu, timestamptz, tiền số nguyên |
-| 11 | Cấu hình/secret | env validate lúc khởi động, không secret trong code/log, cấu hình theo môi trường, fail-closed |
-| 12 | Thống nhất chéo tính năng | cùng một khái niệm một cách xử lý (lỗi, phân trang, quyền, i18n, thời gian); tính năng A phá B? |
+## 2. Blueprint
+`<XS> blueprint-status BLUEPRINT.md --json`: MUST mở kiểm được ngay → phát hiện; miễn trừ nghi sai → phát hiện. Không tick blueprint trong lúc audit.
 
-Mức: 🔴 chặn phát hành · 🟠 sửa trong đợt này · 🟢 nợ có chủ. Mỗi phát hiện: ID, bằng chứng (file:dòng/lệnh+output), đề xuất sửa, Gate kiểm.
+## 3. Quét theo nhóm — lệnh thật, song song khi độc lập
+- Chia nhóm áp dụng thành 2–4 cụm độc lập về file (gợi ý: {SEC, CFG, DEP, CI} · {ARCH, CODE, TEST, PERF} · {DOC, HAR, XFEAT} · {A11Y, DATA}).
+- Mỗi cụm giao một subagent **read-only** (`reviewer` cho mã/bảo mật, `Explore` cho tài liệu), prompt gồm: nhóm, nhà yêu cầu ở bảng §3 của `audit.md`, lệnh/công cụ có sẵn, thư mục scratch để tái hiện, yêu cầu **mỗi phát hiện có file:dòng hoặc lệnh + output**, phân biệt đo được/suy luận/chưa biết, không sửa file.
+- Phiên chính vẫn tự chạy cổng chuẩn (`xs.yaml`/`dev-task.sh gate`), coverage, gitleaks toàn lịch sử (nếu cài được), và đo những gì subagent không làm.
+- Subagent không lồng subagent. Gộp kết quả, bỏ trùng, đánh ID `AUD-<MÃ>-NNN` (không tái sử dụng số cũ trong sổ).
 
-## Bước 3 — DỪNG CHỜ DUYỆT
-Xuất `docs/ops/AUDIT-REPORT-<ngày>.md` + cập nhật AUDIT-STATUS. Trình kế hoạch sửa theo đợt (mỗi đợt ≤ 1 PR, bug có test tái hiện trước khi sửa). **Không sửa trước khi người duyệt** (trừ khi đang trong autopilot đã duyệt trước và phát hiện thuộc phạm vi PLAN).
+## 4. Xác minh đối kháng (bắt buộc với 🔴/🟠)
+Gửi danh sách 🔴/🟠 cho một `reviewer` **khác** subagent đã tìm ra (model khác nếu được) để tái hiện độc lập.
+Không tái hiện được → hạ thành `suy luận:` (và hạ mức nếu cần) hoặc `bác bỏ` kèm lý do. Ghi người/lần xác minh vào báo cáo.
 
-## Bước 4 — Vòng hội tụ (sau duyệt)
-Sửa → qua `/gate` → quét lại nhóm liên quan → lặp đến khi không còn 🔴/🟠 đã biết → ghi Definition of Complete đạt + bằng chứng.
+## 5. Ghi sổ + báo cáo
+- Cập nhật `docs/ops/AUDIT-STATUS.md`: nhóm đã quét (SHA = `git rev-parse HEAD` lúc quét, ngày), bảng phát hiện đúng schema.
+- Viết `docs/ops/AUDIT-REPORT-<ngày>.md`: tóm tắt đếm, phạm vi (output rút gọn `audit plan`), lệnh đã chạy + exit, chi tiết 🔴/🟠 (tái hiện từng bước), kế hoạch sửa theo đợt, nợ 🟢 có chủ.
+- `<XS> audit check docs/ops/AUDIT-STATUS.md` phải exit 0. Commit `docs(audit): …` (không sửa mã trong commit này).
+
+## 6. DỪNG CHỜ DUYỆT
+Trình ≤ 20 dòng: số phát hiện theo mức, 🔴 từng dòng, kế hoạch đợt (mỗi đợt ≤ 1 PR, 🔴 trước, bug có test tái hiện đỏ trước khi sửa).
+**Không sửa trước khi người duyệt** — trừ khi đang autopilot đã duyệt trước và phát hiện thuộc phạm vi PLAN.
+Đang autopilot mà cần người: `<XS> loop block --reason "audit: chờ duyệt kế hoạch sửa"`.
+
+## 7. Hội tụ (sau duyệt)
+Mỗi đợt: test/Gate đỏ → sửa → `/gate` → PR → cập nhật phát hiện `đã sửa` (#PR) → `<XS> audit plan` → quét lại nhóm bị chạm.
+Lặp tới khi `<XS> audit check docs/ops/AUDIT-STATUS.md --strict` exit 0 (Definition of Complete). Nợ 🟢 giữ lại: `chấp nhận` có `chủ:` + `hạn:`.
+
+## Không bao giờ
+Khai "an toàn/đạt" khi công cụ không chạy được · gộp suy luận thành đo được · sửa lặng lẽ trong lúc audit · hạ ngưỡng/nới cấu hình để phát hiện biến mất · xoá dòng phát hiện (bác bỏ thì giữ dòng + lý do).

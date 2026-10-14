@@ -18,6 +18,9 @@ Lệnh:
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
   progress-check [FILE]         PROGRESS.md: ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính.
   ci-check [DIR]                Fitness function cho workflow CI (permissions, ghim SHA, timeout, continue-on-error).
+  audit plan [--blueprint F] [--status F] [--json]
+                                Dò stack → nhóm audit áp dụng/rút gọn/N/A, công cụ có/thiếu, bằng chứng blueprint cũ, nhóm cần quét lại.
+  audit check STATUS [--strict] Kiểm sổ docs/ops/AUDIT-STATUS.md; --strict = Definition of Complete (0 🔴/🟠 mở, mọi nhóm đã quét).
   stats                         Thống kê số module/mục.
 
 Thoát: 0 = ổn, 1 = vi phạm/chưa đạt, 2 = lỗi dùng lệnh.
@@ -29,11 +32,13 @@ import argparse
 import datetime as _dt
 import fnmatch
 import hashlib
+import importlib.util
 import itertools
 import json
 import os
 import posixpath
 import re
+import shutil
 import subprocess
 import sys
 import unicodedata
@@ -880,6 +885,517 @@ def ci_check(workflows: Path) -> Dict[str, List[str]]:
     return {p.name: ci_check_text(p.read_bytes().decode("utf-8", errors="replace")) for p in files}
 
 
+# --------------------------------------------------------------------------- audit
+
+AUDIT_GROUPS: Tuple[Tuple[int, str, str], ...] = (
+    (1, "ARCH", "Kiến trúc & ranh giới"),
+    (2, "SEC", "Bảo mật"),
+    (3, "CODE", "Chất lượng mã"),
+    (4, "TEST", "Kiểm thử"),
+    (5, "PERF", "Hiệu năng"),
+    (6, "A11Y", "A11y & UX"),
+    (7, "DEP", "Phụ thuộc"),
+    (8, "CI", "CI/CD"),
+    (9, "DOC", "Tài liệu"),
+    (10, "DATA", "Dữ liệu"),
+    (11, "CFG", "Cấu hình & bí mật"),
+    (12, "XFEAT", "Thống nhất chéo tính năng"),
+    (13, "HAR", "Harness & quy trình agent"),
+)
+AUDIT_CODES = {code: no for no, code, _ in AUDIT_GROUPS}
+GROUP_STATES = ("chưa quét", "đã quét", "rút gọn", "N/A")
+FINDING_STATES = ("mở", "đã sửa", "chấp nhận", "bác bỏ")
+FINDING_LEVELS = ("🔴", "🟠", "🟢")
+EVIDENCE_KINDS = ("đo được:", "suy luận:", "chưa biết:")
+FINDING_ID_RE = re.compile(r"^AUD-([A-Z0-9]+)-(\d{3})$")
+PLACEHOLDER_RE = re.compile(r"<[^<>\s|][^<>|]*>")
+
+LANG_EXT = {
+    "python": (".py",),
+    "js/ts": (".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"),
+    "go": (".go",),
+    "rust": (".rs",),
+    "java/kotlin": (".java", ".kt", ".kts"),
+    "dotnet": (".cs", ".fs"),
+    "php": (".php",),
+    "ruby": (".rb",),
+    "dart": (".dart",),
+    "swift": (".swift",),
+    "shell": (".sh", ".bash"),
+}
+MANIFESTS = {
+    "package.json",
+    "pyproject.toml",
+    "setup.py",
+    "go.mod",
+    "Cargo.toml",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "composer.json",
+    "Gemfile",
+    "pubspec.yaml",
+    "Package.swift",
+}
+LOCKFILES = {
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lockb",
+    "uv.lock",
+    "poetry.lock",
+    "Pipfile.lock",
+    "go.sum",
+    "Cargo.lock",
+    "composer.lock",
+    "Gemfile.lock",
+    "pubspec.lock",
+    "packages.lock.json",
+}
+UI_EXT = (".html", ".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss")
+SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".xstored",
+    "vendor",
+    "dist",
+    "build",
+    ".autopilot",
+}
+
+# Công cụ gợi ý theo nhóm: (tên, ngăn xếp áp dụng hoặc None = mọi repo). "xs:" = lệnh có sẵn của khung.
+AUDIT_TOOLS: Dict[int, Tuple[Tuple[str, Optional[str]], ...]] = {
+    1: (("lint-imports", "python"), ("depcruise", "js/ts"), ("go", "go")),
+    2: (("gitleaks", None), ("semgrep", None), ("osv-scanner", None), ("bandit", "python")),
+    3: (
+        ("ruff", "python"),
+        ("mypy", "python"),
+        ("vulture", "python"),
+        ("eslint", "js/ts"),
+        ("biome", "js/ts"),
+        ("tsc", "js/ts"),
+        ("knip", "js/ts"),
+        ("golangci-lint", "go"),
+        ("shellcheck", "shell"),
+        ("jscpd", None),
+    ),
+    4: (("coverage", "python"), ("pytest", "python"), ("vitest", "js/ts"), ("jest", "js/ts"), ("go", "go")),
+    5: (("k6", None), ("lighthouse", "ui")),
+    6: (("playwright", "ui"), ("axe", "ui")),
+    7: (
+        ("osv-scanner", None),
+        ("pip-audit", "python"),
+        ("npm", "js/ts"),
+        ("govulncheck", "go"),
+        ("cargo-audit", "rust"),
+    ),
+    8: (("xs:ci-check", None), ("actionlint", None), ("zizmor", None)),
+    9: (("xs:progress-check", None), ("lychee", None)),
+    11: (("gitleaks", None),),
+    13: (("xs:blueprint-status", None), ("xs:progress-check", None)),
+}
+
+
+def split_md_row(line: str) -> List[str]:
+    """Tách một dòng bảng Markdown theo `|` không thoát (`\\|` là ký tự trong ô)."""
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|") and not s.endswith("\\|"):
+        s = s[:-1]
+    return [c.strip().replace("\\|", "|") for c in re.split(r"(?<!\\)\|", s)]
+
+
+def md_tables(text: str) -> Dict[str, List[Dict[str, str]]]:
+    """Bảng đầu tiên dưới mỗi heading `## `: {tên heading: [dòng dạng dict theo tiêu đề cột]} (bỏ code fence)."""
+    out: Dict[str, List[Dict[str, str]]] = {}
+    heading: Optional[str] = None
+    header: Optional[List[str]] = None
+    fence: Optional[str] = None
+    for line in text.splitlines():
+        m = FENCE_RE.match(line)
+        if m and (fence is None or m.group(1) == fence):
+            fence = None if fence else m.group(1)
+            continue
+        if fence:
+            continue
+        if line.startswith("## "):
+            heading, header = unicodedata.normalize("NFC", line[3:].strip()), None
+            continue
+        if heading is None or (heading in out and header is None):
+            continue
+        if not line.lstrip().startswith("|"):
+            if header is not None:  # hết bảng: chỉ lấy bảng đầu tiên của mỗi heading
+                header, heading = None, None
+            continue
+        cells = split_md_row(line)
+        if header is None:
+            header = [unicodedata.normalize("NFC", c) for c in cells]
+            out[heading] = []
+        elif all(re.fullmatch(r":?-{3,}:?", c) for c in cells if c):
+            continue
+        else:
+            out[heading].append(dict(zip(header, cells + [""] * (len(header) - len(cells)))))
+    return out
+
+
+def _repo_files(root: Path) -> List[str]:
+    r = _git(root, "ls-files", "-z")
+    if r.returncode == 0 and r.stdout:
+        return [f for f in r.stdout.split("\0") if f and not set(Path(f).parts) & SKIP_DIRS]
+    files = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for fn in filenames:
+            files.append(os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/"))
+    return files
+
+
+def audit_signals(root: Path, files: Optional[List[str]] = None) -> Dict[str, Any]:
+    files = _repo_files(root) if files is None else files
+    names = [posixpath.basename(f) for f in files]
+    langs = {}
+    for lang, exts in LANG_EXT.items():
+        n = sum(1 for f in files if f.endswith(exts))
+        if n:
+            langs[lang] = n
+    ui = [f for f in files if f.endswith(UI_EXT)]
+    db = [f for f in files if "/migrations/" in f"/{f}" or f.endswith((".sql", "schema.prisma", "alembic.ini"))]
+    tests = [
+        f
+        for f in files
+        if re.search(r"(^|/)(tests?|__tests__|spec)/", f)
+        or re.search(r"(_test\.go|\.(test|spec)\.[jt]sx?|(^|/)test_[^/]+\.py)$", f)
+    ]
+    sig = {
+        "files": len(files),
+        "langs": langs,
+        "manifests": sorted({n for n in names if n in MANIFESTS or re.match(r"requirements.*\.txt$", n)}),
+        "lockfiles": sorted({n for n in names if n in LOCKFILES}),
+        "ui": len(ui),
+        "mobile": any(f.startswith(("android/", "ios/")) for f in files) or "pubspec.yaml" in names,
+        "service": sorted(
+            {
+                n
+                for n in names
+                if n in ("Dockerfile", "compose.yaml", "docker-compose.yml", "Procfile", "serverless.yml")
+            }
+        ),
+        "db": len(db),
+        "ci": sorted(f for f in files if f.startswith(".github/workflows/") or f == ".gitlab-ci.yml"),
+        "tests": len(tests),
+        "iac": sum(1 for f in files if f.endswith(".tf")),
+        "docs": sum(1 for f in files if f.endswith(".md")),
+        "harness": sorted(n for n in ("AGENTS.md", "xs.yaml", "PROGRESS.md", "BLUEPRINT.md") if n in files)
+        + ([".claude/"] if any(f.startswith(".claude/") for f in files) else []),
+        "framework_repo": "framework/00-method/conventions.md" in files and "scripts/xs.py" in files,
+    }
+    return sig
+
+
+def audit_applicability(sig: Dict[str, Any]) -> Dict[int, Tuple[str, str]]:
+    code = {k: v for k, v in sig["langs"].items() if k != "shell"}
+    has_code = bool(code) or bool(sig["langs"].get("shell"))
+    has_ui = sig["ui"] > 0 or sig["mobile"]
+    lang_txt = ", ".join(f"{k} {v}" for k, v in sig["langs"].items()) or "không có mã"
+    a: Dict[int, Tuple[str, str]] = {}
+    a[1] = ("áp dụng", lang_txt) if has_code else ("N/A", "không có file mã nguồn")
+    a[2] = ("áp dụng", "mọi repo: secret toàn lịch sử, quyền CI, chuỗi cung ứng")
+    a[3] = ("áp dụng", lang_txt) if has_code else ("N/A", "không có file mã nguồn")
+    a[4] = ("áp dụng", f"{sig['tests']} file test") if has_code else ("N/A", "không có mã để test")
+    if has_ui or sig["service"]:
+        a[5] = ("áp dụng", "có UI/dịch vụ")
+    elif has_code:
+        a[5] = ("rút gọn", "không UI/dịch vụ chạy liên tục: đo thời gian lệnh chính")
+    else:
+        a[5] = ("N/A", "không có mã")
+    a[6] = (
+        ("áp dụng", f"{sig['ui']} file UI" + (", mobile" if sig["mobile"] else ""))
+        if has_ui
+        else ("N/A", "không có UI (*.html/*.tsx/*.jsx/*.vue/*.svelte/*.css, android/, ios/)")
+    )
+    if sig["manifests"] or sig["lockfiles"]:
+        a[7] = (
+            "áp dụng",
+            "manifest: "
+            + ", ".join(sig["manifests"] or ["—"])
+            + "; lock: "
+            + ", ".join(sig["lockfiles"] or ["không có"]),
+        )
+    else:
+        a[7] = ("rút gọn", "không manifest/lockfile: chỉ action CI, công cụ cài trong CI, runtime")
+    a[8] = (
+        ("áp dụng", f"{len(sig['ci'])} workflow") if sig["ci"] else ("áp dụng", "KHÔNG có CI — bản thân là phát hiện")
+    )
+    a[9] = ("áp dụng", f"{sig['docs']} file .md")
+    a[10] = (
+        ("áp dụng", f"{sig['db']} file migration/SQL/schema")
+        if sig["db"]
+        else ("N/A", "không có migration/SQL/schema CSDL")
+    )
+    a[11] = (
+        ("áp dụng", "mã/dịch vụ đọc cấu hình")
+        if has_code or sig["service"]
+        else ("rút gọn", "chỉ secret trong file/lịch sử")
+    )
+    a[12] = ("áp dụng", "nhiều module/tính năng") if has_code else ("N/A", "không có mã")
+    if sig["harness"]:
+        a[13] = ("áp dụng", ", ".join(sig["harness"]) + (" · repo khung" if sig["framework_repo"] else ""))
+    else:
+        a[13] = ("N/A", "chưa cài harness khung (không AGENTS.md/xs.yaml/.claude/)")
+    return a
+
+
+def _tool_present(root: Path, name: str) -> bool:
+    if name.startswith("xs:"):
+        return True
+    if shutil.which(name) or (root / "node_modules" / ".bin" / name).exists():
+        return True
+    return name in ("coverage", "pytest", "mypy", "ruff", "vulture", "bandit", "pip-audit") and bool(
+        importlib.util.find_spec(name.replace("-", "_"))
+    )
+
+
+def audit_tools(root: Path, sig: Dict[str, Any], appl: Dict[int, Tuple[str, str]]) -> Dict[int, Dict[str, List[str]]]:
+    stacks = set(sig["langs"]) | ({"ui"} if sig["ui"] or sig["mobile"] else set())
+    out: Dict[int, Dict[str, List[str]]] = {}
+    for no, tools in AUDIT_TOOLS.items():
+        if appl[no][0] == "N/A":
+            continue
+        rel = [t for t, st in tools if st is None or st in stacks]
+        if rel:
+            out[no] = {
+                "có": [t for t in rel if _tool_present(root, t)],
+                "thiếu": [t for t in rel if not _tool_present(root, t)],
+            }
+    return out
+
+
+EVIDENCE_REF_RE = re.compile(r"(?<![\w/.-])((?:[\w.-]+/)*[\w.-]+\.[A-Za-z][A-Za-z0-9]{0,5})(?::\d+(?:[-,]\d+)*)?")
+
+
+def _resolve_ref(ref: str, files: List[str]) -> Optional[str]:
+    if ref in files:
+        return ref
+    hits = [f for f in files if f.endswith("/" + ref)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def blueprint_stale_evidence(root: Path, blueprint: Path, files: List[str]) -> List[Dict[str, Any]]:
+    """Mục [x]/[~] trích file mà file đó đổi SAU commit ghi dòng bằng chứng/miễn trừ → cần xác minh lại."""
+    try:
+        lines = blueprint.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    rel_bp = os.path.relpath(blueprint.resolve(), root.resolve()).replace(os.sep, "/")
+    mtime_cache: Dict[str, int] = {}
+    out = []
+    for no, line in enumerate(lines, 1):
+        m = ITEM_RE.match(line)
+        if not m or m.group("state") not in "xX~":
+            continue
+        note = re.search(r"\s—\s(Bằng chứng|Miễn):(.*)$", line)
+        if not note:
+            continue
+        refs = {
+            r for r in (_resolve_ref(x, files) for x in EVIDENCE_REF_RE.findall(note.group(2))) if r and r != rel_bp
+        }
+        if not refs:
+            continue
+        blame = _git(root, "blame", "-L", f"{no},{no}", "--porcelain", "--", rel_bp)
+        t = re.search(r"^committer-time (\d+)$", blame.stdout, re.M)
+        if blame.returncode != 0 or not t or blame.stdout.startswith("0000000"):
+            continue
+        written = int(t.group(1))
+        changed = []
+        for ref in sorted(refs):
+            if ref not in mtime_cache:
+                ct = _git(root, "log", "-1", "--format=%ct", "--", ref).stdout.strip()
+                mtime_cache[ref] = int(ct) if ct.isdigit() else 0
+            if mtime_cache[ref] > written:
+                changed.append(ref)
+        if changed:
+            out.append({"id": m.group("id"), "kind": note.group(1), "files": changed})
+    return out
+
+
+def _path_groups(path: str) -> List[int]:
+    name = posixpath.basename(path)
+    g: List[int] = []
+    if path.startswith(".github/workflows/") or name == ".gitlab-ci.yml":
+        g += [8, 2]
+    if name in MANIFESTS or name in LOCKFILES or re.match(r"requirements.*\.txt$", name):
+        g += [7, 2]
+    if re.search(r"(^|/)(tests?|__tests__|spec)/", path) or re.search(
+        r"(_test\.go|\.(test|spec)\.[jt]sx?|test_[^/]+\.py)$", path
+    ):
+        g.append(4)
+    if "/migrations/" in f"/{path}" or path.endswith((".sql", "schema.prisma")):
+        g.append(10)
+    if name in ("AGENTS.md", "CLAUDE.md", "xs.yaml", "PROGRESS.md", "BLUEPRINT.md") or path.startswith(".claude/"):
+        g.append(13)
+    if name.startswith(".env") or name in ("Dockerfile", "compose.yaml", "docker-compose.yml"):
+        g += [11, 8]
+    if path.endswith(UI_EXT):
+        g += [6, 5]
+    if path.endswith(".md"):
+        g.append(9)
+    if any(path.endswith(e) for exts in LANG_EXT.values() for e in exts) and 4 not in g:
+        g += [1, 2, 3, 12]
+    return sorted(set(g))
+
+
+def audit_status_groups(status: Path) -> Dict[int, Dict[str, str]]:
+    rows = md_tables(status.read_text(encoding="utf-8")).get("Nhóm", [])
+    out: Dict[int, Dict[str, str]] = {}
+    for r in rows:
+        if r.get("#", "").isdigit():
+            out[int(r["#"])] = r
+    return out
+
+
+def audit_rescan(root: Path, status: Path) -> Dict[int, str]:
+    """Nhóm cần quét lại: chưa quét · SHA không còn trong lịch sử · có file đổi kể từ SHA quét."""
+    groups = audit_status_groups(status)
+    out: Dict[int, str] = {}
+    for no, _, _ in AUDIT_GROUPS:
+        r = groups.get(no)
+        if r is None or r.get("Trạng thái") == "chưa quét":
+            out[no] = "chưa quét"
+            continue
+        if r.get("Trạng thái") == "N/A":
+            continue
+        sha = r.get("SHA", "").strip("` ")
+        if not sha or _git(root, "merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+            out[no] = f"SHA `{sha or '—'}` không còn là tổ tiên HEAD — quét lại từ đầu"
+            continue
+        changed = [
+            f for f in _git(root, "diff", "--name-only", f"{sha}..HEAD").stdout.splitlines() if no in _path_groups(f)
+        ]
+        if changed:
+            out[no] = f"{len(changed)} file đổi từ `{sha[:7]}` (vd {', '.join(changed[:3])})"
+    return out
+
+
+def audit_plan(root: Path, blueprint: Optional[Path] = None, status: Optional[Path] = None) -> Dict[str, Any]:
+    files = _repo_files(root)
+    sig = audit_signals(root, files)
+    appl = audit_applicability(sig)
+    plan: Dict[str, Any] = {
+        "root": str(root),
+        "head": (_git(root, "rev-parse", "HEAD").stdout.strip() or None),
+        "signals": sig,
+        "groups": [
+            {"no": no, "code": code, "name": name, "state": appl[no][0], "reason": appl[no][1]}
+            for no, code, name in AUDIT_GROUPS
+        ],
+        "tools": {str(k): v for k, v in audit_tools(root, sig, appl).items()},
+        "stale_evidence": blueprint_stale_evidence(root, blueprint, files) if blueprint else [],
+        "rescan": {str(k): v for k, v in audit_rescan(root, status).items()} if status and status.exists() else None,
+    }
+    return plan
+
+
+def _sha_ok(root: Path, sha: str) -> Optional[str]:
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", sha):
+        return "SHA không hợp lệ"
+    if _git(root, "rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}").returncode != 0:
+        return f"SHA `{sha}` không có trong lịch sử (clone nông? quét lại?)"
+    if _git(root, "merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+        return f"SHA `{sha}` không phải tổ tiên HEAD — quét lại nhóm này"
+    return None
+
+
+def audit_check(
+    status: Path, strict: bool = False, today: Optional[_dt.date] = None
+) -> Tuple[List[str], Dict[str, int]]:
+    """Kiểm sổ AUDIT-STATUS.md theo templates/AUDIT-STATUS.md. Trả (lỗi, đếm). Ném OSError khi không đọc được."""
+    today = today or _dt.date.today()
+    tables = md_tables(status.read_text(encoding="utf-8"))
+    root = status.resolve().parent
+    in_git = _git(root, "rev-parse", "--git-dir").returncode == 0
+    errors: List[str] = []
+    counts: Dict[str, int] = {}
+    if "Nhóm" not in tables:
+        errors.append("thiếu bảng `## Nhóm`")
+    if "Phát hiện" not in tables:
+        errors.append("thiếu bảng `## Phát hiện`")
+    seen_no: Dict[int, int] = {}
+    for r in tables.get("Nhóm", []):
+        no_s, code, state, note = r.get("#", ""), r.get("Mã", ""), r.get("Trạng thái", ""), r.get("Ghi chú", "")
+        if not no_s.isdigit() or int(no_s) not in dict((n, c) for n, c, _ in AUDIT_GROUPS):
+            errors.append(f"nhóm `{no_s}`: số nhóm phải 1–{len(AUDIT_GROUPS)}")
+            continue
+        no = int(no_s)
+        seen_no[no] = seen_no.get(no, 0) + 1
+        if AUDIT_CODES.get(code) != no:
+            errors.append(f"nhóm {no}: mã `{code}` phải là `{AUDIT_GROUPS[no - 1][1]}`")
+        if state not in GROUP_STATES:
+            errors.append(f"nhóm {no}: trạng thái `{state}` không thuộc {' · '.join(GROUP_STATES)}")
+            continue
+        counts[f"nhóm {state}"] = counts.get(f"nhóm {state}", 0) + 1
+        if state in ("N/A", "rút gọn") and not note:
+            errors.append(f"nhóm {no}: `{state}` phải ghi lý do/phạm vi ở Ghi chú")
+        if state in ("đã quét", "rút gọn"):
+            sha = r.get("SHA", "").strip("` ")
+            if not DATE_RE.match(r.get("Ngày", "")):
+                errors.append(f"nhóm {no}: thiếu Ngày quét YYYY-MM-DD")
+            if not sha:
+                errors.append(f"nhóm {no}: thiếu SHA lúc quét")
+            elif in_git and (msg := _sha_ok(root, sha)):
+                errors.append(f"nhóm {no}: {msg}")
+        if strict and state == "chưa quét":
+            errors.append(f"nhóm {no}: chưa quét (--strict)")
+    for no, _, _ in AUDIT_GROUPS:
+        if "Nhóm" in tables and seen_no.get(no, 0) != 1:
+            errors.append(f"nhóm {no}: phải có đúng 1 dòng (đang có {seen_no.get(no, 0)})")
+    ids: Dict[str, int] = {}
+    for r in tables.get("Phát hiện", []):
+        fid, lv, st = r.get("ID", ""), r.get("Mức", ""), r.get("Trạng thái", "")
+        ev, gate, note = r.get("Bằng chứng", ""), r.get("Gate", ""), r.get("Ghi chú", "")
+        where = fid or "(dòng thiếu ID)"
+        if any(
+            PLACEHOLDER_RE.search(re.sub(r"`[^`]*`", "", v)) for v in r.values()
+        ):  # `<x>` trong code là nội dung thật
+            errors.append(f"{where}: còn chỗ trống của mẫu `<...>`")
+        m = FINDING_ID_RE.match(fid)
+        if not m or m.group(1) not in AUDIT_CODES:
+            errors.append(f"{where}: ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc {', '.join(AUDIT_CODES)}")
+        ids[fid] = ids.get(fid, 0) + 1
+        if lv not in FINDING_LEVELS:
+            errors.append(f"{where}: mức `{lv}` phải là 🔴/🟠/🟢")
+        if st not in FINDING_STATES:
+            errors.append(f"{where}: trạng thái `{st}` không thuộc {' · '.join(FINDING_STATES)}")
+        if not r.get("Tóm tắt"):
+            errors.append(f"{where}: thiếu Tóm tắt")
+        if not ev.startswith(EVIDENCE_KINDS):
+            errors.append(f"{where}: Bằng chứng phải mở đầu `đo được:` / `suy luận:` / `chưa biết:`")
+        elif lv == "🔴" and ev.startswith("chưa biết:") and st != "bác bỏ":
+            errors.append(f"{where}: 🔴 không thể dựa trên `chưa biết:` — đo hoặc hạ mức")
+        if lv in ("🔴", "🟠") and st != "bác bỏ" and not ("`" in gate or gate.startswith("tay:")):
+            errors.append(f"{where}: {lv} phải có Gate (lệnh trong backtick hoặc `tay: <bước>`)")
+        if st == "đã sửa" and not re.search(r"#\d+|\b[0-9a-f]{7,40}\b", note):
+            errors.append(f"{where}: `đã sửa` phải ghi PR (#N) hoặc SHA ở Ghi chú")
+        if st == "chấp nhận":
+            owner = re.search(r"chủ:\s*\S", note)
+            due = re.search(r"hạn:\s*(\d{4}-\d{2}-\d{2})", note)
+            if not owner or not due:
+                errors.append(f"{where}: `chấp nhận` phải ghi `chủ: <ai>` và `hạn: YYYY-MM-DD`")
+            elif _dt.date.fromisoformat(due.group(1)) < today:
+                errors.append(f"{where}: chấp nhận rủi ro đã quá hạn {due.group(1)}")
+        if st == "bác bỏ" and not note:
+            errors.append(f"{where}: `bác bỏ` phải ghi lý do ở Ghi chú")
+        if lv in FINDING_LEVELS and st in FINDING_STATES:
+            counts[f"{lv} {st}"] = counts.get(f"{lv} {st}", 0) + 1
+            if strict and st == "mở" and lv in ("🔴", "🟠"):
+                errors.append(f"{where}: {lv} còn mở (--strict)")
+    errors += [f"{i}: ID trùng {n} lần" for i, n in ids.items() if i and n > 1]
+    return errors, counts
+
+
 # --------------------------------------------------------------------------- CLI
 
 
@@ -1057,6 +1573,58 @@ def cmd_ci_check(args) -> int:
     return 1 if bad else 0
 
 
+def cmd_audit(args) -> int:
+    root = project_dir()
+    if args.audit_cmd == "plan":
+        bp = (
+            Path(args.blueprint)
+            if args.blueprint
+            else (root / "BLUEPRINT.md" if (root / "BLUEPRINT.md").exists() else None)
+        )
+        st = Path(args.status) if args.status else root / "docs" / "ops" / "AUDIT-STATUS.md"
+        plan = audit_plan(root, bp, st)
+        if args.json:
+            print(json.dumps(plan, ensure_ascii=False, indent=2))
+            return 0
+        sig = plan["signals"]
+        print(f"Audit plan — {root} @ {(plan['head'] or 'không có git')[:12]}")
+        print(
+            f"Tín hiệu: {sig['files']} file · mã: {', '.join(f'{k} {v}' for k, v in sig['langs'].items()) or 'không'}"
+            f" · test {sig['tests']} · UI {sig['ui']} · CSDL {sig['db']} · CI {len(sig['ci'])}"
+            f" · harness: {', '.join(sig['harness']) or 'không'}" + (" · REPO KHUNG" if sig["framework_repo"] else "")
+        )
+        print("\nNhóm:")
+        for g in plan["groups"]:
+            tools = plan["tools"].get(str(g["no"]))
+            tool_txt = (
+                f"  [có: {', '.join(tools['có']) or '—'} · thiếu: {', '.join(tools['thiếu']) or '—'}]" if tools else ""
+            )
+            print(f"  {g['no']:>2} {g['code']:<5} {g['state']:<8} {g['reason']}{tool_txt}")
+        if plan["stale_evidence"]:
+            print(
+                f"\nBằng chứng/miễn trừ blueprint trỏ file đã đổi sau khi ghi ({len(plan['stale_evidence'])}) — xác minh lại:"
+            )
+            stale = plan["stale_evidence"]
+            for e in stale[:25]:
+                print(f"  {e['id']:<18} {e['kind']:<10} ← {', '.join(e['files'])}")
+            if len(stale) > 25:
+                print(f"  … và {len(stale) - 25} mục nữa (--json để xem hết)")
+        if plan["rescan"] is not None:
+            print("\nQuét lại theo AUDIT-STATUS:" + ("" if plan["rescan"] else " không nhóm nào đổi"))
+            for no, why in plan["rescan"].items():
+                print(f"  {no:>2} {AUDIT_GROUPS[int(no) - 1][1]:<5} {why}")
+        print(
+            "\nCông cụ thiếu → bằng chứng nhóm đó là `chưa biết:` cho tới khi cài/chạy được. Phương pháp: framework/00-method/audit.md"
+        )
+        return 0
+    errors, counts = audit_check(Path(args.file), strict=args.strict)
+    for e in errors:
+        print(f"✗ {args.file}: {e}")
+    summary = " · ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "trống"
+    print(("✗" if errors else "✓") + f" {args.file}: {summary}" + (" (--strict)" if args.strict else ""))
+    return 1 if errors else 0
+
+
 def cmd_stats(args) -> int:
     docs, _ = load_docs(args.framework)
     by_kind: Dict[str, int] = {}
@@ -1153,6 +1721,16 @@ def build_parser() -> argparse.ArgumentParser:
     pci = sub.add_parser("ci-check")
     pci.add_argument("dir", nargs="?", help="thư mục workflow (mặc định .github/workflows, không có thì bỏ qua)")
     pci.set_defaults(fn=cmd_ci_check)
+    pau = sub.add_parser("audit")
+    asub = pau.add_subparsers(dest="audit_cmd", required=True)
+    aplan = asub.add_parser("plan")
+    aplan.add_argument("--blueprint", help="mặc định BLUEPRINT.md ở gốc dự án nếu có")
+    aplan.add_argument("--status", help="mặc định docs/ops/AUDIT-STATUS.md")
+    aplan.add_argument("--json", action="store_true")
+    achk = asub.add_parser("check")
+    achk.add_argument("file", help="docs/ops/AUDIT-STATUS.md")
+    achk.add_argument("--strict", action="store_true", help="Definition of Complete: 0 🔴/🟠 mở, mọi nhóm đã quét/N/A")
+    pau.set_defaults(fn=cmd_audit)
     sub.add_parser("stats").set_defaults(fn=cmd_stats)
     return p
 
