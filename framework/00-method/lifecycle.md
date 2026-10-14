@@ -29,7 +29,7 @@ updated: 2026-10-14
 2. **Đầu ra là file trong repo**, không phải đoạn chat. Phiên sau đọc được.
 3. **Cổng máy trước**: cái gì kiểm bằng lệnh thì phải có lệnh; người chỉ duyệt phần còn lại.
 4. **Quay lui được**: phát hiện sai ở GĐ sau → quay về GĐ gây ra, sửa đầu ra gốc, không vá ở hạ nguồn.
-5. **Dự án có sẵn**: G0 = đọc repo (stack thật, cấu trúc, CI, test, nợ kỹ thuật) → G1 sinh blueprint → audit
+5. **Dự án có sẵn**: G0 = đọc repo (stack thật, cấu trúc, CI, test, nợ kỹ thuật) → G1 sinh blueprint → audit theo [`audit.md`](audit.md)
    blueprint với hiện trạng (mục nào đã đạt có bằng chứng thì tick) → các GĐ sau chỉ làm phần còn thiếu, tăng dần,
    **không áp đặt stack mới**.
 
