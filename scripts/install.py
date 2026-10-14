@@ -181,7 +181,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     if (SRC / "research").is_dir():
         copy_tree_replace(SRC / "research", xs_dir / "research")
     (xs_dir / "scripts").mkdir(exist_ok=True)
-    for f in ("xs.py", "dev-task.sh"):
+    for f in ("xs.py", "dev-task.sh", "check-links.py"):
         shutil.copy2(SRC / "scripts" / f, xs_dir / "scripts" / f)
     (xs_dir / "scripts" / "dev-task.sh").chmod(0o755)
     (xs_dir / "VERSION").write_text(framework_label(label) + "\n", encoding="utf-8")
