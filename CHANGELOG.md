@@ -9,7 +9,10 @@ Thay đổi **mục checklist** (thêm ID, đổi mức, ngừng dùng) ghi rõ 
 - Đổi tên repo `seeker19110/X-stored` → `seeker19110/X-Templates` (GitHub chuyển hướng 301 từ tên cũ): cập nhật tên khung,
   URL clone trong README + bước CI chạy lệnh README, docstring/`--help` của `install.py`/`xs.py`, harness `.claude/`, mẫu dự án đích.
   Giữ nguyên để không phá dự án đã cài: thư mục `.xstored/`, `xs.py`, `xs.yaml`, biến `XS_*`, đuôi `.xstored-new`; giữ tên cũ
-  ở tài liệu lịch sử (`research/`, ADR, báo cáo audit đã ký, trích dẫn "khung cũ X-stored").
+  ở tài liệu lịch sử (`research/`, ADR, báo cáo audit đã ký, trích dẫn "khung cũ X-stored") — ADR-0006.
+- `LOOP-HARNESS-012` (SHOULD, ID giữ): đảo nghĩa — hook **không** có biến môi trường tắt riêng (agent tự đặt được = nới
+  hàng rào ADR-0002); tắt có chủ đích qua `disableAllHooks` của Claude Code. Test mới `HookFailOpenTest`: 5 hook × stdin
+  rỗng/rác → exit 0, không deny; không hook nào đọc biến `DISABLE`/`SKIP_HOOK`; mọi hook trong `settings.json` được phủ.
 
 ### Added
 - Audit có máy đỡ (ADR-0005): phương pháp `framework/00-method/audit.md` (13 nhóm, thêm *Harness & quy trình agent*;

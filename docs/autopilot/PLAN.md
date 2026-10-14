@@ -1,27 +1,27 @@
-# PLAN.md — Khung X-Templates · trả nợ C901 (AUD-CODE-001)
+# PLAN.md — Khung X-Templates · chốt việc còn treo sau đổi tên
 
-> Lập ngày 2026-10-14. Người dùng yêu cầu: "trả nợ C901 luôn đi".
-> 11 hàm có độ phức tạp vòng (mccabe) > 10 — đo bằng
-> `ruff check --select C901 --config 'lint.mccabe.max-complexity=10' scripts .claude/hooks`.
-> Sau khi trả: bật luật C901 (`max-complexity = 10`) trong `ruff.toml` để cổng `lint` chặn nợ quay lại.
+> Lập ngày 2026-10-14. Người dùng yêu cầu: "tự quyết hết các việc còn lại đi" (mục Tiếp theo của PROGRESS + hệ quả đổi tên).
+> Việc ngoài tầm agent giữ cho người: import ruleset, bật PVR/Dependabot security updates, tạo tag (đổi quyền/cấu hình repo
+> = điểm dừng bắt buộc, phiên không có quyền admin); thử khung trên dự án sản phẩm thật (cần người chọn dự án).
 
 ## Mục tiêu của kế hoạch này
-- 0 hàm vượt độ phức tạp 10 trong `scripts/*.py` + `.claude/hooks/guard.py`; `ruff.toml` bật C901.
-- Hành vi không đổi: test có sẵn giữ nguyên assert và xanh; coverage dòng + nhánh vẫn 100%; `mypy --strict` 0 lỗi.
-- Tách theo trách nhiệm có nghĩa (một hàm một việc, tên nói rõ việc), không băm cơ học cho lọt ngưỡng.
+- `LOOP-HARNESS-012` có quyết định: không biến tắt riêng trong hook (giữ hàng rào ADR-0002), tắt có chủ đích qua `disableAllHooks`
+  của harness; mọi hook fail-open với stdin rỗng/rác, có test.
+- Phạm vi đổi tên được chốt bằng ADR: giữ định danh kỹ thuật `.xstored/`, `xs.py`, `xs.yaml`, `XS_*`.
+- PROGRESS phản ánh trạng thái mới.
 
 ## Ngân sách (4 con số)
-- Số vòng tối đa: 30 (`--max-iterations 30`)
+- Số vòng tối đa: 15 (`--max-iterations 15`)
 - Chi phí: 0 đồng ngoài phiên (không phụ thuộc mới)
 - Timeout mỗi lệnh Gate: 300 giây (`XS_RECORD_TIMEOUT`)
-- Ngày hết hạn: 6 giờ sau `loop init` (`--hours 6`)
+- Ngày hết hạn: 3 giờ sau `loop init` (`--hours 3`)
 
 ## Điểm dừng bắt buộc (dừng và hỏi người — `xs.py loop block --reason "..."`)
-- Refactor buộc đổi hành vi người dùng thấy (output CLI, quyết định hook, exit code)
-- Muốn nới ngưỡng (> 10), thêm `noqa: C901`, hoặc loại file khỏi luật
+- Thêm biến môi trường làm hook guard cho qua lệnh nguy hiểm
+- Đổi ruleset/quyền repo, xoá nhánh, merge khi CI đỏ
 
 ## Task
 
-- [x] `T-301` Tách `guard.py` (`normalize`, `git_rules`, `bash_decision`) và `install.py` (`install`) về ≤ 10 — Gate: `python3 -m ruff check --select C901 --config lint.mccabe.max-complexity=10 .claude/hooks scripts/install.py`
-- [x] `T-302` Tách `xs.py` (`validate`, `audit_check`, `ci_check_text`, `loop_verdict`, `compose`, `cmd_loop`, `blueprint_stale_evidence`) về ≤ 10 — Gate: `python3 -m ruff check --select C901 --config lint.mccabe.max-complexity=10 scripts/xs.py`
-- [x] `T-303` `ruff.toml` bật C901 (max-complexity 10); sổ audit AUD-CODE-001 đã sửa, CHANGELOG, PROGRESS — Gate: `scripts/dev-task.sh gate`
+- [x] `T-401` `LOOP-HARNESS-012` viết lại (giữ ID, SHOULD) + test mọi hook fail-open với stdin rỗng/rác + tick BLUEPRINT có bằng chứng — Gate: `python3 -m unittest tests.test_hooks`
+- [x] `T-402` ADR-0006 phạm vi đổi tên (giữ `.xstored`/`xs`) + CHANGELOG — Gate: `python3 scripts/xs.py validate`
+- [x] `T-403` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`

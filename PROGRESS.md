@@ -1,15 +1,15 @@
 # PROGRESS.md — Khung X-Templates
 
-> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
+> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Không có việc dở. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
+- PR #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-012) chờ merge; autopilot PLAN T-401…T-403. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
 2. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100% — hàm mới vượt thì tách, không `noqa`/pragma.
-3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
-4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
+3. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
+4. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận chuỗi tên mới.
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -27,10 +27,11 @@
 - 2026-10-14 9 mục trùng chủ đề chuyển `MAY` "gộp vào" nhà (ID giữ, CHANGELOG).
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
-- 2026-10-14 Repo đổi tên X-stored → X-Templates; giữ `.xstored/`, `xs.py`, `XS_*` (đổi = phá dự án đã cài, cần ADR riêng).
+- 2026-10-14 Repo đổi tên X-stored → X-Templates; giữ `.xstored/`, `xs.py`, `XS_*` (đổi = phá dự án đã cài) — ADR-0006.
+- 2026-10-14 `LOOP-HARNESS-012`: không biến tắt hook riêng; tắt có chủ đích qua `disableAllHooks` của Claude Code; test fail-open 5 hook.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `f6cd254` (#28 trả nợ C901); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
+- Commit cuối trên `main`: `557cf81` (#29); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không; autopilot PLAN T-301…T-303 xong.
-- Câu hỏi cần người: mục Tiếp theo 1 và 4.
+- Đang chặn: không; autopilot PLAN T-401…T-403 (nhánh PR #30).
+- Câu hỏi cần người: mục Tiếp theo 1 và 3.
