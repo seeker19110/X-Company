@@ -1060,6 +1060,10 @@ class AuditCheckTest(GitRepoMixin, unittest.TestCase):
         ):
             self.assertIn(frag, errs)
 
+    def test_audit_check_placeholder_inside_code_is_content(self):
+        row = "AUD-SEC-001 | 🟠 | mở | `git -C <dir> reset --hard` lọt | đo được: `<XS> loop` | `t` | "
+        self.assertEqual(self.check(audit_status_text(findings=[row])), [])
+
     def test_audit_check_fixed_and_accepted_ok(self):
         rows = [
             "AUD-CI-001 | 🟠 | đã sửa | x | đo được: a | `t` | #19",

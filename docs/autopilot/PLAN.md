@@ -27,5 +27,5 @@ Chỉ số: audit chính repo khung chạy hết bằng quy trình mới, `audit
 - [x] `T-003` `xs.py audit plan`: tín hiệu stack, nhóm áp dụng/rút gọn/N/A kèm lý do, công cụ có/thiếu theo nhóm, bằng chứng blueprint trỏ file đã đổi sau khi tick, nhóm cần quét lại từ SHA trong STATUS; `--json` + test — Gate: `python3 -m unittest discover -s tests -k audit_plan`
 - [x] `T-004` `xs.py audit check STATUS [--strict]`: schema nhóm/phát hiện, SHA tổ tiên HEAD, chấp nhận rủi ro có hạn chưa quá, `--strict` đỏ khi còn 🔴/🟠 mở hoặc nhóm chưa quét + test — Gate: `python3 -m unittest discover -s tests -k audit_check`
 - [x] `T-005` Viết lại skill `/audit` dùng hai lệnh + fan-out subagent theo cụm nhóm + xác minh đối kháng; ADR-0005; README/AGENTS/CHANGELOG — Gate: `scripts/dev-task.sh gate`
-- [ ] `T-006` Dogfood: audit repo khung theo quy trình mới → `docs/ops/AUDIT-STATUS.md` + `docs/ops/AUDIT-REPORT-2026-10-14.md`; dừng chờ duyệt kế hoạch sửa — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md`
+- [x] `T-006` Dogfood: audit repo khung theo quy trình mới → `docs/ops/AUDIT-STATUS.md` + `docs/ops/AUDIT-REPORT-2026-10-14.md`; dừng chờ duyệt kế hoạch sửa — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md`
 - [ ] `T-007` PR, CI xanh, tự merge theo uỷ quyền; PROGRESS — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`

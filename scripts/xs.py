@@ -1357,7 +1357,9 @@ def audit_check(
         fid, lv, st = r.get("ID", ""), r.get("Mức", ""), r.get("Trạng thái", "")
         ev, gate, note = r.get("Bằng chứng", ""), r.get("Gate", ""), r.get("Ghi chú", "")
         where = fid or "(dòng thiếu ID)"
-        if any(PLACEHOLDER_RE.search(v) for v in r.values()):
+        if any(
+            PLACEHOLDER_RE.search(re.sub(r"`[^`]*`", "", v)) for v in r.values()
+        ):  # `<x>` trong code là nội dung thật
             errors.append(f"{where}: còn chỗ trống của mẫu `<...>`")
         m = FINDING_ID_RE.match(fid)
         if not m or m.group(1) not in AUDIT_CODES:
