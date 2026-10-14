@@ -45,9 +45,7 @@ def check(root: Path) -> list[str]:
                 target = target[1:-1] if target.startswith("<") else target
                 if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
                     continue
-                path_part = target.split("#", 1)[0]
-                if not path_part:
-                    continue
+                path_part = target.split("#", 1)[0]  # rỗng chỉ với `<>` → thư mục chứa file, luôn tồn tại
                 # Đường dẫn tuyệt đối từ gốc repo (/docs/x.md) cũng chấp nhận.
                 resolved = (root / path_part.lstrip("/")) if path_part.startswith("/") else (p.parent / path_part)
                 if not resolved.exists():

@@ -329,9 +329,7 @@ def validate(root: Path) -> List[str]:
             for target in LINK_RE.findall(line):
                 if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
                     continue
-                path_part = target.split("#", 1)[0]
-                if not path_part:
-                    continue
+                path_part = target.split("#", 1)[0]  # không rỗng: target bắt đầu bằng `#` đã bỏ qua ở trên
                 resolved = (d.path.parent / path_part).resolve()
                 if not resolved.exists():
                     errors.append(f"{where}:{n}: liên kết hỏng -> {target}")
@@ -649,18 +647,20 @@ def loop_verdict(base: Optional[Path] = None) -> Dict[str, Any]:
                     "reason": f"task {t['id']} khai Gate `{t['gate']}` nhưng bằng chứng chạy lệnh khác",
                 }
     bp = st.get("blueprint")
-    if bp:
-        bpp = base / bp
-        if bpp.exists():
-            s = blueprint_status(bpp)
-            if s["open_must"]:
-                return {
-                    "verdict": "continue",
-                    "task": s["open_must"][0],
-                    "reason": f"còn {len(s['open_must'])} mục MUST của blueprint chưa đạt (đầu tiên: {s['open_must'][0]})",
-                }
-            if s["bad_waivers"]:
-                return {"verdict": "continue", "reason": "mục miễn trừ thiếu lý do: " + ", ".join(s["bad_waivers"][:5])}
+    bpp = base / bp if bp else None
+    if bpp is None or not bpp.exists():
+        # Không khai "blueprint sạch" khi không hề kiểm blueprint (loop init thiếu --blueprint hoặc file mất).
+        why = "không kiểm blueprint: loop init không có --blueprint" if bpp is None else f"không thấy blueprint {bp}"
+        return {"verdict": "done", "reason": f"mọi task có bằng chứng xanh ({why})"}
+    s = blueprint_status(bpp)
+    if s["open_must"]:
+        return {
+            "verdict": "continue",
+            "task": s["open_must"][0],
+            "reason": f"còn {len(s['open_must'])} mục MUST của blueprint chưa đạt (đầu tiên: {s['open_must'][0]})",
+        }
+    if s["bad_waivers"]:
+        return {"verdict": "continue", "reason": "mục miễn trừ thiếu lý do: " + ", ".join(s["bad_waivers"][:5])}
     return {"verdict": "done", "reason": "mọi task có bằng chứng xanh và blueprint không còn MUST mở"}
 
 
@@ -920,7 +920,7 @@ def ci_check_text(text: str) -> List[str]:
         for no, ln in body:
             if _indent(ln) == job_indent:
                 jobs.append((no, ln.strip().rstrip(":"), []))
-            elif jobs:
+            else:  # dòng đầu của body luôn ở job_indent nên jobs đã có phần tử
                 jobs[-1][2].append(ln)
         for no, name, job_lines in jobs:
             child = min((_indent(x) for x in job_lines), default=0)

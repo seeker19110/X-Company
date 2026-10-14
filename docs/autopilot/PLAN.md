@@ -25,6 +25,6 @@
 
 - [x] `T-201` mypy --strict 0 lỗi; `typecheck` trong xs.yaml thêm `--strict` — Gate: `python3 -m mypy --strict --python-version 3.11 scripts/xs.py scripts/install.py scripts/check-links.py .claude/hooks/guard.py`
 - [x] `T-202` Đo coverage cả subprocess (`.coveragerc`: branch, parallel, `patch = subprocess`); `coverage` vào requirements-dev.txt kèm hash — Gate: `python3 -m coverage run -m unittest discover -s tests`
-- [ ] `T-203` Test tới 100% cho `guard.py`, `install.py`, `check-links.py` — Gate: `python3 -m unittest discover -s tests`
-- [ ] `T-204` Test tới 100% cho `xs.py` — Gate: `python3 -m unittest discover -s tests`
-- [ ] `T-205` Cổng `test` = coverage run + combine + `report --fail-under=100`; cập nhật sổ audit, BLUEPRINT, CHANGELOG, PROGRESS — Gate: `scripts/dev-task.sh gate`
+- [x] `T-203` Test tới 100% cho `guard.py`, `install.py`, `check-links.py` — Gate: `python3 -m unittest discover -s tests`
+- [x] `T-204` Test tới 100% cho `xs.py` — Gate: `python3 -m unittest discover -s tests`
+- [x] `T-205` Cổng `test` = coverage run + combine + `report --fail-under=100`; cập nhật sổ audit, BLUEPRINT, CHANGELOG, PROGRESS — Gate: `scripts/dev-task.sh gate`

@@ -84,12 +84,12 @@ Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, m
 trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `XS_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
 `loop`) · `XS_DEBUG=1` (in traceback khi lỗi).
 
-Kiểm tra trước khi đóng góp (cần Python ≥ 3.11 và shellcheck; ruff/mypy khoá kèm hash ở `requirements-dev.txt`):
+Kiểm tra trước khi đóng góp (cần Python ≥ 3.11 và shellcheck; ruff/mypy/coverage khoá kèm hash ở `requirements-dev.txt`):
 
 ```bash
 pip install --require-hashes -r requirements-dev.txt
 scripts/dev-task.sh gate                 # build · typecheck · lint · test — phần lõi của CI job quality
-python3 -m unittest discover -s tests    # chỉ test
+python3 -m unittest discover -s tests    # chỉ test (cổng test còn đòi coverage dòng + nhánh 100%, xem xs.yaml)
 ```
 
 ## Quyết định thiết kế

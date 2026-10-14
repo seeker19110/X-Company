@@ -3,11 +3,11 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- Không có việc dở. Sửa audit 2026-10-14 xong: `audit check docs/ops/AUDIT-STATUS.md --strict` exit 0 (🔴 1 · 🟠 30 · 🟢 19 đã sửa; 🟢 3 chấp nhận có chủ + hạn); quét lại 9 nhóm trên `main` 6490f7b không phát hiện mới.
+- PR #26 trả nợ AUD-CODE-002 + AUD-TEST-001 (PLAN T-201…T-205): `mypy --strict` 0 lỗi; coverage dòng + nhánh 100% (đo cả subprocess, 0 pragma), cổng `test` chặn dưới 100%; 130 → 280 test.
 
 ## Tiếp theo
-1. Việc của admin (6 MUST mở trong BLUEPRINT.md: GATE-004, GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
-2. Trả nợ 🟢 trước khi thêm tính năng lớn vào `xs.py`: AUD-CODE-002 mypy `--strict` 24 lỗi (hạn 2026-12-31), AUD-TEST-001 đo coverage cả subprocess rồi đặt ratchet (hạn 2026-12-31), AUD-CODE-001 C901 11 hàm (hạn 2027-03-31).
+1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
+2. Nợ 🟢 còn lại: AUD-CODE-001 C901 11 hàm (hạn 2027-03-31) — tách hàm khi chạm vùng đó.
 3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
 4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
 
@@ -25,6 +25,7 @@
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 - 2026-10-14 Sửa audit 5 đợt (#20–#24): `dev-task.sh` lấy gốc dự án đúng ở `.xstored/`; hook phân tích lệnh bằng `guard.py` (shlex); install gộp hook + manifest hash; công cụ cổng khoá hash + `dep-audit`; WF-DOC-004 bỏ điều kiện "nhánh còn trên remote" (xung đột squash).
 - 2026-10-14 9 mục trùng chủ đề chuyển `MAY` "gộp vào" nhà (ID giữ, CHANGELOG).
+- 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
 ## Bàn giao phiên
 - Commit cuối trên `main`: `6490f7b` (#24 audit đợt 5) — SHA quét lại trong `docs/ops/AUDIT-STATUS.md`.

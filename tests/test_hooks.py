@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOKS = ROOT / ".claude" / "hooks"
@@ -275,6 +276,76 @@ class GuardMatrixTest(unittest.TestCase):
         code, out, _ = run_hook("pre-bash-guard.sh", {"tool_input": {"command": cmd}})
         self.assertEqual((code, decision(out)), (0, "deny"))
         self.assertLess(len(out), 2000)
+
+    def test_guard_tokenize_unclosed_quote_is_conservative(self):
+        # Nháy không đóng: shlex lỗi → tách thô, vẫn nhận ra lệnh nguy hiểm thay vì bỏ qua.
+        self.assertEqual(self.g.tokenize("echo 'abc"), ["echo", "'abc"])
+        self.assertIn("sudo", self.g.tokenize('sudo apt "x'))
+        self.check("deny", ["sudo apt install 'x", "git reset --hard \\"])
+
+    def test_guard_normalize_wrappers_and_assignments(self):
+        n = self.g.normalize
+        self.assertEqual(n(["X=1"]), [])  # chỉ có gán biến → không còn lệnh
+        self.assertEqual(n(["env", "-u"]), [])  # -u không có giá trị đi kèm
+        self.assertEqual(n(["env", "-u", "FOO", "git", "status"]), ["git", "status"])
+        self.assertEqual(n(["env", "-i", "A=1", "/usr/bin/ls", "-l"]), ["ls", "-l"])
+        self.assertEqual(n(["time", "-p", "git", "status"]), ["git", "status"])
+        self.assertEqual(n(["nohup", "-x", "rm", "-rf", "/"]), ["rm", "-rf", "/"])
+        self.assertEqual(n(["git", "-c", "a=b", "--no-pager", "log"]), ["git", "log"])
+        self.assertEqual(n([]), [])
+        self.check("deny", ["env -u FOO git reset --hard", "time -p sudo ls", "nohup -x sudo ls"])
+
+    def test_guard_assignment_only_command_is_ignored(self):
+        self.check("", ["X=1", "A=1 B=2; FOO=bar", "env"])
+        res = self.g.bash_decision("X=1; git commit -m x", self.root)
+        self.assertEqual((res["decision"], res["commit"]), ("", True))
+
+    def test_guard_bare_git_and_system_commands(self):
+        self.assertEqual(self.g.git_rules(["git"]), ("", ""))
+        self.check("", ["git", "git --version", "git -C /p"])
+        self.check("deny", ["mkfs /dev/sda1", "mkfs.ext4 /dev/sda1", "chmod 777 /srv/app", "chmod -R 777 ."])
+        self.check("", ["chmod 755 run.sh", "chmod 0777x f"])
+
+    def test_guard_rel_path_without_relative_form(self):
+        # Windows (khác ổ đĩa): relpath ném ValueError → trả đường dẫn chuẩn hoá tuyệt đối.
+        with mock.patch.object(self.g.os.path, "relpath", side_effect=ValueError("khác ổ đĩa")):
+            self.assertEqual(
+                self.g.rel_path("a/b.txt", self.root), os.path.realpath(os.path.join(self.root, "a/b.txt"))
+            )
+        self.assertEqual(self.g.rel_path("a/b.txt", self.root), "a/b.txt")
+        self.assertEqual(self.g.rel_path("../ngoai.txt", self.root), os.path.realpath(self.root + "/../ngoai.txt"))
+
+    def run_guard(self, args: list[str], stdin: str) -> tuple[int, str]:
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=self.root)
+        r = subprocess.run(
+            [sys.executable, str(HOOKS / "guard.py"), *args],
+            input=stdin,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=60,
+        )
+        return r.returncode, r.stdout
+
+    def test_guard_main_modes_and_fail_open(self):
+        bash = json.dumps({"tool_input": {"command": "sudo ls"}})
+        code, out = self.run_guard(["bash"], bash)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["decision"], "deny")
+        for args in ([], ["lung-tung"]):  # thiếu mode / mode lạ → quyết định rỗng
+            self.assertEqual(self.run_guard(args, bash), (0, '{"decision": ""}'), args)
+        for mode, tool_input in [
+            ("bash", {"command": 123}),
+            ("bash", {"command": ""}),
+            ("bash", {}),
+        ]:
+            self.assertEqual(self.run_guard([mode], json.dumps({"tool_input": tool_input})), (0, '{"decision": ""}'))
+        self.assertEqual(
+            self.run_guard(["edit"], json.dumps({"tool_input": {"file_path": 5}})),
+            (0, '{"decision": "", "reason": ""}'),
+        )
+        self.assertEqual(self.run_guard(["bash"], "not json"), (0, '{"decision": ""}'))
+        self.assertEqual(self.run_guard(["bash"], ""), (0, '{"decision": ""}'))
 
     def test_edit_guard_paths(self):
         root = Path(self.root)
