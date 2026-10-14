@@ -1,10 +1,10 @@
 ---
-title: Chỉ mục khung X-stored
+title: Chỉ mục khung X-Templates
 kind: index
 updated: 2026-10-14
 ---
 
-# Khung X-stored — chỉ mục
+# Khung X-Templates — chỉ mục
 
 > Thư viện yêu cầu có ID cho mọi phần mềm. Đọc [`00-method/`](00-method/README.md) trước, rồi ghép blueprint cho dự án
 > bằng `xs.py compose` (xem [`00-method/composition.md`](00-method/composition.md)).

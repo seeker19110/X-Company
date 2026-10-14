@@ -51,7 +51,7 @@ python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict
    Ghi bằng chứng ở PR tương ứng.
 3. **Miễn trừ có lý do**: mục không áp dụng → `[~]` kèm `— Miễn: <lý do>` (vd "không có thanh toán"). Máy chặn miễn
    trừ thiếu lý do.
-4. **Không sửa chữ của mục** trong blueprint dự án; muốn đổi yêu cầu → sửa khung (PR vào X-stored) rồi ghép lại.
+4. **Không sửa chữ của mục** trong blueprint dự án; muốn đổi yêu cầu → sửa khung (PR vào X-Templates) rồi ghép lại.
 5. **Ghép lại khi khung cập nhật**: chạy lại đúng lệnh `compose ... --out BLUEPRINT.md`. Khi file đã có, máy giữ ô trạng thái
    và ghi chú cuối dòng (`— Bằng chứng:` / `— Miễn:` / `— Thiếu:`) theo **ID**; mục mới vào ở `[ ]`, mục đã bỏ khỏi khung biến mất.
    Xem diff trước khi commit.

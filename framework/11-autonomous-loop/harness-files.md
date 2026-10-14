@@ -72,12 +72,13 @@ Mẫu đầy đủ: [`../templates/PLAN.md`](../templates/PLAN.md); PROGRESS: [`
 - [ ] `LOOP-HARNESS-009` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-002`](../18-cross-cutting/docs-for-ai-agents.md) (`CLAUDE.md` chứa dòng `@AGENTS.md` ngoài code block).
 - [ ] `LOOP-HARNESS-010` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-007`](../18-cross-cutting/docs-for-ai-agents.md) (bản gốc `AGENTS.md` giữ trong `docs/agents/`, CI so sánh).
 - [ ] `LOOP-HARNESS-011` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-002`](../18-cross-cutting/docs-for-ai-agents.md) (file bridge cho harness khác chỉ trỏ về `AGENTS.md`).
-- [ ] `LOOP-HARNESS-012` **SHOULD** Mọi hook có biến môi trường tắt có chủ đích và có test; hook fail-open khi thiếu công cụ (jq/python). → Kiểm: `tests/` có test hook; chạy hook với stdin rỗng → exit 0.
+- [ ] `LOOP-HARNESS-012` **MAY** Ngừng dùng 2026-10-14 — thay bằng [`LOOP-HARNESS-018`](#checklist) (bỏ yêu cầu biến môi trường tắt hook: agent tự đặt được = nới hàng rào ADR-0002).
 - [ ] `LOOP-HARNESS-013` **SHOULD** Bẫy đã mắc thật ghi vào `TRAPS.md` theo mẫu triệu chứng → nguyên nhân → cách rà → chốt chặn → ngày/PR; `fix:` lặp lại phải trỏ tới mục TRAPS. → Kiểm: PR `fix:` có link `TRAPS.md#...` khi lỗi tái phát. · Nguồn: stored 23 §2.4
 - [ ] `LOOP-HARNESS-014` **SHOULD** Danh sách tính năng dạng máy đọc (`features.json` hoặc PLAN) chỉ cho phép agent đổi trường trạng thái, không xoá/sửa tiêu chí. → Kiểm: CI diff: số task không giảm; tiêu chí không đổi ngoài cột trạng thái. · Nguồn: Anthropic harness 2025-11-26
 - [ ] `LOOP-HARNESS-015` **SHOULD** Bằng chứng chạy thật của mỗi mốc (đầu ra lệnh, ảnh, báo cáo) lưu `docs/bang-chung/<ngày>/`, tách khỏi tuyên bố trong README. → Kiểm: thư mục tồn tại cho mỗi G7; README trỏ tới.
 - [ ] `LOOP-HARNESS-016` **MAY** Dùng `preflight`/`init.sh` chạy đầu phiên (cài dep, dev server, smoke test) để agent định vị lại trước khi làm. → Kiểm: `xs.yaml` có khoá `init` (lệnh khai báo: agent đọc và chạy trực tiếp, `dev-task.sh` không chạy khoá này); `AGENTS.md` hoặc SessionStart nhắc chạy.
 - [ ] `LOOP-HARNESS-017` **MAY** Mọi tool cần `jq`/Python được khai trong `AGENTS.md` mục "Công cụ cần có" để phiên cloud không thiếu. → Kiểm: SessionStart hook in cảnh báo khi thiếu.
+- [ ] `LOOP-HARNESS-018` **SHOULD** Hook **không** có biến môi trường tắt riêng (biến tắt guard = nới hàng rào, agent tự đặt được); tắt có chủ đích dùng cơ chế của harness mà người thấy (Claude Code: `"disableAllHooks": true` ở settings người dùng). Mọi hook fail-open về luồng khi stdin rỗng/không phải JSON hoặc thiếu công cụ (jq/python). → Kiểm: hook không đọc biến kiểu `*_DISABLE*`/`*_SKIP_HOOK*`; `tests/` chạy từng hook với stdin rỗng và rác → exit 0, không ra quyết định chặn. · Nguồn: Claude Code docs *Hooks* (`disableAllHooks`), đọc 2026-10-14
 
 ## Bẫy thường gặp
 

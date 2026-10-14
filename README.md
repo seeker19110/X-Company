@@ -1,4 +1,4 @@
-# X-stored — khung tham chiếu phát triển phần mềm
+# X-Templates — khung tham chiếu phát triển phần mềm
 
 > Thư viện **yêu cầu có ID** cho mọi loại phần mềm và ngành nghề, kèm công cụ ghép thành checklist dự án, kiểm "xong" bằng máy,
 > và harness để AI agent **tự làm đến khi hoàn thành** mà vẫn dừng đúng chỗ cần người.
@@ -33,8 +33,8 @@ Chỉ mục đầy đủ theo vai đọc: [`framework/README.md`](framework/READ
 
 ```bash
 # 1) Cài khung vào dự án (chỉ cần Python >= 3.11; không đè file đã có)
-git clone https://github.com/seeker19110/X-stored /tmp/x-stored
-python3 /tmp/x-stored/scripts/install.py /đường/dẫn/dự-án --with-github
+git clone https://github.com/seeker19110/X-Templates /tmp/x-templates
+python3 /tmp/x-templates/scripts/install.py /đường/dẫn/dự-án --with-github
 
 # 2) Chọn hồ sơ, ngành, quy mô rồi ghép checklist
 cd /đường/dẫn/dự-án

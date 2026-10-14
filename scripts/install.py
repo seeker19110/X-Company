@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""install.py — cài khung X-stored vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.11).
+"""install.py — cài khung X-Templates vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.11).
 
 Kết quả trong dự án đích:
   .xstored/framework/        bản sao thư viện yêu cầu (chỉ đọc; cập nhật bằng cách chạy lại install)
@@ -13,7 +13,7 @@ Kết quả trong dự án đích:
 
 Dùng:
   python3 scripts/install.py <thư-mục-dự-án> [--force-harness] [--no-harness] [--with-github] [--label v1.0.0]
-  (chạy từ bản clone của X-stored; hoặc: python3 -c "$(curl ...)" KHÔNG được khuyến khích — tải về, kiểm checksum rồi chạy)
+  (chạy từ bản clone của X-Templates; hoặc: python3 -c "$(curl ...)" KHÔNG được khuyến khích — tải về, kiểm checksum rồi chạy)
 Thoát 0 = ổn; 2 = lỗi tham số.
 """
 
@@ -209,7 +209,7 @@ def install_framework(xs_dir: Path, label: str | None) -> None:
     version = framework_label(label)
     (xs_dir / "VERSION").write_text(version + "\n", encoding="utf-8")
     (xs_dir / "README.md").write_text(
-        "# .xstored/\n\nBản sao khung X-stored (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
+        "# .xstored/\n\nBản sao khung X-Templates (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
         "Ghép blueprint: `python3 .xstored/scripts/xs.py compose --profile <p> --scale <S|M|L> --out BLUEPRINT.md`.\n",
         encoding="utf-8",
     )
@@ -309,10 +309,10 @@ def ensure_gitignore(target: Path) -> None:
     if gi.exists():
         if line not in gi.read_text(encoding="utf-8").splitlines():
             with gi.open("a", encoding="utf-8") as fh:
-                fh.write(f"\n# X-stored: trạng thái autopilot cục bộ\n{line}\n")
+                fh.write(f"\n# X-Templates: trạng thái autopilot cục bộ\n{line}\n")
             log("  .gitignore: thêm .autopilot/")
     else:
-        gi.write_text(f"# X-stored: trạng thái autopilot cục bộ\n{line}\n", encoding="utf-8")
+        gi.write_text(f"# X-Templates: trạng thái autopilot cục bộ\n{line}\n", encoding="utf-8")
         log("  .gitignore: tạo mới")
 
 
@@ -340,7 +340,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Cài khung X-stored vào dự án đích")
+    p = argparse.ArgumentParser(description="Cài khung X-Templates vào dự án đích")
     p.add_argument("target", help="thư mục gốc dự án đích")
     p.add_argument("--force-harness", action="store_true", help="đè .claude/ của dự án bằng bản khung")
     p.add_argument("--no-harness", action="store_true", help="không copy .claude/")

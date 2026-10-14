@@ -9,7 +9,7 @@ updated: 2026-10-13
 @AGENTS.md
 
 <!-- Claude Code chỉ đọc CLAUDE.md khi có cả hai file; dòng import trên nạp AGENTS.md (nguồn sự thật duy nhất cho mọi harness).
-     Chỉ ghi ở đây những gì RIÊNG cho Claude Code. File do install.py của khung X-stored tạo (copy-if-absent). -->
+     Chỉ ghi ở đây những gì RIÊNG cho Claude Code. File do install.py của khung X-Templates tạo (copy-if-absent). -->
 
 ## Riêng cho Claude Code
 - Hook (`.claude/settings.json`): SessionStart nạp PROGRESS + trạng thái autopilot; PreToolUse chặn lệnh phá huỷ/`curl|sh`, hỏi khi deploy/publish/push nhánh chính hoặc sửa cấu hình cổng/CI/migration đã có; PostToolUse format file vừa sửa; Stop đọc bằng chứng autopilot (`xs.py loop hook-stop`).

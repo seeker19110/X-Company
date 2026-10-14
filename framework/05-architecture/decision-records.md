@@ -38,7 +38,7 @@ updated: 2026-10-14
 | Ai duyệt | S: chủ dự án · M: tech lead + 1 reviewer · L: hội đồng kiến trúc/bảo mật cho ADR chạm bảo mật/dữ liệu | Trạng thái *proposed* → *accepted* chỉ sau duyệt ghi trong ADR (`decision-makers`) |
 | Chỉ mục | `docs/adr/README.md` sinh bằng script từ frontmatter/heading, cột: ID · Tiêu đề · Status · Implementation status · Ngày · Thay thế bởi | Sinh tự động + cổng drift, không tay (catalog 23 §6.4) |
 | ADR cho AI agent | `AGENTS.md`/`CLAUDE.md` của dự án trỏ đọc `docs/adr/` trước khi đề xuất thay đổi kiến trúc; bài học kiến trúc từ sự cố → ADR (thang `/hoc`) | Xem [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md) |
-| Thay đổi khung X-stored | ADR ở `docs/adr/` của repo khung, cùng luật | Xem conventions §8 |
+| Thay đổi khung X-Templates | ADR ở `docs/adr/` của repo khung, cùng luật | Xem conventions §8 |
 
 ## Checklist
 
