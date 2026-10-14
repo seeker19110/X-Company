@@ -113,7 +113,11 @@ class PreEditGuardTest(unittest.TestCase):
 @unittest.skipIf(shutil.which("bash") is None, "cần bash")
 class StopAndSessionTest(unittest.TestCase):
     def test_stop_guard_inactive_allows_stop(self):
-        code, out, _ = run_hook("stop-guard.sh", {"stop_hook_active": False})
+        # Dự án tạm chưa `loop init` — không dùng ROOT, vì autopilot có thể đang bật trên chính repo này.
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "scripts").mkdir()
+        shutil.copy(ROOT / "scripts" / "xs.py", tmp / "scripts" / "xs.py")
+        code, out, _ = run_hook("stop-guard.sh", {"stop_hook_active": False}, tmp)
         self.assertEqual((code, out.strip()), (0, ""))
 
     def test_stop_guard_blocks_when_loop_active(self):

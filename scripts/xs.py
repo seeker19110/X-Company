@@ -16,6 +16,7 @@ Lệnh:
   loop resume [--reason TEXT]   Người đã xử lý → bỏ BLOCKED, đặt lại đếm lỗi lặp, giữ số vòng/bằng chứng.
   loop stop [--reason TEXT]     Tắt vòng lặp.
   loop hook-stop                Dùng cho Stop hook của Claude Code: đọc JSON stdin, quyết định cho dừng hay chạy tiếp.
+  progress-check [FILE]         PROGRESS.md: ≤ 8 KB, đúng 4 mục, SHA trong Bàn giao phiên là tổ tiên HEAD.
   stats                         Thống kê số module/mục.
 
 Thoát: 0 = ổn, 1 = vi phạm/chưa đạt, 2 = lỗi dùng lệnh.
@@ -706,6 +707,71 @@ def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
     return "", 0
 
 
+# --------------------------------------------------------------------------- progress-check
+
+PROGRESS_MAX_BYTES = 8192
+PROGRESS_SECTIONS = ("Đang làm", "Tiếp theo", "Quyết định", "Bàn giao phiên")
+SHA_TOKEN_RE = re.compile(r"`([0-9a-f]{7,40})`")
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=False)
+
+
+def progress_sections(text: str) -> List[Tuple[str, List[str]]]:
+    """Các mục `## ` (bỏ qua heading trong code fence) cùng dòng thân của từng mục."""
+    sections: List[Tuple[str, List[str]]] = []
+    fence = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fence = not fence
+        if not fence and line.startswith("## "):
+            sections.append((unicodedata.normalize("NFC", line[3:].strip()), []))
+        elif sections:
+            sections[-1][1].append(line)
+    return sections
+
+
+def progress_check(path: Path) -> List[str]:
+    """Luật PROGRESS.md (mẫu templates/PROGRESS.md): ≤ 8 KB, đúng 4 mục, SHA bàn giao là tổ tiên HEAD.
+
+    Trả danh sách vi phạm; ném OSError khi không đọc được file hoặc không chạy được git.
+    """
+    raw = path.read_bytes()
+    errors: List[str] = []
+    if len(raw) > PROGRESS_MAX_BYTES:
+        errors.append(f"{len(raw)} byte > {PROGRESS_MAX_BYTES} — chuyển lịch sử sang CHANGELOG.md/docs/")
+    sections = progress_sections(raw.decode("utf-8", errors="replace"))
+    names = tuple(n for n, _ in sections)
+    if names != PROGRESS_SECTIONS:
+        errors.append(
+            "mục `## ` phải đúng thứ tự "
+            + " · ".join(PROGRESS_SECTIONS)
+            + "; đang có: "
+            + (" · ".join(names) or "(không có)")
+        )
+    handover = next((body for n, body in sections if n == PROGRESS_SECTIONS[-1]), None)
+    if handover is None:
+        return errors
+    shas = list(dict.fromkeys(m.group(1) for line in handover for m in SHA_TOKEN_RE.finditer(line)))
+    if not shas:
+        errors.append("mục Bàn giao phiên không ghi SHA commit (dạng `abc1234`)")
+        return errors
+    repo = path.resolve().parent
+    if _git(repo, "rev-parse", "--git-dir").returncode != 0:
+        raise OSError(f"không phải repo git: {repo}")
+    shallow = _git(repo, "rev-parse", "--is-shallow-repository").stdout.strip() == "true"
+    hint = " (clone nông — CI cần checkout `fetch-depth: 0`)" if shallow else ""
+    for sha in shas:
+        if _git(repo, "rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}").returncode != 0:
+            errors.append(f"SHA `{sha}` không có trong lịch sử{hint}")
+        elif _git(repo, "merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+            errors.append(
+                f"SHA `{sha}` không phải tổ tiên của HEAD (squash/rebase làm mất? ghi SHA trên nhánh chính){hint}"
+            )
+    return errors
+
+
 # --------------------------------------------------------------------------- CLI
 
 
@@ -856,6 +922,15 @@ def cmd_loop(args) -> int:
     return 2
 
 
+def cmd_progress_check(args) -> int:
+    errors = progress_check(Path(args.file))
+    for e in errors:
+        print(f"✗ {args.file}: {e}")
+    if not errors:
+        print(f"✓ {args.file}: ≤ {PROGRESS_MAX_BYTES} byte, đủ 4 mục, SHA bàn giao là tổ tiên HEAD.")
+    return 1 if errors else 0
+
+
 def cmd_stats(args) -> int:
     docs, _ = load_docs(args.framework)
     by_kind: Dict[str, int] = {}
@@ -946,6 +1021,9 @@ def build_parser() -> argparse.ArgumentParser:
     lst.add_argument("--reason", default="dừng thủ công")
     lsub.add_parser("hook-stop")
     plp.set_defaults(fn=cmd_loop)
+    pp = sub.add_parser("progress-check")
+    pp.add_argument("file", nargs="?", default="PROGRESS.md")
+    pp.set_defaults(fn=cmd_progress_check)
     sub.add_parser("stats").set_defaults(fn=cmd_stats)
     return p
 

@@ -628,6 +628,107 @@ class CliContractTest(unittest.TestCase):
         self.assertEqual(missing, [], "README thiếu lệnh — cập nhật bảng Công cụ")
 
 
+GOOD_PROGRESS = """# PROGRESS.md — Thử
+
+## Đang làm
+- Không.
+
+## Tiếp theo
+1. Việc kế.
+
+## Quyết định
+- 2026-10-14 Chọn X.
+
+## Bàn giao phiên
+- Commit cuối: `{sha}` · CI xanh
+"""
+
+
+class ProgressCheckTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        self.git("init", "-q", "-b", "main")
+        self.base = self.commit("a")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def git(self, *args) -> str:
+        r = subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return r.stdout.strip()
+
+    def commit(self, name: str) -> str:
+        (self.repo / name).write_text(name, encoding="utf-8")
+        self.git("add", name)
+        self.git("commit", "-q", "-m", name)
+        return self.git("rev-parse", "HEAD")
+
+    def check(self, text: str):
+        f = self.repo / "PROGRESS.md"
+        f.write_text(text, encoding="utf-8")
+        return xs.progress_check(f)
+
+    def test_progress_ok_with_ancestor_sha(self):
+        self.commit("b")
+        self.assertEqual(self.check(GOOD_PROGRESS.format(sha=self.base[:7])), [])
+
+    def test_progress_too_big(self):
+        errs = self.check(GOOD_PROGRESS.format(sha=self.base) + "x" * 9000)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("> 8192", errs[0])
+
+    def test_progress_wrong_sections(self):
+        text = GOOD_PROGRESS.format(sha=self.base).replace("## Quyết định", "## Lịch sử")
+        errs = self.check(text)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("Lịch sử", errs[0])
+
+    def test_progress_heading_inside_fence_ignored(self):
+        text = GOOD_PROGRESS.format(sha=self.base).replace("- Không.", "```\n## Không tính\n```")
+        self.assertEqual(self.check(text), [])
+
+    def test_progress_missing_sha(self):
+        errs = self.check(GOOD_PROGRESS.format(sha="SHA"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không ghi SHA", errs[0])
+
+    def test_progress_sha_not_ancestor(self):
+        self.git("checkout", "-q", "-b", "nhanh")
+        side = self.commit("side")
+        self.git("checkout", "-q", "main")
+        self.commit("c")
+        errs = self.check(GOOD_PROGRESS.format(sha=side))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không phải tổ tiên", errs[0])
+
+    def test_progress_unknown_sha(self):
+        errs = self.check(GOOD_PROGRESS.format(sha="deadbeef"))
+        self.assertEqual(len(errs), 1)
+        self.assertIn("không có trong lịch sử", errs[0])
+
+    def test_progress_cli_exit_codes(self):
+        f = self.repo / "PROGRESS.md"
+        f.write_text(GOOD_PROGRESS.format(sha="deadbeef"), encoding="utf-8")
+        run = lambda *a: (
+            subprocess.run(  # noqa: E731
+                [sys.executable, str(ROOT / "scripts" / "xs.py"), "progress-check", *a],
+                capture_output=True,
+                text=True,
+                check=False,
+            ).returncode
+        )
+        self.assertEqual(run(str(f)), 1)
+        f.write_text(GOOD_PROGRESS.format(sha=self.base), encoding="utf-8")
+        self.assertEqual(run(str(f)), 0)
+        self.assertEqual(run(str(self.repo / "khong-co.md")), 2)
+
+
 class RealFrameworkTest(unittest.TestCase):
     """Khung thật trong repo phải luôn hợp lệ."""
 
