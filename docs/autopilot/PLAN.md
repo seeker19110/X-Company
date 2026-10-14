@@ -5,7 +5,7 @@
 > = điểm dừng bắt buộc, phiên không có quyền admin); thử khung trên dự án sản phẩm thật (cần người chọn dự án).
 
 ## Mục tiêu của kế hoạch này
-- `LOOP-HARNESS-012` có quyết định: không biến tắt riêng trong hook (giữ hàng rào ADR-0002), tắt có chủ đích qua `disableAllHooks`
+- `LOOP-HARNESS-012` có quyết định (thay bằng 018): không biến tắt riêng trong hook (giữ hàng rào ADR-0002), tắt có chủ đích qua `disableAllHooks`
   của harness; mọi hook fail-open với stdin rỗng/rác, có test.
 - Phạm vi đổi tên được chốt bằng ADR: giữ định danh kỹ thuật `.xstored/`, `xs.py`, `xs.yaml`, `XS_*`.
 - PROGRESS phản ánh trạng thái mới.
@@ -22,6 +22,6 @@
 
 ## Task
 
-- [x] `T-401` `LOOP-HARNESS-012` viết lại (giữ ID, SHOULD) + test mọi hook fail-open với stdin rỗng/rác + tick BLUEPRINT có bằng chứng — Gate: `python3 -m unittest tests.test_hooks`
+- [x] `T-401` `LOOP-HARNESS-012` ngừng dùng → `LOOP-HARNESS-018` + test mọi hook fail-open với stdin rỗng/rác + tick BLUEPRINT có bằng chứng — Gate: `python3 -m unittest tests.test_hooks`
 - [x] `T-402` ADR-0006 phạm vi đổi tên (giữ `.xstored`/`xs`) + CHANGELOG — Gate: `python3 scripts/xs.py validate`
 - [x] `T-403` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`

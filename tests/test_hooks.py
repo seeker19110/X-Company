@@ -484,19 +484,26 @@ class PreEditGateFilesTest(unittest.TestCase):
             self.assertEqual(decision(out), "ask", rel)
 
 
+@unittest.skipIf(shutil.which("bash") is None, "cần bash")
 class HookFailOpenTest(unittest.TestCase):
-    """LOOP-HARNESS-012: mọi hook fail-open về luồng với stdin rỗng/rác; không có biến tắt riêng."""
+    """LOOP-HARNESS-018: mọi hook fail-open về luồng với stdin rỗng/rác; không có biến tắt riêng."""
 
     HOOK_FILES = ("session-start.sh", "pre-bash-guard.sh", "pre-edit-guard.sh", "auto-format.sh", "stop-guard.sh")
 
     def test_every_hook_fail_open_on_empty_or_garbage_stdin(self):
+        # Dự án tạm có xs.py thật (chưa `loop init`) để stop-guard/session-start chạy tới nhánh gọi xs.py.
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "scripts").mkdir()
+        shutil.copy(ROOT / "scripts" / "xs.py", tmp / "scripts" / "xs.py")
         for name in self.HOOK_FILES:
             for payload in ("", "not json {"):
                 code, out, _ = run_hook(name, payload, project_dir=tmp)
                 self.assertEqual(code, 0, f"{name} {payload!r}")
-                self.assertNotIn('"deny"', out, f"{name} {payload!r}")
+                if name == "session-start.sh":
+                    self.assertNotIn('"decision"', out, f"{name} {payload!r}")
+                else:
+                    self.assertEqual(out.strip(), "", f"{name} {payload!r}")
 
     def test_hooks_have_no_private_kill_switch(self):
         for f in sorted(HOOKS.glob("*.sh")) + sorted(HOOKS.glob("*.py")):

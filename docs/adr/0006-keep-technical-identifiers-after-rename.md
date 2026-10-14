@@ -14,7 +14,7 @@ xuất hiện ở hai lớp khác nhau:
 
 ## Quyết định
 
-1. Đổi toàn bộ **tên hiển thị** sang X-Templates (PR #30); tài liệu lịch sử (`research/`, ADR cũ, báo cáo audit đã ký,
+1. Đổi toàn bộ **tên hiển thị** sang X-Templates (PR #30); tài liệu lịch sử (`research/`, báo cáo audit đã ký,
    trích dẫn "khung cũ X-stored commit `1b80fe4`") giữ tên cũ vì đó là sự kiện đã xảy ra.
 2. **Giữ nguyên định danh kỹ thuật**: `.xstored/`, `xs.py`, `xs.yaml`, `XS_*`, `.xstored-new`, manifest hash.
 
@@ -29,7 +29,8 @@ xuất hiện ở hai lớp khác nhau:
 
 - **Đổi hết sang `.xtemplates/` + `xt.py` kèm lớp tương thích một phiên bản lớn:** đúng tên nhưng là thay đổi phá vỡ
   (SemVer 3.0.0) cho dự án đã cài, chi phí di chuyển trên mỗi dự án. Loại.
-- **Không đổi gì, chỉ để GitHub chuyển hướng:** URL cũ có thể bị chiếm nếu ai tạo repo trùng tên cũ; tài liệu sai tên. Loại.
+- **Không đổi gì, chỉ để GitHub chuyển hướng:** tài liệu sai tên; chuyển hướng mất nếu chủ tài khoản về sau tạo repo mới
+  trùng tên cũ (GitHub docs *Renaming a repository*). Loại.
 
 ## Hệ quả
 
