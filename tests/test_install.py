@@ -1,4 +1,5 @@
 """Test scripts/install.py và scripts/check-links.py."""
+
 from __future__ import annotations
 
 import subprocess
@@ -30,15 +31,30 @@ class InstallTest(unittest.TestCase):
         self.assertIn(".autopilot/", (self.target / ".gitignore").read_text(encoding="utf-8"))
         for name in ("AGENTS.md", "CLAUDE.md", "PROGRESS.md", "xs.yaml"):
             self.assertTrue((self.target / name).exists(), name)
-            self.assertFalse((self.target / name).read_text(encoding="utf-8").startswith("---"), f"{name} còn frontmatter")
+            self.assertFalse(
+                (self.target / name).read_text(encoding="utf-8").startswith("---"), f"{name} còn frontmatter"
+            )
 
     def test_installed_xs_validates_and_composes(self):
         self.run_install()
         xs = self.target / ".xstored" / "scripts" / "xs.py"
         r = subprocess.run([sys.executable, str(xs), "validate"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stdout)
-        r = subprocess.run([sys.executable, str(xs), "compose", "--profile", "web-app", "--scale", "M",
-                            "--out", str(self.target / "BLUEPRINT.md")], capture_output=True, text=True)
+        r = subprocess.run(
+            [
+                sys.executable,
+                str(xs),
+                "compose",
+                "--profile",
+                "web-app",
+                "--scale",
+                "M",
+                "--out",
+                str(self.target / "BLUEPRINT.md"),
+            ],
+            capture_output=True,
+            text=True,
+        )
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("kind: blueprint", (self.target / "BLUEPRINT.md").read_text(encoding="utf-8"))
 
@@ -79,8 +95,12 @@ class CheckLinksTest(unittest.TestCase):
 
     def test_detects_broken(self):
         tmp = Path(tempfile.mkdtemp())
-        (tmp / "a.md").write_text("[x](b.md) [ok](#h) [url](https://x) `[no](c.md)`\n```\n[in-fence](d.md)\n```\n", encoding="utf-8")
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "check-links.py"), str(tmp)], capture_output=True, text=True)
+        (tmp / "a.md").write_text(
+            "[x](b.md) [ok](#h) [url](https://x) `[no](c.md)`\n```\n[in-fence](d.md)\n```\n", encoding="utf-8"
+        )
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "check-links.py"), str(tmp)], capture_output=True, text=True
+        )
         self.assertEqual(r.returncode, 1)
         self.assertIn("b.md", r.stdout)
         self.assertNotIn("d.md", r.stdout)

@@ -26,7 +26,7 @@ case "$rel" in
   vitest.config.*|jest.config.*|playwright.config.*|lighthouserc*|.lighthouserc*|\
   pyproject.toml|setup.cfg|mypy.ini|pyrightconfig.json|ruff.toml|.coveragerc|codecov.yml|.codecov.yml|\
   .pre-commit-config.yaml|.husky/*|lefthook.yml|.lintstagedrc*|commitlint.config.*|\
-  Makefile|justfile|.gitleaks.toml|.gitleaksignore|.semgrep*|sonar-project.properties)
+  xs.yaml|scripts/dev-task.sh|Makefile|justfile|.gitleaks.toml|.gitleaksignore|.semgrep*|sonar-project.properties)
     pretool_decision ask "Sửa cấu hình cổng/CI/harness ($rel). Khung coi đây là điểm dừng: nói rõ lý do trước khi nới hàng rào." ;;
 esac
 

@@ -25,27 +25,19 @@ jobs:
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: "3.13"
+          # 3.11 = sàn hỗ trợ (3.10 hết hạn 2026-10-01); 3.13 = mặc định. Cài cả hai trong MỘT job để giữ tên check `quality`.
+          python-version: |
+            3.11
+            3.13
 
-      - name: Quy ước khung (frontmatter, ID, liên kết, hồ sơ/ngành)
-        run: python3 scripts/xs.py validate
+      - name: Công cụ ghim (khớp xs.yaml)
+        run: pip install --quiet "ruff==0.17.0" "mypy==2.4.0"
 
-      - name: Liên kết Markdown toàn repo
-        run: python3 scripts/check-links.py
+      - name: Cổng chuẩn — đúng lệnh trong xs.yaml (build · typecheck · lint · test)
+        run: scripts/dev-task.sh gate
 
-      - name: Cú pháp shell + ShellCheck (hook, script)
-        run: |
-          set -euo pipefail
-          for f in scripts/*.sh .claude/hooks/*.sh; do bash -n "$f"; done
-          shellcheck --severity=warning scripts/*.sh .claude/hooks/*.sh
-
-      - name: JSON hợp lệ (settings, ruleset)
-        run: |
-          set -euo pipefail
-          for f in .claude/settings.json .github/rulesets/main.json; do python3 -m json.tool "$f" >/dev/null && echo "OK $f"; done
-
-      - name: Test
-        run: python3 -m unittest discover -s tests -v
+      - name: Test trên Python 3.11 (sàn hỗ trợ)
+        run: python3.11 -m unittest discover -s tests
 
       - name: Ghép thử blueprint cho MỌI hồ sơ × gói ngành (smoke)
         run: |
@@ -64,15 +56,25 @@ jobs:
           done
           echo "OK — ghép $n blueprint"
 
-      - name: Cài thử vào dự án rỗng rồi validate/compose từ bản cài
+      - name: Chạy ĐÚNG khối lệnh "Dùng cho một dự án" trong README (cài thử vào dự án rỗng)
         run: |
           set -euo pipefail
           d=$(mktemp -d)
-          python3 scripts/install.py "$d" --label ci
-          python3 "$d/.xstored/scripts/xs.py" validate
-          python3 "$d/.xstored/scripts/xs.py" compose --profile api-service --industry fintech --scale M --out "$d/BLUEPRINT.md"
-          test -f "$d/AGENTS.md" && test -f "$d/.claude/settings.json"
-          echo "OK — cài thử thành công"
+          awk '/^## Dùng cho một dự án/{f=1} f&&/^```bash/{g=1;next} g&&/^```/{exit} g' README.md \
+            | grep -v '^git clone' | sed "s#/tmp/x-stored#$PWD#g; s#/đường/dẫn/dự-án#$d#g" \
+            | sed '$ s/$/ || test $? -eq 1/' > "$RUNNER_TEMP/readme.sh"   # --strict trả 1 vì blueprint mới chưa tick
+          cat "$RUNNER_TEMP/readme.sh"
+          bash -euo pipefail "$RUNNER_TEMP/readme.sh"
+          test -f "$d/AGENTS.md" && test -f "$d/.claude/settings.json" && test -f "$d/.github/rulesets/main.json"
+          echo "OK — lệnh README chạy được"
+
+      - name: Tiêu đề PR theo Conventional Commits, ≤ 72 ký tự (thành tiêu đề squash)
+        if: github.event_name == 'pull_request'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+$' \
+            && [ "${#TITLE}" -le 72 ] || { echo "::error::Tiêu đề PR phải dạng '<type>(scope): mô tả' và ≤ 72 ký tự: $TITLE"; exit 1; }
 
       - name: Không còn "(đang viết)" / placeholder trong khung
         run: |

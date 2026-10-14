@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""install.py — cài khung X-stored vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.9).
+"""install.py — cài khung X-stored vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.11).
 
 Kết quả trong dự án đích:
   .xstored/framework/        bản sao thư viện yêu cầu (chỉ đọc; cập nhật bằng cách chạy lại install)
@@ -16,10 +16,10 @@ Dùng:
   (chạy từ bản clone của X-stored; hoặc: python3 -c "$(curl ...)" KHÔNG được khuyến khích — tải về, kiểm checksum rồi chạy)
 Thoát 0 = ổn; 2 = lỗi tham số.
 """
+
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import stat
 import subprocess
@@ -29,13 +29,18 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parent.parent
 HARNESS_FILES = ["settings.json"]
 HARNESS_DIRS = ["hooks", "skills", "agents"]
-ROOT_TEMPLATES = {"AGENTS.md": "AGENTS.md", "CLAUDE.md": "CLAUDE.md", "PROGRESS.md": "PROGRESS.md", "xs.yaml": "xs.yaml"}
+ROOT_TEMPLATES = {
+    "AGENTS.md": "AGENTS.md",
+    "CLAUDE.md": "CLAUDE.md",
+    "PROGRESS.md": "PROGRESS.md",
+    "xs.yaml": "xs.yaml",
+}
 # --with-github: hàng rào GitHub mẫu của khung (copy-if-absent). Workflow KHÔNG copy vì job quality phụ thuộc stack.
 GITHUB_FILES = [".github/rulesets/main.json", ".github/pull_request_template.md", ".github/dependabot.yml"]
 
 
 def log(msg: str) -> None:
-    print(f"[install] {msg}")
+    print(f"[install] {msg}", file=sys.stderr)
 
 
 def strip_frontmatter(text: str) -> str:
@@ -43,14 +48,18 @@ def strip_frontmatter(text: str) -> str:
     if lines and lines[0].strip() == "---":
         for i in range(1, len(lines)):
             if lines[i].strip() == "---":
-                return "\n".join(lines[i + 1:]).lstrip("\n") + "\n"
+                return "\n".join(lines[i + 1 :]).lstrip("\n") + "\n"
     return text
 
 
 def copy_tree_replace(src: Path, dst: Path) -> None:
+    """Copy vào thư mục tạm rồi mới thay: lỗi giữa chừng không để dst mất/dở."""
+    tmp = dst.with_name(dst.name + ".tmp")
+    shutil.rmtree(tmp, ignore_errors=True)
+    shutil.copytree(src, tmp, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     if dst.exists():
         shutil.rmtree(dst)
-    shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    tmp.rename(dst)
 
 
 def copy_if_absent(src: Path, dst: Path, force: bool = False, transform=None) -> str:
@@ -72,15 +81,19 @@ def copy_if_absent(src: Path, dst: Path, force: bool = False, transform=None) ->
 
 
 def framework_label(explicit: str | None) -> str:
+    """Nhãn ghi vào .xstored/VERSION: --label, hoặc '<VERSION> (<git sha>)' của bản khung đang cài."""
     if explicit:
         return explicit
+    version = (SRC / "VERSION").read_text(encoding="utf-8").strip() if (SRC / "VERSION").exists() else "unknown"
     try:
-        r = subprocess.run(["git", "-C", str(SRC), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=10)
+        r = subprocess.run(
+            ["git", "-C", str(SRC), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=10
+        )
         if r.returncode == 0 and r.stdout.strip():
-            return r.stdout.strip()
+            return f"{version} ({r.stdout.strip()})"
     except (OSError, subprocess.TimeoutExpired):
         pass
-    return "unknown"
+    return version
 
 
 def install(target: Path, force_harness: bool, no_harness: bool, label: str | None, with_github: bool = False) -> int:
@@ -107,7 +120,8 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     (xs_dir / "README.md").write_text(
         "# .xstored/\n\nBản sao khung X-stored (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
         "Ghép blueprint: `python3 .xstored/scripts/xs.py compose --profile <p> --scale <S|M|L> --out BLUEPRINT.md`.\n",
-        encoding="utf-8")
+        encoding="utf-8",
+    )
     log(f"✓ .xstored/framework + scripts (phiên bản {framework_label(label)})")
 
     # 2) harness .claude/ — copy-if-absent
@@ -120,21 +134,23 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
                 if src.is_file():
                     rel = src.relative_to(SRC / ".claude")
                     stats[copy_if_absent(src, target / ".claude" / rel, force_harness)] += 1
-        log(f"✓ .claude/: copy {stats['copied']} · giữ nguyên {stats['kept']} · có bản mới (.xstored-new) {stats['updated-new']}")
+        log(
+            f"✓ .claude/: copy {stats['copied']} · giữ nguyên {stats['kept']} · có bản mới (.xstored-new) {stats['updated-new']}"
+        )
 
     # 3) file gốc từ templates — copy-if-absent, bỏ frontmatter
     for name, tmpl in ROOT_TEMPLATES.items():
-        src = SRC / "framework" / "templates" / tmpl
-        if not src.exists():
+        tsrc = SRC / "framework" / "templates" / tmpl
+        if not tsrc.exists():
             continue
-        r = copy_if_absent(src, target / name, False, transform=strip_frontmatter)
+        r = copy_if_absent(tsrc, target / name, False, transform=strip_frontmatter)
         log(f"  {name}: {r}")
 
     # 3b) --with-github: ruleset mẫu + PR template + Dependabot (copy-if-absent)
     if with_github:
-        for rel in GITHUB_FILES:
-            r = copy_if_absent(SRC / rel, target / rel, False)
-            log(f"  {rel}: {r}")
+        for gh in GITHUB_FILES:
+            r = copy_if_absent(SRC / gh, target / gh, False)
+            log(f"  {gh}: {r}")
 
     # 4) .gitignore: thêm .autopilot/ nếu thiếu
     gi = target / ".gitignore"
@@ -148,7 +164,9 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
         gi.write_text(f"# X-stored: trạng thái autopilot cục bộ\n{line}\n", encoding="utf-8")
         log("  .gitignore: tạo mới")
 
-    log("Xong. Bước tiếp: đọc AGENTS.md, điền xs.yaml, rồi `python3 .xstored/scripts/xs.py list profiles` → compose BLUEPRINT.md.")
+    log(
+        "Xong. Bước tiếp: đọc AGENTS.md, điền xs.yaml, rồi `python3 .xstored/scripts/xs.py list profiles` → compose BLUEPRINT.md."
+    )
     return 0
 
 
@@ -158,7 +176,9 @@ def main(argv=None) -> int:
     p.add_argument("--force-harness", action="store_true", help="đè .claude/ của dự án bằng bản khung")
     p.add_argument("--no-harness", action="store_true", help="không copy .claude/")
     p.add_argument("--label", help="nhãn phiên bản ghi vào .xstored/VERSION (mặc định: git SHA)")
-    p.add_argument("--with-github", action="store_true", help="copy ruleset mẫu, PR template, Dependabot vào .github/ (không đè)")
+    p.add_argument(
+        "--with-github", action="store_true", help="copy ruleset mẫu, PR template, Dependabot vào .github/ (không đè)"
+    )
     a = p.parse_args(argv)
     return install(Path(a.target), a.force_harness, a.no_harness, a.label, a.with_github)
 

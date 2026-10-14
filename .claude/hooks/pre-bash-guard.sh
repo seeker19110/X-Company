@@ -17,9 +17,9 @@ if printf '%s' "$cmd" | grep -Eq '(curl|wget)[^|]*\|[[:space:]]*(sudo[[:space:]]
 fi
 
 # Tách thành từng lệnh con, bỏ khoảng trắng đầu.
-mapfile -t parts < <(printf '%s' "$cmd" | sed -E 's/\|\||&&|;|\|/\n/g' | sed -E 's/^[[:space:]]+//')
-
-for p in "${parts[@]}"; do
+# awk + while read thay cho mapfile/sed '\n' để chạy được với bash 3.2 và sed/awk BSD (macOS).
+while IFS= read -r p; do
+  p="${p#"${p%%[![:space:]]*}"}"
   [ -n "$p" ] || continue
   # ---- 1) DENY ---------------------------------------------------------------
   if printf '%s' "$p" | grep -Eq '^(sudo[[:space:]]|rm[[:space:]]+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)[[:space:]]+(/|~|\$HOME|\.\.|\*|\.)([[:space:]]|$)|dd[[:space:]]+if=|mkfs|chmod[[:space:]]+(-R[[:space:]]+)?777|curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh)'; then
@@ -36,7 +36,7 @@ for p in "${parts[@]}"; do
   if printf '%s' "$p" | grep -Eq '(^|[[:space:]])(git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(main|master)([[:space:]]|$)|git[[:space:]]+push[[:space:]]+(origin[[:space:]]+)?(HEAD:)?(main|master)([[:space:]]|$))'; then
     pretool_decision ask "Push thẳng nhánh chính — khung yêu cầu đi qua PR: $p"
   fi
-done
+done < <(printf '%s\n' "$cmd" | awk '{ gsub(/\|\||&&|;|\|/, "\n"); print }')
 
 # ---- 3) Cổng trước commit ------------------------------------------------------
 if printf '%s' "$cmd" | grep -Eq '(^|[^-])git[[:space:]]+([^|&;]*[[:space:]])?commit([[:space:]]|$)'; then

@@ -30,13 +30,13 @@ if [ -z "$TASK" ]; then
 fi
 
 # --- 1) Lệnh KHAI BÁO (escape hatch cho mọi dự án đặc thù) --------------------
+yaml_has() { [ -f "$YAML" ] && grep -Eq "^$1:" "$YAML"; }
+yaml_get() { # giá trị khoá $1 trong xs.yaml; bỏ nháy chỉ khi bọc cả hai đầu ("..." hoặc '...')
+  grep -E "^$1:" "$YAML" | head -1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]+\$//; s/^\"(.*)\"\$/\\1/; s/^'(.*)'\$/\\1/"
+}
 declared_cmd() {
   # In ra lệnh khai báo cho $1 nếu có, ngược lại rỗng. xs.yaml (phẳng) ưu tiên hơn file bash.
-  if [ -f "$YAML" ]; then
-    local v
-    v="$(grep -E "^$1:[[:space:]]*" "$YAML" | head -1 | sed -E "s/^$1:[[:space:]]*//; s/^[\"']//; s/[\"']\$//")"
-    [ -n "$v" ] && { printf '%s' "$v"; return 0; }
-  fi
+  if yaml_has "$1"; then yaml_get "$1"; return 0; fi
   [ -f "$DECL" ] || return 0
   # Nạp trong subshell để không rò biến; lấy giá trị biến trùng tên task.
   # shellcheck source=/dev/null
@@ -104,8 +104,8 @@ detected_cmd() {
   return 0
 }
 
-resolve() { # $1=task -> in lệnh (khai báo ưu tiên), rỗng nếu không có
-  local c; c="$(declared_cmd "$1")"; [ -n "$c" ] && { echo "$c"; return 0; }
+resolve() { # $1=task -> in lệnh (khai báo ưu tiên), rỗng nếu không có; khoá "" trong xs.yaml = cố ý bỏ qua
+  local c; c="$(declared_cmd "$1")"; { [ -n "$c" ] || yaml_has "$1"; } && { echo "$c"; return 0; }
   detected_cmd "$1"
 }
 
@@ -118,29 +118,25 @@ run_task() { # $1=task -> chạy; 0 nếu ok hoặc no-op, khác 0 nếu lệnh 
 
 # --- format-file: format ĐÚNG file vừa sửa (dùng cho auto-format hook) --------
 declared_format_file() {
-  if [ -f "$YAML" ]; then
-    local v
-    v="$(grep -E "^format_file:[[:space:]]*" "$YAML" | head -1 | sed -E "s/^format_file:[[:space:]]*//; s/^[\"']//; s/[\"']\$//")"
-    [ -n "$v" ] && { printf '%s' "$v"; return 0; }
-  fi
+  if yaml_has format_file; then yaml_get format_file; return 0; fi
   [ -f "$DECL" ] || return 0
   # shellcheck source=/dev/null
   ( set +u; . "$DECL" >/dev/null 2>&1; eval "printf '%s' \"\${format_file:-}\"" )
 }
-resolve_format_file() { # $1=path -> in lệnh format 1 file, rỗng nếu không có per-file formatter
+resolve_format_file() { # $1=path -> in lệnh format 1 file (file là "$1" khi chạy), rỗng nếu không có
   local p="$1" tmpl ext
   tmpl="$(declared_format_file)"
-  if [ -n "$tmpl" ]; then printf '%s' "${tmpl//\{\}/$p}"; return 0; fi
+  if [ -n "$tmpl" ]; then tmpl="${tmpl//\"\{\}\"/\"\$1\"}"; printf '%s' "${tmpl//\{\}/\"\$1\"}"; return 0; fi
   ext="${p##*.}"
   case "$ext" in
     js|jsx|ts|tsx|mjs|cjs|json|css|scss|md|mdx|html|yaml|yml)
       if command -v npx >/dev/null 2>&1 && [ -f "$ROOT/package.json" ]; then
-        echo "npx --no-install prettier --write \"$p\""; return 0; fi ;;
+        echo 'npx --no-install prettier --write "$1"'; return 0; fi ;;
     py)
-      command -v ruff  >/dev/null 2>&1 && { echo "ruff format \"$p\""; return 0; }
-      command -v black >/dev/null 2>&1 && { echo "black \"$p\"";       return 0; } ;;
-    go)  command -v gofmt   >/dev/null 2>&1 && { echo "gofmt -w \"$p\""; return 0; } ;;
-    rs)  command -v rustfmt >/dev/null 2>&1 && { echo "rustfmt \"$p\"";  return 0; } ;;
+      command -v ruff  >/dev/null 2>&1 && { echo 'ruff format "$1"'; return 0; }
+      command -v black >/dev/null 2>&1 && { echo 'black "$1"';       return 0; } ;;
+    go)  command -v gofmt   >/dev/null 2>&1 && { echo 'gofmt -w "$1"'; return 0; } ;;
+    rs)  command -v rustfmt >/dev/null 2>&1 && { echo 'rustfmt "$1"';  return 0; } ;;
   esac
   return 0
 }
@@ -153,7 +149,7 @@ case "$TASK" in
     P="${2:-}"; [ -n "$P" ] || { log "format-file: thiếu path"; exit 0; }
     C="$(resolve_format_file "$P")"
     [ -n "$C" ] || { log "skip format-file: không có per-file formatter cho '$P'"; exit 0; }
-    log "format-file: $C"; ( cd "$ROOT" && bash -c "$C" ) || true
+    log "format-file: $C  (\$1=$P)"; ( cd "$ROOT" && bash -c "$C" _ "$P" ) || true
     exit 0 ;;
   gate)
     rc=0

@@ -3,7 +3,7 @@ title: Cổng chất lượng tối thiểu (lint · format · type · test · C
 kind: baseline
 prefix: BASE-GATE
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Cổng chất lượng tối thiểu (lint · format · type · test · CI)
@@ -37,13 +37,13 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `BASE-GATE-001` **MUST** Có đúng năm lệnh chuẩn `format` · `lint` · `typecheck` · `test` · `build` (hoặc tương đương của ngôn ngữ) được khai báo ở **một** nơi máy đọc được (`package.json#scripts`, `Makefile`, `justfile`, `noxfile`, `runtime.yaml`). → Kiểm: chạy từng lệnh từ clone sạch, exit 0; tên lệnh được CI và hook gọi nguyên văn (grep workflow). · Nguồn: 12-factor II; catalog 23 §3.3 (`runtime.yaml`)
+- [ ] `BASE-GATE-001` **MUST** Có đúng năm lệnh chuẩn `format` · `lint` · `typecheck` · `test` · `build` (hoặc tương đương của ngôn ngữ) được khai báo ở **một** nơi máy đọc được (`package.json#scripts`, `Makefile`, `justfile`, `noxfile`, `runtime.yaml`); mỗi lệnh có trong `xs.yaml`, lệnh không áp dụng ghi `""` kèm chú thích lý do. → Kiểm: `xs.yaml` có đủ năm khoá, khoá `""` có chú thích lý do; chạy từng lệnh không rỗng từ clone sạch, exit 0; tên lệnh được CI và hook gọi nguyên văn (grep workflow). · Nguồn: 12-factor II; catalog 23 §3.3 (`runtime.yaml`)
 - [ ] `BASE-GATE-002` **MUST** Formatter chạy ở chế độ kiểm (`--check`) trong CI và chế độ sửa ở hook; định dạng là **tất định** (cùng input → cùng output). → Kiểm: CI `format --check` exit 0; chạy `format` hai lần không tạo diff. · Nguồn: OpenSSF Badge `warnings`
 - [ ] `BASE-GATE-003` **MUST** Linter chạy với **0 cảnh báo** (cảnh báo = lỗi) trên toàn repo; rule tắt phải có comment lý do tại chỗ hoặc trong config. → Kiểm: `lint` exit 0 với `--max-warnings 0` / `-D warnings` / `TreatWarningsAsErrors`; grep `eslint-disable|noqa|#nosec|allow(` không có dòng thiếu lý do. · Nguồn: OpenSSF Badge `warnings_fixed`, `warnings_strict`
 - [ ] `BASE-GATE-004` **MUST** Type-checker ở chế độ nghiêm (nếu ngôn ngữ có): TypeScript `strict: true`, không `any` ngầm; pyright/mypy `strict`; Rust `clippy -D warnings`; Go `go vet`. → Kiểm: file config có cờ nghiêm; `typecheck` exit 0 trong CI. · Nguồn: khung cũ `01-process-and-standards.md` nguyên tắc 2
 - [ ] `BASE-GATE-005` **MUST** Có bộ test tự động chạy bằng một lệnh, **tất định** (không phụ thuộc giờ máy, mạng, thứ tự) và CI chạy **toàn bộ** trên mỗi PR. → Kiểm: `test` exit 0; chạy 3 lần liên tiếp cùng commit cho cùng kết quả; CI không có `continue-on-error` ở bước test. · Nguồn: OpenSSF Badge `test`, `test_continuous_integration`
 - [ ] `BASE-GATE-006` **MUST** CI chạy lại **mọi** cổng của hook cục bộ (hook có thể bị `--no-verify`); không có cổng nào chỉ tồn tại ở máy dev. → Kiểm: đối chiếu danh sách hook trong `.pre-commit-config.yaml`/`lefthook.yml` với bước trong workflow CI — mỗi hook có bước CI tương ứng. · Nguồn: pre-commit docs (CI); catalog 13 §4c
-- [ ] `BASE-GATE-007` **MUST** Nhánh mặc định yêu cầu CI xanh (required status check) và "up to date" với nhánh đích trước khi merge; không ai (kể cả admin/bot) trong bypass list ở quy mô M trở lên. → Kiểm: ruleset JSON có `required_status_checks` với `strict_required_status_checks_policy: true` và `bypass_actors: []`. · Nguồn: GitHub rulesets; Scorecard Branch-Protection, CI-Tests
+- [ ] `BASE-GATE-007` **MUST** Nhánh mặc định yêu cầu CI xanh (required status check) và "up to date" với nhánh đích trước khi merge. → Kiểm: ruleset JSON có `required_status_checks` với `strict_required_status_checks_policy: true`. · Nguồn: GitHub rulesets; Scorecard Branch-Protection, CI-Tests
 - [ ] `BASE-GATE-008` **MUST** Build từ clone sạch (`git clone` → cài phụ thuộc đóng băng → `build`) thành công trong CI; không phụ thuộc file cục bộ hay cache có sẵn để xanh. → Kiểm: job CI dùng runner mới, không `continue-on-error`; `build` exit 0. · Nguồn: 12-factor II, V
 - [ ] `BASE-GATE-009` **MUST** Thay đổi **cấu hình cổng** (lint/type/coverage/CI/hook/ruleset) đi PR riêng, có lý do trong mô tả; agent tự động không được tự nới. → Kiểm: hook PreToolUse/CODEOWNERS yêu cầu review người cho đường dẫn `eslint.config.*`, `tsconfig*.json`, `pyproject.toml[tool.*]`, `.github/workflows/**`, `.pre-commit-config.yaml`. · Nguồn: catalog 12 §3, 23 §4.3 ("làm cổng xanh bằng nới cấu hình")
 - [ ] `BASE-GATE-010` **MUST@M** CI chạy trên runner có `permissions:` tối thiểu (`contents: read` mặc định) và action bên thứ ba ghim theo SHA đầy đủ. → Kiểm: `actionlint` + `pinact run --check` exit 0; mọi workflow có khối `permissions:` cấp đầu. · Nguồn: GitHub Actions security hardening; chi tiết ở [`../12-security/supply-chain.md`](../12-security/supply-chain.md)
@@ -55,6 +55,7 @@ updated: 2026-10-13
 - [ ] `BASE-GATE-016` **SHOULD** Cổng có **ngân sách**: lint/format/typecheck tổng < 60 s trên máy dev cho thay đổi thường (dùng cache, chỉ chạy file thay đổi ở hook). → Kiểm: đo `time` chạy hook trên commit mẫu; ghi vào README DX. · Nguồn: [`../18-cross-cutting/developer-experience.md`](../18-cross-cutting/developer-experience.md)
 - [ ] `BASE-GATE-017` **MAY** Thêm cổng "dead code/trùng lặp" (knip, jscpd, vulture, `deadcode`) ở chế độ báo cáo trước, nâng thành chặn khi baseline sạch. → Kiểm: job CI xuất báo cáo; ngưỡng ghi trong config. · Nguồn: [`../14-testing-quality/static-analysis-and-code-quality.md`](../14-testing-quality/static-analysis-and-code-quality.md)
 - [ ] `BASE-GATE-018` **MAY** Fitness function cho **chính CI** (AST/script): job gate không được `continue-on-error`, không `if: false`, không `|| true` ở bước cổng. → Kiểm: script `ci_guard` chạy trong CI, exit 1 khi phát hiện. · Nguồn: catalog 23 §3.3
+- [ ] `BASE-GATE-019` **MUST@M** Ruleset nhánh mặc định không có ai (kể cả admin/bot) trong bypass list; review bắt buộc trước merge theo [`WF-GIT-011`](../10-workflow/git-and-branching.md). → Kiểm: ruleset JSON có `bypass_actors: []` (ruleset dạng code theo `WF-GIT-002`). · Nguồn: GitHub rulesets; Scorecard Branch-Protection
 
 ## Bẫy thường gặp
 

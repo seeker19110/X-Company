@@ -42,7 +42,7 @@ Cổng commit: `/gate` đạt hết (validate · test · link · shell syntax) +
 - Thêm/sửa mục: giữ ID cũ; mục bỏ → `MAY` + "Ngừng dùng"; cập nhật `updated`; ghi `CHANGELOG.md`.
 - Thêm module/hồ sơ/ngành: đúng `conventions.md` (frontmatter, prefix duy nhất, `## Checklist`, `## Nguồn`), cập nhật README chỉ mục của mảng; `xs.py validate` xanh.
 - Đổi cấu trúc khung/công cụ: ADR ở `docs/adr/` (`/adr`), không sửa ADR cũ.
-- Thay đổi `scripts/xs.py`: có test trong `tests/`; giữ chỉ thư viện chuẩn Python ≥ 3.9.
+- Thay đổi `scripts/xs.py`: có test trong `tests/`; giữ chỉ thư viện chuẩn Python ≥ 3.11 (CI kiểm 3.11 và 3.13).
 - Hook/skill/agent trong `.claude/`: là harness được dự án đích copy — giữ fail-open, không hard-code stack, test bằng payload giả (xem `tests/test_hooks.py`).
 
 ## 7. Skill và subagent

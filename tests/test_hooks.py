@@ -1,4 +1,5 @@
 """Test hook của harness bằng payload giả — hook phải fail-open và quyết định đúng deny/ask/allow."""
+
 from __future__ import annotations
 
 import json
@@ -122,8 +123,9 @@ class StopAndSessionTest(unittest.TestCase):
         (tmp / "docs" / "autopilot").mkdir(parents=True)
         (tmp / "docs" / "autopilot" / "PLAN.md").write_text("- [ ] `T-001` việc — Gate: `true`\n", encoding="utf-8")
         env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp))
-        subprocess.run([sys.executable, str(tmp / "scripts" / "xs.py"), "loop", "init"], check=True, env=env,
-                       capture_output=True)
+        subprocess.run(
+            [sys.executable, str(tmp / "scripts" / "xs.py"), "loop", "init"], check=True, env=env, capture_output=True
+        )
         code, out, _ = run_hook("stop-guard.sh", {"stop_hook_active": False}, tmp)
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)["decision"], "block")
@@ -139,6 +141,46 @@ class StopAndSessionTest(unittest.TestCase):
     def test_auto_format_noop(self):
         code, out, _ = run_hook("auto-format.sh", {"tool_input": {"file_path": str(ROOT / "README.md")}})
         self.assertEqual((code, out.strip()), (0, ""))
+
+
+class DevTaskTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        (self.tmp / "scripts").mkdir()
+        shutil.copy(ROOT / "scripts" / "dev-task.sh", self.tmp / "scripts" / "dev-task.sh")
+
+    def run_task(self, *args):
+        return subprocess.run(
+            ["bash", str(self.tmp / "scripts" / "dev-task.sh"), *args],
+            capture_output=True,
+            text=True,
+            cwd=self.tmp,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.tmp)),
+        )
+
+    def test_format_file_path_is_not_executed(self):
+        evil = self.tmp / "x$(touch INJECTED).py"
+        evil.write_text("print(1)\n", encoding="utf-8")
+        for tmpl in ("cat {}", 'cat "{}"'):
+            (self.tmp / "xs.yaml").write_text(f"format_file: {tmpl}\n", encoding="utf-8")
+            r = self.run_task("format-file", str(evil))
+            self.assertFalse((self.tmp / "INJECTED").exists(), tmpl)
+            self.assertNotIn("unexpected EOF", r.stderr, tmpl)
+
+    def test_empty_declared_command_skips_autodetect(self):
+        (self.tmp / "xs.yaml").write_text('test: ""\n', encoding="utf-8")
+        (self.tmp / "Makefile").write_text("test:\n\ttouch RAN\n", encoding="utf-8")
+        r = self.run_task("test")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.tmp / "RAN").exists())
+
+
+@unittest.skipIf(shutil.which("bash") is None, "cần bash")
+class PreEditGateFilesTest(unittest.TestCase):
+    def test_ask_when_editing_gate_definitions(self):
+        for rel in ("xs.yaml", "scripts/dev-task.sh"):
+            code, out, _ = run_hook("pre-edit-guard.sh", {"tool_input": {"file_path": str(ROOT / rel)}})
+            self.assertEqual(decision(out), "ask", rel)
 
 
 class SettingsJsonTest(unittest.TestCase):

@@ -32,7 +32,7 @@ Chỉ mục đầy đủ theo vai đọc: [`framework/README.md`](framework/READ
 ## Dùng cho một dự án
 
 ```bash
-# 1) Cài khung vào dự án (chỉ cần Python >= 3.9; không đè file đã có)
+# 1) Cài khung vào dự án (chỉ cần Python >= 3.11; không đè file đã có)
 git clone https://github.com/seeker19110/X-stored /tmp/x-stored
 python3 /tmp/x-stored/scripts/install.py /đường/dẫn/dự-án --with-github
 
@@ -66,12 +66,26 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 
 | Lệnh | Việc |
 |---|---|
-| `python3 scripts/xs.py validate` | Kiểm quy ước toàn khung: frontmatter, ID duy nhất, MUST có cách kiểm, liên kết |
-| `python3 scripts/xs.py compose ...` | Ghép blueprint theo hồ sơ, ngành, quy mô |
-| `python3 scripts/xs.py blueprint-status FILE --strict` | Đếm đạt/miễn/chưa; cổng phát hành |
+| `python3 scripts/xs.py validate` · `python3 scripts/xs.py list profiles` | Kiểm quy ước toàn khung: frontmatter, ID duy nhất, MUST có cách kiểm, liên kết |
+| `python3 scripts/xs.py compose ...` | Ghép blueprint theo hồ sơ, ngành, quy mô; ghép lại vào file có sẵn thì giữ trạng thái theo ID |
+| `python3 scripts/xs.py blueprint-status FILE --strict [--json]` | Đếm đạt/miễn/chưa; cổng phát hành; `FILE` là `-` thì đọc stdin |
 | `python3 scripts/xs.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
 | `python3 scripts/install.py DỰ_ÁN [--with-github]` | Cài khung + harness vào dự án đích |
+| `python3 scripts/xs.py stats` | Đếm file theo loại và mục theo mức |
+| `python3 scripts/xs.py --version` · `--help` | Phiên bản khung (file `VERSION`) · ví dụ và mã thoát (0 ổn · 1 chưa đạt · 2 sai cách dùng) |
 | `python3 scripts/check-links.py` | Kiểm liên kết Markdown toàn repo |
+| `scripts/dev-task.sh gate` | Cổng commit: chạy lệnh trong `xs.yaml` (build · typecheck · lint · test), CI chạy đúng lệnh này |
+
+Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XS_FRAMEWORK_LINK` (gốc liên kết
+trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
+`loop`) · `XS_DEBUG=1` (in traceback khi lỗi).
+
+Kiểm tra trước khi đóng góp (cần Python ≥ 3.11, `ruff==0.17.0`, `mypy==2.4.0`):
+
+```bash
+scripts/dev-task.sh gate                 # = CI job quality
+python3 -m unittest discover -s tests    # chỉ test
+```
 
 ## Quyết định thiết kế
 
