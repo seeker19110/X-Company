@@ -72,6 +72,36 @@ class InstallTest(unittest.TestCase):
         self.assertIn("KHÔNG CHẠY LỆNH NÀO", r.stderr)
         self.assertNotIn("GATE XANH", r.stderr)
 
+    def test_check_links_fence_angle_and_outside_root(self):
+        # AUD-DOC-019: ~~~ fence, link <có dấu cách>, link ra ngoài gốc repo.
+        repo = Path(tempfile.mkdtemp())
+        outside = repo.parent / (repo.name + "-ngoai.md")
+        outside.write_text("x", encoding="utf-8")
+        (repo / "có dấu cách.md").write_text("x", encoding="utf-8")
+        (repo / "a.md").write_text(
+            "~~~\n[x](khong-co.md)\n~~~\n[ok](<có dấu cách.md>)\n[hỏng](<không có.md>)\n[ngoài](../"
+            + outside.name
+            + ")\n",
+            encoding="utf-8",
+        )
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "check-links.py"), str(repo)], capture_output=True, text=True
+        )
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertNotIn("khong-co.md", r.stdout)
+        self.assertIn("không có.md", r.stdout)
+        self.assertIn("ra ngoài repo", r.stdout)
+        self.assertEqual(r.stdout.count("✗"), 2)
+
+    def test_installed_check_links_uses_project_root(self):
+        self.run_install()
+        (self.target / "doc.md").write_text("[hỏng](khong-co.md)\n", encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, str(self.target / ".xstored/scripts/check-links.py")], capture_output=True, text=True
+        )
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("doc.md:1", r.stdout)
+
     def test_installed_xs_validates_and_composes(self):
         self.run_install()
         xs = self.target / ".xstored" / "scripts" / "xs.py"

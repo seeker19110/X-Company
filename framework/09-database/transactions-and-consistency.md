@@ -90,7 +90,7 @@ updated: 2026-10-14
 | UNIQUE cho khoá idempotency | SQL catalog + test chèn trùng | `psql -f scripts/db-checks.sql` | CI | có UNIQUE |
 | Deadlock / serialization failure | metric `pg_stat_database.deadlocks`, đếm `40001` ở helper | cảnh báo | production | tỉ lệ < ngưỡng đã ghi |
 | Idle in transaction | `idle_in_transaction_session_timeout` + metric `pg_stat_activity` | cấu hình vai trò | production | ≈ 0 phiên idle in tx > n s |
-| Đối chiếu sổ cái | job theo lịch | `scripts/reconcile.py` | production hằng ngày | lệch = 0 hoặc cảnh báo |
+| Đối chiếu sổ cái | job theo lịch | `scripts/reconcile.py` (dự án tự viết) | production hằng ngày | lệch = 0 hoặc cảnh báo |
 | Test hàm/trigger ở CSDL | pgTAP 1.3.4 · PostgreSQL License | `pg_prove tests/db/*.sql` | CI | 100% pass |
 
 ## Nguồn

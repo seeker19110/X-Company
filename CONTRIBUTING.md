@@ -11,11 +11,11 @@
 2. Thêm/sửa mục checklist: giữ ID cũ, không tái sử dụng ID; mục bỏ → `MAY` + "Ngừng dùng". Mọi MUST có `→ Kiểm:`.
 3. Phiên bản/chuẩn/luật: nguồn chính thống + ngày xác minh; không xác minh được → "(chưa xác minh)".
 4. Cập nhật README chỉ mục của mảng và `CHANGELOG.md` (mục *Unreleased*).
-5. Mở PR theo mẫu; CI (`quality`, `gitleaks`, `protection-guard`) xanh mới merge.
+5. Mở PR theo mẫu; CI (`quality`, `gitleaks`, `protection-guard`, `dep-audit`) xanh mới merge.
 
 ## Bảo vệ nhánh `main`
 `.github/rulesets/main.json` là ruleset **import được** (Settings → Rules → Rulesets → New ruleset → Import a ruleset): bắt buộc PR, chỉ squash,
-required check `quality` · `protection-guard` · `gitleaks`, cấm xoá/force-push, không ai bypass. Job `protection-guard` kiểm (1) mọi required check là job có thật
+required check `quality` · `protection-guard` · `gitleaks` · `dep-audit`, cấm xoá/force-push, không ai bypass. Job `protection-guard` kiểm (1) mọi required check là job có thật
 (đổi tên job mà quên sửa ruleset = khoá `main` vĩnh viễn trong khi CI vẫn xanh) — **đỏ** nếu lệch; (2) ruleset có đang hiệu lực không — hiện chỉ
 **cảnh báo** để repo mới chưa import vẫn merge được; muốn ép buộc, đổi `::warning` thành `exit 1` trong `ci.yml`.
 

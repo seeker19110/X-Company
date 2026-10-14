@@ -48,7 +48,7 @@ Xác minh ngày **2026-10-13** — **xác minh lại trước khi dùng**. Chọ
 | Ký/attest | Sigstore `cosign` v3.1.3; GitHub artifact attestation; npm provenance; PyPI Trusted Publishers | — | GPG khi người dùng yêu cầu |
 | Test | Golden/snapshot test cho output + exit code (`cargo insta`, Go `testscript`, Vitest snapshot, pytest `syrupy` — chưa xác minh phiên bản trừ Vitest 5.0.4) | — | Property test (`fast-check`, `proptest`, `hypothesis` — chưa xác minh) cho parser |
 | Benchmark | `hyperfine` (chưa xác minh phiên bản) đo thời gian khởi động | — | `perf`/`criterion` |
-| Lint | Go: `golangci-lint` · Rust: `clippy` + `cargo deny` 0.20.2 · TS: Biome 2.5.15 · Python: `ruff` + `pyright` (chưa xác minh phiên bản) | — | — |
+| Lint | Go: `golangci-lint` · Rust: `clippy` + `cargo deny` 0.20.2 · TS: Biome 2.5.15 · Python: `ruff` + `pyright` (phiên bản đã xác minh ở [`../01-baseline/quality-gates.md`](../01-baseline/quality-gates.md): ruff 0.17.0, pyright 1.1.414, pre-commit 4.7.0) | — | — |
 | Audit dep | `govulncheck`, `cargo audit`, `pnpm audit`, `pip-audit` 2.10.1 | — | OSV-Scanner |
 
 ## Checklist

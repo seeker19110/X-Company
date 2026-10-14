@@ -36,7 +36,7 @@ Thao tác không đảo ngược (xoá dữ liệu/nhánh, drop/alter phá vỡ)
 | Ghép blueprint mẫu | `python3 scripts/xs.py compose --profile web-app --industry ecommerce --scale M` |
 | Thống kê | `python3 scripts/xs.py stats` |
 
-Cổng commit: `/gate` đạt hết (validate · test · link · shell syntax) + tự review diff + conventional commit. Cổng merge: thêm CI xanh, review, cập nhật `CHANGELOG.md` khi đổi mục/ID/công cụ.
+Cổng commit: `/gate` = `scripts/dev-task.sh gate` = build · typecheck · lint · test (lint nên gồm kiểm format; ở repo này `lint` trong `xs.yaml` gồm validate · link · progress-check · ci-check · ruff · shell syntax) + tự review diff + conventional commit. Cổng merge: thêm CI xanh, review, cập nhật `CHANGELOG.md` khi đổi mục/ID/công cụ.
 
 ## 6. Sửa khung thế nào
 - Thêm/sửa mục: giữ ID cũ; mục bỏ → `MAY` + "Ngừng dùng"; cập nhật `updated`; ghi `CHANGELOG.md`.

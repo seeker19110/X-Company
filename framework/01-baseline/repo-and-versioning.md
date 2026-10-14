@@ -71,7 +71,7 @@ updated: 2026-10-14
 | Định dạng commit message | commitlint 21.2.3 (MIT) + `@commitlint/config-conventional`; hoặc regex shell | `npx commitlint --from=origin/main --to=HEAD` | hook `commit-msg` (husky/lefthook/pre-commit) **và** CI | 0 lỗi |
 | Bí mật trong toàn lịch sử | gitleaks v8.30.1 (MIT) | `gitleaks git --log-opts=--all --redact` | CI hằng ngày + trên PR (`fetch-depth: 0`) | 0 phát hiện |
 | Sinh phiên bản + CHANGELOG | release-please v17.11.2 (Apache-2.0) · git-cliff v2.14.2 (MIT/Apache-2.0) · changesets (MIT) | `release-please release-pr` / `git cliff --unreleased` | CI trên nhánh mặc định | PR phát hành tự mở; không tag tay |
-| Nhánh mặc định được bảo vệ | GitHub rulesets (as code) | `gh api repos/{o}/{r}/rulesets` so với `.github/rulesets/main.json` | CI job `protection-guard` | lệch = đỏ |
+| Nhánh mặc định được bảo vệ | GitHub rulesets (as code) | `gh api repos/{o}/{r}/rulesets` so với `.github/rulesets/main.json` | CI job `protection-guard` | required check không khớp job thật = đỏ; ruleset chưa hiệu lực trên nhánh mặc định = cảnh báo (đổi `::warning` thành `exit 1` để ép) |
 | Line ending / file lớn | git + script | `git ls-files --eol`; hook chặn file > 1 MB không LFS | pre-commit | 0 vi phạm |
 | Tag khớp manifest | script repo | so `git describe --tags --abbrev=0` với version trong manifest | CI job release | bằng nhau |
 

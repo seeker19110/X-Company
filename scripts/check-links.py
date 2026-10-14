@@ -2,7 +2,8 @@
 """check-links.py — kiểm liên kết Markdown nội bộ (tương đối) trên TOÀN repo, không chỉ framework/.
 
 - Mọi `[text](đường/dẫn.md#anchor)` tương đối phải trỏ tới file/thư mục có thật.
-- Bỏ qua URL (http:, mailto:…), anchor thuần (#…), nội dung trong code fence.
+- Bỏ qua URL (http:, mailto:…), anchor thuần (#…), nội dung trong code fence (``` hoặc ~~~).
+- Link trỏ ra ngoài gốc repo là lỗi (file có trên máy người viết nhưng không có trong repo).
 - Bỏ qua thư mục: .git, node_modules, .venv, .autopilot, __pycache__.
 Thoát 1 nếu có link hỏng. Chỉ dùng thư viện chuẩn.
 """
@@ -14,8 +15,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if ROOT.name == ".xstored":  # cài ở dự án đích (.xstored/scripts/) → gốc là dự án, không phải .xstored/
+    ROOT = ROOT.parent
 SKIP_DIRS = {".git", "node_modules", ".venv", ".autopilot", "__pycache__", ".xstored"}
-LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+LINK_RE = re.compile(r"\[[^\]]*\]\((<[^>]+>|[^)\s]+)(?:\s+\"[^\"]*\")?\)")
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
 def iter_md(root: Path):
@@ -28,14 +32,16 @@ def iter_md(root: Path):
 def check(root: Path) -> list[str]:
     errors: list[str] = []
     for p in iter_md(root):
-        in_fence = False
+        fence: str | None = None
         for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), start=1):
-            if line.lstrip().startswith("```"):
-                in_fence = not in_fence
+            m = FENCE_RE.match(line)
+            if m and (fence is None or m.group(1) == fence):
+                fence = None if fence else m.group(1)
                 continue
-            if in_fence:
+            if fence:
                 continue
             for target in LINK_RE.findall(line):
+                target = target[1:-1] if target.startswith("<") else target
                 if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
                     continue
                 path_part = target.split("#", 1)[0]
@@ -45,6 +51,8 @@ def check(root: Path) -> list[str]:
                 resolved = (root / path_part.lstrip("/")) if path_part.startswith("/") else (p.parent / path_part)
                 if not resolved.exists():
                     errors.append(f"{p.relative_to(root)}:{n}: liên kết hỏng -> {target}")
+                elif not resolved.resolve().is_relative_to(root.resolve()):
+                    errors.append(f"{p.relative_to(root)}:{n}: liên kết trỏ ra ngoài repo -> {target}")
     return errors
 
 

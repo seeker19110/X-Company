@@ -20,8 +20,8 @@ updated: 2026-10-14
    tách khỏi feature/fix.
 3. **Lịch sử là tài liệu.** Mỗi commit trên `main` là một đơn vị có nghĩa theo Conventional Commits → sinh
    CHANGELOG/phiên bản tự động; không "wip", "fix fix".
-4. **Bảo vệ nhánh là cấu hình kiểm được.** Ruleset nằm trong repo, import vào GitHub, và CI xác nhận rule đang
-   có hiệu lực; required check trỏ tới job có thật.
+4. **Bảo vệ nhánh là cấu hình kiểm được.** Ruleset nằm trong repo, import vào GitHub; CI đỏ khi required check
+   không khớp job thật và cảnh báo khi ruleset chưa hiệu lực trên nhánh mặc định.
 5. **Hook local là tiện ích, CI là cổng.** `--no-verify` tồn tại; mọi kiểm ở hook phải chạy lại trong CI.
 
 ## Quyết định
@@ -39,8 +39,8 @@ updated: 2026-10-14
 ## Checklist
 
 - [ ] `WF-GIT-001` **MUST** Không push thẳng nhánh chính; mọi thay đổi qua PR (kể cả một người, kể cả bot/agent). → Kiểm: ruleset nhánh mặc định có rule `pull_request`; `git log --merges`/`--first-parent main` không có commit ngoài squash PR. · Nguồn: GitHub Rulesets
-- [ ] `WF-GIT-002` **MUST** Ruleset nhánh chính lưu dưới dạng code (`.github/rulesets/main.json`), gồm: cấm xoá, cấm force-push (`non_fast_forward`), `pull_request` (resolve thread, chỉ squash — hoặc rebase theo ngoại lệ có ADR của `WF-GIT-005`), `required_status_checks` trỏ tới job `quality`; `bypass_actors: []`. → Kiểm: file tồn tại; `GET /repos/{o}/{r}/rules/branches/main` chứa đủ 4 loại rule. · Nguồn: GitHub REST Rules, khung cũ `rulesets/main.json`
-- [ ] `WF-GIT-003` **MUST** Job CI `protection-guard` đọc rule đang áp qua API và đỏ khi thiếu rule hoặc khi required check trong ruleset không khớp tên job thật trong `.github/workflows/` (chống khoá nhánh do đổi tên job). → Kiểm: job tồn tại; test đổi tên job `quality` trong nhánh thử → guard đỏ. · Nguồn: khung cũ `ci.yml` job `protection-guard` (commit `1b80fe4`)
+- [ ] `WF-GIT-002` **MUST** Ruleset nhánh chính lưu dưới dạng code (`.github/rulesets/main.json`), gồm: cấm xoá, cấm force-push (`non_fast_forward`), `pull_request` (resolve thread, chỉ squash — hoặc rebase theo ngoại lệ có ADR của `WF-GIT-005`), `required_status_checks` trỏ tới các job có thật `quality`, `protection-guard`, `gitleaks`, `dep-audit`; `bypass_actors: []`. → Kiểm: file tồn tại; `GET /repos/{o}/{r}/rules/branches/main` chứa đủ 4 loại rule. · Nguồn: GitHub REST Rules, khung cũ `rulesets/main.json`
+- [ ] `WF-GIT-003` **MUST** Job CI `protection-guard` **đỏ** khi required check trong ruleset không khớp tên job thật trong `.github/workflows/` (chống khoá nhánh do đổi tên job) và **cảnh báo** (không đỏ) khi ruleset chưa hiệu lực trên nhánh mặc định; dự án đã import ruleset đổi `::warning` thành `exit 1` để ép. → Kiểm: job tồn tại; test đổi tên job `quality` trong nhánh thử → guard đỏ; nhánh mặc định thiếu rule → log có `::warning`. · Nguồn: khung cũ `ci.yml` job `protection-guard` (commit `1b80fe4`)
 - [ ] `WF-GIT-004` **MUST@L** Commit message và tiêu đề PR theo Conventional Commits 1.0.0 (`type(scope)!: mô tả`), subject ≤ 72 ký tự, `BREAKING CHANGE:` footer hoặc `!` cho thay đổi phá vỡ; kiểm bằng commitlint ở hook **và** CI (PR title + mọi commit). → Kiểm: `commitlint --from origin/main` trong CI exit 0; PR title lint. · Nguồn: Conventional Commits 1.0.0; catalog 23 §2.5 (TRAPS 58: squash lấy title)
 - [ ] `WF-GIT-005` **MUST@L** Squash merge là phương thức mặc định và duy nhất bật ở repo (tiêu đề squash = tiêu đề PR conventional); tắt merge commit; bật tự xoá nhánh sau merge. Ngoại lệ duy nhất: **rebase-merge** cho thư viện/monorepo cần giữ từng commit — phải có ADR, mọi commit conventional, vẫn tắt merge commit. → Kiểm: ruleset `allowed_merge_methods: ["squash"]` (hoặc `["rebase"]`/`["squash", "rebase"]` khi có ADR trong `docs/adr/`); settings repo "Allow merge commits" tắt; `git log --merges main` rỗng. · Nguồn: release-please README (khuyến nghị squash); [`../05-architecture/decision-records.md`](../05-architecture/decision-records.md)
 - [ ] `WF-GIT-006` **MUST@L** PR nhỏ: mục tiêu ≤ 400 dòng thay đổi (không tính lockfile/snapshot/sinh mã); vượt → tách hoặc ghi lý do trong PR và reviewer chấp nhận rõ ràng. → Kiểm: job CI tính `git diff --shortstat` loại trừ file sinh → cảnh báo > 400, đỏ > 1000 nếu không có nhãn `large-change-approved`. · Nguồn: SmartBear/Cisco (200–400 LOC), Google eng-practices Small CLs
@@ -53,7 +53,7 @@ updated: 2026-10-14
 - [ ] `WF-GIT-013` **SHOULD** Tên nhánh `type/mô-tả-ngắn` (`feat/`, `fix/`, `chore/`, `docs/`), có mã issue/spec khi có; ruleset `branch_name_pattern` nếu cần. → Kiểm: regex trong ruleset hoặc hook.
 - [ ] `WF-GIT-014` **SHOULD** PR template có: mục tiêu, link spec/issue, cách xác minh (lệnh + kết quả), rủi ro/rollback, checklist DoD; PR `feat` link spec đã duyệt ([`spec-driven-development.md`](spec-driven-development.md)). → Kiểm: `.github/pull_request_template.md` tồn tại; `pr-policy` job kiểm mục bắt buộc.
 - [ ] `WF-GIT-015` **SHOULD** Lịch sử tuyến tính: `required_linear_history` bật; `git pull --rebase` mặc định cho nhánh cá nhân. → Kiểm: ruleset có rule; `git config pull.rebase true` trong hướng dẫn onboarding.
-- [ ] `WF-GIT-016` **SHOULD** Monorepo: CODEOWNERS theo thư mục; CI chỉ chạy phần bị ảnh hưởng (affected) nhưng cổng `quality` vẫn là một required check gom. → Kiểm: workflow dùng path filter/affected; required check duy nhất.
+- [ ] `WF-GIT-016` **SHOULD** Monorepo: CODEOWNERS theo thư mục; CI chỉ chạy phần bị ảnh hưởng (affected) nhưng cổng `quality` vẫn là một required check gom. → Kiểm: workflow dùng path filter/affected; không thêm required check rời cho job con.
 - [ ] `WF-GIT-017` **SHOULD** Dependabot/Renovate gom nhóm (`groups`/`multi-ecosystem-groups`), lịch tuần, `open-pull-requests-limit` phù hợp WIP cap ([`team-and-wip.md`](team-and-wip.md)); bản vá bảo mật tách riêng. → Kiểm: `dependabot.yml` có `groups` và limit; xem [`../01-baseline/dependencies.md`](../01-baseline/dependencies.md). · Nguồn: Dependabot options reference
 - [ ] `WF-GIT-018` **MAY** Merge queue khi > ~10 PR/ngày vào một nhánh; CI phải lắng nghe `merge_group`. → Kiểm: workflow có trigger `merge_group`; ruleset `merge_queue`. · Nguồn: GitHub Merge queue
 - [ ] `WF-GIT-019` **MAY** Stacked PR (chuỗi PR nhỏ phụ thuộc) cho thay đổi lớn; mỗi PR vẫn qua cổng và merge FIFO. → Kiểm: PR base trỏ nhánh trước; sau merge rebase lên `main`.
@@ -78,7 +78,7 @@ updated: 2026-10-14
 |---|---|---|---|
 | commitlint (MIT) @commitlint/cli 21.2.3 + config-conventional | `commitlint --edit` (hook commit-msg) · `commitlint --from origin/main --to HEAD` (CI) · lint PR title | hook + CI | 0 lỗi |
 | Hook manager | husky 9.1.7 (MIT) / lefthook 2.2.1 (MIT, đa ngôn ngữ) / pre-commit 4.7.0 (MIT, Python) + lint-staged 17.6.0 | local | Hook < 10 s |
-| protection-guard | `curl $API/repos/$R/rules/branches/$BRANCH` + `jq` so với `.github/rulesets/main.json`; so tên job từ `.github/workflows/*.yml` | CI (required) | Đỏ khi thiếu rule/sai tên |
+| protection-guard | so `required_status_checks` trong `.github/rulesets/main.json` với tên job từ `.github/workflows/*.yml`; `curl $API/repos/$R/rules/branches/$BRANCH` kiểm rule đang áp | CI (required) | Đỏ khi required check không khớp job; cảnh báo khi thiếu rule (đổi `::warning` thành `exit 1` để ép) |
 | PR size | `git diff --shortstat origin/main...HEAD -- . ':!*.lock' ':!**/__snapshots__/**'` | CI | > 400 cảnh báo, > 1000 đỏ trừ nhãn duyệt |
 | pr-policy | script kiểm title conventional, mục bắt buộc trong body, `feat` có link spec, WIP cap | CI | Đỏ khi thiếu |
 | Secret scan | gitleaks v8.30.1 (MIT) `gitleaks git --log-opts=--all` | hook (`protect`) + CI | 0 |

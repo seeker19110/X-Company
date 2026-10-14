@@ -55,7 +55,7 @@ updated: 2026-10-14
 
 - [ ] `LOOP-CI-001` **MUST** Không skip/disable/xoá test, không hạ ngưỡng coverage, không tắt rule lint/type để cổng xanh. → Kiểm: diff không chứa `skip(`, `xfail`, `.only(`, `eslint-disable` mới, thay đổi `coverageThreshold`/`strict`; hook `pre-edit-guard.sh` hỏi khi chạm file cấu hình cổng. · Nguồn: `AGENTS.md` §3
 - [ ] `LOOP-CI-002` **MUST@L** Re-run CI tối đa 1 lần cho mỗi lần đỏ nghi do hạ tầng; đỏ lần hai được xử lý như lỗi thật. → Kiểm: log autopilot/PROGRESS ghi số lần re-run mỗi run ID ≤ 1.
-- [ ] `LOOP-CI-003` **MUST** Cùng một chữ ký lỗi không sửa quá 3 lần; lần 3 máy đặt `blocked` để người xem. → Kiểm: `.autopilot/state.json` `max_same_failure: 3`; `loop status` = `blocked` sau 3 `loop record` cùng chữ ký. · Nguồn: [`loop-design.md`](loop-design.md)
+- [ ] `LOOP-CI-003` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`LOOP-DESIGN-005`](loop-design.md) (cùng chữ ký lỗi lặp 3 lần → `blocked`).
 - [ ] `LOOP-CI-004` **MUST** Không force-push, không rebase/rewrite history nhánh người khác, không empty commit để kích CI. → Kiểm: `.claude/settings.json` deny `git push --force*`; `pre-bash-guard.sh` chặn; `git log` không có commit rỗng (`git log --format=%H --diff-filter=A`… hoặc `git show --stat` rỗng). · Nguồn: [`../10-workflow/git-and-branching.md`](../10-workflow/git-and-branching.md)
 - [ ] `LOOP-CI-005` **MUST@L** Trước mỗi lần sửa, agent trích đúng dòng lỗi từ log CI (assertion/stack trace) vào PROGRESS hoặc commit message; không sửa theo tên job. → Kiểm: commit `fix:` dẫn dòng lỗi hoặc link job log.
 - [ ] `LOOP-CI-006` **MUST@L** Secret scan hoặc SAST đỏ → dừng và hỏi người; không thêm allowlist/ignore để qua. → Kiểm: `loop block --reason` được gọi; diff không sửa file cấu hình scanner. · Nguồn: [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
@@ -91,7 +91,7 @@ updated: 2026-10-14
 |---|---|---|---|
 | Chặn nới cổng | `pre-edit-guard.sh` (ask khi sửa eslint/tsconfig/coverage/workflows/migration); grep diff `skip(|xfail|\.only\(|eslint-disable` | PreToolUse Edit/Write; job CI | 0 vi phạm không giải thích |
 | Chặn lệnh phá huỷ | `pre-bash-guard.sh` deny `push --force`, `reset --hard`, `clean`; `settings.json` deny | PreToolUse Bash | Deny |
-| Trần sửa cùng lỗi | `python3 scripts/xs.py loop status --json` → `blocked` | Stop hook `stop-guard.sh` | `same_failure_count` ≥ 3 |
+| Trần sửa cùng lỗi | `xs.py loop status --json` → `blocked` | Stop hook `stop-guard.sh` | `same_failure_count` ≥ 3 |
 | Trần chi phí headless | `claude -p … --max-turns N --max-budget-usd X --output-format json` | Workflow | `total_cost_usd` ≤ X |
 | Cổng commit | `scripts/dev-task.sh gate` (đọc `xs.yaml`) | Hook trước `git commit` | Exit 0 |
 | Pin action | Linter workflow (vd `zizmor`/`actionlint`) | CI | 0 action chưa pin |

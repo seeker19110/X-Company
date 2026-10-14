@@ -14,7 +14,7 @@ updated: 2026-10-14
 
 ## Nguyên tắc
 
-1. **Trạng thái sống trên đĩa, không trong context** (stored 03 §6): `PROGRESS.md` ≤ 8 KB, 4 mục; mọi quyết định,
+1. **Trạng thái sống trên đĩa, không trong context** (stored 03 §6): `PROGRESS.md` (luật định dạng ở [`LOOP-HARNESS-004`](harness-files.md)); mọi quyết định,
    SHA, bước kế tiếp ghi file; context chỉ là bộ nhớ làm việc.
 2. **Think-in-code**: thay vì đọc log/JSON dài vào context, viết script lọc (grep/jq/python) rồi đọc 20–40 dòng
    kết quả; `xs.py loop record` chỉ giữ `output_tail` 40 dòng vì lý do này.
@@ -59,7 +59,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 
 ## Checklist
 
-- [ ] `LOOP-CTX-001` **MUST** `PROGRESS.md` ≤ 8 KB, đúng 4 mục (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên); SessionStart chỉ nạp 4 mục này. → Kiểm: `wc -c PROGRESS.md` ≤ 8192; `session-start.sh` cắt 8 KB; grep 4 tiêu đề mục. · Nguồn: stored 03 §6; `.claude/hooks/session-start.sh`
+- [ ] `LOOP-CTX-001` **MUST** SessionStart chỉ nạp 4 mục của `PROGRESS.md` (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên) để phiên sau tiếp tục; định dạng và độ tươi theo [`LOOP-HARNESS-004`](harness-files.md)/[`LOOP-HARNESS-005`](harness-files.md). → Kiểm: chạy `session-start.sh` với PROGRESS mẫu chỉ in 4 mục đó (cắt ở 8 KB). · Nguồn: stored 03 §6; `.claude/hooks/session-start.sh`
 - [ ] `LOOP-CTX-002` **MUST** Mỗi lần chạy headless hoặc `loop init` khai trần: `--max-iterations`/`--hours` và (headless) `--max-turns` + `--max-budget-usd`. → Kiểm: `.autopilot/state.json` có `max_iterations`, `deadline`; JSON headless có `total_cost_usd`. · Nguồn: [`loop-design.md`](loop-design.md)
 - [ ] `LOOP-CTX-003` **MUST** Đến ≥ 80% trần vòng/giờ hoặc context lớn, agent chuyển sang bàn giao: ghi chỗ dở + bước kế tiếp + SHA vào PROGRESS, commit + push, không mở task mới. → Kiểm: PROGRESS mục "Bàn giao phiên" có SHA là tổ tiên HEAD; `loop status --json` `iterations/max_iterations` ≥ 0.8 không kèm task mới tick. · Nguồn: stored 21 §10
 - [ ] `LOOP-CTX-004` **MUST@L** Không `cat` file > 1 MB hoặc đổ output lệnh > 40 dòng vào context; lọc bằng script rồi đọc phần cần. → Kiểm: `.claude/settings.json`/hook chặn `cat` file lớn hoặc quy ước trong `AGENTS.md`; `xs.py loop record` giữ `output_tail` 40 dòng. · Nguồn: stored 03 §8b
@@ -93,9 +93,9 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 
 | Việc | Công cụ → lệnh | Đặt ở đâu | Ngưỡng |
 |---|---|---|---|
-| Kích thước PROGRESS | `wc -c PROGRESS.md` | Cổng commit / CI | ≤ 8192 byte |
+| Định dạng PROGRESS | `xs.py progress-check` (luật ở [`LOOP-HARNESS-004`](harness-files.md)) | Cổng commit / CI | exit 0 |
 | Kích thước AGENTS.md | `wc -l AGENTS.md` | Cổng commit | ≤ 200 dòng |
-| Trần vòng/giờ | `python3 scripts/xs.py loop status --json` | Stop hook | `budget` khi `iterations ≥ max_iterations` hoặc quá `deadline` |
+| Trần vòng/giờ | `xs.py loop status --json` | Stop hook | `budget` khi `iterations ≥ max_iterations` hoặc quá `deadline` |
 | Trần chi phí headless | `claude -p … --max-turns N --max-budget-usd X --output-format json` | Workflow CI | `total_cost_usd` ≤ X |
 | Output lệnh trong bằng chứng | `xs.py loop record` (giữ 40 dòng cuối) | Mọi Gate | `output_tail` ≤ 40 dòng |
 | Checkpoint trước nén | PreCompact hook ghi PROGRESS | `.claude/settings.json` | Hook exit 0 |

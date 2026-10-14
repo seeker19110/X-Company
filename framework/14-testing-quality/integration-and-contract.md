@@ -61,7 +61,7 @@ updated: 2026-10-14
 - **Cassette chứa token thật** commit lên repo. Cách tránh: filter header trước ghi; gitleaks trên fixture.
 - **Pact cho mọi thứ** → chi phí broker, provider verify chậm khi chỉ một đội sở hữu cả hai đầu. Cách tránh: bảng Quyết định.
 - **Test authz chỉ ở unit** (gọi hàm `can()`), bỏ middleware/route. Cách tránh: QA-INT-006 qua HTTP thật.
-- **Cổng authz-gate `continue-on-error`** khi đã có endpoint PII. Cách tránh: fitness function cho chính CI (`ci_guard.py`, catalog 23 §3.3).
+- **Cổng authz-gate `continue-on-error`** khi đã có endpoint PII. Cách tránh: fitness function cho chính CI (`xs.py ci-check` + job `protection-guard`; xem Nguồn).
 - **Container mới cho mỗi test** → suite 40 phút. Cách tránh: QA-INT-013 reuse + cách ly dữ liệu.
 
 ## Cổng tự động
@@ -73,7 +73,7 @@ updated: 2026-10-14
 | oasdiff (Apache-2.0; phiên bản **chưa xác minh**) | `oasdiff breaking base.yaml head.yaml --fail-on ERR` | CI PR | 0 breaking |
 | Pact 17.1.4 / pact-python 3.4.1 (MIT) + Pact Broker | `pact-broker can-i-deploy --pacticipant <svc> --version $SHA --to-environment prod` | CI trước deploy | exit 0 |
 | `buf` (Apache-2.0; phiên bản **chưa xác minh**) | `buf breaking --against '.git#branch=main'` | CI PR | 0 breaking |
-| Script coverage theo operationId | `python3 scripts/check-api-test-coverage.py openapi.yaml junit.xml` | CI | 100% |
+| Script coverage theo operationId | `python3 scripts/check-api-test-coverage.py openapi.yaml junit.xml` (dự án tự viết) | CI | 100% |
 | `check_authz_tests` (tự viết theo mẫu qlkh) | mọi operationId chạm PII có test authz | CI | 0 thiếu |
 
 ## Nguồn

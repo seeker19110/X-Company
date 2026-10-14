@@ -123,6 +123,9 @@ Gói ngành thêm: **Khung pháp lý** (Việt Nam + quốc tế, số hiệu v�
 | Bảo mật AI (mối đe doạ) / guardrail sản phẩm | `12-security/ai-security.md` / `13-ai-engineering/guardrails-and-safety.md` | — |
 | Vòng lặp tự động khi PHÁT TRIỂN / hệ agentic là SẢN PHẨM | `11-autonomous-loop/` / `13-ai-engineering/agentic-systems.md` | — |
 | Tài liệu cho AI agent (AGENTS.md, SKILL.md) | `18-cross-cutting/docs-for-ai-agents.md` | — |
+| PROGRESS/PLAN/file harness | `11-autonomous-loop/harness-files.md` | 01-baseline: sàn `BASE-DOC-008` |
+| "4 con số" của vòng lặp; lỗi lặp 3 lần → BLOCKED | `11-autonomous-loop/loop-design.md` (`LOOP-DESIGN-001`, `LOOP-DESIGN-005`) | PLAN/skill/README: trỏ |
+| Bộ khoá `xs.yaml` (dev-task chạy khoá nào) | `templates/xs.yaml` + `LOOP-HARNESS-008` | 01 quality-gates, 18 docs-for-ai-agents: trỏ |
 | ADR | `05-architecture/decision-records.md` | — |
 | Spec | `17-product-project/specification.md` | 10 spec-driven: quy trình |
 | Sự cố | `15-operations/incident-response.md` | 12 logging-audit: phần bảo mật |

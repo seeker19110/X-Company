@@ -6,10 +6,10 @@ argument-hint: "[compose|status|audit] [--profile p --industry i --scale M]"
 
 # /blueprint — checklist có ID cho dự án
 
-`<XS>` = `python3 .xstored/scripts/xs.py` (dự án đích) hoặc `python3 scripts/xs.py` (repo khung).
+`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
 
 ## compose (G1)
-1. `<XS> list profiles` / `<XS> list industries` → chọn **một** hồ sơ chính, 0..n ngành, quy mô theo bảng `00-method/composition.md`.
+1. `<XS> list profiles` / `<XS> list industries` → chọn **một** hồ sơ chính, 0..n ngành, quy mô theo bảng `<FW>/00-method/composition.md`.
 2. `<XS> compose --profile <p> [--industry <i>]... --scale <S|M|L> [--add <module-glob>]... --out BLUEPRINT.md`
    - `--add` khi dự án có nhu cầu ngoài hồ sơ (vd web app có tính năng AI → `--add "13-ai-engineering/*"`).
    - `--include-may` nếu muốn thấy cả mục MAY.

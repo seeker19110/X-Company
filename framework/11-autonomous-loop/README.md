@@ -1,7 +1,7 @@
 ---
 title: Vòng lặp tự động (autopilot)
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 11 — Vòng lặp tự động (autopilot)
@@ -37,7 +37,7 @@ updated: 2026-10-13
 6. **G4 Design** → sơ đồ, schema, `API-CONTRACT.md`, `THREAT-MODEL.md` (≥ M).
 7. **Viết `docs/autopilot/PLAN.md`** theo [`../templates/PLAN.md`](../templates/PLAN.md): mỗi task một dòng
    `- [ ] \`T-NNN\` <việc> — Gate: \`<lệnh>\`` (regex thật: `TASK_RE`/`GATE_RE` trong xs.py), ≤ 1 ngày/task; 4 con số
-   (max vòng, giờ, chi phí, hạn); danh sách điểm dừng dự kiến.
+   theo [`LOOP-DESIGN-001`](loop-design.md) (trần vòng · ngân sách tiền/token · timeout mỗi lệnh kiểm · hạn chót); danh sách điểm dừng dự kiến.
 8. **MỘT cổng duyệt**: tóm tắt ≤ 30 dòng (MUST/SHOULD của blueprint, stack + phiên bản, task, rủi ro, điểm dừng) → chờ người. Sau duyệt không hỏi lại trừ điểm dừng bắt buộc.
 
 **Pha 2 — vòng lặp có bằng chứng**
@@ -57,10 +57,10 @@ updated: 2026-10-13
     hành động đối ngoại, mâu thuẫn spec): `<XS> loop block --reason "..."` rồi dừng; hook `pre-bash-guard.sh`/
     `pre-edit-guard.sh` deny/ask là lưới thứ hai. Người đọc lý do, xử lý, rồi `loop resume --reason "..."` để tiếp (giữ số vòng và bằng chứng; `loop init` lại chỉ khi đổi PLAN/ngân sách).
 14. **Gần hết ngân sách** (≥ 80% vòng/giờ hoặc context lớn): ghi mục "Bàn giao phiên" vào PROGRESS (chỗ dở, bước kế tiếp, SHA), commit + push, để Stop hook kết thúc (`/handover`).
-15. **Kết thúc**: `done` = mọi task có bằng chứng xanh và `<XS> blueprint-status BLUEPRINT.md --strict` không còn MUST mở
+15. **Kết thúc**: `done` = mọi task có bằng chứng xanh và `<XS> blueprint-status BLUEPRINT.md --strict` (cổng phát hành G7) không còn MUST mở
     → `GO-NO-GO.md`, PR cuối, báo cáo ≤ 20 dòng (đã làm · bằng chứng · còn treo · đề xuất). `blocked`/`budget` → báo lý do + bước kế tiếp, không khai "xong".
 
-## Lệnh thật của vòng lặp (`scripts/xs.py`)
+## Lệnh thật (`scripts/xs.py`)
 
 | Lệnh | Làm gì |
 |---|---|
@@ -68,8 +68,13 @@ updated: 2026-10-13
 | `loop status [--json]` | Verdict: `inactive` · `continue` · `verify` · `blocked` · `budget` · `done` |
 | `loop record --task T-NNN -- <lệnh>` | Chạy lệnh (timeout `XS_RECORD_TIMEOUT`, mặc định 1800 s), ghi evidence, cập nhật chữ ký lỗi |
 | `loop block --reason "..."` | Đặt `blocked=true` (điểm dừng bắt buộc) |
+| `loop resume [--reason "..."]` | Sau khi người xử lý lý do `blocked`: bỏ chặn, giữ số vòng và bằng chứng, đặt lại đếm lỗi lặp (`loop init` lại chỉ khi đổi PLAN/ngân sách) |
 | `loop stop` | Tắt vòng (`active=false`) |
 | `loop hook-stop` | Dùng bởi Stop hook; đọc stdin JSON, quyết block/cho dừng; fail-open khi lỗi |
+| `progress-check [file]` | Kiểm `PROGRESS.md`: ≤ 8192 byte, 4 mục, SHA ở Bàn giao là tổ tiên HEAD và của nhánh chính (luật: [`LOOP-HARNESS-004`/`005`](harness-files.md)) |
+| `ci-check [dir]` | Fitness function cho workflow GitHub Actions (`permissions`, ghim SHA, `timeout-minutes`, không `continue-on-error`) |
+| `audit plan [--blueprint B] [--status S] [--json]` | Lập kế hoạch audit 13 nhóm từ blueprint + `docs/ops/AUDIT-STATUS.md` (skill `/audit`) |
+| `audit check [--strict] <AUDIT-STATUS.md>` | Kiểm sổ audit; `--strict` = 0 🔴/🟠 mở, mọi nhóm đã quét/N/A |
 
 Trần ngoài xs.py: Claude Code tự ngừng block Stop sau 8 lần liên tiếp không có tool call
 (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, không đặt `0`); headless thêm `--max-turns`, `--max-budget-usd`.

@@ -66,7 +66,7 @@ Mặc định: **tháp** (nhiều unit, vừa integration, ít E2E) cho backend/
 - **Kem ốc quế (ice-cream cone):** nhiều E2E chậm, ít unit. Chậm, flaky, không chỉ ra lỗi ở đâu. Cách tránh: bảng Quyết định; E2E chỉ luồng chính.
 - **Test chi tiết triển khai** (assert hàm private, cấu trúc state nội bộ) → refactor là đỏ dù hành vi đúng. Cách tránh: test qua giao diện công khai; `getByRole` thay selector CSS.
 - **Mock tất cả** → test xanh, production đỏ (DB thật khác mock). Cách tránh: integration với testcontainers ([`integration-and-contract.md`](integration-and-contract.md)).
-- **CI "advisory"**: job test không required, merge trước khi xong (baseline xboss: lead time 4,4 phút = thời gian CI). Cách tránh: QA-STRAT-002; `ci_guard` kiểm chính CI (catalog 23 §3.3).
+- **CI "advisory"**: job test không required, merge trước khi xong (baseline xboss: lead time 4,4 phút = thời gian CI). Cách tránh: QA-STRAT-002; `xs.py ci-check` + job `protection-guard` kiểm chính CI (ý gốc: catalog 23 §3.3).
 - **Làm cổng xanh bằng nới cấu hình**: skip test, hạ ngưỡng, tăng retry. Cách tránh: hook hỏi khi chạm cấu hình cổng; review diff cấu hình riêng.
 - **Snapshot làm oracle**: cập nhật snapshot "cho xanh" mà không đọc. Cách tránh: snapshot chỉ cho output ổn định (CLI golden), review diff snapshot như code.
 - **Retry che bug thật** (race condition xanh ở lần 2). Cách tránh: retry ≤ 2 + trace on-first-retry + ticket.
