@@ -28,6 +28,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 
@@ -186,18 +187,17 @@ def framework_label(explicit: str | None) -> str:
     return version
 
 
-def install(target: Path, force_harness: bool, no_harness: bool, label: str | None, with_github: bool = False) -> int:
-    target = target.resolve()
+def target_error(target: Path) -> str | None:
+    """Lý do không cài được vào `target` (None nếu hợp lệ)."""
     if not target.is_dir():
-        log(f"✗ không phải thư mục: {target}")
-        return 2
+        return f"✗ không phải thư mục: {target}"
     if target == SRC:
-        log("✗ không cài khung vào chính repo khung")
-        return 2
-    xs_dir = target / ".xstored"
-    xs_dir.mkdir(exist_ok=True)
+        return "✗ không cài khung vào chính repo khung"
+    return None
 
-    # 1) framework + scripts: thay thế toàn bộ (bản chỉ đọc, ID ổn định nên blueprint cũ vẫn so được).
+
+def install_framework(xs_dir: Path, label: str | None) -> None:
+    """Bước 1: framework + research + scripts + VERSION + README vào .xstored/ — thay thế toàn bộ (bản chỉ đọc)."""
     copy_tree_replace(SRC / "framework", xs_dir / "framework")
     # research/ đi kèm vì module trong framework/ trỏ tới nguồn nghiên cứu bằng đường dẫn tương đối.
     if (SRC / "research").is_dir():
@@ -206,47 +206,66 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     for f in ("xs.py", "dev-task.sh", "check-links.py"):
         shutil.copy2(SRC / "scripts" / f, xs_dir / "scripts" / f)
     (xs_dir / "scripts" / "dev-task.sh").chmod(0o755)
-    (xs_dir / "VERSION").write_text(framework_label(label) + "\n", encoding="utf-8")
+    version = framework_label(label)
+    (xs_dir / "VERSION").write_text(version + "\n", encoding="utf-8")
     (xs_dir / "README.md").write_text(
         "# .xstored/\n\nBản sao khung X-stored (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
         "Ghép blueprint: `python3 .xstored/scripts/xs.py compose --profile <p> --scale <S|M|L> --out BLUEPRINT.md`.\n",
         encoding="utf-8",
     )
-    log(f"✓ .xstored/framework + scripts (phiên bản {framework_label(label)})")
+    log(f"✓ .xstored/framework + scripts (phiên bản {version})")
 
-    # 2) harness .claude/ — copy-if-absent
-    stats: dict[str, int] = {}
-    if not no_harness:
-        manifest = load_manifest(target)
-        new_manifest = {}
-        settings = target / ".claude" / "settings.json"
-        if settings.exists() and not force_harness:
-            r = merge_hooks(SRC / ".claude" / "settings.json", settings)
-            stats[r] = stats.get(r, 0) + 1
-            if r == "merged-hooks":
-                log("  .claude/settings.json: đã thêm khoá hooks của khung (giữ nguyên quyền và hook riêng)")
-        else:
-            r = copy_if_absent(SRC / ".claude" / "settings.json", settings, force_harness)
-            stats[r] = stats.get(r, 0) + 1
-        sources = [SRC / ".claude" / f for f in HARNESS_FILES if f != "settings.json"]
-        for d in HARNESS_DIRS:
-            sources += [
-                p for p in sorted((SRC / ".claude" / d).rglob("*")) if p.is_file() and "__pycache__" not in p.parts
-            ]
-        for src in sources:
-            rel = src.relative_to(SRC).as_posix()
-            r = copy_if_absent(src, target / rel, force_harness, installed_hash=manifest.get(rel))
-            stats[r] = stats.get(r, 0) + 1
-            if r in ("copied", "updated", "kept"):
-                new_manifest[rel] = sha256(src.read_bytes())
-            elif rel in manifest:
-                new_manifest[rel] = manifest[rel]
-        write_atomic(target / MANIFEST, json.dumps(new_manifest, indent=2, sort_keys=True) + "\n")
-        log("✓ .claude/: " + " · ".join(f"{k} {v}" for k, v in sorted(stats.items())))
-        if stats.get("updated-new"):
-            log("  ⚠ có file .xstored-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")
 
-    # 3) file gốc từ templates — copy-if-absent, bỏ frontmatter
+def install_settings(target: Path, force_harness: bool, stats: Counter[str]) -> None:
+    """settings.json của harness: dự án đã có (không --force-harness) thì gộp khoá hooks, chưa có thì copy."""
+    settings = target / ".claude" / "settings.json"
+    if settings.exists() and not force_harness:
+        r = merge_hooks(SRC / ".claude" / "settings.json", settings)
+        stats[r] += 1
+        if r == "merged-hooks":
+            log("  .claude/settings.json: đã thêm khoá hooks của khung (giữ nguyên quyền và hook riêng)")
+    else:
+        stats[copy_if_absent(SRC / ".claude" / "settings.json", settings, force_harness)] += 1
+
+
+def harness_sources() -> list[Path]:
+    """File harness của khung cần copy ngoài settings.json: HARNESS_FILES khác settings + mọi file trong HARNESS_DIRS."""
+    sources = [SRC / ".claude" / f for f in HARNESS_FILES if f != "settings.json"]
+    for d in HARNESS_DIRS:
+        sources += [p for p in sorted((SRC / ".claude" / d).rglob("*")) if p.is_file() and "__pycache__" not in p.parts]
+    return sources
+
+
+def copy_harness_files(
+    target: Path, force_harness: bool, manifest: dict[str, str], stats: Counter[str]
+) -> dict[str, str]:
+    """Copy-if-absent từng file harness; trả manifest mới (hash bản khung đã cài, giữ hash cũ nếu file người dùng đã sửa)."""
+    new_manifest: dict[str, str] = {}
+    for src in harness_sources():
+        rel = src.relative_to(SRC).as_posix()
+        r = copy_if_absent(src, target / rel, force_harness, installed_hash=manifest.get(rel))
+        stats[r] += 1
+        if r in ("copied", "updated", "kept"):
+            new_manifest[rel] = sha256(src.read_bytes())
+        elif rel in manifest:
+            new_manifest[rel] = manifest[rel]
+    return new_manifest
+
+
+def install_harness(target: Path, force_harness: bool) -> None:
+    """Bước 2: harness .claude/ — copy-if-absent, ghi manifest hash, báo thống kê."""
+    stats: Counter[str] = Counter()
+    manifest = load_manifest(target)
+    install_settings(target, force_harness, stats)
+    new_manifest = copy_harness_files(target, force_harness, manifest, stats)
+    write_atomic(target / MANIFEST, json.dumps(new_manifest, indent=2, sort_keys=True) + "\n")
+    log("✓ .claude/: " + " · ".join(f"{k} {v}" for k, v in sorted(stats.items())))
+    if stats.get("updated-new"):
+        log("  ⚠ có file .xstored-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")
+
+
+def install_root_templates(target: Path) -> None:
+    """Bước 3: file gốc từ framework/templates — copy-if-absent, bỏ frontmatter."""
     for name, tmpl in ROOT_TEMPLATES.items():
         tsrc = SRC / "framework" / "templates" / tmpl
         if not tsrc.exists():
@@ -254,30 +273,37 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
         r = copy_if_absent(tsrc, target / name, False, transform=template_body)
         log(f"  {name}: {r}")
 
-    # 3b) --with-github: ruleset mẫu + PR template + Dependabot (copy-if-absent)
-    if with_github:
-        for gh in GITHUB_FILES:
-            r = copy_if_absent(SRC / gh, target / gh, False)
-            log(f"  {gh}: {r}")
-        try:
-            rules = json.loads((SRC / ".github/rulesets/main.json").read_text(encoding="utf-8"))["rules"]
-            checks = [
-                c["context"]
-                for r in rules
-                if r["type"] == "required_status_checks"
-                for c in r["parameters"]["required_status_checks"]
-            ]
-        except (OSError, ValueError, KeyError):
-            checks = []
-        if (
-            checks
-        ):  # AUD-CI-003: workflow không được copy (phụ thuộc stack) → import ruleset trước khi có job sẽ khoá merge
-            log(
-                f"  ⚠ ruleset mẫu đòi required check: {', '.join(checks)} — tạo workflow có job ĐÚNG tên trước khi import, "
-                "hoặc sửa danh sách check trong .github/rulesets/main.json; nếu không, mọi PR sẽ treo chờ check"
-            )
 
-    # 4) .gitignore: thêm .autopilot/ nếu thiếu
+def ruleset_required_checks() -> list[str]:
+    """Tên các required status check trong ruleset mẫu (rỗng nếu không đọc/không có)."""
+    try:
+        rules = json.loads((SRC / ".github/rulesets/main.json").read_text(encoding="utf-8"))["rules"]
+        return [
+            c["context"]
+            for r in rules
+            if r["type"] == "required_status_checks"
+            for c in r["parameters"]["required_status_checks"]
+        ]
+    except (OSError, ValueError, KeyError):
+        return []
+
+
+def install_github(target: Path) -> None:
+    """Bước 3b (--with-github): ruleset mẫu + PR template + Dependabot (copy-if-absent), cảnh báo required check."""
+    for gh in GITHUB_FILES:
+        r = copy_if_absent(SRC / gh, target / gh, False)
+        log(f"  {gh}: {r}")
+    checks = ruleset_required_checks()
+    # AUD-CI-003: workflow không được copy (phụ thuộc stack) → import ruleset trước khi có job sẽ khoá merge
+    if checks:
+        log(
+            f"  ⚠ ruleset mẫu đòi required check: {', '.join(checks)} — tạo workflow có job ĐÚNG tên trước khi import, "
+            "hoặc sửa danh sách check trong .github/rulesets/main.json; nếu không, mọi PR sẽ treo chờ check"
+        )
+
+
+def ensure_gitignore(target: Path) -> None:
+    """Bước 4: .gitignore thêm `.autopilot/` nếu thiếu (tạo mới nếu chưa có file)."""
     gi = target / ".gitignore"
     line = ".autopilot/"
     if gi.exists():
@@ -288,6 +314,24 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     else:
         gi.write_text(f"# X-stored: trạng thái autopilot cục bộ\n{line}\n", encoding="utf-8")
         log("  .gitignore: tạo mới")
+
+
+def install(target: Path, force_harness: bool, no_harness: bool, label: str | None, with_github: bool = False) -> int:
+    target = target.resolve()
+    error = target_error(target)
+    if error:
+        log(error)
+        return 2
+    xs_dir = target / ".xstored"
+    xs_dir.mkdir(exist_ok=True)
+
+    install_framework(xs_dir, label)
+    if not no_harness:
+        install_harness(target, force_harness)
+    install_root_templates(target)
+    if with_github:
+        install_github(target)
+    ensure_gitignore(target)
 
     log(
         "Xong. Bước tiếp: đọc AGENTS.md, điền xs.yaml, rồi `python3 .xstored/scripts/xs.py list profiles` → compose BLUEPRINT.md."

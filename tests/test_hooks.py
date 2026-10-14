@@ -171,6 +171,13 @@ class GuardMatrixTest(unittest.TestCase):
             ],
         )
 
+    def test_guard_git_reset_clean_safe_forms(self):
+        # reset/clean chỉ bị chặn khi có --hard / -f: dạng an toàn (soft, mixed, dry-run) phải qua; --hard / -f vẫn deny.
+        self.check(
+            "", ["git reset", "git reset --soft HEAD~1", "git reset HEAD file.txt", "git clean -n", "git clean -d"]
+        )
+        self.check("deny", ["git reset --hard HEAD~1", "git clean -fd", "git clean -n -f"])
+
     def test_guard_rm(self):
         self.check(
             "deny",

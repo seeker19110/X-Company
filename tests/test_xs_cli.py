@@ -118,6 +118,26 @@ class CiCheckEdgeTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("job `a` thiếu `timeout-minutes`", errors[0])
 
+    def test_errors_ordered_permissions_then_lines_then_jobs(self):
+        text = (
+            "name: x\njobs:\n  a:\n    runs-on: u\n    steps:\n      - uses: a/b@v1\n"
+            "      - {uses: a/c@v1, continue-on-error: true, permissions: write-all}\n"
+            "      - continue-on-error: true\n  b:\n    timeout-minutes: 3\n"
+        )
+        coe = "`continue-on-error` trên job/bước — ngoại lệ ghi `# ci-check-allow: <lý do + hạn>`"
+        self.assertEqual(
+            xs.ci_check_text(text),
+            [
+                "thiếu `permissions:` cấp workflow (mặc định `contents: read`)",
+                "dòng 6: `a/b@v1` chưa ghim SHA 40 ký tự",
+                "dòng 7: `write-all` — khai quyền tối thiểu theo job",
+                f"dòng 7: {coe}",
+                "dòng 7: `a/c@v1` chưa ghim SHA 40 ký tự",
+                f"dòng 8: {coe}",
+                "dòng 3: job `a` thiếu `timeout-minutes`",
+            ],
+        )
+
 
 # --------------------------------------------------------------------------- markdown helpers
 
@@ -351,10 +371,87 @@ class AuditCheckEdgeTest(TmpDirCase):
         self.assertIn("nhóm `99`: số nhóm phải 1–13", errors)
         self.assertIn("nhóm 13: phải có đúng 1 dòng (đang có 0)", errors)
 
+    def test_unicode_digit_group_number_is_an_error_not_a_crash(self):
+        # "²".isdigit() là True nhưng int("²") văng ValueError → audit check/plan từng in traceback.
+        text = audit_status_text().replace("| 1 | ARCH |", "| ² | ARCH |")
+        errors = self.check(text)
+        self.assertIn("nhóm `²`: số nhóm phải 1–13", errors)
+        self.assertIn("nhóm 1: phải có đúng 1 dòng (đang có 0)", errors)
+        f = self.tmp / "AUDIT-STATUS.md"
+        self.assertNotIn(1, xs.audit_status_groups(f))
+
+    def test_impossible_due_date_is_an_error_not_a_crash(self):
+        # "2026-13-45" khớp regex YYYY-MM-DD nhưng không phải ngày thật → từng văng ValueError.
+        row = "AUD-CODE-001 | 🟢 | chấp nhận | a | đo được: x |  | chủ: t · hạn: 2026-13-45"
+        self.assertEqual(
+            self.check(audit_status_text(findings=[row])),
+            ["AUD-CODE-001: hạn `2026-13-45` không phải ngày hợp lệ"],
+        )
+
     def test_finding_without_summary(self):
         row = "AUD-SEC-001 | 🟢 | mở |  | đo được: x |  | "
         errors = self.check(audit_status_text(findings=[row]))
         self.assertEqual(errors, ["AUD-SEC-001: thiếu Tóm tắt"])
+
+    def test_errors_ordered_tables_then_groups_then_findings(self):
+        """Thứ tự lỗi là hợp đồng: dòng nhóm → thiếu dòng nhóm → từng phát hiện (hình thức, bằng chứng/Gate, kết thúc) → ID trùng."""
+        groups = {
+            1: ("đã quét", "", "", ""),
+            2: ("bogus", "", "", ""),
+            3: ("N/A", "", "", ""),
+            4: ("chưa quét", "", "", ""),
+        }
+        findings = [
+            "AUD-FOO-001 | 🔴 | mở | <tóm tắt> | chưa biết: a | | ",
+            " | 🔵 | xong |  | thấy | | x",
+            "AUD-SEC-003 | 🟠 | chấp nhận | x | đo được: a | `t` | chủ: An, hạn: 2026-10-01",
+            "AUD-SEC-003 | 🟢 | bác bỏ | x | đo được: a | | ",
+            "AUD-SEC-005 | 🟢 | đã sửa | x | đo được: a | | xong",
+        ]
+        text = audit_status_text(groups, findings).replace("| 5 | PERF |", "| 5 | SPEED |")
+        f = self.tmp / "AUDIT-STATUS.md"
+        f.write_text(text.replace("| 7 | DEP |", "| 99 | DEP |"), encoding="utf-8")
+        errors, counts = xs.audit_check(f, strict=True, today=xs._dt.date(2026, 10, 14))
+        id_form = "ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc " + ", ".join(xs.AUDIT_CODES)
+        self.assertEqual(
+            errors,
+            [
+                "nhóm 1: thiếu Ngày quét YYYY-MM-DD",
+                "nhóm 1: thiếu SHA lúc quét",
+                "nhóm 2: trạng thái `bogus` không thuộc chưa quét · đã quét · rút gọn · N/A",
+                "nhóm 3: `N/A` phải ghi lý do/phạm vi ở Ghi chú",
+                "nhóm 4: chưa quét (--strict)",
+                "nhóm 5: mã `SPEED` phải là `PERF`",
+                "nhóm `99`: số nhóm phải 1–13",
+                "nhóm 7: phải có đúng 1 dòng (đang có 0)",
+                "AUD-FOO-001: còn chỗ trống của mẫu `<...>`",
+                f"AUD-FOO-001: {id_form}",
+                "AUD-FOO-001: 🔴 không thể dựa trên `chưa biết:` — đo hoặc hạ mức",
+                "AUD-FOO-001: 🔴 phải có Gate (lệnh trong backtick hoặc `tay: <bước>`)",
+                "AUD-FOO-001: 🔴 còn mở (--strict)",
+                f"(dòng thiếu ID): {id_form}",
+                "(dòng thiếu ID): mức `🔵` phải là 🔴/🟠/🟢",
+                "(dòng thiếu ID): trạng thái `xong` không thuộc mở · đã sửa · chấp nhận · bác bỏ",
+                "(dòng thiếu ID): thiếu Tóm tắt",
+                "(dòng thiếu ID): Bằng chứng phải mở đầu `đo được:` / `suy luận:` / `chưa biết:`",
+                "AUD-SEC-003: chấp nhận rủi ro đã quá hạn 2026-10-01",
+                "AUD-SEC-003: `bác bỏ` phải ghi lý do ở Ghi chú",
+                "AUD-SEC-005: `đã sửa` phải ghi PR (#N) hoặc SHA ở Ghi chú",
+                "AUD-SEC-003: ID trùng 2 lần",
+            ],
+        )
+        self.assertEqual(
+            counts,
+            {
+                "nhóm đã quét": 1,
+                "nhóm N/A": 9,
+                "nhóm chưa quét": 1,
+                "🔴 mở": 1,
+                "🟠 chấp nhận": 1,
+                "🟢 bác bỏ": 1,
+                "🟢 đã sửa": 1,
+            },
+        )
 
 
 # --------------------------------------------------------------------------- cmd_validate / list / compose / stats
