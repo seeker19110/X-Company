@@ -71,7 +71,7 @@ trong `_lib.sh`, dùng cho mọi luật; giữ fail-open khi lỗi. Một chỗ 
 - **AUD-DEP-001** miễn trừ BASE-DEP-001/002 sai từ khi CI cài `ruff`/`mypy` (không hash, bắc cầu không ghim).
 - **AUD-DOC-001…012** tài liệu khung lệch số đo, lệch mã, trùng chủ đề — chi tiết từng dòng trong `AUDIT-STATUS.md`.
 
-## 5. Kế hoạch sửa theo đợt (chờ duyệt)
+## 5. Kế hoạch sửa theo đợt (đã duyệt 2026-10-14, xong — xem §7)
 
 | Đợt | Phát hiện | PR dự kiến | Gate của đợt |
 |---|---|---|---|
@@ -88,6 +88,25 @@ Xong khi `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` e
 
 | ID | Chủ | Hạn | Lý do chưa sửa |
 |---|---|---|---|
-| AUD-CODE-001 | người bảo trì khung | khi chạm hàm đó | tách hàm khi sửa, không refactor riêng |
+| AUD-CODE-001 | người bảo trì khung | 2027-03-31 | tách hàm khi chạm vùng đó, không refactor riêng |
 | AUD-CODE-002 | người bảo trì khung | 2026-12-31 | mypy `--strict` bật dần theo file |
 | AUD-TEST-001 | người bảo trì khung | 2026-12-31 | cần đo cả subprocess (`COVERAGE_PROCESS_START`) trước khi đặt ratchet |
+
+## 7. Kết quả sau sửa (quét lại trên `main` `6490f7b`)
+
+| Đợt | PR | Phát hiện đóng |
+|---|---|---|
+| 1 | #20 | AUD-HAR-001 🔴, HAR-002, HAR-007, HAR-008, HAR-009, CFG-001 |
+| 2 | #21 | AUD-SEC-001…010, HAR-005, HAR-011 |
+| 3 | #22 | AUD-HAR-003, HAR-004, HAR-010, CI-003 |
+| 4 | #23 | AUD-DEP-001, DEP-002, CI-002, CI-004 |
+| 5 | #24 | AUD-DOC-001…019, CI-001, CI-005, HAR-006, HAR-012 (mới), DEP-003 (mới) |
+
+- Sổ: 🔴 đã sửa 1 · 🟠 đã sửa 30 · 🟢 đã sửa 19 · 🟢 chấp nhận 3 (§6). `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` → exit 0.
+- Quét lại 9 nhóm bị chạm (ARCH, SEC, CODE, TEST, DEP, CI, DOC, XFEAT, HAR) bằng công cụ: ruff/format/mypy/shellcheck
+  `--severity=warning`, `ci-check`, `validate`, `check-links`, `progress-check`, 130 test, coverage; CI trên `main` 6490f7b
+  xanh cả 5 workflow (CI, CodeQL, Secret scan, Dependency audit, Portability). Không phát hiện mới.
+- Nợ 🟢 lớn lên trong lúc sửa, đã ghi số đo mới vào sổ: C901 6 → 11 hàm (`audit_check` 31, `guard.py` 3 hàm, `install` 21),
+  `mypy --strict` 20 → 24 lỗi; coverage nhánh 73% → 77%. Hạn giữ nguyên; nên trả trước khi thêm tính năng lớn vào `xs.py`.
+- Còn cho admin (ngoài tầm PR): import `.github/rulesets/main.json`, bật Private Vulnerability Reporting và Dependabot
+  security updates, tạo tag `v2.0.0`.

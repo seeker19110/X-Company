@@ -1,24 +1,24 @@
 # AUDIT-STATUS — Khung X-stored
 
-> Cập nhật: 2026-10-14 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-14.md` · SHA quét = `main` lúc quét (nhánh audit có cùng cây).
+> Cập nhật: 2026-10-14 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-14.md` · SHA quét = `main` lúc quét (nhánh audit có cùng cây) · quét lại 9 nhóm sau 5 đợt sửa trên `main` 6490f7b.
 
 ## Nhóm
 
 | # | Mã | Nhóm | Trạng thái | SHA | Ngày | Ghi chú |
 |---|---|---|---|---|---|---|
-| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | `xs.py` một file theo ADR-0001 (copy được, stdlib); không phát hiện |
-| 2 | SEC | Bảo mật | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | hook harness, install, loop record; gitleaks/CodeQL CI xanh; gitleaks/semgrep không cài được cục bộ |
-| 3 | CODE | Chất lượng mã | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | ruff, mypy, mypy --strict, ruff C901, vulture, shellcheck |
-| 4 | TEST | Kiểm thử | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | coverage --branch (in-process), test không assert = 0 |
+| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại sau 5 đợt sửa: thêm `.claude/hooks/guard.py` (hook .sh chỉ là lớp mỏng gọi nó qua stdin); `xs.py`/`install.py` vẫn một file stdlib theo ADR-0001 — không phát hiện mới |
+| 2 | SEC | Bảo mật | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: guard.py ma trận ca AUD-SEC-001…010 xanh; `git grep` TLS tắt/`http://` rỗng; gitleaks + CodeQL xanh trên main; gitleaks/semgrep không cài được cục bộ — không phát hiện mới |
+| 3 | CODE | Chất lượng mã | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: ruff, ruff format, mypy xanh; shellcheck --severity=warning xanh; mypy --strict 24 lỗi, C901 11 hàm (cập nhật AUD-CODE-001/002); vulture chỉ báo `stdin_text` của `hook_stop` (chữ ký hook, cố ý) |
+| 4 | TEST | Kiểm thử | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: 130 test xanh; coverage --branch in-process 77% (xs.py 75%, guard.py 90%, install.py 87%; check-links.py chạy qua subprocess nên 0%) — cập nhật AUD-TEST-001 |
 | 5 | PERF | Hiệu năng | rút gọn | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | CLI: đo thời gian cổng (lint 1,3 s · typecheck 1,8 s · test 10,4 s); không phát hiện |
 | 6 | A11Y | A11y & UX | N/A | | | không có UI (`audit plan`: 0 file *.html/*.tsx/*.vue/*.css) |
-| 7 | DEP | Phụ thuộc | rút gọn | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | không manifest: chỉ action CI + công cụ cài trong CI |
-| 8 | CI | CI/CD | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | `xs.py ci-check`, ruleset, workflow links chạy tay 1 lần |
-| 9 | DOC | Tài liệu | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | validate, check-links, lychee (link ngoài), subagent rà thống nhất |
+| 7 | DEP | Phụ thuộc | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: nay có manifest requirements-dev.txt + requirements-audit.txt (khoá hash); workflow dep-audit (pip-audit --strict) xanh trên main; pip-audit/osv-scanner không cài cục bộ |
+| 8 | CI | CI/CD | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: `xs.py ci-check` xanh 6 workflow (ghim SHA, permissions, timeout); 5 workflow xanh trên main; ruleset mẫu strict + 4 required check — không phát hiện mới |
+| 9 | DOC | Tài liệu | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: validate (180 file, 2623 mục), check-links, progress-check xanh; link ngoài thay ở #24 đã kiểm HTTP 200; lychee chưa chạy lại toàn repo |
 | 10 | DATA | Dữ liệu | N/A | | | không có CSDL/migration (`audit plan`: 0 file SQL/schema) |
 | 11 | CFG | Cấu hình & bí mật | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | biến `XS_*`, che bí mật trong bằng chứng |
-| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | thống nhất giữa module khung — phát hiện ghi ở nhóm DOC |
-| 13 | HAR | Harness & quy trình agent | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | dev-task.sh, install.py, loop record, settings; `audit plan` bằng chứng cũ |
+| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: `SECRET_PATTERNS` ở guard.py (mẫu đường dẫn) và xs.py (mẫu nội dung che) khác mục đích; `write_atomic` lặp ở install.py/xs.py do mỗi script copy độc lập (ADR-0001) — không phát hiện mới |
+| 13 | HAR | Harness & quy trình agent | đã quét | 6490f7b8713b7183ea3f950dff4ef3074b9c6592 | 2026-10-14 | quét lại: dev-task.sh gate xanh (4 lệnh); `audit plan` 0 bằng chứng blueprint cũ; install/loop record/hook có test hồi quy — không phát hiện mới |
 
 ## Phát hiện
 
@@ -72,8 +72,8 @@
 | AUD-DOC-017 | 🟢 | đã sửa | Skill dùng `<FW>` không định nghĩa (adr, handover, research); research đặt ngưỡng xác minh lại 30 ngày trái quy ước | suy luận: .claude/skills/adr/SKILL.md:9, handover/SKILL.md:9, research/SKILL.md:9,13 |  | #24 — validate + check-links + lychee thay link 2026-10-14 |
 | AUD-DOC-018 | 🟢 | đã sửa | Chỉ mục templates ghi "Ba file" được cài, thật là bốn (thêm PROGRESS.md) | đo được: scripts/install.py ROOT_TEMPLATES 4 khoá |  | ded9560 |
 | AUD-DOC-019 | 🟢 | đã sửa | `check-links.py` chấp nhận link ra ngoài gốc repo; không nhận fence `~~~`; bỏ qua link `<…>` có dấu cách | đo được: link `../../outside.md` có thật → không báo; scripts/check-links.py:33-46 |  | #24 — test hồi quy đỏ trước/xanh sau |
-| AUD-CODE-001 | 🟢 | chấp nhận | Độ phức tạp vượt 10: validate 38, ci_check_text 19, compose 17, loop_verdict 17, cmd_loop 16, install 16 | đo được: `ruff check --select C901 --config 'lint.mccabe.max-complexity=10' scripts` |  | chủ: người bảo trì khung · hạn: 2027-03-31 — tách hàm khi chạm vùng đó |
-| AUD-CODE-002 | 🟢 | chấp nhận | `mypy --strict` còn 20 lỗi (11 no-untyped-def, 6 type-arg, 3 no-any-return) | đo được: `python3 -m mypy --strict --python-version 3.11 scripts/*.py` → 20 errors |  | chủ: người bảo trì khung · hạn: 2026-12-31 — bật mypy --strict dần theo file |
-| AUD-TEST-001 | 🟢 | chấp nhận | Không có ratchet coverage (BASE-GATE-013); coverage nhánh in-process 73% (xs.py 75%), test qua subprocess không được đếm | đo được: `coverage run --branch --source=scripts -m unittest discover -s tests` → TOTAL 73% |  | chủ: người bảo trì khung · hạn: 2026-12-31 — đo cả subprocess (COVERAGE_PROCESS_START) rồi mới đặt ratchet |
+| AUD-CODE-001 | 🟢 | chấp nhận | Độ phức tạp vượt 10 (11 hàm): validate 38, audit_check 31, install 21, ci_check_text 19, loop_verdict 18, compose 17, bash_decision 16, cmd_loop 16, git_rules 15, normalize 11, blueprint_stale_evidence 11 | đo được: `ruff check --select C901 --config 'lint.mccabe.max-complexity=10' scripts .claude/hooks` (quét lại 6490f7b; lần đầu 6 hàm) |  | chủ: người bảo trì khung · hạn: 2027-03-31 — tách hàm khi chạm vùng đó |
+| AUD-CODE-002 | 🟢 | chấp nhận | `mypy --strict` còn 24 lỗi (12 no-untyped-def, 8 type-arg, 4 no-any-return); guard.py 0 lỗi | đo được: `python3 -m mypy --strict --python-version 3.11 scripts .claude/hooks/guard.py` → 24 errors (quét lại 6490f7b; lần đầu 20) |  | chủ: người bảo trì khung · hạn: 2026-12-31 — bật mypy --strict dần theo file |
+| AUD-TEST-001 | 🟢 | chấp nhận | Không có ratchet coverage (BASE-GATE-013); coverage nhánh in-process 77% (xs.py 75%, guard.py 90%), test qua subprocess không được đếm | đo được: `coverage run --branch --source=scripts,.claude/hooks -m unittest discover -s tests` → TOTAL 77% (quét lại 6490f7b; lần đầu 73%) |  | chủ: người bảo trì khung · hạn: 2026-12-31 — đo cả subprocess (COVERAGE_PROCESS_START) rồi mới đặt ratchet |
 | AUD-HAR-012 | 🟠 | đã sửa | `check-links.py` cài ở `.xstored/scripts/` lấy gốc = `.xstored/` (cùng lỗi AUD-HAR-001) — dự án đích kiểm nhầm thư mục | đo được: test `test_installed_check_links_uses_project_root` đỏ trên mã cũ | `python3 -m unittest discover -s tests -k installed_check_links` | #24 — phát hiện khi sửa đợt 5 |
 | AUD-DEP-003 | 🟠 | đã sửa | `BASE-DEP-004` miễn trừ sai sau khi CI cài gói pip: không quét lỗ hổng phụ thuộc trên PR/theo lịch | đo được: không có osv-scanner/pip-audit trong .github/workflows (reviewer xác minh lại bằng chứng 2026-10-14) | `pip-audit --require-hashes --strict --disable-pip -r requirements-dev.txt -r requirements-audit.txt` | #24 — workflow dep-audit + required check |
