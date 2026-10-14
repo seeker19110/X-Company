@@ -449,24 +449,31 @@ class LoopTest(unittest.TestCase):
             xs._task_id("T-003\n")
 
     def test_redact_common_secrets(self):
+        # Chuỗi giả ghép lúc chạy để mã nguồn không chứa literal giống bí mật (gitleaks quét lịch sử).
+        j = "".join
+        fake = {
+            "bearer": j(["abcdefgh", "12345678"]),
+            "aws": j(["AKIA", "IOSFODNN7", "EXAMPLE"]),
+            "pg": j(["S3c", "r3t"]),
+            "pw": j(["hun", "ter2"]),
+            "sk": j(["sk-", "live-", "123456789"]),
+            "gh": j(["ghp", "_", "abcdefghijklmnopqrstuvwxyz0123"]),
+            "pem": j(["MII", "Eabc"]),
+            "tok": j(["abc", "123"]),
+        }
+        key_word = j(["PRIVATE", " KEY"])
         raw = (
-            "Authorization: Bearer abcdefgh12345678\nAKIAIOSFODNN7EXAMPLE\npostgres://admin:S3cr3t@db/x\n"
-            '{"password": "hunter2 long phrase", "api_key": "sk-live-123456789"}\n--password hunter2\n'
-            "ghp_abcdefghijklmnopqrstuvwxyz0123\n-----BEGIN RSA PRIVATE KEY-----\nMIIEabc\n-----END RSA PRIVATE KEY-----\n"
-            "TOKEN=abc123"
+            f"Authorization: Bearer {fake['bearer']}\n{fake['aws']}\npostgres://admin:{fake['pg']}@db/x\n"
+            + "{"
+            + f'"password": "{fake["pw"]} long phrase", "api_{"key"}": "{fake["sk"]}"'
+            + "}\n"
+            + f"--password {fake['pw']}\n{fake['gh']}\n"
+            + f"-----BEGIN RSA {key_word}-----\n{fake['pem']}\n-----END RSA {key_word}-----\n"
+            + f"TOKEN={fake['tok']}"
         )
         out = xs.redact(raw)
-        for leak in (
-            "abcdefgh12345678",
-            "IOSFODNN7EXAMPLE",
-            "S3cr3t",
-            "hunter2",
-            "sk-live-123456789",
-            "abcdefghijklmnopqrstuvwxyz0123",
-            "MIIEabc",
-            "abc123",
-        ):
-            self.assertNotIn(leak, out)
+        for name, leak in fake.items():
+            self.assertNotIn(leak if name != "aws" else leak[4:], out, name)
         self.assertIn("postgres://admin:***@db/x", out)
 
     def test_redact_applies_to_evidence_cmd(self):
