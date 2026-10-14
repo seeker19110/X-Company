@@ -71,6 +71,7 @@ updated: 2026-10-14
 - [ ] `AI-EVAL-015` **SHOULD** Eval chọn tool và eval injection (tài liệu/tool trả chỉ thị độc) nằm trong regression. · Nguồn: [`../12-security/ai-security.md`](../12-security/ai-security.md)
 - [ ] `AI-EVAL-016` **MAY** Red-team định kỳ với bộ tấn công cập nhật (OWASP LLM/Agentic) cho hệ đối ngoại; kết quả vào dataset negative.
 - [ ] `AI-EVAL-017` **MAY** A/B online với guardrail dừng sớm khi biến thể mới giảm chỉ số an toàn.
+- [ ] `AI-EVAL-018` **SHOULD** So hai biến thể (model, prompt, skill, harness) phải ghi **n** (số ca × số lần lặp) và **khoảng tin cậy 95 %** (bootstrap hoặc sai số chuẩn theo cụm). Chỉ kết luận "tốt/kém hơn" khi chênh lệch vượt nhiễu; so cặp trên cùng ca, cùng dataset, cùng thước đo. Không quyết dựa trên smoke run vài ca. → Kiểm: báo cáo so sánh có n, CI 95 % hoặc p, số ca thắng/thua/hoà; script tính lại được từ dữ liệu thô. · Nguồn: E. Miller, *Adding Error Bars to Evals* (arXiv 2411.00640, 2024); JetBrains 07/2026 (smoke run 10 task cho kết luận ngược với 80 task); catalog 08 §2f
 
 ## Bẫy thường gặp
 
@@ -84,6 +85,7 @@ updated: 2026-10-14
 | Eval không bao giờ đỏ | Không phát hiện hồi quy | Mutation eval |
 | Dataset lẫn few-shot/huấn luyện | Điểm cao giả do rò | Tách tập |
 | Chỉ nhìn số, không đọc transcript | Bỏ lọt lỗi hệ thống | 20 transcript/tuần |
+| "Biến thể B tốt hơn 3 điểm" trên 10 ca, 1 lần chạy | Đổi model/prompt theo nhiễu; JetBrains: smoke run 10 task báo ponytail tăng chi phí 9,6 %, 80 task cặp đo được giảm 10,3 % | n + CI 95 %, so cặp (`AI-EVAL-018`) |
 
 ## Cổng tự động
 
@@ -99,5 +101,7 @@ updated: 2026-10-14
 
 - Anthropic, *Demystifying evals for AI agents* (capability vs regression, grader tất định → judge → người, pass@k vs pass^k, đọc transcript): <https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents> — xác minh 2026-10-13 (`research/2026-10-13-ai-agent-research.md` §6 [F]).
 - `promptfoo` 0.124.1 <https://www.npmjs.com/package/promptfoo> · docs <https://www.promptfoo.dev/docs/intro/> · `deepeval` 4.2.8 <https://pypi.org/project/deepeval/> · `ragas` 0.4.3 <https://pypi.org/project/ragas/> · `langfuse` 4.17.0 <https://pypi.org/project/langfuse/> — xác minh 2026-10-13.
+- E. Miller, *Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations* (arXiv 2411.00640, 2024-11-01): <https://arxiv.org/abs/2411.00640> — xác minh 2026-10-14.
+- JetBrains AI Blog, ponytail đo trên 80 cặp task SkillsBench (07/2026): <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/> — đọc 2026-10-14.
 - `seeker19110/stored` mục 07 (negative control, record/replay không gọi model trong CI, judge khác họ), mục 23 §2.3 (ma trận claim real-path/faithful-fixture/asserted-not-measured) — đọc 2026-10-13 (`research/2026-10-13-stored-catalog-extraction.md`).
 - OWASP Top 10 for LLM Applications 2026 cho bộ red-team (04/08/2026; mã đổi so với 2025 — bảng ở [`../12-security/ai-security.md`](../12-security/ai-security.md)): <https://github.com/GenAI-Security-Project/GenAI-LLM-Top10> — xác minh 2026-10-14. Agentic Top 10 2026: <https://genai.owasp.org/> — (chưa xác minh — 403 ngày 2026-10-13).

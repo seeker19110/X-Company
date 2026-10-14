@@ -56,6 +56,7 @@ updated: 2026-10-14
 - [ ] `WF-REVIEW-016` **SHOULD** Bài học lặp ≥ 2 lần từ review → hàng rào mới (lint rule, test, hook, mục checklist), không chỉ nhắc miệng (P12). → Kiểm: `TRAPS.md`/CHANGELOG ghi hàng rào mới kèm link PR gốc.
 - [ ] `WF-REVIEW-017` **MAY** Hai reviewer AI độc lập cùng rubric, cả hai phải pass trước khi người xem (giảm nhiễu); vẫn là claim. → Kiểm: cấu hình pipeline; nhãn kết quả. · Nguồn: catalog 23 §4.3 (`ecc-santa-method`)
 - [ ] `WF-REVIEW-018` **MAY** Spot-check: review ngẫu nhiên ≥ 10% PR fast-lane đã merge để hiệu chuẩn vị từ. → Kiểm: nhật ký spot-check hàng tuần. · Nguồn: khung cũ spec L2 (review mẫu ≥ 10%)
+- [ ] `WF-REVIEW-019` **SHOULD** Review có bước **"ít hơn"** theo thang P3 ([`../00-method/principles.md`](../00-method/principles.md)): mỗi phần mã mới cần tồn tại không, đã có trong codebase/stdlib/dependency đã cài chưa, có trừu tượng/cấu hình/tuỳ chọn chưa ai cần không; báo số dòng bỏ được kèm cách thay. Không bao giờ đề xuất cắt validate ở ranh giới tin cậy, xử lý lỗi chống mất dữ liệu, bảo mật, a11y. Đường tắt có marker nêu giới hạn ([`OPS-MAINT-021`](../15-operations/maintenance-and-lifecycle.md)) là quyết định đã ghi, chỉ thành phát hiện khi tải thật đã vượt giới hạn. → Kiểm: báo cáo `/review` có mục "Ít hơn: −N dòng" (hoặc "không có"). · Nguồn: ponytail `ponytail-review` (MIT, `2961b52`); M. Fowler "Yagni"
 
 ## Bẫy thường gặp
 
@@ -67,6 +68,7 @@ updated: 2026-10-14
 - **Làm cổng xanh bằng cách nới cấu hình trong cùng PR.** Hạ coverage threshold, `skip` test, `continue-on-error`. Hook hỏi + reviewer từ chối nếu không có lý do (`protect-config`, catalog 23 §4.3).
 - **Review không chạy code.** Diff đọc "đúng" nhưng app crash khi mở. Preview env + bấm luồng chính.
 - **Bài học chỉ nói trong comment.** Lỗi lặp lại tháng sau. Mỗi lỗi lặp → một hàng rào máy.
+- **Review chỉ tìm lỗi, không tìm mã thừa.** Agent viết thêm lớp bọc, tuỳ chọn, dependency "để sau"; reviewer không hỏi "có cần tồn tại không" nên mã thừa vào trunk rồi mới tới knip/jscpd. Ngược lại, review "cắt cho gọn" có thể bỏ mất xử lý đầu vào xấu. Hỏi theo thang và giữ danh sách không cắt (`WF-REVIEW-019`).
 - **Mâu thuẫn nguồn:** SmartBear khuyến nghị ≤ 60 phút/lượt và ≤ 500 LOC/giờ; nhiều đội coi review 5 phút là đủ cho PR nhỏ — không mâu thuẫn: ngưỡng là *trần*, PR nhỏ review nhanh là mục tiêu.
 
 ## Cổng tự động
@@ -83,6 +85,7 @@ updated: 2026-10-14
 
 ## Nguồn
 
+- `DietrichGebert/ponytail` `skills/ponytail-review/SKILL.md` (MIT, commit `2961b52`; thứ tự: đúng, an toàn, chịu tải, có test, nhanh, gọn): <https://github.com/DietrichGebert/ponytail> — đọc 2026-10-14. M. Fowler "Yagni": <https://martinfowler.com/bliki/Yagni.html> — xác minh 2026-10-14.
 - Google Engineering Practices — Code Review Developer Guide / Small CLs: <https://google.github.io/eng-practices/review/developer/small-cls.html> — xác minh 2026-10-13
 - SmartBear — Best Practices for Peer Code Review (Cisco study): <https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/> — xác minh 2026-10-13
 - GitHub — About protected branches / rulesets (`required_review_thread_resolution`, code owner review, dismiss stale): <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches> · <https://docs.github.com/en/rest/repos/rules> — xác minh 2026-10-13

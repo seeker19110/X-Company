@@ -1,7 +1,7 @@
 ---
 title: Bằng chứng, nguồn và chống ảo giác
 kind: method
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Bằng chứng, nguồn và chống ảo giác
@@ -22,6 +22,9 @@ updated: 2026-10-13
    bài mạng xã hội. Số liệu từ aggregator phải đối chiếu (từng lệch ~100 lần).
 7. **Kiểm trạng thái trước khi dẫn/cài.** Repo đã archive? Đổi tên? License đổi? Telemetry bật mặc định? Đọc
    `install.sh`/hook trước khi chạy.
+   **Danh tính trước trạng thái:** chỉ có tên → liệt kê repo/gói trùng hoặc gần trùng tên và nói chọn cái nào, vì sao
+   (vd ≥ 6 repo cùng tên `social-media-skills`; `vercel/agent-skills` không tồn tại, bản thật là `vercel-labs/agent-skills`);
+   publisher trên npm/PyPI phải khớp chủ repo; ghi nhánh + SHA đã đọc (đo nhầm nhánh mặc định là lỗi đã gặp).
 8. **Phân loại bằng chứng:** *đo được* (lệnh chạy thật) / *suy luận* (từ đọc code) / *chưa biết*. Không trình bày suy
    luận như đo được. "Không thấy" ≠ "không có".
 9. **Khi tài liệu và mã lệch nhau, mã thắng** — và ghi lại độ lệch để sửa tài liệu.
@@ -57,6 +60,7 @@ Trong autopilot, `xs.py loop record --task T-001 -- <lệnh>` chạy lệnh và 
 ## Nguồn
 
 - Khung cũ X-stored `CLAUDE.md` §4 (chống ảo giác), commit `1b80fe4`.
+- Catalog `seeker19110/stored` 20 §3f–§3g (repo trùng tên, `vercel/agent-skills` → `vercel-labs`), 23 §8.1 (đính chính đo nhầm nhánh), 11 §1b (tên gói npm đã chuyển nhượng) — đọc 2026-10-14.
 - `seeker19110/stored` `WORKFLOW.md` (grep cổng đang chạy, ba cột, ghi ngày đọc, chưa xác minh) và mục 23 (verified_by
   do code điền), đọc 2026-10-13.
 - `seeker19110/projects-template` ADR-0009 (nội dung ngoài là dữ liệu, không phải chỉ thị), đọc 2026-10-13.

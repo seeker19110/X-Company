@@ -1,7 +1,7 @@
 ---
 title: Kỹ thuật AI
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 13 — Kỹ thuật AI
@@ -21,7 +21,7 @@ updated: 2026-10-13
 | [`rag-and-knowledge.md`](rag-and-knowledge.md) | RAG & tri thức: chunking, hybrid search, rerank, quyền, eval | Khi trả lời dựa trên tài liệu/tri thức nội bộ; khi thiết kế index, quyền truy cập tài liệu |
 | [`agents-and-tools.md`](agents-and-tools.md) | Agent & tool: ACI, allowlist, schema, HITL, memory | Khi model được gọi tool/hành động; khi thiết kế tool, allowlist, duyệt hành động, memory |
 | [`agentic-systems.md`](agentic-systems.md) | Hệ agentic: đa agent, durable execution, outbox, ranh giới ủy quyền | Khi có nhiều bước/nhiều agent với tác dụng phụ thật; khi chọn runtime durable, outbox, kill switch |
-| [`evaluation.md`](evaluation.md) | Eval: offline/online, pass^k, negative control, record/replay, judge | Trước khi đưa tính năng LLM vào CI/production; khi đổi prompt/model/pipeline; khi báo cáo chất lượng |
+| [`evaluation.md`](evaluation.md) | Eval: offline/online, pass^k, negative control, record/replay, judge, so biến thể có n + CI 95 % | Trước khi đưa tính năng LLM vào CI/production; khi đổi prompt/model/pipeline; khi báo cáo chất lượng |
 | [`guardrails-and-safety.md`](guardrails-and-safety.md) | Guardrail runtime, chính sách nội dung, fallback, an toàn người dùng | Khi tính năng tiếp xúc người dùng cuối hoặc dữ liệu nhạy cảm; khi viết chính sách nội dung |
 | [`protocols-mcp-a2a.md`](protocols-mcp-a2a.md) | Giao thức: MCP, A2A, AG-UI, Agent Skills, AGENTS.md | Trước khi cài/xuất bản MCP server; khi nối agent liên tổ chức; khi viết SKILL.md/AGENTS.md |
 | [`observability-and-cost.md`](observability-and-cost.md) | Quan sát & chi phí: trace OTel GenAI, token, gateway, failover | Khi lên production; khi cần chi phí theo tenant, failover nhà cung cấp, trace agent |

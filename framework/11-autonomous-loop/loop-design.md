@@ -72,6 +72,7 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 - [ ] `LOOP-DESIGN-016` **SHOULD** Đo DORA baseline (lead time, change failure rate, lỗi lọt) trước khi bật tự trị để có số so sánh. → Kiểm: file baseline trong `docs/ops/` có ngày và 4 chỉ số. · Nguồn: stored 21 §8
 - [ ] `LOOP-DESIGN-017` **MAY** Dùng evaluator riêng (test như người dùng thật qua trình duyệt/CLI) khi task vượt mức model làm ổn một mình. → Kiểm: evidence có lệnh E2E thật, không chỉ unit test.
 - [ ] `LOOP-DESIGN-018` **MAY** Headless/CI dùng `claude -p --output-format json` và đọc `total_cost_usd`, `num_turns` để tính chi phí mỗi task hoàn thành. → Kiểm: báo cáo cuối có cột chi phí/task.
+- [ ] `LOOP-DESIGN-019` **SHOULD** Đổi harness phát triển (thêm skill/plugin/prompt hành vi, hook, đổi model) vì lời hứa tiết kiệm hoặc chất lượng → đo trên task của chính dự án trước khi giữ. Yêu cầu: cặp bật/tắt trên cùng task; môi trường sạch (thư mục tạm, không lộ lịch sử git/commit message/lời giải; nhánh đối chứng không chạy hook/skill của plugin); hidden check chạy mã và ca đầu vào xấu; thống kê theo [`AI-EVAL-018`](../13-ai-engineering/evaluation.md). Số tác giả tự công bố chỉ là claim (luật 11). → Kiểm: `docs/agents/harness-ab-<ngày>.md` có n, CI 95 %, ca thua; giữ thay đổi thì ghi ADR. · Nguồn: ponytail `benchmarks/results/` (lỗi harness tự nhận: lộ commit message, hook SessionStart chạy cả nhánh đối chứng); JetBrains 07/2026 (quảng cáo −54 % mã, đo −15,4 %; caveman −65 % token, đo −8,5 %); KuldeepB19 (rơi xử lý đầu vào xấu 5/24 task)
 
 ## Bẫy thường gặp
 
@@ -85,6 +86,7 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 | Runaway: một tool lỗi bị gọi hàng trăm lần | Đốt ngân sách, không tiến triển | Chữ ký lỗi 3 lần → blocked; trần vòng; cap 8 lần chặn liên tiếp |
 | "Context anxiety": agent vội kết luận xong khi context đầy | Code dở, tài liệu thiếu | Bàn giao theo `context-and-token-budget.md`; verdict không cho dừng khi còn task |
 | Nhiều lần `loop init` để "reset" chuỗi lỗi | Mất lịch sử lỗi lặp, lặp lại sai lầm | Sau BLOCKED dùng `loop resume --reason` (giữ số vòng, đặt lại đếm lỗi) khi người đã xem lý do và ghi vào PROGRESS; `loop init` chỉ khi đổi PLAN/ngân sách |
+| Cài plugin "−50 % token" rồi tin số trong README | Hiệu quả thật thấp hơn 3–8 lần, có thể mất xử lý đầu vào xấu | A/B trên task của mình (`LOOP-DESIGN-019`) |
 
 ## Cổng tự động
 
@@ -105,4 +107,5 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 - Claude Code docs — headless (`--bare` bỏ hook/skill/CLAUDE.md; `--max-turns`, `--max-budget-usd`, `total_cost_usd`): <https://code.claude.com/docs/en/headless> — xác minh 2026-10-13.
 - Anthropic, *Effective harnesses for long-running agents* (2025-11-26): <https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents> · *Harness design for long-running application development* (2026-03-24): <https://www.anthropic.com/engineering/harness-design-long-running-apps> — theo `research/2026-10-13-ai-agent-research.md` §3.4 [F].
 - `seeker19110/stored` mục 03 §6 (checklist 9 điểm), §8c; mục 21 §1, §8, §10; mục 23 §2.2 (ba cổng máy), §6.1 — đọc 2026-10-13 (`research/2026-10-13-stored-catalog-extraction.md`).
+- Đo độc lập plugin hành vi: JetBrains AI Blog (07/2026) <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/>, <https://blog.jetbrains.com/ai/2026/07/speak-to-ai-agents-like-cavemen-tosave-tokens/>; KuldeepB19/ponytail-benchmark <https://github.com/KuldeepB19/ponytail-benchmark>; ponytail `benchmarks/results/2026-10-07-agentic.md` (MIT, `2961b52`) — đọc 2026-10-14.
 - `research/2026-10-13-claude-code-hooks-skills.md` (ba phát hiện: `/goal` là lời khai, `defaultMode auto` bị bỏ qua ở project settings, `--bare` mất hook).

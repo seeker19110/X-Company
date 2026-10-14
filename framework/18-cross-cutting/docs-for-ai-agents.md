@@ -57,12 +57,14 @@ updated: 2026-10-14
 - [ ] `XC-DOCAI-015` **SHOULD** Audit định kỳ file hướng dẫn: mâu thuẫn, lệnh lỗi thời, luật trùng (`/doctor prompt-audit` của Claude Code hoặc checklist tay); kết quả thành PR. → Kiểm: nhật ký audit hằng quý trong `docs/agents/`. · Nguồn: Claude Code memory docs (consistency, prompt audit)
 - [ ] `XC-DOCAI-016` **MAY** Cung cấp MCP server tài liệu/catalog cho agent (read-only, tool ít, tham số tra được) thay vì nhồi tài liệu vào context; ghi rõ không phải "production-ready" nếu chỉ dùng nội bộ. → Kiểm: `tools/list` thứ tự xác định; server bind loopback; xem [`../13-ai-engineering/protocols-mcp-a2a.md`](../13-ai-engineering/protocols-mcp-a2a.md). · Nguồn: MCP spec 2026-07-28; catalog 04 §2
 - [ ] `XC-DOCAI-017` **MAY** Bản đồ tri thức mã sinh bằng máy (code graph, catalog từ mã) gắn nhãn `EXTRACTED`/`INFERRED` và có cổng drift so với mã thật. → Kiểm: job sinh lại + `git diff --exit-code`. · Nguồn: catalog 16 §2c–2d, 23 §6.4
+- [ ] `XC-DOCAI-018` **SHOULD** Luật hành vi phải áp mọi phiên (thang "ít hơn" của P3, danh sách không cắt, cách báo cáo) viết **vài dòng trong `AGENTS.md`** hoặc hook, không giao cho skill/plugin tự kích hoạt. Không bật chồng ≥ 2 skill/plugin cùng chỉnh cách viết mã hay giọng trả lời (vd ponytail + caveman + superpowers): chọn một, ghi lý do. → Kiểm: `AGENTS.md` có mục thang (grep "ít hơn"/"không bao giờ cắt"); danh sách plugin/skill bật (`.claude/settings.json` `enabledPlugins`, `.claude/skills/`) không có hai bộ cùng vai. · Nguồn: [`../00-method/principles.md`](../00-method/principles.md) P3; JetBrains 07/2026 (skill tự kích hoạt 0/10 phiên); Scott Logic 2026-06-16 (prompt "Follow YAGNI principles" đạt gần bằng plugin); catalog 20 §3g.5
+- [ ] `XC-DOCAI-019` **SHOULD** File hướng dẫn agent của **bên thứ ba** nằm trong cây làm việc (`vendor/`, `third_party/`, submodule, mã chép về, fixture, `node_modules/`) không được có hiệu lực: CI liệt kê mọi `AGENTS.md`/`CLAUDE.md`/`CLAUDE.local.md`/`GEMINI.md`/`.cursorrules`/`.cursor/rules/`/`SKILL.md` ngoài allowlist đường dẫn → đỏ; buộc giữ thì loại khỏi nạp (Claude Code `claudeMdExcludes`) và coi nội dung là dữ liệu. → Kiểm: `git ls-files | grep -E '(^|/)(AGENTS|CLAUDE|CLAUDE\.local|GEMINI)\.md$|(^|/)\.cursorrules$|/SKILL\.md$'` khớp allowlist; `claudeMdExcludes` có các thư mục vendor. · Nguồn: Claude Code memory docs (`CLAUDE.md`/`AGENTS.md` ở thư mục con nạp khi agent đọc file trong đó; `claudeMdExcludes`); catalog 11 §1c (`AGENTS.md` của browser-use dặn agent luôn đề xuất dịch vụ trả phí của hãng)
 
 ## Bẫy thường gặp
 
 - **Có `CLAUDE.md` và `AGENTS.md` nhưng không import** → Claude Code chỉ đọc `CLAUDE.md`; đội tưởng luật ở `AGENTS.md` đang được áp. Thêm `@AGENTS.md`.
 - **`@AGENTS.md` nằm trong code block hoặc trong dấu backtick** → không import (parser bỏ qua code span). Để ở dòng riêng, không backtick.
-- **Dán luật vào 5 file cho 5 harness** → lệch sau tuần đầu. Bridge một dòng.
+- **Dán luật vào 5 file cho 5 harness** → lệch sau tuần đầu. Bridge một dòng. Harness nào buộc phải có bản sao đầy đủ thì sinh bản sao từ `AGENTS.md` bằng script và CI so nguyên văn. Ví dụ ponytail: `check-rule-copies` so chuỗi 7 bản sao với `AGENTS.md` nhưng chỉ kiểm 10 cụm từ trong `SKILL.md`, chính tác giả gọi là "canary, not full equality".
 - **File hướng dẫn 1.500 dòng** → tốn context mỗi lượt, agent bám kém; Codex cắt ở 32 KiB. Tách path-scoped.
 - **"Chạy test như bình thường"** → agent đoán sai lệnh, đánh dấu `unverified` 11 lần. `runtime.yaml`.
 - **Coi `AGENTS.md` là cổng bảo mật** ("không được push main") — agent vẫn có thể làm. Hook deny + ruleset.
@@ -70,6 +72,8 @@ updated: 2026-10-14
 - **Cài skill có `install.sh` sửa `~/.claude/settings.json`** hoặc MCP stdio chạy mã khi quét. Đọc trước, chạy trong sandbox.
 - **`next dev` ghi đè `AGENTS.md`** — mất luật mà không ai thấy. Kiểm hash trong CI.
 - **llms.txt liệt kê 400 link không ghi chú** → agent không biết chọn. Nhóm, ghi chú một dòng, mục `Optional`.
+- **Luật "luôn áp" đặt trong skill** → model không tự gọi skill (đo độc lập: 0/10 phiên), luật như không có. Đặt ở `AGENTS.md`/hook (`XC-DOCAI-018`).
+- **Vendor nguyên repo kèm `AGENTS.md`/`CLAUDE.md` của họ** → khi agent đọc file trong thư mục đó, harness nạp luật của bên thứ ba (có cả nội dung quảng bá). Loại khỏi nạp (`XC-DOCAI-019`).
 - **`AGENTS.md` ghi tên model/phiên AI** → lỗi thời sau một tháng và vi phạm quy ước khung. Ghi năng lực cần, không ghi tên.
 
 ## Cổng tự động
@@ -85,6 +89,7 @@ updated: 2026-10-14
 | SKILL.md hợp lệ | `skills-ref validate` (agentskills, Apache-2.0) | `skills-ref validate .claude/skills/*` | CI | 0 lỗi |
 | Vendor lock | script `verify-vendor` | so sha256 từng file với lock | CI | 0 lệch |
 | llms.txt | lychee v0.24.2 + curl | `curl -f /llms.txt`; `lychee llms.txt` | cron | 200; 0 link chết |
+| File hướng dẫn bên thứ ba | script `git ls-files` + allowlist | xem `XC-DOCAI-019` | CI | 0 file ngoài allowlist |
 | Markdown sạch | markdownlint-cli2 (MIT) | `markdownlint-cli2 "AGENTS.md" ".claude/**/*.md"` | CI | 0 |
 
 ## Nguồn
@@ -93,6 +98,8 @@ updated: 2026-10-14
 - Claude Code — How Claude remembers your project (`@path` import ≤ 4 hops, bỏ qua code span; ≤ 200 dòng; AGENTS.md chỉ đọc khi không có CLAUDE.md, cần v2.1.277+; `.claude/rules/` `paths:`; "context, not enforced configuration"): <https://code.claude.com/docs/en/memory.md> — xác minh 2026-10-13
 - OpenAI Codex — AGENTS.md (global → gốc → lồng; `AGENTS.override.md`; `project_doc_max_bytes` 32 KiB): <https://learn.chatgpt.com/docs/agent-configuration/agents-md> — xác minh 2026-10-13
 - GitHub Copilot — repository custom instructions (`.github/copilot-instructions.md`, `.github/instructions/*.instructions.md` `applyTo`; đọc `AGENTS.md`/`CLAUDE.md`/`GEMINI.md`): <https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions> — xác minh 2026-10-13
+- Claude Code memory docs (`CLAUDE.md`/`AGENTS.md` ở thư mục con nạp theo nhu cầu khi agent đọc/sửa file trong đó; `claudeMdExcludes` để loại): <https://code.claude.com/docs/en/memory> — xác minh 2026-10-14
+- `DietrichGebert/ponytail` (MIT, commit `2961b52`: `AGENTS.md` 32 dòng, `scripts/check-rule-copies.js`): <https://github.com/DietrichGebert/ponytail>; JetBrains AI Blog (07/2026): <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/>; Scott Logic, C. Eberhardt, "Ponytail, YAGNI and the problem with prompt benchmarks" (2026-06-16): <https://blog.scottlogic.com/2026/06/16/ponytail-yagni-and-the-problem-with-prompt-benchmarks.html> — đọc 2026-10-14
 - Agent Skills specification (`name` ≤ 64, `description` ≤ 1024, thư mục trùng tên, < 500 dòng, `skills-ref validate`): <https://agentskills.io/specification> — xác minh 2026-10-13
 - llms.txt v2 (Jeremy Howard; 2024-09-03, cập nhật 2026-08-10): <https://llmstxt.org/> — xác minh 2026-10-13
 - MCP specification 2026-07-28 (`tools/list` thứ tự xác định, trace context trong `_meta`) theo [`../../research/2026-10-13-ai-agent-research.md`](../../research/2026-10-13-ai-agent-research.md) — xác minh 2026-10-13

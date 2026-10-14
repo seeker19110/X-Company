@@ -1,7 +1,7 @@
 ---
 title: Vận hành
 kind: index
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # 15 — Vận hành
@@ -20,4 +20,4 @@ updated: 2026-10-13
 | [`backup-and-disaster-recovery.md`](backup-and-disaster-recovery.md) | 3-2-1, PITR, bất biến, RPO/RTO theo quy mô, diễn tập khôi phục, multi-region | G5 (backup trước dữ liệu thật); G7 cổng "đã thử khôi phục"; hàng quý |
 | [`deployment-strategies.md`](deployment-strategies.md) | Rolling/canary/blue-green, feature flag (OpenFeature), rollback < 15 phút, expand/contract, smoke test, freeze, DORA | G5 thiết kế pipeline deploy; trước thay đổi lớn/major; khi đổi prompt/model |
 | [`cost-management.md`](cost-management.md) | Ngân sách 80/90/100%, tag, unit cost, rightsizing, chi phí AI/token theo tenant, circuit breaker | G5 (budget trước khi tạo tài nguyên); hàng tháng; mọi tính năng gọi LLM |
-| [`maintenance-and-lifecycle.md`](maintenance-and-lifecycle.md) | Dependabot/Renovate gom nhóm, EOL theo endoflife.date, nâng major có kế hoạch, nợ kỹ thuật có chủ, quét tuần | G8 liên tục; review bảo trì tháng; khi runtime/framework sắp EOL |
+| [`maintenance-and-lifecycle.md`](maintenance-and-lifecycle.md) | Dependabot/Renovate gom nhóm, EOL theo endoflife.date, nâng major có kế hoạch, nợ kỹ thuật có chủ, marker `shortcut:` có điều kiện nâng, quét tuần | G8 liên tục; review bảo trì tháng; khi runtime/framework sắp EOL |

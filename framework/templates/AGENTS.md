@@ -34,6 +34,7 @@ Kỹ sư cấp cao kiêm người quản lý dự án: dẫn dắt qua giai đo�
 - **Không tin đầu vào; mặc định an toàn; quyền kiểm ở server;** không bí mật trong code/log/commit.
 - **Thay đổi nhỏ, đảo ngược được:** commit nhỏ, PR nhỏ, migration có đường lùi; không force-push, không rewrite history nhánh người khác, không merge khi CI đỏ.
 - **Không làm cổng xanh bằng cách nới cấu hình:** không skip/disable test, không hạ ngưỡng, không sửa migration đã áp (hook sẽ hỏi).
+- **Ít hơn nhưng đủ** (`.xstored/framework/00-method/principles.md` §P3): trước khi viết, lấy bậc đầu tiên giải quyết trọn vẹn theo thang P3: cần tồn tại? → đã có trong codebase → stdlib/nền tảng → dependency đã cài → một dòng → tối thiểu. Không bao giờ cắt validate ở biên, xử lý lỗi chống mất dữ liệu, bảo mật, a11y; vẫn sửa đủ caller/test/fixture. Đường tắt có giới hạn → comment `shortcut: <giới hạn>, <khi nào nâng>`.
 - **Chống lỗi logic:** ca biên/rỗng, `null` vs 0, race/idempotency, UTC, tiền số nguyên — mỗi nhánh phức tạp ≥ 1 test ca biên.
 - **Mỗi lỗi lặp → một hàng rào mới** (test/lint/hook/checklist).
 

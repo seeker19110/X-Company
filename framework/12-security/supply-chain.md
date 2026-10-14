@@ -67,6 +67,7 @@ updated: 2026-10-14
 - [ ] `SEC-SUPPLY-022` **SHOULD** Runner CI tự host (nếu có) là ephemeral, không chạy job từ fork, không mount docker socket. → Kiểm: cấu hình runner `--ephemeral`; chính sách repo không cho fork dùng self-hosted runner. · Nguồn: GitHub Actions hardening (self-hosted runners)
 - [ ] `SEC-SUPPLY-023` **MAY** Mirror/proxy registry nội bộ (Artifactory/Nexus/`verdaccio`) với quarantine package mới < N ngày để tránh typosquat/compromise mới công bố. → Kiểm: `.npmrc`/`pip.conf` trỏ mirror. · Nguồn: kinh nghiệm vận hành
 - [ ] `SEC-SUPPLY-024` **MAY** Lockfile cho workflow (khi nền tảng hỗ trợ) thay/bổ sung ghim SHA. → Kiểm: file lock workflow tồn tại và CI kiểm. · Nguồn: GitHub Actions hardening (lockfile ưu tiên hơn SHA khi có)
+- [ ] `SEC-SUPPLY-025` **SHOULD** Trước khi bật plugin/skill/proxy cho agent lập trình: ghi bảng **chạy gì trên máy, gì rời máy** — hook nào chạy ở sự kiện nào, có tải binary lúc chạy không (ghim phiên bản + sha256?), có tiêm chỉ thị vào context không (vd nhắc model đề nghị sửa `settings.json`), dữ liệu gửi đi (telemetry mặc định, prompt/`CLAUDE.md`/memory lên cloud, proxy giữ token đăng nhập provider). Opt-out đặt trong env dự án; proxy đứng giữa agent và provider là điểm dừng cần người duyệt. → Kiểm: `docs/security/agent-plugins.md` mỗi plugin một dòng; `.claude/settings.json` `env` có `DO_NOT_TRACK=1` và biến tắt riêng của plugin; hook tải binary có phiên bản + checksum ghim. · Nguồn: catalog 20 §3g.2; caveman `SECURITY.md` (telemetry CLI bật mặc định, gửi IP); impeccable README/privacy (roll API luôn gọi, hook tải engine); ponytail `hooks/` (không gọi mạng nhưng tiêm lời nhắc sửa `settings.json`); [`SEC-INFRA-018`](infrastructure-and-network.md) (telemetry công cụ)
 
 ## Bẫy thường gặp
 
@@ -80,6 +81,7 @@ updated: 2026-10-14
 8. **SBOM sinh một lần rồi quên.** SBOM có giá trị khi được quét lại khi có CVE mới. Tránh: lưu SBOM theo phiên bản + quét tuần.
 9. **Trivy/scanner tải từ `install.sh` không checksum** → chính công cụ bảo mật là vector tấn công. Tránh: `SEC-SUPPLY-005`.
 10. **Ký nhưng không verify.** `cosign sign` xong mà deploy không `cosign verify` → chữ ký chỉ để trang trí. Tránh: `SEC-SUPPLY-013` phần admission.
+11. **Plugin "tiết kiệm token" đứng giữa agent và provider.** Proxy giữ login Claude/ChatGPT, module Auto gửi prompt kèm `CLAUDE.md`/memory lên cloud, telemetry CLI bật mặc định (caveman 4.x, catalog 20 §3g.2). Bảng sao chỉ tả lợi ích, không tả dữ liệu đi đâu. Tránh: `SEC-SUPPLY-025` + đọc `SECURITY.md` trước khi cài.
 
 ## Cổng tự động
 
@@ -109,4 +111,5 @@ updated: 2026-10-14
 - OWASP MCP Top 10 (MCP01–MCP10, living document, CC BY-NC-SA 4.0): <https://github.com/OWASP/www-project-mcp-top-10> — xác minh 2026-10-13.
 - CycloneDX 1.7 (2025-10-21; ECMA-424): <https://cyclonedx.org/specification/overview/>; SPDX 3.0; ISO/IEC 5962:2021 tương ứng SPDX 2.2.1: <https://spdx.dev/use/specifications/> — xác minh 2026-10-13 (đính chính 2026-10-14: bản trước ghi như thể ISO/IEC 5962:2021 là SPDX 3.0).
 - Phiên bản tool (tag xác minh 2026-10-13, trang GitHub không hiện năm): syft v1.54.1, cosign v3.1.3, conftest v0.71.1, OSV-Scanner v2.7.0 (12/10/2026 theo catalog 12 §3d), checkov 3.3.28 + pip-audit 2.10.1 + zizmor 1.30.1 (PyPI, 2026-10-13); Renovate AGPL-3.0 (LICENSE fetch 2026-10-13), 44.151.5 theo catalog 13 (2026-10-12).
+- JuliusBrussee/caveman `SECURITY.md` + README Privacy (v4.0.1, Apache-2.0; telemetry CLI opt-out, tắt bằng `caveman telemetry off`/`DO_NOT_TRACK=1`): <https://github.com/JuliusBrussee/caveman/blob/main/SECURITY.md>; pbakaus/impeccable README + <https://impeccable.style/privacy> (4.5.2, Apache-2.0; hook tải `engine-v0.1.14`, kiểm sha256 cùng nguồn; tắt `IMPECCABLE_NO_TELEMETRY=1`); DietrichGebert/ponytail `hooks/` (MIT, `2961b52`) — đọc 2026-10-14; catalog 20 §3g (đọc 2026-10-14).
 - Catalog `seeker19110/stored` 12 §3 (7 quy tắc, supply chain, CI có AI), 23 §8.1 (ma trận vệ sinh), 20 §3b (vendor-with-lock), đọc 2026-10-13. Sự cố tj-actions/changed-files 2025 và Trivy CVE-2026-33634: ghi theo catalog, (chưa xác minh lại nguồn gốc ngày 2026-10-13).

@@ -6,6 +6,15 @@ Thay đổi **mục checklist** (thêm ID, đổi mức, ngừng dùng) ghi rõ 
 ## [Unreleased]
 
 ### Added
+- Tích hợp bài học từ `DietrichGebert/ponytail` và 13 PR mới của catalog `seeker19110/stored` (#20–#33), có đối chiếu đo độc lập
+  (`research/2026-10-14-ponytail-and-stored-additions.md`):
+  - `00-method/principles.md` §P3 "thang ít hơn" (nhà mới, bản đồ "một chủ đề một nhà" thêm dòng): 6 bậc trước khi viết mã + danh sách không cắt;
+    `AGENTS.md` (repo + mẫu), subagent `executor`, skill `/review` (bước 5 "Ít hơn") trỏ tới.
+  - Mục mới (đều `SHOULD`): `WF-REVIEW-019` review tìm mã thừa · `OPS-MAINT-021` marker `shortcut: <giới hạn>, <khi nào nâng>` có lint ·
+    `XC-DOCAI-018` luật hành vi ở `AGENTS.md`, không chồng plugin hành vi · `XC-DOCAI-019` chặn file hướng dẫn agent của bên thứ ba ·
+    `SEC-SUPPLY-025` bảng dữ liệu rời máy của plugin agent · `AI-EVAL-018` so biến thể có n + CI 95 % · `LOOP-DESIGN-019` A/B khi đổi harness.
+  - Luật 7 (`evidence-and-sources.md`) và `/research`: kiểm danh tính nguồn (trùng tên, publisher khớp chủ repo, nhánh + SHA).
+  Dự án đích: ghép lại `BLUEPRINT.md` (trạng thái giữ theo ID).
 - Audit có máy đỡ (ADR-0005): phương pháp `framework/00-method/audit.md` (13 nhóm, thêm *Harness & quy trình agent*;
   mức 🔴/🟠/🟢; bằng chứng đo được/suy luận/chưa biết; xác minh đối kháng; quét lại theo diff; Definition of Complete),
   mẫu `templates/AUDIT-STATUS.md` (sổ máy đọc) + `templates/AUDIT-REPORT.md`, skill `/audit` viết lại.

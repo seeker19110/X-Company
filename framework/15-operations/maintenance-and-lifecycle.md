@@ -55,6 +55,7 @@ updated: 2026-10-14
 - [ ] `OPS-MAINT-018` **MAY** Nâng major theo "spike có hạn" (≤ 2 ngày) trên nhánh bỏ đi để ước lượng trước khi lập kế hoạch. → Kiểm: kết quả spike ghi vào ticket. · Nguồn: P8
 - [ ] `OPS-MAINT-019` **MAY** Theo dõi sức khoẻ dependency bằng deps.dev/Scorecard định kỳ và hiển thị trong README nội bộ. → Kiểm: badge/báo cáo. · Nguồn: OpenSSF Scorecard
 - [ ] `OPS-MAINT-020` **MAY** Mirror/fork phụ thuộc quan trọng được đồng bộ upstream theo lịch và cite upstream; drift > N phiên bản = cảnh báo. → Kiểm: job so tag upstream. · Nguồn: catalog stored 23 §8.1 (mirror trôi xa upstream)
+- [ ] `OPS-MAINT-021` **SHOULD** Đường tắt có chủ ý trong mã mang marker máy đọc nêu **giới hạn** và **điều kiện nâng**: `shortcut: <giới hạn>, <khi nào nâng>` hoặc TODO có hạn/link theo lint của ngôn ngữ. Marker thiếu điều kiện là lỗi lint (nợ ngầm). Sổ nợ của `OPS-MAINT-006` được đối chiếu bằng máy với marker, không chép tay. → Kiểm: `git grep -nE '(#|//|/[*]) ?shortcut:' | grep -vE 'shortcut: [^,]+, .+'` rỗng; JS/TS bật `unicorn/expiring-todo-comments` với `checkDates: true` (mặc định không kiểm ngày); Python bật ruff `TD002`/`TD003`; script so số marker với sổ nợ. · Nguồn: ponytail `ponytail-debt` (marker thiếu điều kiện gắn `no-trigger`); JetBrains 07/2026 (quy ước chỉ có trong prompt được theo 1/80 lần)
 
 ## Bẫy thường gặp
 
@@ -68,6 +69,7 @@ updated: 2026-10-14
 8. **License đổi âm thầm giữa phiên bản** (BUSL/SSPL) lọt vào sản phẩm. Tránh: `OPS-MAINT-017`.
 9. **Harness viết cho model cũ** chạy với model mới → hành vi lệch, không ai xét lại. Tránh: `OPS-MAINT-015`.
 10. **Docs trạng thái tự khai** (PROGRESS ghi SHA không tồn tại/nhánh đã xoá). Tránh: CI kiểm SHA là ancestor của HEAD (`OPS-MAINT-010`).
+11. **Quy ước đánh dấu nợ chỉ nằm trong prompt/AGENTS.md** → agent làm theo thang tối giản nhưng hầu như không ghi marker (1/80 lần, JetBrains 07/2026); nợ thành ngầm. Tránh: lint `OPS-MAINT-021`.
 
 ## Cổng tự động
 
@@ -79,6 +81,7 @@ updated: 2026-10-14
 | Lỗ hổng tuần | OSV-Scanner v2.7.0 / pip-audit 2.10.1 / `npm audit` | `schedule` tuần | CI | quá SLA = báo cáo đỏ |
 | Dependency bỏ rơi | Scorecard `Maintained` / script release date | > 18 tháng | CI lịch tháng | liệt kê + ticket |
 | Nợ kỹ thuật | script so `PROGRESS.md` với issue `tech-debt` | — | CI | "(không có)" mà còn issue = đỏ |
+| Marker đường tắt | `git grep` + eslint-plugin-unicorn 78.0.0 (MIT) `expiring-todo-comments` / ruff `TD002` `TD003` | `checkDates: true`; `select = ["TD002", "TD003"]` | hook + CI | marker thiếu điều kiện hoặc quá hạn = đỏ |
 | Docs tươi | script frontmatter `updated`/`review_by`; `git merge-base --is-ancestor <sha> HEAD` | — | CI | quá 12 tháng/SHA lạ = cảnh báo/đỏ |
 | Dead code / dep thừa | knip (ISC), vulture (MIT), depcheck (MIT) | lịch tháng | CI | báo cáo |
 | License diff | dependency-review `deny-licenses`; SBOM diff | PR cập nhật | CI | license cấm = đỏ |
@@ -93,4 +96,6 @@ updated: 2026-10-14
 - NIST SP 800-218 SSDF v1.1 — RV.1 (phát hiện và xác nhận lỗ hổng liên tục): <https://csrc.nist.gov/pubs/sp/800/218/final> — xác minh 2026-10-13.
 - Khung cũ X-stored `docs/ops/code-optimization-audit-prompt.md` (knip/depcheck/jscpd), `01-process-and-standards.md` GĐ 8, commit `1b80fe4`; `research/2026-10-13-old-framework-analysis.md` §3b (PROGRESS "Nợ kỹ thuật: (không có)").
 - Catalog `seeker19110/stored` 23 §2.5 (Dependabot gom nhóm, WIP cap), §8.1 (Node 18/Python 3.9 EOL còn trong repo; mirror trôi upstream), 21 §2.2 (harness có hạn sử dụng), §8 điểm 9 (docs tươi bằng máy), §9 (agent sửa CI), đọc 2026-10-13.
+- eslint-plugin-unicorn `expiring-todo-comments` (npm 78.0.0, MIT; kiểm ngày tắt mặc định, bật bằng `checkDates`): <https://github.com/sindresorhus/eslint-plugin-unicorn/blob/main/docs/rules/expiring-todo-comments.md>; ruff `TD002` missing-todo-author, `TD003` missing-todo-link (flake8-todos): <https://docs.astral.sh/ruff/rules/missing-todo-link/> — xác minh 2026-10-14.
+- `DietrichGebert/ponytail` `skills/ponytail-debt/SKILL.md` (MIT, commit `2961b52`): <https://github.com/DietrichGebert/ponytail>; JetBrains AI Blog "ponytail skill tested" (07/2026): <https://blog.jetbrains.com/ai/2026/07/ponytail-skill-claude-tested/> — đọc 2026-10-14.
 - (chưa xác minh 2026-10-13) RFC 9745 Deprecation header, automerge docs của Dependabot/Renovate, knip/vulture/depcheck phiên bản — xác minh trước khi dẫn.

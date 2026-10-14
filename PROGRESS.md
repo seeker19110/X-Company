@@ -1,15 +1,16 @@
 # PROGRESS.md — Khung X-stored
 
-> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
+> Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/gifted-rubin-101p92
 
 ## Đang làm
-- Không có việc dở. Đã trả nợ AUD-CODE-002 + AUD-TEST-001 (#26): `mypy --strict` 0 lỗi; coverage dòng + nhánh 100% (đo cả subprocess, 0 pragma), cổng `test` chặn dưới 100%; 130 → 280 test.
+- Nhánh `claude/gifted-rubin-101p92`: tích hợp ponytail + 13 PR mới của catalog stored (`research/2026-10-14-ponytail-and-stored-additions.md`) — thang "ít hơn" ở P3, 7 mục SHOULD mới, luật 7 danh tính nguồn; chờ PR/merge.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
 2. Nợ 🟢 còn lại: AUD-CODE-001 C901 11 hàm (hạn 2027-03-31) — tách hàm khi chạm vùng đó.
 3. Thử khung trên một dự án sản phẩm thật (web/api, quy mô M) để đo mục MUST hay bị miễn trừ.
 4. Cần người quyết: `LOOP-HARNESS-012` (biến tắt hook = nới hàng rào an toàn).
+5. Cần người chọn: 7 đề xuất còn lại từ catalog (research 2026-10-14 §5) — ưu tiên `loop status` đòi Gate render cho task UI, và quyền tool theo kênh đã xác thực.
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -25,6 +26,7 @@
 - Nợ kỹ thuật chấp nhận: chọn 4 MUST/module là phán đoán, chờ dữ liệu miễn trừ từ dự án thật; số điều cụ thể của NĐ 356/2025 chưa đối chiếu bản gốc — trả khi audit dự án thật.
 - 2026-10-14 Sửa audit 5 đợt (#20–#24): `dev-task.sh` lấy gốc dự án đúng ở `.xstored/`; hook phân tích lệnh bằng `guard.py` (shlex); install gộp hook + manifest hash; công cụ cổng khoá hash + `dep-audit`; WF-DOC-004 bỏ điều kiện "nhánh còn trên remote" (xung đột squash).
 - 2026-10-14 9 mục trùng chủ đề chuyển `MAY` "gộp vào" nhà (ID giữ, CHANGELOG).
+- 2026-10-14 Ponytail: lấy thang 6 bậc + danh sách không cắt làm luật (nhà `principles.md` §P3), không cài plugin — đo độc lập chỉ bằng ¼–½ quảng cáo, marker theo prompt 1/80; marker nợ phải có lint (`OPS-MAINT-021`).
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
 ## Bàn giao phiên

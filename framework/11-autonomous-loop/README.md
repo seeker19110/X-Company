@@ -13,7 +13,7 @@ updated: 2026-10-14
 
 | File | Nội dung | Đọc khi nào |
 |---|---|---|
-| [`loop-design.md`](loop-design.md) | Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằng chứng | Trước khi bật autopilot lần đầu; khi chọn tầng vòng lặp (hook/`/loop`/headless) |
+| [`loop-design.md`](loop-design.md) | Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằng chứng, A/B khi đổi harness | Trước khi bật autopilot lần đầu; khi chọn tầng vòng lặp (hook/`/loop`/headless) |
 | [`harness-files.md`](harness-files.md) | File harness: PLAN · PROGRESS · BLUEPRINT · evidence · state | Khi viết PLAN.md, PROGRESS.md; khi hỏi "file nào commit, file nào không" |
 | [`stop-points-and-escalation.md`](stop-points-and-escalation.md) | Điểm dừng bắt buộc, mức tin cậy T0–T4, leo thang | Khi quyết hành động nào agent được tự làm; khi cấu hình allow/ask/deny |
 | [`orchestration-and-subagents.md`](orchestration-and-subagents.md) | Điều phối: subagent, worktree, song song, không lồng | Khi tách việc cho `researcher`/`executor`/`reviewer`; khi muốn chạy song song |
