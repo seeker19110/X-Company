@@ -89,8 +89,8 @@ Xong khi `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` e
 | ID | Chủ | Hạn | Lý do chưa sửa |
 |---|---|---|---|
 | AUD-CODE-001 | người bảo trì khung | 2027-03-31 | tách hàm khi chạm vùng đó, không refactor riêng |
-| AUD-CODE-002 | người bảo trì khung | 2026-12-31 | mypy `--strict` bật dần theo file |
-| AUD-TEST-001 | người bảo trì khung | 2026-12-31 | cần đo cả subprocess (`COVERAGE_PROCESS_START`) trước khi đặt ratchet |
+| AUD-CODE-002 | người bảo trì khung | 2026-12-31 | **đã trả** (#26): `mypy --strict` 0 lỗi, cổng `typecheck` chạy `--strict` |
+| AUD-TEST-001 | người bảo trì khung | 2026-12-31 | **đã trả** (#26): đo cả subprocess, dòng + nhánh 100%, cổng `test` chặn dưới 100% |
 
 ## 7. Kết quả sau sửa (quét lại trên `main` `6490f7b`)
 

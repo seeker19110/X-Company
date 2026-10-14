@@ -20,3 +20,6 @@ Thumbs.db
 *.pem
 *.key
 *.p12
+# Dữ liệu coverage (cổng test ghi rồi gộp)
+.coverage
+.coverage.*

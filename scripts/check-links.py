@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +23,7 @@ LINK_RE = re.compile(r"\[[^\]]*\]\((<[^>]+>|[^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
-def iter_md(root: Path):
+def iter_md(root: Path) -> Iterator[Path]:
     for p in sorted(root.rglob("*.md")):
         if any(part in SKIP_DIRS for part in p.relative_to(root).parts):
             continue
@@ -44,9 +45,7 @@ def check(root: Path) -> list[str]:
                 target = target[1:-1] if target.startswith("<") else target
                 if re.match(r"^[a-z][a-z0-9+.-]*:", target) or target.startswith("#"):
                     continue
-                path_part = target.split("#", 1)[0]
-                if not path_part:
-                    continue
+                path_part = target.split("#", 1)[0]  # rỗng chỉ với `<>` → thư mục chứa file, luôn tồn tại
                 # Đường dẫn tuyệt đối từ gốc repo (/docs/x.md) cũng chấp nhận.
                 resolved = (root / path_part.lstrip("/")) if path_part.startswith("/") else (p.parent / path_part)
                 if not resolved.exists():

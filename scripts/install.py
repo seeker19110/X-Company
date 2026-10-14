@@ -28,6 +28,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent
@@ -96,14 +97,21 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def load_manifest(target: Path) -> dict:
+def load_manifest(target: Path) -> dict[str, str]:
     try:
-        return json.loads((target / MANIFEST).read_text(encoding="utf-8"))
+        data = json.loads((target / MANIFEST).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
+    return data if isinstance(data, dict) else {}
 
 
-def copy_if_absent(src: Path, dst: Path, force: bool = False, transform=None, installed_hash: str | None = None) -> str:
+def copy_if_absent(
+    src: Path,
+    dst: Path,
+    force: bool = False,
+    transform: Callable[[str], str] | None = None,
+    installed_hash: str | None = None,
+) -> str:
     """Trả 'copied' | 'kept' | 'updated' | 'updated-new' | 'skipped-symlink'.
 
     Không bao giờ đè file người dùng đã sửa (trừ force). File còn đúng hash bản khung đã cài lần trước
@@ -207,7 +215,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     log(f"✓ .xstored/framework + scripts (phiên bản {framework_label(label)})")
 
     # 2) harness .claude/ — copy-if-absent
-    stats: dict = {}
+    stats: dict[str, int] = {}
     if not no_harness:
         manifest = load_manifest(target)
         new_manifest = {}
@@ -287,7 +295,7 @@ def install(target: Path, force_harness: bool, no_harness: bool, label: str | No
     return 0
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Cài khung X-stored vào dự án đích")
     p.add_argument("target", help="thư mục gốc dự án đích")
     p.add_argument("--force-harness", action="store_true", help="đè .claude/ của dự án bằng bản khung")

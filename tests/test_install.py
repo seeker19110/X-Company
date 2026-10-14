@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+import unittest.mock as mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -197,6 +198,194 @@ class InstallTest(unittest.TestCase):
     def test_refuses_self_and_missing(self):
         self.assertEqual(install.main([str(ROOT), "--label", "x"]), 2)
         self.assertEqual(install.main([str(self.target / "khong-co"), "--label", "x"]), 2)
+
+
+def make_fake_src(base: Path, ruleset: str | None = None) -> Path:
+    """Khung giả tối thiểu: không research/, không templates/, không VERSION — để chạm nhánh 'thiếu'."""
+    src = base / "khung"
+    (src / "framework").mkdir(parents=True)
+    (src / "framework" / "x.md").write_text("x\n", encoding="utf-8")
+    (src / "scripts").mkdir()
+    for f in ("xs.py", "dev-task.sh", "check-links.py"):
+        (src / "scripts" / f).write_text("# giả\n", encoding="utf-8")
+    (src / ".claude").mkdir()
+    (src / ".claude" / "settings.json").write_text('{"hooks": {}}\n', encoding="utf-8")
+    for d in install.HARNESS_DIRS:
+        (src / ".claude" / d).mkdir()
+    if ruleset is not None:
+        (src / ".github" / "rulesets").mkdir(parents=True)
+        (src / ".github" / "rulesets" / "main.json").write_text(ruleset, encoding="utf-8")
+        (src / ".github" / "pull_request_template.md").write_text("pr\n", encoding="utf-8")
+        (src / ".github" / "dependabot.yml").write_text("version: 2\n", encoding="utf-8")
+    return src
+
+
+class InstallEdgeTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name).resolve()
+        # git không được dò ngược lên thư mục cha (TMPDIR nằm trong một repo → framework_label nhặt nhầm SHA)
+        ceiling = mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": str(self.tmp.parent)})
+        ceiling.start()
+        self.addCleanup(ceiling.stop)
+        self.target = self.tmp / "dich"
+        self.target.mkdir()
+
+    def install_quiet(self, *extra) -> tuple[int, str]:
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = install.main([str(self.target), "--label", "t", *extra])
+        return code, err.getvalue()
+
+    def test_strip_frontmatter_unclosed_keeps_text(self):
+        self.assertEqual(install.strip_frontmatter("---\ntitle: x\nkhông đóng\n"), "---\ntitle: x\nkhông đóng\n")
+        self.assertEqual(install.strip_frontmatter("---\na: 1\n---\n\nthân\n"), "thân\n")
+        self.assertEqual(install.strip_frontmatter(""), "")
+
+    def test_write_atomic_writes_and_cleans_temp_on_failure(self):
+        f = self.tmp / "out.json"
+        install.write_atomic(f, "nội dung Đ\n")
+        self.assertEqual(f.read_text(encoding="utf-8"), "nội dung Đ\n")
+        with mock.patch.object(install.os, "replace", side_effect=OSError("đĩa đầy")):
+            with self.assertRaises(OSError):
+                install.write_atomic(f, "mới\n")
+        self.assertEqual(f.read_text(encoding="utf-8"), "nội dung Đ\n")  # bản cũ còn nguyên
+        self.assertEqual([p.name for p in self.tmp.iterdir() if p.name.endswith(".tmp")], [])  # không rác
+
+    def test_merge_hooks_symlink_destination_is_skipped(self):
+        outside = self.tmp / "ngoai.json"
+        outside.write_text("{}", encoding="utf-8")
+        dst = self.tmp / "settings.json"
+        dst.symlink_to(outside)
+        src = self.tmp / "src.json"
+        src.write_text('{"hooks": {"Stop": [{"hooks": [{"command": "x"}]}]}}', encoding="utf-8")
+        with redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(install.merge_hooks(src, dst), "skipped-symlink")
+        self.assertIn("bỏ qua symlink", err.getvalue())
+        self.assertEqual(outside.read_text(encoding="utf-8"), "{}")
+
+    def test_merge_hooks_invalid_or_missing_json_is_reported(self):
+        src = self.tmp / "src.json"
+        src.write_text('{"hooks": {}}', encoding="utf-8")
+        dst = self.tmp / "settings.json"
+        dst.write_text("{không phải json", encoding="utf-8")
+        with redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(install.merge_hooks(src, dst), "invalid-json")
+        self.assertIn("HOOK CHƯA ĐĂNG KÝ", err.getvalue())
+        self.assertEqual(dst.read_text(encoding="utf-8"), "{không phải json")  # không đè
+        with redirect_stderr(io.StringIO()):
+            self.assertEqual(install.merge_hooks(src, self.tmp / "khong-co.json"), "invalid-json")
+
+    def test_install_with_invalid_existing_settings_keeps_it(self):
+        settings = self.target / ".claude" / "settings.json"
+        settings.parent.mkdir()
+        settings.write_text("{hỏng", encoding="utf-8")
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertEqual(settings.read_text(encoding="utf-8"), "{hỏng")
+        self.assertIn("invalid-json 1", err)
+
+    def test_framework_label_variants(self):
+        self.assertEqual(install.framework_label("v9"), "v9")
+        src = self.tmp / "khung"
+        src.mkdir()
+        with mock.patch.object(install, "SRC", src):
+            self.assertEqual(install.framework_label(None), "unknown")  # thiếu VERSION, không phải git repo
+            (src / "VERSION").write_text("1.2.3\n", encoding="utf-8")
+            ok = subprocess.CompletedProcess([], 0, stdout="abc1234\n", stderr="")
+            with mock.patch.object(install.subprocess, "run", return_value=ok) as run:
+                self.assertEqual(install.framework_label(None), "1.2.3 (abc1234)")
+            self.assertIn(str(src), run.call_args.args[0])
+            for result in (
+                subprocess.CompletedProcess([], 128, stdout="", stderr="not a repo"),
+                subprocess.CompletedProcess([], 0, stdout="  \n", stderr=""),
+            ):
+                with mock.patch.object(install.subprocess, "run", return_value=result):
+                    self.assertEqual(install.framework_label(None), "1.2.3")
+            for exc in (OSError("không có git"), subprocess.TimeoutExpired("git", 10)):
+                with mock.patch.object(install.subprocess, "run", side_effect=exc):
+                    self.assertEqual(install.framework_label(None), "1.2.3")
+
+    def test_no_harness_skips_claude_dir_and_manifest(self):
+        code, _ = self.install_quiet("--no-harness")
+        self.assertEqual(code, 0)
+        self.assertFalse((self.target / ".claude").exists())
+        self.assertFalse((self.target / ".xstored" / "harness.sha256.json").exists())
+        self.assertTrue((self.target / ".xstored" / "framework").is_dir())
+        self.assertTrue((self.target / "AGENTS.md").exists())
+
+    def test_preexisting_modified_hook_gets_new_file_and_no_manifest_entry(self):
+        hook = self.target / ".claude" / "hooks" / "stop-guard.sh"
+        hook.parent.mkdir(parents=True)
+        hook.write_text("# của tôi\n", encoding="utf-8")
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertEqual(hook.read_text(encoding="utf-8"), "# của tôi\n")
+        self.assertTrue(hook.with_name("stop-guard.sh.xstored-new").exists())
+        self.assertIn(".xstored-new", err)
+        manifest = json.loads((self.target / ".xstored" / "harness.sha256.json").read_text(encoding="utf-8"))
+        self.assertNotIn(".claude/hooks/stop-guard.sh", manifest)  # không biết hash bản cài → không ghi
+        self.assertIn(".claude/hooks/session-start.sh", manifest)
+
+    def test_missing_root_template_is_skipped(self):
+        with mock.patch.dict(install.ROOT_TEMPLATES, {"KHONG-CO.md": "KHONG-CO.md"}):
+            code, _ = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertFalse((self.target / "KHONG-CO.md").exists())
+        self.assertTrue((self.target / "AGENTS.md").exists())
+
+    def test_gitignore_is_appended_not_replaced(self):
+        gi = self.target / ".gitignore"
+        gi.write_text("node_modules/\n", encoding="utf-8")
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            gi.read_text(encoding="utf-8"),
+            "node_modules/\n\n# X-stored: trạng thái autopilot cục bộ\n.autopilot/\n",
+        )
+        self.assertIn("thêm .autopilot/", err)
+        self.install_quiet()  # chạy lại: đã có dòng → không nhân đôi
+        self.assertEqual(gi.read_text(encoding="utf-8").count(".autopilot/"), 1)
+
+    def test_minimal_framework_without_research_templates_or_version(self):
+        with mock.patch.object(install, "SRC", make_fake_src(self.tmp)):
+            code, err = self.install_quiet()
+        self.assertEqual(code, 0, err)
+        xs_dir = self.target / ".xstored"
+        self.assertFalse((xs_dir / "research").exists())
+        self.assertTrue((xs_dir / "framework" / "x.md").exists())
+        self.assertEqual((xs_dir / "VERSION").read_text(encoding="utf-8"), "t\n")
+        self.assertFalse((self.target / "AGENTS.md").exists())  # không có mẫu → không tạo
+        self.assertTrue((self.target / ".claude" / "settings.json").exists())
+
+    def test_with_github_unreadable_or_checkless_ruleset_has_no_warning(self):
+        cases = {
+            "không phải json": "{không phải json",
+            "thiếu khoá rules": "{}",
+            "rules không có check": '{"rules": [{"type": "deletion"}]}',
+        }
+        for name, content in cases.items():
+            with self.subTest(name):
+                target = self.tmp / ("dich-" + str(len(name)))
+                target.mkdir()
+                src = make_fake_src(self.tmp / ("src-" + str(len(name))), ruleset=content)
+                err = io.StringIO()
+                with mock.patch.object(install, "SRC", src), redirect_stderr(err):
+                    self.assertEqual(install.main([str(target), "--label", "t", "--with-github"]), 0)
+                self.assertNotIn("required check", err.getvalue())
+                self.assertEqual((target / ".github" / "rulesets" / "main.json").read_text(encoding="utf-8"), content)
+                self.assertTrue((target / ".github" / "dependabot.yml").exists())
+
+    def test_run_as_script(self):
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "install.py"), str(self.target), "--label", "cli", "--no-harness"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual((self.target / ".xstored" / "VERSION").read_text(encoding="utf-8"), "cli\n")
+        self.assertIn("[install] Xong.", r.stderr)
 
 
 class CheckLinksTest(unittest.TestCase):
