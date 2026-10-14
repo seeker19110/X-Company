@@ -405,7 +405,7 @@ class LoopTest(unittest.TestCase):
             """
             # PLAN
             - [ ] `T-001` Viết hàm cộng — Gate: `python3 -c "import sys; sys.exit(0)"`
-            - [ ] `T-002` Viết test
+            - [ ] `T-002` Viết test — Gate: `true`
             """,
         )
         self.env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.base))
@@ -421,6 +421,59 @@ class LoopTest(unittest.TestCase):
     def run_cli(self, *args) -> int:
         with redirect_stdout(io.StringIO()):
             return xs.main(list(args))
+
+    def test_gateless_task_needs_gate(self):
+        # AUD-HAR-008: task tick mà không có Gate thì không được tính xong chỉ vì một lệnh xanh bất kỳ.
+        write(self.base / "docs" / "autopilot" / "PLAN.md", "- [x] `T-001` viết toàn bộ tính năng\n")
+        self.assertEqual(self.run_cli("loop", "init"), 0)
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-001", ["true"], self.base)
+        v = xs.loop_verdict(self.base)
+        self.assertEqual(v["verdict"], "verify")
+        self.assertIn("không có Gate", v["reason"])
+
+    def test_record_quoting_and_double_dash(self):
+        # AUD-HAR-002: argv có nháy/`--` thứ hai phải chạy và khớp Gate nguyên vẹn.
+        write(self.base / "docs" / "autopilot" / "PLAN.md", "- [x] `T-001` x — Gate: `echo ok -- --run`\n")
+        self.assertEqual(self.run_cli("loop", "init"), 0)
+        self.assertEqual(self.run_cli("loop", "record", "--task", "T-001", "--", "echo", "ok", "--", "--run"), 0)
+        self.assertEqual(xs.read_evidence("T-001", self.base)["cmd"], "echo ok -- --run")
+        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
+        self.assertEqual(
+            self.run_cli("loop", "record", "--task", "T-002", "--", "python3", "-c", "print('hi there')"), 0
+        )
+        self.assertTrue(xs.same_command("python3 -c \"print('a b')\"", "python3 -c 'print('\"'\"'a b'\"'\"')'"))
+
+    def test_task_id_rejects_trailing_newline(self):
+        with self.assertRaises(argparse.ArgumentTypeError):
+            xs._task_id("T-003\n")
+
+    def test_redact_common_secrets(self):
+        raw = (
+            "Authorization: Bearer abcdefgh12345678\nAKIAIOSFODNN7EXAMPLE\npostgres://admin:S3cr3t@db/x\n"
+            '{"password": "hunter2 long phrase", "api_key": "sk-live-123456789"}\n--password hunter2\n'
+            "ghp_abcdefghijklmnopqrstuvwxyz0123\n-----BEGIN RSA PRIVATE KEY-----\nMIIEabc\n-----END RSA PRIVATE KEY-----\n"
+            "TOKEN=abc123"
+        )
+        out = xs.redact(raw)
+        for leak in (
+            "abcdefgh12345678",
+            "IOSFODNN7EXAMPLE",
+            "S3cr3t",
+            "hunter2",
+            "sk-live-123456789",
+            "abcdefghijklmnopqrstuvwxyz0123",
+            "MIIEabc",
+            "abc123",
+        ):
+            self.assertNotIn(leak, out)
+        self.assertIn("postgres://admin:***@db/x", out)
+
+    def test_redact_applies_to_evidence_cmd(self):
+        with redirect_stdout(io.StringIO()):
+            xs.loop_record("T-009", ["echo --token SUPERSECRETVALUE; exit 1"], self.base)
+        ev = xs.read_evidence("T-009", self.base)
+        self.assertNotIn("SUPERSECRETVALUE", ev["cmd"] + ev["output_tail"])
 
     def test_inactive_allows_stop(self):
         out, code = xs.hook_stop("{}", self.base)
@@ -891,6 +944,21 @@ def audit_status_text(groups=None, findings=()):
         + head
         + "".join(f"| {f} |\n" for f in findings)
     )
+
+
+class WriteAtomicTest(unittest.TestCase):
+    def test_write_atomic_does_not_follow_planted_symlink(self):
+        # AUD-HAR-009: tên tạm cố định `<file>.tmp` từng đi theo symlink đặt sẵn và ghi đè file ngoài.
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            victim = d / "victim.txt"
+            victim.write_text("giữ nguyên", encoding="utf-8")
+            (d / "out").mkdir()
+            (d / "out" / "BLUEPRINT.md.tmp").symlink_to(victim)
+            xs.write_atomic(d / "out" / "BLUEPRINT.md", "mới")
+            self.assertEqual(victim.read_text(encoding="utf-8"), "giữ nguyên")
+            self.assertEqual((d / "out" / "BLUEPRINT.md").read_text(encoding="utf-8"), "mới")
+            self.assertEqual(sorted(p.name for p in (d / "out").iterdir()), ["BLUEPRINT.md", "BLUEPRINT.md.tmp"])
 
 
 class GitRepoMixin:

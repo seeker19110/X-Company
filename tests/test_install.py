@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,31 @@ class InstallTest(unittest.TestCase):
         text = (self.target / "PROGRESS.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("# PROGRESS.md"), text[:80])
         self.assertEqual(tuple(n for n, _ in xs.progress_sections(text)), xs.PROGRESS_SECTIONS)
+
+    def test_dev_task_root_in_target_project(self):
+        # AUD-HAR-001: thiếu CLAUDE_PROJECT_DIR, .xstored/scripts/dev-task.sh từng lấy gốc = .xstored/ → "xanh giả".
+        self.run_install()
+        (self.target / "xs.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: "false"\n', encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        script = self.target / ".xstored" / "scripts" / "dev-task.sh"
+        r = subprocess.run(["bash", str(script), "gate"], capture_output=True, text=True, env=env, cwd="/")
+        self.assertNotEqual(r.returncode, 0, r.stderr)
+        self.assertIn("GATE ĐỎ ở 'test'", r.stderr)
+        (self.target / "xs.yaml").write_text('test: "true"\n', encoding="utf-8")
+        r = subprocess.run(["bash", str(script), "gate"], capture_output=True, text=True, env=env, cwd="/")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("GATE XANH (1 lệnh)", r.stderr)
+
+    def test_dev_task_noop_is_not_reported_green(self):
+        self.run_install()
+        (self.target / "xs.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: ""\n', encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        r = subprocess.run(
+            ["bash", str(self.target / ".xstored/scripts/dev-task.sh"), "gate"], capture_output=True, text=True, env=env
+        )
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("KHÔNG CHẠY LỆNH NÀO", r.stderr)
+        self.assertNotIn("GATE XANH", r.stderr)
 
     def test_installed_xs_validates_and_composes(self):
         self.run_install()

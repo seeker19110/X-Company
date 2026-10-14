@@ -38,8 +38,10 @@ import json
 import os
 import posixpath
 import re
+import shlex
 import shutil
 import subprocess
+import tempfile
 import sys
 import unicodedata
 from dataclasses import dataclass, field
@@ -70,6 +72,27 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 TASK_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{3,}$")
 NOTE_RE = re.compile(r"\s—\s(?:Bằng chứng|Miễn|Thiếu):.*$")
 SECRET_RE = re.compile(r"(?i)\b(\w*(?:token|secret|passw(?:or)?d|api[_-]?key)\w*)(\s*[=:]\s*)\S+")
+# Dạng bí mật phổ biến khác (AUD-CFG-001): giá trị bị thay bằng *** nhưng giữ tiền tố để còn đọc được ngữ cảnh.
+SECRET_PATTERNS = (
+    (re.compile(r"(?i)\b(bearer|basic|token)(\s+)[A-Za-z0-9._~+/=-]{8,}"), r"\1\2***"),
+    (re.compile(r"(?i)([\"']?\w*(?:token|secret|passw(?:or)?d|api[_-]?key)\w*[\"']?\s*:\s*)\"[^\"]*\""), r'\1"***"'),
+    (re.compile(r"(?i)(--(?:password|passwd|token|secret|api-key)[= ])\S+"), r"\1***"),
+    (re.compile(r"(://[^/\s:@]+:)[^@\s/]+@"), r"\1***@"),
+    (re.compile(r"\b(AKIA|ASIA)[0-9A-Z]{16}\b"), r"\1***"),
+    (re.compile(r"\b(gh[pousr]_|github_pat_|xox[abpr]-|sk_live_|sk_test_|sk-|glpat-)[A-Za-z0-9_-]{8,}"), r"\1***"),
+    (
+        re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(-----END [A-Z ]*PRIVATE KEY-----|\Z)", re.S),
+        "-----BEGIN PRIVATE KEY----- ***",
+    ),
+)
+
+
+def redact(text: str) -> str:
+    for rx, repl in SECRET_PATTERNS:
+        text = rx.sub(repl, text)
+    return SECRET_RE.sub(r"\1\2***", text)
+
+
 TASK_RE = re.compile(r"^- \[(?P<state>[ xX~])\] `(?P<id>T-\d{3,})`(?P<rest>.*)$")
 GATE_RE = re.compile(r"Gate:\s*`([^`]+)`")
 
@@ -536,9 +559,15 @@ def read_state(base: Optional[Path] = None) -> Optional[dict]:
 def write_atomic(path: Path, text: str) -> None:
     """Ghi file qua tệp tạm rồi đổi tên: lỗi giữa chừng không để lại file dở."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.replace(path)
+    # Tên tạm ngẫu nhiên, tạo độc quyền (O_EXCL): không đi theo symlink đặt sẵn, hai tiến trình không đè nhau (AUD-HAR-009).
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def write_state(state: dict, base: Optional[Path] = None) -> None:
@@ -608,7 +637,13 @@ def loop_verdict(base: Optional[Path] = None) -> dict:
                     "task": t["id"],
                     "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>",
                 }
-            if t["gate"] and ev.get("cmd") != t["gate"]:
+            if not t["gate"]:
+                return {
+                    "verdict": "verify",
+                    "task": t["id"],
+                    "reason": f"task {t['id']} không có Gate máy kiểm — thêm `Gate:` + lệnh trong backtick vào PLAN rồi `loop record`",
+                }
+            if not same_command(ev.get("cmd") or "", t["gate"]):
                 return {
                     "verdict": "verify",
                     "task": t["id"],
@@ -636,6 +671,14 @@ def failure_signature(task: str, code: int, output: str) -> str:
     return hashlib.sha256(f"{task}|{code}|{norm}".encode()).hexdigest()[:16]
 
 
+def same_command(a: str, b: str) -> bool:
+    """So lệnh theo token shell (nháy/khoảng trắng khác nhau vẫn là cùng lệnh)."""
+    try:
+        return shlex.split(a) == shlex.split(b)
+    except ValueError:
+        return a.strip() == b.strip()
+
+
 def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
     base = base or project_dir()
     st = read_state(base) or {}
@@ -645,7 +688,8 @@ def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
         print("✗ XS_RECORD_TIMEOUT phải là số giây nguyên dương", file=sys.stderr)
         return 2
     started = now_iso()
-    cmd_str = " ".join(cmd)
+    # Một đối số = chuỗi shell nguyên văn (cho phép `a && b`, ống); nhiều đối số = argv, ghép bằng shlex để giữ nháy (AUD-HAR-002).
+    cmd_str = cmd[0] if len(cmd) == 1 else shlex.join(cmd)
     try:
         proc = subprocess.run(cmd_str, shell=True, cwd=base, capture_output=True, text=True, timeout=timeout)
         code, out = proc.returncode, (proc.stdout or "") + (proc.stderr or "")
@@ -653,16 +697,16 @@ def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
         code, out = 124, f"timeout: {exc}"
     ev: Dict[str, Any] = {
         "task": task,
-        "cmd": cmd_str,
+        "cmd": redact(cmd_str),
         "exit_code": code,
         "started": started,
         "finished": now_iso(),
         "head": _git_head(base),
-        "output_tail": SECRET_RE.sub(r"\1\2***", "\n".join(out.strip().splitlines()[-40:])),
+        "output_tail": redact("\n".join(out.strip().splitlines()[-40:])),
     }
     d = state_dir(base) / "evidence"
     d.mkdir(parents=True, exist_ok=True)
-    (d / f"{task}.json").write_text(json.dumps(ev, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_atomic(d / f"{task}.json", json.dumps(ev, ensure_ascii=False, indent=2) + "\n")
     if st:
         if code == 0:
             st["same_failure_count"] = 0
@@ -1495,7 +1539,7 @@ def cmd_loop(args) -> int:
             print(f"verdict: {v['verdict']} — {v['reason']}")
         return 0
     if args.loop_cmd == "record":
-        cmd = [c for c in args.cmd if c != "--"]
+        cmd = args.cmd[1:] if args.cmd[:1] == ["--"] else list(args.cmd)  # chỉ bỏ `--` phân cách đầu tiên
         if not cmd:
             print("✗ Thiếu lệnh kiểm sau '--'", file=sys.stderr)
             return 2
@@ -1640,7 +1684,7 @@ def cmd_stats(args) -> int:
 
 
 def _task_id(value: str) -> str:
-    if not TASK_ID_RE.match(value):
+    if not TASK_ID_RE.fullmatch(value):
         raise argparse.ArgumentTypeError(f"ID không hợp lệ: {value!r} (dạng T-001 hoặc ID blueprint như BASE-SEC-001)")
     return value
 

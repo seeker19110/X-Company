@@ -1,31 +1,28 @@
-# PLAN.md — Khung X-stored · nâng cấp audit
+# PLAN.md — Khung X-stored · sửa audit 2026-10-14 (5 đợt)
 
-> Lập ngày 2026-10-14 theo yêu cầu người dùng ("nâng cấp audit lên mức tốt nhất … phù hợp với dự án khung và dự án đích").
-> Người dùng đã cho phép: PR xanh thì tự merge, CI đỏ/xung đột thì tự sửa. Blueprint: BLUEPRINT.md.
+> Lập ngày 2026-10-14 từ `docs/ops/AUDIT-REPORT-2026-10-14.md` §5. Người dùng duyệt cả 5 đợt ("duyệt cả 5 đợt, làm tự động đi"),
+> gồm cả đợt đổi hook (2) và CI/ruleset (4). PR xanh thì tự merge; CI đỏ/xung đột thì tự sửa.
+> AUD-DOC-004: chọn đề xuất của báo cáo (bỏ điều kiện "nhánh còn trên remote" khỏi WF-DOC-004, ghi lý do).
 
 ## Mục tiêu của kế hoạch này
-Audit thành quy trình có **máy đỡ** thay vì chỉ văn xuôi trong skill: phương pháp một nhà trong khung, mẫu
-`AUDIT-STATUS.md` máy đọc được, `xs.py audit plan` (dò stack → nhóm áp dụng, công cụ có/thiếu, bằng chứng blueprint
-có thể đã cũ, nhóm cần quét lại theo diff) và `xs.py audit check` (schema phát hiện + Definition of Complete).
-Chỉ số: audit chính repo khung chạy hết bằng quy trình mới, `audit check` exit 0 trên `docs/ops/AUDIT-STATUS.md`.
+`python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` exit 0: không còn 🔴/🟠 mở; nợ 🟢 còn lại có chủ + hạn.
 
 ## Ngân sách (4 con số)
-- Số vòng tối đa: 20 (`--max-iterations 20`)
-- Chi phí: 0 đồng ngoài phiên (chỉ thư viện chuẩn, không dịch vụ trả phí)
+- Số vòng tối đa: 40 (`--max-iterations 40`)
+- Chi phí: 0 đồng ngoài phiên (chỉ thư viện chuẩn + công cụ đã ghim)
 - Timeout mỗi lệnh Gate: 300 giây (`XS_RECORD_TIMEOUT`)
-- Ngày hết hạn: 4 giờ sau `loop init` (`--hours 4`)
+- Ngày hết hạn: 6 giờ sau `loop init` (`--hours 6`)
 
 ## Điểm dừng bắt buộc (dừng và hỏi người — `xs.py loop block --reason "..."`)
-- Ruleset, quyền repo, tag/release (5 MUST chờ admin — không đụng)
-- Sửa phát hiện audit trước khi người duyệt kế hoạch sửa (skill /audit bước 3)
+- Ruleset/quyền repo/tag phát hành trên GitHub (chỉ sửa file ruleset trong repo, không import)
+- Phát hiện mới mức 🔴 trong lúc sửa
 - Hạ ngưỡng, skip test, sửa ADR cũ
 
 ## Task
 
-- [x] `T-001` Phương pháp `framework/00-method/audit.md`: phạm vi, áp dụng theo tín hiệu repo, 13 nhóm (thêm Harness), lệnh dò theo stack, thang mức, loại bằng chứng, schema phát hiện, xác minh đối kháng, quét lại theo diff, Definition of Complete; chỉ mục 00-method + lifecycle trỏ tới — Gate: `python3 scripts/xs.py validate`
-- [x] `T-002` Mẫu `framework/templates/AUDIT-STATUS.md` (máy đọc) và `AUDIT-REPORT.md`; chỉ mục templates — Gate: `python3 scripts/xs.py validate`
-- [x] `T-003` `xs.py audit plan`: tín hiệu stack, nhóm áp dụng/rút gọn/N/A kèm lý do, công cụ có/thiếu theo nhóm, bằng chứng blueprint trỏ file đã đổi sau khi tick, nhóm cần quét lại từ SHA trong STATUS; `--json` + test — Gate: `python3 -m unittest discover -s tests -k audit_plan`
-- [x] `T-004` `xs.py audit check STATUS [--strict]`: schema nhóm/phát hiện, SHA tổ tiên HEAD, chấp nhận rủi ro có hạn chưa quá, `--strict` đỏ khi còn 🔴/🟠 mở hoặc nhóm chưa quét + test — Gate: `python3 -m unittest discover -s tests -k audit_check`
-- [x] `T-005` Viết lại skill `/audit` dùng hai lệnh + fan-out subagent theo cụm nhóm + xác minh đối kháng; ADR-0005; README/AGENTS/CHANGELOG — Gate: `scripts/dev-task.sh gate`
-- [x] `T-006` Dogfood: audit repo khung theo quy trình mới → `docs/ops/AUDIT-STATUS.md` + `docs/ops/AUDIT-REPORT-2026-10-14.md`; dừng chờ duyệt kế hoạch sửa — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md`
-- [x] `T-007` PR, CI xanh, tự merge theo uỷ quyền; PROGRESS — Gate: `python3 scripts/xs.py progress-check PROGRESS.md`
+- [x] `T-101` Đợt 1: AUD-HAR-001 (gốc dự án của dev-task + no-op không báo xanh), HAR-002 (argv/`--`), CFG-001 (che bí mật + `cmd`), HAR-007, HAR-008 (task phải có Gate), HAR-009 (write_atomic) — Gate: `scripts/dev-task.sh gate`
+- [ ] `T-102` Đợt 2: hook tách lệnh bằng shlex (AUD-SEC-001…010), session-start cắt UTF-8 an toàn (HAR-011) — Gate: `python3 -m unittest discover -s tests -k guard`
+- [ ] `T-103` Đợt 3: install đăng ký hook vào settings có sẵn (HAR-003), manifest hash cập nhật hook chưa sửa (HAR-004), bỏ qua symlink (HAR-010), cảnh báo ruleset cần workflow (CI-003) — Gate: `python3 -m unittest discover -s tests -k install`
+- [ ] `T-104` Đợt 4: requirements-dev có hash + Dependabot pip (DEP-001), nâng action (DEP-002), ruleset strict (CI-002), lychee nhận 202 (CI-004) — Gate: `scripts/dev-task.sh gate`
+- [ ] `T-105` Đợt 5: thống nhất tài liệu AUD-DOC-001…019, CI-001, CI-005, HAR-005; xác minh lại 45 bằng chứng blueprint (HAR-006) — Gate: `python3 scripts/xs.py validate`
+- [ ] `T-106` Sổ audit: cập nhật trạng thái, quét lại nhóm bị chạm, `--strict` xanh — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict`
