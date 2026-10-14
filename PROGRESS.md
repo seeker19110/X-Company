@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/stoic-einstein-0tid74
 
 ## Đang làm
-- PR #28 trả nợ AUD-CODE-001 (PLAN T-301…T-303): 11 hàm C901 tách về ≤ 10, hành vi không đổi; `ruff.toml` bật C901. Sau merge: sổ audit không còn nợ 🟢 nào.
+- Không có việc dở. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
 
 ## Tiếp theo
 1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
@@ -28,7 +28,7 @@
 - 2026-10-14 Repo khung: cổng `typecheck` = `mypy --strict`; cổng `test` đòi coverage dòng + nhánh 100% (cả subprocess) — mã chết thì xoá, không dùng `pragma: no cover` trừ khi không thể chạy tới.
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `60ece7b` (#27 PROGRESS sau #26); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
+- Commit cuối trên `main`: `f6cd254` (#28 trả nợ C901); SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không; autopilot PLAN T-301…T-303 (trả nợ C901).
+- Đang chặn: không; autopilot PLAN T-301…T-303 xong.
 - Câu hỏi cần người: mục Tiếp theo 1 và 4.
