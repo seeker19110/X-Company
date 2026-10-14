@@ -3,7 +3,7 @@ title: Nền ứng dụng LLM: chọn model, prompt-as-code, structured output, 
 kind: module
 prefix: AI-APP
 applies_to: [ai-agent, agentic-system, data-ml, web-app, mobile-app, desktop-app, static-site, game, monorepo, api-service]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Nền ứng dụng LLM: chọn model, prompt-as-code, structured output, chi phí
@@ -58,15 +58,15 @@ TTL 5 phút (ghi ×1.25) hoặc 1 giờ (ghi ×2), đọc ×0.1; kiểm hiệu q
 
 ## Checklist
 
-- [ ] `AI-APP-001` **MUST** Prompt lưu trong repo dưới dạng file/hàm có phiên bản (không chuỗi rải trong code), mỗi thay đổi qua PR. → Kiểm: thư mục `prompts/` hoặc module prompt có `git log`; không có prompt hard-code > 2 dòng ngoài đó. · Nguồn: `research/2026-10-13-ai-agent-research.md` §1
-- [ ] `AI-APP-002` **MUST** Mỗi prompt có golden snapshot và bộ eval tối thiểu chạy trong CI; đổi prompt mà eval giảm quá ngưỡng → PR đỏ. → Kiểm: job CI chạy eval (vd `promptfoo` 0.124.1) và so với baseline; xem [`evaluation.md`](evaluation.md).
+- [ ] `AI-APP-001` **MUST@L** Prompt lưu trong repo dưới dạng file/hàm có phiên bản (không chuỗi rải trong code), mỗi thay đổi qua PR. → Kiểm: thư mục `prompts/` hoặc module prompt có `git log`; không có prompt hard-code > 2 dòng ngoài đó. · Nguồn: `research/2026-10-13-ai-agent-research.md` §1
+- [ ] `AI-APP-002` **MUST@L** Mỗi prompt có golden snapshot và bộ eval tối thiểu chạy trong CI; đổi prompt mà eval giảm quá ngưỡng → PR đỏ. → Kiểm: job CI chạy eval (vd `promptfoo` 0.124.1) và so với baseline; xem [`evaluation.md`](evaluation.md).
 - [ ] `AI-APP-003` **MUST** Đầu ra dùng cho logic/giao diện có schema và được validate lúc chạy ở server; JSON hỏng, `refusal`, `max_tokens` đều có nhánh xử lý. → Kiểm: test với response giả cho 3 trường hợp; code đọc `stop_reason`.
-- [ ] `AI-APP-004` **MUST** Không dùng prefill assistant khi bật structured output native; không tin `strict` thay cho validate ngữ nghĩa (giá trị âm, ngày không hợp lệ…). → Kiểm: review code; test schema với giá trị biên. · Nguồn: Anthropic structured outputs docs
-- [ ] `AI-APP-005` **MUST** Chọn model theo bảng tier có eval chứng minh; ghi ADR khi chọn model cho tác vụ chính. → Kiểm: `docs/adr/` có ADR chọn model; eval so ≥ 2 tier. · Nguồn: [`../05-architecture/decision-records.md`](../05-architecture/decision-records.md)
+- [ ] `AI-APP-004` **MUST@L** Không dùng prefill assistant khi bật structured output native; không tin `strict` thay cho validate ngữ nghĩa (giá trị âm, ngày không hợp lệ…). → Kiểm: review code; test schema với giá trị biên. · Nguồn: Anthropic structured outputs docs
+- [ ] `AI-APP-005` **MUST@L** Chọn model theo bảng tier có eval chứng minh; ghi ADR khi chọn model cho tác vụ chính. → Kiểm: `docs/adr/` có ADR chọn model; eval so ≥ 2 tier. · Nguồn: [`../05-architecture/decision-records.md`](../05-architecture/decision-records.md)
 - [ ] `AI-APP-006` **MUST** Mỗi request LLM có `max_tokens` và timeout; mỗi tenant/người dùng có hạn mức token theo ngày; vượt → từ chối rõ ràng, không treo. → Kiểm: config hạn mức; test vượt hạn mức trả lỗi có mã.
 - [ ] `AI-APP-007` **MUST** Dữ liệu ngoài đưa vào prompt (tài liệu, web, output tool) được đặt trong phần dữ liệu có ranh giới và bị coi là untrusted; không nối chuỗi thô vào system prompt. → Kiểm: review cấu trúc prompt; test prompt-injection cơ bản theo [`../12-security/ai-security.md`](../12-security/ai-security.md).
 - [ ] `AI-APP-008` **MUST** API key của nhà cung cấp chỉ ở server/secret manager; client (web/mobile) gọi qua backend có auth và rate limit. → Kiểm: grep bundle client không chứa key; endpoint proxy có auth. · Nguồn: [`../12-security/secrets-management.md`](../12-security/secrets-management.md)
-- [ ] `AI-APP-009` **MUST** Lời gọi có thể lặp lại (retry) phải idempotent ở tầng ứng dụng: retry chỉ trên lỗi tạm (429/5xx/timeout), có backoff và trần số lần. → Kiểm: test retry với mock trả 429 rồi 200; không retry trên 400.
+- [ ] `AI-APP-009` **MUST@L** Lời gọi có thể lặp lại (retry) phải idempotent ở tầng ứng dụng: retry chỉ trên lỗi tạm (429/5xx/timeout), có backoff và trần số lần. → Kiểm: test retry với mock trả 429 rồi 200; không retry trên 400.
 - [ ] `AI-APP-010` **SHOULD** Bắt đầu bằng một lời gọi + schema; chỉ lên workflow/agent khi eval cho thấy không đủ; ghi lý do trong ADR. · Nguồn: Anthropic *Building effective agents*
 - [ ] `AI-APP-011` **SHOULD** Bật prompt caching với prefix ổn định; theo dõi `cache_read_input_tokens`/`cache_creation_input_tokens` và tỉ lệ hit theo tuần. · Nguồn: Anthropic prompt caching docs
 - [ ] `AI-APP-012` **SHOULD** Việc không cần tức thời (đánh giá hàng loạt, nhãn dữ liệu, báo cáo đêm) đi Batch API hoặc hàng đợi để giảm chi phí và tránh rate limit. · Nguồn: [`../08-backend/background-jobs-and-queues.md`](../08-backend/background-jobs-and-queues.md)

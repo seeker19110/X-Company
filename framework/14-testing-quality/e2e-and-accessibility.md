@@ -3,7 +3,7 @@ title: E2E & a11y: Playwright/axe, mobile, flaky, trace
 kind: module
 prefix: QA-E2E
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # E2E & a11y: Playwright/axe, mobile, flaky, trace
@@ -34,16 +34,16 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `QA-E2E-001` **MUST** Có E2E cho luồng chính (ít nhất: đăng nhập/đăng ký, thao tác lõi tạo giá trị, thanh toán nếu có) chạy trong CI trên mọi PR. → Kiểm: test tag `@smoke` ≥ 3; job `e2e` required.
-- [ ] `QA-E2E-002` **MUST** Mỗi luồng chính chạy trên cả project desktop và mobile viewport. → Kiểm: `playwright.config` có ≥ 2 `projects` (`desktop`, `mobile`) và báo cáo có kết quả cả hai. · Nguồn: [`../06-design-ux/responsive-and-mobile-first.md`](../06-design-ux/responsive-and-mobile-first.md)
+- [ ] `QA-E2E-002` **MUST@L** Mỗi luồng chính chạy trên cả project desktop và mobile viewport. → Kiểm: `playwright.config` có ≥ 2 `projects` (`desktop`, `mobile`) và báo cáo có kết quả cả hai. · Nguồn: [`../06-design-ux/responsive-and-mobile-first.md`](../06-design-ux/responsive-and-mobile-first.md)
 - [ ] `QA-E2E-003` **MUST** Mỗi E2E (hoặc mỗi trang chính) kèm quét axe với tag đến `wcag22aa`, 0 vi phạm `critical`/`serious`. → Kiểm: helper `expectNoA11yViolations(page)` được gọi trong mọi spec `@smoke`; CI đỏ khi có vi phạm. · Nguồn: WCAG 2.2 AA
-- [ ] `QA-E2E-004` **MUST** Selector ưu tiên `getByRole`/`getByLabel`/`getByText`; `data-testid` chỉ khi không có vai trò hợp lý. → Kiểm: lint `playwright/prefer-locator`/grep `page.locator('.`/`#` ≤ ngưỡng ghi trong repo (mặc định 0 trong spec `@smoke`).
+- [ ] `QA-E2E-004` **MUST@L** Selector ưu tiên `getByRole`/`getByLabel`/`getByText`; `data-testid` chỉ khi không có vai trò hợp lý. → Kiểm: lint `playwright/prefer-locator`/grep `page.locator('.`/`#` ≤ ngưỡng ghi trong repo (mặc định 0 trong spec `@smoke`).
 - [ ] `QA-E2E-005` **MUST** `forbidOnly` bật ở CI; `retries` ≤ 2; `trace: 'on-first-retry'`; `workers` cố định ở CI (mặc định 4 theo đo catalog 23). → Kiểm: `playwright.config` có `forbidOnly: !!process.env.CI`, `retries: process.env.CI ? 2 : 0`, `trace: 'on-first-retry'`. · Nguồn: Playwright docs test-configuration
 - [ ] `QA-E2E-006` **MUST** Test tự tạo dữ liệu qua API/seed và dọn sau; không dùng tài khoản/dữ liệu thật; chạy trên môi trường staging/preview. → Kiểm: `baseURL` không phải production; fixture tạo user với email `+e2e-<uuid>`; cleanup trong `afterEach`/global teardown.
-- [ ] `QA-E2E-007` **MUST** Không `waitForTimeout` cố định; chờ theo điều kiện (`expect(locator).toBeVisible()`, `waitForResponse`). → Kiểm: `grep -r "waitForTimeout" e2e/` = 0 (ngoại lệ có comment lý do).
-- [ ] `QA-E2E-008` **MUST@M** Trace/video/screenshot của test đỏ được upload artifact và giữ ≥ 14 ngày. → Kiểm: workflow có `upload-artifact` cho `playwright-report/` và `test-results/` khi `failure()`.
-- [ ] `QA-E2E-009` **MUST@M** Flaky: test đỏ-xanh trong cùng run được gắn `@flaky` + ticket, cách ly khỏi required check, hạn sửa ≤ 2 tuần. → Kiểm: báo cáo Playwright `flaky` count = 0 trong required; `docs/ops/flaky.md` có hạn. · Nguồn: [`test-strategy.md`](test-strategy.md) QA-STRAT-009
-- [ ] `QA-E2E-010` **MUST@M** Kiểm tay bàn phím + trình đọc màn hình cho luồng chính mỗi release lớn, ghi biên bản. → Kiểm: mục trong `GO-NO-GO.md`. · Nguồn: [`../04-standards/accessibility-standards.md`](../04-standards/accessibility-standards.md) STD-A11Y-004
-- [ ] `QA-E2E-011` **MUST@M** Mobile native: UI test luồng chính trên emulator/simulator trong CI với ít nhất một kích thước nhỏ (≤ 5,4") và font scale lớn. → Kiểm: job CI chạy XCUITest/Espresso; cấu hình device có 2 profile.
+- [ ] `QA-E2E-007` **MUST@L** Không `waitForTimeout` cố định; chờ theo điều kiện (`expect(locator).toBeVisible()`, `waitForResponse`). → Kiểm: `grep -r "waitForTimeout" e2e/` = 0 (ngoại lệ có comment lý do).
+- [ ] `QA-E2E-008` **MUST@L** Trace/video/screenshot của test đỏ được upload artifact và giữ ≥ 14 ngày. → Kiểm: workflow có `upload-artifact` cho `playwright-report/` và `test-results/` khi `failure()`.
+- [ ] `QA-E2E-009` **MUST@L** Flaky: test đỏ-xanh trong cùng run được gắn `@flaky` + ticket, cách ly khỏi required check, hạn sửa ≤ 2 tuần. → Kiểm: báo cáo Playwright `flaky` count = 0 trong required; `docs/ops/flaky.md` có hạn. · Nguồn: [`test-strategy.md`](test-strategy.md) QA-STRAT-009
+- [ ] `QA-E2E-010` **MUST@L** Kiểm tay bàn phím + trình đọc màn hình cho luồng chính mỗi release lớn, ghi biên bản. → Kiểm: mục trong `GO-NO-GO.md`. · Nguồn: [`../04-standards/accessibility-standards.md`](../04-standards/accessibility-standards.md) STD-A11Y-004
+- [ ] `QA-E2E-011` **MUST@L** Mobile native: UI test luồng chính trên emulator/simulator trong CI với ít nhất một kích thước nhỏ (≤ 5,4") và font scale lớn. → Kiểm: job CI chạy XCUITest/Espresso; cấu hình device có 2 profile.
 - [ ] `QA-E2E-012` **SHOULD** Cache trình duyệt Playwright theo lockfile; cài `--with-deps` chỉ khi cache miss. → Kiểm: workflow cache `~/.cache/ms-playwright` key `hashFiles('**/package-lock.json')` (đo −29s, catalog 23 §2.5).
 - [ ] `QA-E2E-013` **SHOULD** Thời gian suite E2E ở PR ≤ 10 phút; phần còn lại chạy nightly. → Kiểm: log thời gian job; tag `@nightly`.
 - [ ] `QA-E2E-014` **SHOULD** Test trạng thái UI: rỗng, tải, lỗi, thành công cho màn hình chính (chặn API bằng `route` để ép trạng thái). → Kiểm: spec có 4 ca `empty|loading|error|success` cho mỗi màn `@smoke`. · Nguồn: [`../06-design-ux/ui-states-and-feedback.md`](../06-design-ux/ui-states-and-feedback.md)

@@ -3,7 +3,7 @@ title: Chuyển động, hình ảnh, chống 'AI slop', kiểm bằng máy
 kind: module
 prefix: UX-VISUAL
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chuyển động, hình ảnh, chống 'AI slop', kiểm bằng máy
@@ -50,12 +50,12 @@ updated: 2026-10-13
 
 - [ ] `UX-VISUAL-001` **MUST** Mọi animation dịch chuyển/zoom/parallax/auto-play được giảm hoặc thay bằng fade khi `prefers-reduced-motion: reduce`. → Kiểm: Playwright `emulateMedia({ reducedMotion: 'reduce' })` → không phần tử nào có `transform` animation đang chạy (`getAnimations()` lọc transform = 0); CSS có khối `@media (prefers-reduced-motion: reduce)`. · Nguồn: MDN `prefers-reduced-motion`; WCAG 2.2 SC 2.3.3
 - [ ] `UX-VISUAL-002` **MUST** Không nội dung nhấp nháy quá 3 lần/giây; chuyển động tự động > 5 s có nút dừng. → Kiểm: review animation `infinite`; carousel/video nền có nút Pause (E2E). · Nguồn: WCAG 2.2 SC 2.3.1, 2.2.2
-- [ ] `UX-VISUAL-003` **MUST** Chỉ animate `transform`/`opacity` (và `filter` có cân nhắc); không `transition: all`; không animate thuộc tính layout. → Kiểm: stylelint `declaration-property-value-disallowed-list` cho `transition: all`; rule cấm `animation`/`transition` trên `top|left|width|height|margin`. · Nguồn: web.dev Animations guide
-- [ ] `UX-VISUAL-004` **MUST** Thời lượng/easing lấy từ token (`--motion-duration-*`, `--motion-ease-*`); không số lẻ. → Kiểm: grep `transition.*\d+ms` ngoài file token = 0.
-- [ ] `UX-VISUAL-005` **MUST** Lighthouse mobile đạt ≥ 0.9 ở cả 4 category (Performance, Accessibility, Best Practices, SEO cho trang công khai) trên ≥ 3 URL đại diện. → Kiểm: `lhci assert` `categories:* minScore 0.9`, `numberOfRuns: 3`. · Nguồn: Lighthouse scoring (90–100 = xanh); catalog 06 §4
+- [ ] `UX-VISUAL-003` **MUST@L** Chỉ animate `transform`/`opacity` (và `filter` có cân nhắc); không `transition: all`; không animate thuộc tính layout. → Kiểm: stylelint `declaration-property-value-disallowed-list` cho `transition: all`; rule cấm `animation`/`transition` trên `top|left|width|height|margin`. · Nguồn: web.dev Animations guide
+- [ ] `UX-VISUAL-004` **MUST@L** Thời lượng/easing lấy từ token (`--motion-duration-*`, `--motion-ease-*`); không số lẻ. → Kiểm: grep `transition.*\d+ms` ngoài file token = 0.
+- [ ] `UX-VISUAL-005` **MUST@L** Lighthouse mobile đạt ≥ 0.9 ở cả 4 category (Performance, Accessibility, Best Practices, SEO cho trang công khai) trên ≥ 3 URL đại diện. → Kiểm: `lhci assert` `categories:* minScore 0.9`, `numberOfRuns: 3`. · Nguồn: Lighthouse scoring (90–100 = xanh); catalog 06 §4
 - [ ] `UX-VISUAL-006` **MUST** Ảnh/icon trang trí có `alt=""`/`aria-hidden`; icon có nghĩa có tên tiếp cận; không emoji làm icon. → Kiểm: axe `image-alt`, `svg-img-alt`; script regex emoji trong JSX/template UI = 0. · Nguồn: WCAG 2.2 SC 1.1.1
 - [ ] `UX-VISUAL-007` **MUST** Mọi ảnh/minh hoạ có quyền sử dụng ghi trong `assets/CREDITS.md` (nguồn, license); ảnh AI tạo gắn nhãn. → Kiểm: script so khớp file trong `public/images` với dòng trong CREDITS = 100%. · Nguồn: [`../16-compliance-privacy/licensing-and-ip.md`](../16-compliance-privacy/licensing-and-ip.md)
-- [ ] `UX-VISUAL-008` **MUST@M** Visual regression cho component dùng chung và 3–5 trang chính ở cả hai theme, viewport mobile + desktop; diff phải được duyệt. → Kiểm: `toHaveScreenshot` với `maxDiffPixelRatio` cấu hình; CI fail khi lệch chưa cập nhật baseline.
+- [ ] `UX-VISUAL-008` **MUST@L** Visual regression cho component dùng chung và 3–5 trang chính ở cả hai theme, viewport mobile + desktop; diff phải được duyệt. → Kiểm: `toHaveScreenshot` với `maxDiffPixelRatio` cấu hình; CI fail khi lệch chưa cập nhật baseline.
 - [ ] `UX-VISUAL-009` **SHOULD** Kiểm hai theme ở zoom 400% (và ảnh chụp ở zoom 4×) cho màn hình chính: không chữ tàng hình, không viền mất, biểu đồ đọc được. → Kiểm: Playwright `deviceScaleFactor: 4` + `data-theme` dark/light chụp ảnh so baseline. · Nguồn: catalog 06 §7 (verify ở zoom 4×, cả hai theme)
 - [ ] `UX-VISUAL-010` **SHOULD** Một bộ icon duy nhất, cùng stroke/size, nạp theo cây (tree-shake), `aria-hidden` khi trang trí. → Kiểm: `package.json` chỉ một thư viện icon; knip không báo icon thừa.
 - [ ] `UX-VISUAL-011` **SHOULD** Không có trope "AI slop" trong bảng trên; section hero có nội dung thật (số liệu, ảnh sản phẩm) thay vì khẩu hiệu chung. → Kiểm: script `check:ui-ux-guard` (grep gradient ngoài token, `transition: all`, emoji, `backdrop-filter` > ngưỡng) = 0; review ảnh hero trong PR.

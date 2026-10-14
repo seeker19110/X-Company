@@ -3,7 +3,7 @@ title: Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằ
 kind: module
 prefix: LOOP-DESIGN
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằng chứng
@@ -55,15 +55,15 @@ và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đ
 ## Checklist
 
 - [ ] `LOOP-DESIGN-001` **MUST** Vòng lặp khai đủ 4 con số trước khi chạy: trần vòng, ngân sách tiền/token, timeout mỗi lệnh kiểm, hạn chót. → Kiểm: `.autopilot/state.json` có `max_iterations` và `deadline` (từ `loop init --max-iterations N --hours H`); lệnh headless có `--max-turns` + `--max-budget-usd`; `XS_RECORD_TIMEOUT` (mặc định 1800 s) ghi trong `PLAN.md`. · Nguồn: stored 21 §10
-- [ ] `LOOP-DESIGN-002` **MUST** Mỗi task trong `PLAN.md` có tiêu chí dừng máy kiểm dạng `— Gate:` theo sau là lệnh trong backtick (test/lint/build/script), không phải mô tả bằng lời. → Kiểm: `python3 scripts/xs.py loop status --json` không trả `blocked` với lý do "PLAN không có task"; grep `Gate:` cho mọi dòng `T-\d{3}`.
+- [ ] `LOOP-DESIGN-002` **MUST@L** Mỗi task trong `PLAN.md` có tiêu chí dừng máy kiểm dạng `— Gate:` theo sau là lệnh trong backtick (test/lint/build/script), không phải mô tả bằng lời. → Kiểm: `python3 scripts/xs.py loop status --json` không trả `blocked` với lý do "PLAN không có task"; grep `Gate:` cho mọi dòng `T-\d{3}`.
 - [ ] `LOOP-DESIGN-003` **MUST** Task chỉ được tick `[x]` sau khi `xs.py loop record --task T-xxx -- <đúng lệnh Gate>` trả exit 0. → Kiểm: `.autopilot/evidence/T-xxx.json` có `exit_code: 0` và `cmd` bằng chuỗi Gate; `loop status` không trả `verify`.
 - [ ] `LOOP-DESIGN-004` **MUST** Tín hiệu dừng đọc từ file trạng thái/bằng chứng, không từ chuỗi model in ra (promise string) hay phán quyết của model đánh giá transcript. → Kiểm: `.claude/settings.json` có Stop hook gọi `xs.py loop hook-stop`; không có hook nào grep `<promise>`; `/goal` nếu dùng chỉ là lớp phụ. · Nguồn: stored 23 §2.2
-- [ ] `LOOP-DESIGN-005` **MUST** Cùng một chữ ký lỗi (task + exit code + 20 dòng cuối đã bỏ số) lặp 3 lần → verdict `blocked`, vòng lặp tự dừng để người xem. → Kiểm: `state.json` có `max_same_failure: 3`; test tái hiện: 3 lần `loop record` cùng lỗi → `loop status` = `blocked`.
-- [ ] `LOOP-DESIGN-006` **MUST** Trạng thái bền nằm trên đĩa/repo (`PLAN.md`, `PROGRESS.md`, `BLUEPRINT.md`, `.autopilot/`), không trong trí nhớ phiên. → Kiểm: mở phiên mới, `xs.py loop status` cho cùng verdict; `session-start.sh` nạp được PROGRESS. · Nguồn: stored 03 §6
-- [ ] `LOOP-DESIGN-007` **MUST** Chạm bất kỳ trần nào (vòng, hạn, ngân sách) → dừng có kiểm soát: commit phần xong, ghi `PROGRESS.md`, không "cố nốt". → Kiểm: `state.json.final_verdict.verdict ∈ {budget, blocked, done}`; `PROGRESS.md` mục Bàn giao có SHA là tổ tiên HEAD.
+- [ ] `LOOP-DESIGN-005` **MUST@L** Cùng một chữ ký lỗi (task + exit code + 20 dòng cuối đã bỏ số) lặp 3 lần → verdict `blocked`, vòng lặp tự dừng để người xem. → Kiểm: `state.json` có `max_same_failure: 3`; test tái hiện: 3 lần `loop record` cùng lỗi → `loop status` = `blocked`.
+- [ ] `LOOP-DESIGN-006` **MUST@L** Trạng thái bền nằm trên đĩa/repo (`PLAN.md`, `PROGRESS.md`, `BLUEPRINT.md`, `.autopilot/`), không trong trí nhớ phiên. → Kiểm: mở phiên mới, `xs.py loop status` cho cùng verdict; `session-start.sh` nạp được PROGRESS. · Nguồn: stored 03 §6
+- [ ] `LOOP-DESIGN-007` **MUST@L** Chạm bất kỳ trần nào (vòng, hạn, ngân sách) → dừng có kiểm soát: commit phần xong, ghi `PROGRESS.md`, không "cố nốt". → Kiểm: `state.json.final_verdict.verdict ∈ {budget, blocked, done}`; `PROGRESS.md` mục Bàn giao có SHA là tổ tiên HEAD.
 - [ ] `LOOP-DESIGN-008` **MUST** Có phát hiện không-tiến-triển ngoài trần vòng: Stop hook không chặn vô hạn khi model không gọi tool. → Kiểm: `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` giữ mặc định 8 (không đặt `0`); `hook-stop` tăng `iterations` mỗi lần chặn. · Nguồn: Claude Code docs env-vars
-- [ ] `LOOP-DESIGN-009` **MUST@M** Vòng lặp không tự merge vào nhánh chính; kết thúc ở PR có CI xanh, người (hoặc làn nhanh đã định nghĩa bằng máy) merge. → Kiểm: ruleset chặn push thẳng `main`; hook `pre-bash-guard.sh` ask khi push `main`; log autopilot không có `gh pr merge` tự động ngoài làn nhanh. · Nguồn: stored 03 §6 mục 7
-- [ ] `LOOP-DESIGN-010` **MUST** Stop hook fail-open (lỗi hook → cho dừng), cổng chặn lệnh nguy hiểm fail-closed (lỗi → chặn). → Kiểm: `hook_stop()` bọc `try/except` trả exit 0; PreToolUse deny có `"onFailure": "block"` hoặc exit 2 khi script lỗi.
+- [ ] `LOOP-DESIGN-009` **MUST@L** Vòng lặp không tự merge vào nhánh chính; kết thúc ở PR có CI xanh, người (hoặc làn nhanh đã định nghĩa bằng máy) merge. → Kiểm: ruleset chặn push thẳng `main`; hook `pre-bash-guard.sh` ask khi push `main`; log autopilot không có `gh pr merge` tự động ngoài làn nhanh. · Nguồn: stored 03 §6 mục 7
+- [ ] `LOOP-DESIGN-010` **MUST@L** Stop hook fail-open (lỗi hook → cho dừng), cổng chặn lệnh nguy hiểm fail-closed (lỗi → chặn). → Kiểm: `hook_stop()` bọc `try/except` trả exit 0; PreToolUse deny có `"onFailure": "block"` hoặc exit 2 khi script lỗi.
 - [ ] `LOOP-DESIGN-011` **SHOULD** Lỗi lần 2 cùng bước → đổi cách tiếp cận và ghi vào `PROGRESS.md` trước khi thử lại; không sửa máy móc lần 3. → Kiểm: `PROGRESS.md` mục Quyết định có dòng "đổi cách" trước evidence lần 3. · Nguồn: stored 23 §6.1
 - [ ] `LOOP-DESIGN-012` **SHOULD** Prefix prompt ổn định để tận dụng cache: chỉ nối thêm, không sửa đầu hội thoại, không chèn timestamp vào system prompt. → Kiểm: `usage.cache_read_input_tokens > 0` ở lượt thứ hai trở đi (headless `--output-format json`).
 - [ ] `LOOP-DESIGN-013` **SHOULD** Người sinh và người chấm tách nhau: lệnh Gate do code chạy, reviewer không đọc lời giải thích của agent viết code. → Kiểm: `reviewer` subagent chỉ nhận diff + SPEC; Gate là lệnh trong `xs.yaml`, không phải prompt.

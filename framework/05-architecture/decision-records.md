@@ -3,7 +3,7 @@ title: Quyết định kiến trúc (ADR) và quản trị thay đổi kiến tr
 kind: module
 prefix: ARC-ADR
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Quyết định kiến trúc (ADR) và quản trị thay đổi kiến trúc
@@ -46,11 +46,11 @@ updated: 2026-10-13
 - [ ] `ARC-ADR-002` **MUST** ADR đánh số tăng dần 4 chữ số, không trùng, không tái sử dụng số; tên file `NNNN-<slug-kebab>.md`. → Kiểm: script liệt kê số và báo trùng/khoảng trống bất thường; regex tên file trong CI. · Nguồn: khung cũ `.claude/commands/adr.md` (`git show 1b80fe4:.claude/commands/adr.md`)
 - [ ] `ARC-ADR-003` **MUST** Mỗi ADR có đủ: Status · Date · Context and Problem Statement · Considered Options (≥ 2) · Decision Outcome · Consequences. → Kiểm: script lint heading (grep) chạy trong CI; 0 file thiếu. · Nguồn: MADR 4.0.0 (required: Context, Considered Options, Decision Outcome)
 - [ ] `ARC-ADR-004` **MUST** ADR đã *accepted* không bị sửa nội dung; thay đổi chỉ được ở dòng Status/liên kết "superseded by". → Kiểm: CI so diff file `docs/adr/*.md` đã accepted ở nhánh gốc — chỉ cho phép thay đổi dòng Status/links; hook `ask` khi sửa file ADR có `status: accepted`. · Nguồn: khung cũ ADR template ("KHÔNG sửa ADR cũ") · evidence-and-sources luật 12
-- [ ] `ARC-ADR-005` **MUST** Đổi ý → ADR mới trỏ ADR cũ, ADR cũ chuyển Status `superseded by ADR-NNNN`; hai chiều liên kết. → Kiểm: script kiểm mọi "superseded by X" có file X tồn tại và X tham chiếu ngược. · Nguồn: MADR 4.0.0 (status superseded)
-- [ ] `ARC-ADR-006` **MUST** Phiên bản, số liệu, văn bản luật trong ADR kèm ngày xác minh + URL; không xác minh được → "(chưa xác minh)". → Kiểm: grep mỗi chuỗi phiên bản (`\d+\.\d+`) trong ADR có "xác minh"/"(chưa xác minh)" cùng đoạn; review checklist. · Nguồn: P2 · [`../00-method/evidence-and-sources.md`](../00-method/evidence-and-sources.md)
-- [ ] `ARC-ADR-007` **MUST** Chỉ mục `docs/adr/README.md` tách cột **Status** và **Implementation status** (not started / partial / done + link bằng chứng). → Kiểm: bảng chỉ mục có hai cột đó; mỗi "done" có link PR/CI/test. · Nguồn: catalog 23 §6.4 (reveser `docs/adr/README.md`)
-- [ ] `ARC-ADR-008` **MUST@M** Chỉ mục ADR sinh tự động từ file, có cổng drift trong CI (sinh lại và so khớp). → Kiểm: `python3 scripts/adr-index.py --check` exit 0; CI đỏ khi lệch. · Nguồn: catalog 23 §6.4 (catalog sinh từ mã + cổng drift)
-- [ ] `ARC-ADR-009` **MUST@M** ADR thuộc làn kiến trúc (schema phá vỡ, hợp đồng API, bảo mật/thanh toán/mật mã, đổi model AI) được duyệt bởi người có vai trò ghi trong `decision-makers` trước khi merge code liên quan. → Kiểm: PR có nhãn `architecture` phải link ADR ở trạng thái accepted; rule CI kiểm thân PR. · Nguồn: khung cũ spec §B3 (làn kiến trúc) · catalog 23 §4 (`pr-policy.yml` feat phải link spec)
+- [ ] `ARC-ADR-005` **MUST@L** Đổi ý → ADR mới trỏ ADR cũ, ADR cũ chuyển Status `superseded by ADR-NNNN`; hai chiều liên kết. → Kiểm: script kiểm mọi "superseded by X" có file X tồn tại và X tham chiếu ngược. · Nguồn: MADR 4.0.0 (status superseded)
+- [ ] `ARC-ADR-006` **MUST@L** Phiên bản, số liệu, văn bản luật trong ADR kèm ngày xác minh + URL; không xác minh được → "(chưa xác minh)". → Kiểm: grep mỗi chuỗi phiên bản (`\d+\.\d+`) trong ADR có "xác minh"/"(chưa xác minh)" cùng đoạn; review checklist. · Nguồn: P2 · [`../00-method/evidence-and-sources.md`](../00-method/evidence-and-sources.md)
+- [ ] `ARC-ADR-007` **MUST@L** Chỉ mục `docs/adr/README.md` tách cột **Status** và **Implementation status** (not started / partial / done + link bằng chứng). → Kiểm: bảng chỉ mục có hai cột đó; mỗi "done" có link PR/CI/test. · Nguồn: catalog 23 §6.4 (reveser `docs/adr/README.md`)
+- [ ] `ARC-ADR-008` **MUST@L** Chỉ mục ADR sinh tự động từ file, có cổng drift trong CI (sinh lại và so khớp). → Kiểm: `python3 scripts/adr-index.py --check` exit 0; CI đỏ khi lệch. · Nguồn: catalog 23 §6.4 (catalog sinh từ mã + cổng drift)
+- [ ] `ARC-ADR-009` **MUST@L** ADR thuộc làn kiến trúc (schema phá vỡ, hợp đồng API, bảo mật/thanh toán/mật mã, đổi model AI) được duyệt bởi người có vai trò ghi trong `decision-makers` trước khi merge code liên quan. → Kiểm: PR có nhãn `architecture` phải link ADR ở trạng thái accepted; rule CI kiểm thân PR. · Nguồn: khung cũ spec §B3 (làn kiến trúc) · catalog 23 §4 (`pr-policy.yml` feat phải link spec)
 - [ ] `ARC-ADR-010` **SHOULD** Mỗi ADR có mục Confirmation nêu hàng rào máy kiểm (luật phụ thuộc, test, hook, mục blueprint) hoặc ghi "chưa có hàng rào — nợ". → Kiểm: heading "Confirmation"/"Xác nhận" có trong ADR; nợ ghi vào `PROGRESS.md`. · Nguồn: MADR 4.0.0 (Confirmation)
 - [ ] `ARC-ADR-011` **SHOULD** ADR có mục "Điều kiện đọc lại" (trigger) và chủ sở hữu theo dõi. → Kiểm: heading tồn tại; điều kiện kiểm được (sự kiện/ngưỡng), không mơ hồ. · Nguồn: khung cũ ADR-0003 (điều kiện đọc lại)
 - [ ] `ARC-ADR-012` **SHOULD** Khi ADR mô tả hiện trạng repo, dẫn SHA/commit và file đã đọc; khi hiện trạng mâu thuẫn tài liệu, ghi bảng "giả định vs thực tế". → Kiểm: ADR có SHA 7+ ký tự hoặc link commit; bảng đối chiếu khi có mâu thuẫn. · Nguồn: khung cũ ADR-0003 (bảng ADR-0002 giả định vs thực tế)

@@ -3,7 +3,7 @@ title: Ranh giới, module hoá, C4, hexagonal, luật phụ thuộc
 kind: module
 prefix: ARC-MOD
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Ranh giới, module hoá, C4, hexagonal, luật phụ thuộc
@@ -42,13 +42,13 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `ARC-MOD-001` **MUST** Repo có sơ đồ C4 mức 1 (System Context) và mức 2 (Container) dưới dạng text, render được. → Kiểm: `docs/architecture/c4-context.*` và `c4-container.*` tồn tại; lệnh render (mermaid-cli/structurizr-cli) exit 0 trong CI. · Nguồn: C4 model
-- [ ] `ARC-MOD-002` **MUST** Sơ đồ Container liệt kê đúng các đơn vị chạy/lưu trữ đang có trong IaC/compose (không thừa, không thiếu). → Kiểm: script so khớp tên container trong sơ đồ với service trong `docker-compose.yml`/IaC; CI đỏ khi lệch. · Nguồn: evidence-and-sources luật 5 (grep cổng đang chạy)
+- [ ] `ARC-MOD-001` **MUST@L** Repo có sơ đồ C4 mức 1 (System Context) và mức 2 (Container) dưới dạng text, render được. → Kiểm: `docs/architecture/c4-context.*` và `c4-container.*` tồn tại; lệnh render (mermaid-cli/structurizr-cli) exit 0 trong CI. · Nguồn: C4 model
+- [ ] `ARC-MOD-002` **MUST@L** Sơ đồ Container liệt kê đúng các đơn vị chạy/lưu trữ đang có trong IaC/compose (không thừa, không thiếu). → Kiểm: script so khớp tên container trong sơ đồ với service trong `docker-compose.yml`/IaC; CI đỏ khi lệch. · Nguồn: evidence-and-sources luật 5 (grep cổng đang chạy)
 - [ ] `ARC-MOD-003` **MUST** Lõi nghiệp vụ không import framework web, ORM, HTTP client, SDK đám mây. → Kiểm: luật `forbidden` của dependency-cruiser/import-linter/ArchUnit từ `domain|application` tới `infra|api|framework` ở mức `error`, chạy trong CI. · Nguồn: Clean Architecture (Dependency Rule) · Hexagonal Architecture
 - [ ] `ARC-MOD-004` **MUST** Không có vòng phụ thuộc giữa các module/miền. → Kiểm: luật `circular: true` (dependency-cruiser) / contract `acyclic siblings` (import-linter) / `beFreeOfCycles()` (ArchUnit) ở mức lỗi, CI exit ≠ 0 khi vi phạm. · Nguồn: tài liệu công cụ (xem Nguồn)
 - [ ] `ARC-MOD-005` **MUST** Mỗi module chỉ được import từ điểm xuất công khai của module khác, không import đường dẫn nội bộ. → Kiểm: luật `forbidden` `from: <module A> to: <module B>/(?!index)` hoặc contract `protected`; ESLint `no-restricted-imports` cho đường dẫn `**/internal/**`. · Nguồn: import-linter contract types
-- [ ] `ARC-MOD-006` **MUST** Cấu hình luật phụ thuộc nằm trong repo và được bảo vệ: sửa file luật cần review riêng (CODEOWNERS) và hook cảnh báo. → Kiểm: `.dependency-cruiser.*`/`.importlinter`/`ArchTest` có dòng trong `CODEOWNERS`; hook `ask`/`deny` khi sửa (xem [`../11-autonomous-loop/harness-files.md`](../11-autonomous-loop/harness-files.md)). · Nguồn: catalog 23 §4.3 (`protect-config.sh`)
-- [ ] `ARC-MOD-007` **MUST@M** Mọi truy cập tài nguyên ngoài (CSDL, HTTP, hàng đợi, file, đồng hồ, random) đi qua port có interface, để test lõi không cần hạ tầng. → Kiểm: test đơn vị của `domain|application` chạy không mở socket/CSDL (test runner cấm network, vd `pytest-socket`/`nock`); thời gian lấy qua `Clock` tiêm vào. · Nguồn: Hexagonal Architecture (drive app bằng test như bằng người)
+- [ ] `ARC-MOD-006` **MUST@L** Cấu hình luật phụ thuộc nằm trong repo và được bảo vệ: sửa file luật cần review riêng (CODEOWNERS) và hook cảnh báo. → Kiểm: `.dependency-cruiser.*`/`.importlinter`/`ArchTest` có dòng trong `CODEOWNERS`; hook `ask`/`deny` khi sửa (xem [`../11-autonomous-loop/harness-files.md`](../11-autonomous-loop/harness-files.md)). · Nguồn: catalog 23 §4.3 (`protect-config.sh`)
+- [ ] `ARC-MOD-007` **MUST@L** Mọi truy cập tài nguyên ngoài (CSDL, HTTP, hàng đợi, file, đồng hồ, random) đi qua port có interface, để test lõi không cần hạ tầng. → Kiểm: test đơn vị của `domain|application` chạy không mở socket/CSDL (test runner cấm network, vd `pytest-socket`/`nock`); thời gian lấy qua `Clock` tiêm vào. · Nguồn: Hexagonal Architecture (drive app bằng test như bằng người)
 - [ ] `ARC-MOD-008` **MUST@M** Thư mục cấp một của source chia theo miền nghiệp vụ; tên miền trùng với bounded context trong `PROJECT.md`/spec. → Kiểm: danh sách thư mục `src/*` ⊆ danh sách miền trong `docs/architecture/domains.md`; script so khớp trong CI. · Nguồn: [`../17-product-project/specification.md`](../17-product-project/specification.md)
 - [ ] `ARC-MOD-009` **SHOULD** Mỗi module có `README.md` nêu trách nhiệm, API công khai, module nó được phép phụ thuộc. → Kiểm: `find src -maxdepth 2 -name README.md` phủ 100% module; nội dung có 3 heading đó. · Nguồn: [`../01-baseline/documentation-minimum.md`](../01-baseline/documentation-minimum.md)
 - [ ] `ARC-MOD-010` **SHOULD** Luật phụ thuộc mô tả **lớp** (api → application → domain ← infra) bằng contract `layers`/`layeredArchitecture()`, không chỉ liệt kê cặp cấm. → Kiểm: file cấu hình có khai báo lớp theo thứ tự; test kiến trúc đỏ khi thêm import ngược chiều (thử bằng mutation thủ công một lần, ghi vào PR). · Nguồn: import-linter `layers` · ArchUnit `layeredArchitecture()`

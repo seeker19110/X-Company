@@ -3,7 +3,7 @@ title: Threat model (STRIDE), tài sản, ranh giới tin cậy, biện pháp
 kind: module
 prefix: SEC-TM
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Threat model (STRIDE), tài sản, ranh giới tin cậy, biện pháp
@@ -43,13 +43,13 @@ xác minh phiên bản trước khi dùng; tài liệu Markdown theo mẫu của
 ## Checklist
 
 - [ ] `SEC-TM-001` **MUST** Có file `docs/THREAT-MODEL.md` theo mẫu khung, được tạo ở G4 và cập nhật khi thêm ranh giới tin cậy mới. → Kiểm: file tồn tại; CI kiểm `updated` trong frontmatter không cũ hơn ADR kiến trúc mới nhất (script so ngày). · Nguồn: OWASP Threat Modeling CS; NIST SSDF PW.1
-- [ ] `SEC-TM-002` **MUST** Bảng tài sản liệt kê dữ liệu/khoá/tiền/năng lực cần bảo vệ, mỗi tài sản có mức nhạy cảm và chủ sở hữu. → Kiểm: mục "Tài sản" có ≥ 1 hàng mỗi loại dữ liệu trong schema có cột nhạy cảm (đối chiếu [`../09-database/sensitive-data-and-access.md`](../09-database/sensitive-data-and-access.md)). · Nguồn: ASVS 5.0 V15
+- [ ] `SEC-TM-002` **MUST@L** Bảng tài sản liệt kê dữ liệu/khoá/tiền/năng lực cần bảo vệ, mỗi tài sản có mức nhạy cảm và chủ sở hữu. → Kiểm: mục "Tài sản" có ≥ 1 hàng mỗi loại dữ liệu trong schema có cột nhạy cảm (đối chiếu [`../09-database/sensitive-data-and-access.md`](../09-database/sensitive-data-and-access.md)). · Nguồn: ASVS 5.0 V15
 - [ ] `SEC-TM-003` **MUST** Có sơ đồ luồng dữ liệu (DFD) đánh dấu mọi ranh giới tin cậy: client↔server, server↔CSDL, server↔bên thứ ba, nội dung ngoài↔LLM, agent↔tool. → Kiểm: sơ đồ (Mermaid/Threat Dragon JSON) trong repo; mỗi tích hợp bên ngoài trong `docs/` hoặc cấu hình env xuất hiện trên sơ đồ. · Nguồn: OWASP Threat Modeling CS §"What are we working on"
-- [ ] `SEC-TM-004` **MUST** Mỗi phần tử DFD được rà đủ 6 loại STRIDE; mối đe doạ không áp dụng ghi "N/A + lý do". → Kiểm: bảng mối đe doạ có cột STRIDE; script đếm mỗi phần tử × 6 ô đều có giá trị. · Nguồn: OWASP Threat Modeling CS §STRIDE
+- [ ] `SEC-TM-004` **MUST@L** Mỗi phần tử DFD được rà đủ 6 loại STRIDE; mối đe doạ không áp dụng ghi "N/A + lý do". → Kiểm: bảng mối đe doạ có cột STRIDE; script đếm mỗi phần tử × 6 ô đều có giá trị. · Nguồn: OWASP Threat Modeling CS §STRIDE
 - [ ] `SEC-TM-005` **MUST** Mỗi mối đe doạ có mức rủi ro (khả năng × tác động, 3 bậc) và quyết định: mitigate / eliminate / transfer / accept. → Kiểm: không còn hàng thiếu mức hoặc thiếu quyết định (grep bảng). · Nguồn: OWASP Threat Modeling CS §"What are we going to do"
 - [ ] `SEC-TM-006` **MUST** Mọi mối đe doạ mức **Cao** có biện pháp trỏ tới ID checklist khung, test hoặc cấu hình cụ thể — không có hàng Cao ở trạng thái "accept" khi lên production. → Kiểm: `blueprint-status` của các ID được trỏ = đạt; cổng G4 chặn nếu còn Cao chưa có biện pháp. · Nguồn: NIST SSDF PW.1.1
-- [ ] `SEC-TM-007` **MUST** Mối đe doạ "accept" có người ký, lý do và ngày xem lại (≤ 12 tháng). → Kiểm: cột Người ký + Hạn xem lại không rỗng; CI cảnh báo khi quá hạn. · Nguồn: ISO/IEC 27005 (chấp nhận rủi ro có chủ)
-- [ ] `SEC-TM-008` **MUST** Đầu vào từ mọi ranh giới tin cậy được đánh dấu "không tin" và có biện pháp validate ở biên (trỏ [`appsec-web.md`](appsec-web.md), [`ai-security.md`](ai-security.md)). → Kiểm: mỗi mũi tên vào hệ thống trên DFD có tham chiếu tới middleware/schema validate trong code. · Nguồn: ASVS 5.0 V2; P6
+- [ ] `SEC-TM-007` **MUST@L** Mối đe doạ "accept" có người ký, lý do và ngày xem lại (≤ 12 tháng). → Kiểm: cột Người ký + Hạn xem lại không rỗng; CI cảnh báo khi quá hạn. · Nguồn: ISO/IEC 27005 (chấp nhận rủi ro có chủ)
+- [ ] `SEC-TM-008` **MUST@L** Đầu vào từ mọi ranh giới tin cậy được đánh dấu "không tin" và có biện pháp validate ở biên (trỏ [`appsec-web.md`](appsec-web.md), [`ai-security.md`](ai-security.md)). → Kiểm: mỗi mũi tên vào hệ thống trên DFD có tham chiếu tới middleware/schema validate trong code. · Nguồn: ASVS 5.0 V2; P6
 - [ ] `SEC-TM-009` **SHOULD** Threat model được review bởi người không viết thiết kế (hoặc agent reviewer khác model với tác giả) trước cổng G4. → Kiểm: PR threat model có ≥ 1 approval khác tác giả. · Nguồn: OWASP Threat Modeling CS §"Did we do a good enough job"
 - [ ] `SEC-TM-010` **SHOULD** Có mục "Giả định tin cậy" liệt kê thứ hệ thống tin mà không kiểm (vd CSDL quản lý của cloud, OS của người dùng) để lộ rõ điểm mù. → Kiểm: mục tồn tại, ≥ 3 giả định. · Nguồn: NIST SP 800-207 (không tin theo vị trí mạng)
 - [ ] `SEC-TM-011` **SHOULD** Hệ có AI: thêm hàng cho từng ASI01–10 (OWASP Agentic 2026) với trạng thái áp dụng/N/A. → Kiểm: bảng ánh xạ ASI trong threat model; chi tiết biện pháp ở `SEC-AI-*`. · Nguồn: OWASP Top 10 Agentic 2026

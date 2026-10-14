@@ -3,7 +3,7 @@ title: Đặc tả: user story, Given/When/Then, ca biên, hợp đồng API, tr
 kind: module
 prefix: PM-SPEC
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Đặc tả: user story, Given/When/Then, ca biên, hợp đồng API, truy vết
@@ -43,15 +43,15 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `PM-SPEC-001` **MUST** Mỗi tính năng MVP (`F-NNN` trong `PROJECT.md`) có spec theo mẫu, trạng thái "Approved for implementation" trước khi task đầu tiên bắt đầu. → Kiểm: `ls docs/specs/SPEC-*.md`; mỗi `F-NNN` có file chứa dòng `Trạng thái: Approved`.
-- [ ] `PM-SPEC-002` **MUST** Mỗi user story đạt INVEST và có ≥1 scenario Given/When/Then có ID `S-NNN`. → Kiểm: `rg -c "^\s*(Given|Khi có|When|Then)" docs/specs/SPEC-*.md` > 0 cho mỗi file; ID scenario không trùng.
+- [ ] `PM-SPEC-002` **MUST@L** Mỗi user story đạt INVEST và có ≥1 scenario Given/When/Then có ID `S-NNN`. → Kiểm: `rg -c "^\s*(Given|Khi có|When|Then)" docs/specs/SPEC-*.md` > 0 cho mỗi file; ID scenario không trùng.
 - [ ] `PM-SPEC-003` **MUST** Mục "Ca biên" không rỗng và rà đủ nhóm: rỗng/null, cực đại, trùng lặp/idempotency, song song, mất mạng giữa chừng, thời gian/múi giờ, quyền, tiền/đơn vị (cách làm đúng ở [`../18-cross-cutting/units-time-and-money.md`](../18-cross-cutting/units-time-and-money.md)). → Kiểm: bảng ca biên có cột "nhóm" phủ ≥6/8 nhóm hoặc ghi "không áp dụng" có lý do.
 - [ ] `PM-SPEC-004` **MUST** Mỗi scenario có ≥1 test tự động trỏ về ID của nó; scenario chưa có test thì tính năng chưa Done. → Kiểm: `rg -l "S-[0-9]{3}" tests/ e2e/ src/` phủ mọi `S-NNN` trong spec (script so khớp hai danh sách).
-- [ ] `PM-SPEC-005` **MUST** Hợp đồng API/sự kiện/schema giữa hai thành phần được viết (OpenAPI 3.x, JSON Schema 2020-12, proto, AsyncAPI) và duyệt **trước** khi chia việc song song. → Kiểm: file contract có trong PR đầu tiên của tính năng; `redocly lint openapi.yaml` hoặc `spectral lint` xanh.
-- [ ] `PM-SPEC-006` **MUST** Chuỗi truy vết đầy đủ: PR body ghi `Spec: SPEC-<slug> (F-NNN)`; task trong `PLAN.md` ghi `F-NNN`; bằng chứng ở `.autopilot/evidence/T-NNN.json` hoặc CI. → Kiểm: `rg -n "Spec: SPEC-" .github/pull_request_template.md`; CI job kiểm PR body có `Spec:` với PR `feat:`.
+- [ ] `PM-SPEC-005` **MUST@L** Hợp đồng API/sự kiện/schema giữa hai thành phần được viết (OpenAPI 3.x, JSON Schema 2020-12, proto, AsyncAPI) và duyệt **trước** khi chia việc song song. → Kiểm: file contract có trong PR đầu tiên của tính năng; `redocly lint openapi.yaml` hoặc `spectral lint` xanh.
+- [ ] `PM-SPEC-006` **MUST@L** Chuỗi truy vết đầy đủ: PR body ghi `Spec: SPEC-<slug> (F-NNN)`; task trong `PLAN.md` ghi `F-NNN`; bằng chứng ở `.autopilot/evidence/T-NNN.json` hoặc CI. → Kiểm: `rg -n "Spec: SPEC-" .github/pull_request_template.md`; CI job kiểm PR body có `Spec:` với PR `feat:`.
 - [ ] `PM-SPEC-007` **MUST** Spec hở (điểm không nói, mâu thuẫn với code/spec khác) → ghi vào "Câu hỏi mở" và dừng task đó; không tự chọn một cách hiểu. → Kiểm: `xs.py loop block --reason "spec hở: …"` trong autopilot; ngoài autopilot: issue/comment nêu câu hỏi trước khi code.
-- [ ] `PM-SPEC-008` **MUST** Task chỉ bắt đầu khi đạt Definition of Ready: spec Approved, 0 câu hỏi mở chặn, phụ thuộc xác định, đủ nhỏ cho một PR, có Gate máy kiểm. → Kiểm: mục DoR trong spec tick đủ; task trong `PLAN.md` có `Gate:`.
-- [ ] `PM-SPEC-009` **MUST** Definition of Done của tính năng gồm: mọi scenario xanh, ca biên có test, cổng commit/merge xanh, tài liệu người dùng/API cập nhật, chỉ số đo được gắn sự kiện. → Kiểm: PR template có mục DoD; CI `gate` xanh; `blueprint-status` không mở MUST liên quan.
-- [ ] `PM-SPEC-010` **MUST@M** Nhánh lỗi được đặc tả: mỗi lỗi nghiệp vụ có mã, thông điệp cho người dùng, HTTP status/exit code; API trả lỗi theo RFC 9457 (`application/problem+json`). → Kiểm: bảng "Lỗi" trong spec; test gọi API lỗi kiểm `Content-Type: application/problem+json` và trường `type`/`title`/`status`. · Nguồn: RFC 9457 §3
+- [ ] `PM-SPEC-008` **MUST@L** Task chỉ bắt đầu khi đạt Definition of Ready: spec Approved, 0 câu hỏi mở chặn, phụ thuộc xác định, đủ nhỏ cho một PR, có Gate máy kiểm. → Kiểm: mục DoR trong spec tick đủ; task trong `PLAN.md` có `Gate:`.
+- [ ] `PM-SPEC-009` **MUST@L** Definition of Done của tính năng gồm: mọi scenario xanh, ca biên có test, cổng commit/merge xanh, tài liệu người dùng/API cập nhật, chỉ số đo được gắn sự kiện. → Kiểm: PR template có mục DoD; CI `gate` xanh; `blueprint-status` không mở MUST liên quan.
+- [ ] `PM-SPEC-010` **MUST@L** Nhánh lỗi được đặc tả: mỗi lỗi nghiệp vụ có mã, thông điệp cho người dùng, HTTP status/exit code; API trả lỗi theo RFC 9457 (`application/problem+json`). → Kiểm: bảng "Lỗi" trong spec; test gọi API lỗi kiểm `Content-Type: application/problem+json` và trường `type`/`title`/`status`. · Nguồn: RFC 9457 §3
 - [ ] `PM-SPEC-011` **SHOULD** Spec có bảng dữ liệu: thực thể, trường, kiểu, ràng buộc, ai được đọc/ghi; thay đổi schema trỏ migration ([`../09-database/migrations.md`](../09-database/migrations.md)). → Kiểm: mục "Dữ liệu" + link migration trong PR.
 - [ ] `PM-SPEC-012` **SHOULD** Tính năng có UI mô tả đủ 4 trạng thái (đang tải, rỗng, lỗi, thành công) và a11y tối thiểu; chi tiết ở [`../06-design-ux/ui-states-and-feedback.md`](../06-design-ux/ui-states-and-feedback.md). → Kiểm: mục "Trạng thái UI" có 4 dòng.
 - [ ] `PM-SPEC-013` **SHOULD** Sửa spec sau Approved: tăng `Phiên bản`, ghi "Thay đổi" (gì, vì sao, ai duyệt), test tương ứng cập nhật trong cùng PR. → Kiểm: `git log -p docs/specs/SPEC-<slug>.md` cho thấy dòng phiên bản thay đổi cùng với test.

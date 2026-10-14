@@ -3,7 +3,7 @@ title: Chuẩn API & web (OpenAPI 3.1, RFC 9457, OAuth 2.1, OIDC, JSON Schema, H
 kind: standard
 prefix: STD-API
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain, cli-tool, library-sdk]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Chuẩn API & web (OpenAPI 3.1, RFC 9457, OAuth 2.1, OIDC, JSON Schema, HTTP)
@@ -47,12 +47,12 @@ Mặc định: **OpenAPI 3.1.x + RFC 9457 + JSON Schema 2020-12 + OAuth 2.0/PKCE
 ## Checklist
 
 - [ ] `STD-API-001` **MUST** Mọi HTTP API công khai/đối tác có file OpenAPI trong repo khai báo `openapi: 3.1.x` hoặc `3.2.x`. → Kiểm: `grep -E "^openapi: 3\.(1|2)\.[0-9]+" openapi.yaml`. · Nguồn: OAS 3.2.1 §4.1 (OpenAPI Object)
-- [ ] `STD-API-002` **MUST@M** File OpenAPI lint trong CI với bộ rule `spectral:oas` (hoặc Redocly `recommended`) 0 lỗi. → Kiểm: job CI `spectral lint openapi.yaml --fail-severity=error` exit 0. · Nguồn: OAS 3.2.1
-- [ ] `STD-API-003` **MUST** Mọi phản hồi lỗi (4xx/5xx) là `application/problem+json` với `type`, `title`, `status`, `detail`, `instance`; `status` trong body = mã HTTP. → Kiểm: contract test gọi 1 endpoint lỗi và assert content-type + 5 trường; schema `Problem` có trong OpenAPI. · Nguồn: RFC 9457 §3
-- [ ] `STD-API-004` **MUST** Không endpoint GET/HEAD nào có `requestBody` hoặc gây tác dụng phụ; PUT/DELETE idempotent. → Kiểm: Spectral rule tuỳ chỉnh cấm `requestBody` dưới `get`; test gọi PUT 2 lần cho cùng trạng thái. · Nguồn: RFC 9110 §9.2.1, §9.2.2
+- [ ] `STD-API-002` **MUST@L** File OpenAPI lint trong CI với bộ rule `spectral:oas` (hoặc Redocly `recommended`) 0 lỗi. → Kiểm: job CI `spectral lint openapi.yaml --fail-severity=error` exit 0. · Nguồn: OAS 3.2.1
+- [ ] `STD-API-003` **MUST@L** Mọi phản hồi lỗi (4xx/5xx) là `application/problem+json` với `type`, `title`, `status`, `detail`, `instance`; `status` trong body = mã HTTP. → Kiểm: contract test gọi 1 endpoint lỗi và assert content-type + 5 trường; schema `Problem` có trong OpenAPI. · Nguồn: RFC 9457 §3
+- [ ] `STD-API-004` **MUST@L** Không endpoint GET/HEAD nào có `requestBody` hoặc gây tác dụng phụ; PUT/DELETE idempotent. → Kiểm: Spectral rule tuỳ chỉnh cấm `requestBody` dưới `get`; test gọi PUT 2 lần cho cùng trạng thái. · Nguồn: RFC 9110 §9.2.1, §9.2.2
 - [ ] `STD-API-005` **MUST@M** Uỷ quyền OAuth: PKCE bắt buộc cho mọi client, không cấp implicit (`response_type=token`) và không ROPC (`grant_type=password`). → Kiểm: test tích hợp gửi `response_type=token` nhận lỗi; cấu hình authorization server `require_pkce: true`. · Nguồn: draft-ietf-oauth-v2-1-16 (PKCE, bỏ implicit/ROPC)
 - [ ] `STD-API-006` **MUST@M** Đăng nhập OIDC validate ID token đầy đủ: chữ ký, `iss`, `aud`, `exp`, `nonce`. → Kiểm: unit test với token sửa từng trường đều bị từ chối. · Nguồn: OIDC Core 1.0 §3.1.3.7
-- [ ] `STD-API-007` **MUST** Schema JSON độc lập dùng dialect 2020-12 (`"$schema": "https://json-schema.org/draft/2020-12/schema"`) và validator hỗ trợ 2020-12 chạy trong test. → Kiểm: `grep -rl "draft/2020-12" schemas/`; test validate mẫu hợp lệ/không hợp lệ. · Nguồn: JSON Schema 2020-12
+- [ ] `STD-API-007` **MUST@L** Schema JSON độc lập dùng dialect 2020-12 (`"$schema": "https://json-schema.org/draft/2020-12/schema"`) và validator hỗ trợ 2020-12 chạy trong test. → Kiểm: `grep -rl "draft/2020-12" schemas/`; test validate mẫu hợp lệ/không hợp lệ. · Nguồn: JSON Schema 2020-12
 - [ ] `STD-API-008` **MUST@M** Thay đổi phá vỡ hợp đồng (xoá field, đổi kiểu, bỏ endpoint) bị chặn ở PR trừ khi tăng major version. → Kiểm: job `oasdiff breaking base.yaml head.yaml` exit 0 hoặc PR có nhãn `breaking` + bump major. · Nguồn: SemVer 2.0.0 §8 (xem [`process-and-quality-standards.md`](process-and-quality-standards.md))
 - [ ] `STD-API-009` **SHOULD** Payload được ký/hash (webhook, audit) canonical hoá theo RFC 8785 trước khi ký. → Kiểm: test với vector mẫu của RFC 8785 ra đúng chuỗi.
 - [ ] `STD-API-010` **SHOULD** Header cache (`Cache-Control`, `ETag`/`Last-Modified`) theo RFC 9111 cho GET có thể cache; test 304. → Kiểm: test gửi `If-None-Match` nhận 304.

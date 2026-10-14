@@ -3,7 +3,7 @@ title: Integration & contract test: DB thật, API contract, Pact, testcontainer
 kind: module
 prefix: QA-INT
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Integration & contract test: DB thật, API contract, Pact, testcontainers
@@ -35,16 +35,16 @@ updated: 2026-10-13
 
 - [ ] `QA-INT-001` **MUST** Integration test chạy trên CSDL thật cùng engine và major version với production (container/service), không SQLite thay thế. → Kiểm: cấu hình testcontainers/`services:` ghi image `postgres:<major>` trùng `PROJECT.md`; test kết nối thật.
 - [ ] `QA-INT-002` **MUST** DB test được dựng bằng chính chuỗi migration từ rỗng, không bằng dump schema. → Kiểm: bước setup gọi lệnh migrate (`prisma migrate deploy`/`alembic upgrade head`/`goose up`); không file `schema.sql` tải tay.
-- [ ] `QA-INT-003` **MUST** Mỗi test cách ly dữ liệu (transaction rollback, schema theo worker, hoặc truncate) và chạy song song xanh. → Kiểm: `-n auto`/`workers > 1` xanh 3 lần liên tiếp.
-- [ ] `QA-INT-004` **MUST** Mọi endpoint trong OpenAPI có ≥ 1 test gọi thật qua HTTP (không gọi handler trực tiếp) kiểm status, content-type và schema phản hồi. → Kiểm: script đối chiếu `paths` trong spec với test đã chạy (coverage theo operationId) = 100%.
-- [ ] `QA-INT-005` **MUST** Phản hồi lỗi được test theo schema `Problem` (RFC 9457) ít nhất cho 400, 401/403, 404, 409, 422. → Kiểm: test parameterized 5 mã, assert `application/problem+json`. · Nguồn: [`../04-standards/api-and-web-standards.md`](../04-standards/api-and-web-standards.md) STD-API-003
+- [ ] `QA-INT-003` **MUST@L** Mỗi test cách ly dữ liệu (transaction rollback, schema theo worker, hoặc truncate) và chạy song song xanh. → Kiểm: `-n auto`/`workers > 1` xanh 3 lần liên tiếp.
+- [ ] `QA-INT-004` **MUST@L** Mọi endpoint trong OpenAPI có ≥ 1 test gọi thật qua HTTP (không gọi handler trực tiếp) kiểm status, content-type và schema phản hồi. → Kiểm: script đối chiếu `paths` trong spec với test đã chạy (coverage theo operationId) = 100%.
+- [ ] `QA-INT-005` **MUST@L** Phản hồi lỗi được test theo schema `Problem` (RFC 9457) ít nhất cho 400, 401/403, 404, 409, 422. → Kiểm: test parameterized 5 mã, assert `application/problem+json`. · Nguồn: [`../04-standards/api-and-web-standards.md`](../04-standards/api-and-web-standards.md) STD-API-003
 - [ ] `QA-INT-006` **MUST** Test phân quyền ở tầng HTTP: cho mỗi endpoint có dữ liệu theo người dùng, test người dùng A không đọc/sửa được tài nguyên của B (BOLA) và vai trò thấp không gọi được thao tác admin (BFLA). → Kiểm: test tag `api1-bola`, `api5-bfla` phủ mọi operationId chạm dữ liệu cá nhân (script `check_authz_tests` theo catalog 23 §3.3). · Nguồn: OWASP API Security Top 10 2023 API1, API5
 - [ ] `QA-INT-007` **MUST** Thay đổi phá vỡ hợp đồng bị chặn ở PR (oasdiff / Pact can-i-deploy / `buf breaking` / schema registry compatibility). → Kiểm: job CI tương ứng exit 0.
-- [ ] `QA-INT-008` **MUST** Dịch vụ bên thứ ba không được gọi thật ở PR: record/replay hoặc mock ở biên HTTP, kèm test schema phản hồi theo tài liệu nhà cung cấp. → Kiểm: job PR không có secret của nhà cung cấp; cassette/fixture trong repo không chứa bí mật (gitleaks).
-- [ ] `QA-INT-009` **MUST@M** Webhook nhận vào có test: chữ ký sai → 401, trùng `event_id` → idempotent, thứ tự đảo → đúng trạng thái. → Kiểm: 3 test đặt tên `webhook-signature`, `webhook-replay`, `webhook-out-of-order`. · Nguồn: [`../08-backend/integrations-and-webhooks.md`](../08-backend/integrations-and-webhooks.md)
-- [ ] `QA-INT-010` **MUST@M** Hàng đợi/job nền có test: job lỗi được retry theo chính sách, vượt ngưỡng vào DLQ, job chạy lại không nhân đôi tác dụng. → Kiểm: test với broker thật (container), assert số lần chạy và DLQ. · Nguồn: [`../08-backend/background-jobs-and-queues.md`](../08-backend/background-jobs-and-queues.md)
-- [ ] `QA-INT-011` **MUST@M** Pact (nếu dùng): consumer publish pact mỗi PR; provider verify mỗi PR; deploy chỉ khi `can-i-deploy` xanh. → Kiểm: job `pact-verify` + `can-i-deploy` required.
-- [ ] `QA-INT-012` **MUST@M** Agent/MCP: test tích hợp với MCP server thật trong container, snapshot `tools/list` và kiểm schema input/output 2020-12. → Kiểm: test `mcp-tools-snapshot` + validator; xem [`../04-standards/ai-standards.md`](../04-standards/ai-standards.md) STD-AI-006.
+- [ ] `QA-INT-008` **MUST@L** Dịch vụ bên thứ ba không được gọi thật ở PR: record/replay hoặc mock ở biên HTTP, kèm test schema phản hồi theo tài liệu nhà cung cấp. → Kiểm: job PR không có secret của nhà cung cấp; cassette/fixture trong repo không chứa bí mật (gitleaks).
+- [ ] `QA-INT-009` **MUST@L** Webhook nhận vào có test: chữ ký sai → 401, trùng `event_id` → idempotent, thứ tự đảo → đúng trạng thái. → Kiểm: 3 test đặt tên `webhook-signature`, `webhook-replay`, `webhook-out-of-order`. · Nguồn: [`../08-backend/integrations-and-webhooks.md`](../08-backend/integrations-and-webhooks.md)
+- [ ] `QA-INT-010` **MUST@L** Hàng đợi/job nền có test: job lỗi được retry theo chính sách, vượt ngưỡng vào DLQ, job chạy lại không nhân đôi tác dụng. → Kiểm: test với broker thật (container), assert số lần chạy và DLQ. · Nguồn: [`../08-backend/background-jobs-and-queues.md`](../08-backend/background-jobs-and-queues.md)
+- [ ] `QA-INT-011` **MUST@L** Pact (nếu dùng): consumer publish pact mỗi PR; provider verify mỗi PR; deploy chỉ khi `can-i-deploy` xanh. → Kiểm: job `pact-verify` + `can-i-deploy` required.
+- [ ] `QA-INT-012` **MUST@L** Agent/MCP: test tích hợp với MCP server thật trong container, snapshot `tools/list` và kiểm schema input/output 2020-12. → Kiểm: test `mcp-tools-snapshot` + validator; xem [`../04-standards/ai-standards.md`](../04-standards/ai-standards.md) STD-AI-006.
 - [ ] `QA-INT-013` **SHOULD** Thời gian integration suite ≤ 10 phút; container tái dùng giữa test (một container cho cả suite, dữ liệu cách ly). → Kiểm: log thời gian job; cấu hình `reuse`/fixture scope `session`.
 - [ ] `QA-INT-014` **SHOULD** Test truy vấn: kế hoạch thực thi của truy vấn nóng không full-scan (`EXPLAIN`) trên dữ liệu seed đủ lớn. → Kiểm: test assert `EXPLAIN` không chứa `Seq Scan` trên bảng > N hàng; xem [`../09-database/indexing-and-query-performance.md`](../09-database/indexing-and-query-performance.md).
 - [ ] `QA-INT-015` **SHOULD** Cấu hình/biến môi trường được validate khi khởi động và có test khởi động thiếu biến → fail nhanh. → Kiểm: test bỏ `DATABASE_URL` → tiến trình thoát mã ≠ 0 kèm thông báo rõ.

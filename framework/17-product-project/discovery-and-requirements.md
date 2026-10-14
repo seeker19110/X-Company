@@ -3,7 +3,7 @@ title: Khám phá & yêu cầu: vấn đề, người dùng, chỉ số thành c
 kind: module
 prefix: PM-REQ
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Khám phá & yêu cầu: vấn đề, người dùng, chỉ số thành công, phạm vi không làm
@@ -38,11 +38,11 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `PM-REQ-001` **MUST** `PROJECT.md` có phát biểu vấn đề 1–2 câu nêu rõ ai, trong tình huống nào, đau ở đâu — không chứa tên công nghệ hay tính năng. → Kiểm: `rg -n "^## .*Vấn đề" PROJECT.md` có kết quả; review G0 xác nhận câu không chứa giải pháp.
-- [ ] `PM-REQ-002` **MUST** Mỗi nhóm người dùng chính có ≥1 câu JTBD dạng "Khi …, tôi muốn …, để …". → Kiểm: `rg -c "Khi .*tôi muốn .*để " PROJECT.md` ≥ số nhóm người dùng.
-- [ ] `PM-REQ-003` **MUST** Bằng chứng nhu cầu có nguồn: ghi chú phỏng vấn, ticket, log hoặc số liệu kèm link/ngày. → Kiểm: mục "Bằng chứng nhu cầu" trong `PROJECT.md` có ≥1 liên kết tới file/URL có thật; không chấp nhận "nhiều người nói".
-- [ ] `PM-REQ-004` **MUST** Có ≥1 chỉ số thành công đo được, mỗi chỉ số có baseline (hoặc "chưa đo" + ngày sẽ đo), mục tiêu và hạn. → Kiểm: bảng "Chỉ số thành công" đủ 4 cột; mỗi chỉ số ánh xạ tới một sự kiện trong sơ đồ sự kiện (xem `PM-METRIC`).
-- [ ] `PM-REQ-005` **MUST** Mục "Không làm" (Won't have lúc này) không rỗng và nêu lý do cho từng mục. → Kiểm: `rg -A3 "^## .*Không làm" PROJECT.md` có ≥1 dòng gạch đầu; `SCOPE.md` tồn tại khi dự án ≥ M.
-- [ ] `PM-REQ-006` **MUST** Mọi giả định quan trọng ghi vào bảng giả định với cách kiểm chứng và hạn. → Kiểm: bảng "Giả định" trong `PROJECT.md` (hoặc `docs/RISKS.md`) đủ cột giả định · cách kiểm · hạn · trạng thái.
+- [ ] `PM-REQ-002` **MUST@L** Mỗi nhóm người dùng chính có ≥1 câu JTBD dạng "Khi …, tôi muốn …, để …". → Kiểm: `rg -c "Khi .*tôi muốn .*để " PROJECT.md` ≥ số nhóm người dùng.
+- [ ] `PM-REQ-003` **MUST@L** Bằng chứng nhu cầu có nguồn: ghi chú phỏng vấn, ticket, log hoặc số liệu kèm link/ngày. → Kiểm: mục "Bằng chứng nhu cầu" trong `PROJECT.md` có ≥1 liên kết tới file/URL có thật; không chấp nhận "nhiều người nói".
+- [ ] `PM-REQ-004` **MUST@L** Có ≥1 chỉ số thành công đo được, mỗi chỉ số có baseline (hoặc "chưa đo" + ngày sẽ đo), mục tiêu và hạn. → Kiểm: bảng "Chỉ số thành công" đủ 4 cột; mỗi chỉ số ánh xạ tới một sự kiện trong sơ đồ sự kiện (xem `PM-METRIC`).
+- [ ] `PM-REQ-005` **MUST@L** Mục "Không làm" (Won't have lúc này) không rỗng và nêu lý do cho từng mục. → Kiểm: `rg -A3 "^## .*Không làm" PROJECT.md` có ≥1 dòng gạch đầu; `SCOPE.md` tồn tại khi dự án ≥ M.
+- [ ] `PM-REQ-006` **MUST@L** Mọi giả định quan trọng ghi vào bảng giả định với cách kiểm chứng và hạn. → Kiểm: bảng "Giả định" trong `PROJECT.md` (hoặc `docs/RISKS.md`) đủ cột giả định · cách kiểm · hạn · trạng thái.
 - [ ] `PM-REQ-007` **MUST** Mỗi yêu cầu có ID ổn định `R-NNN`, không tái sử dụng ID đã bỏ. → Kiểm: `rg -o "R-[0-9]{3}" PROJECT.md | sort | uniq -d` rỗng (không trùng ID).
 - [ ] `PM-REQ-008` **MUST** Không còn câu hỏi mở đánh dấu `[chặn]` khi qua cổng G0; câu hỏi chặn phải được hỏi người quyết định, không tự đoán. → Kiểm: `rg -c "\[chặn\]" PROJECT.md` = 0 tại commit đánh dấu cổng G0.
 - [ ] `PM-REQ-009` **MUST@M** Phân loại dữ liệu dự án sẽ xử lý ngay ở G0: có dữ liệu cá nhân không, có dữ liệu nhạy cảm (sức khoẻ, tài chính, trẻ em, định danh) không. → Kiểm: mục "Dữ liệu & pháp lý" ghi rõ có/không + loại; nếu có → gói ngành/module [`../16-compliance-privacy/privacy-by-design.md`](../16-compliance-privacy/privacy-by-design.md) được ghép vào blueprint.

@@ -3,7 +3,7 @@ title: State, data fetching, cache phía client, đồng bộ server
 kind: module
 prefix: FE-STATE
 applies_to: [web-app, mobile-app, desktop-app, static-site, game, monorepo]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # State, data fetching, cache phía client, đồng bộ server
@@ -43,14 +43,14 @@ reconnect; `gcTime` 5 phút; retry 3 lần với backoff; structural sharing. Đ
 ## Checklist
 
 - [ ] `FE-STATE-001` **MUST** Mọi fetch dữ liệu server đi qua một lớp (thư viện query hoặc loader/server component của framework); không `useEffect(() => fetch())` trong component. → Kiểm: lint `@tanstack/eslint-plugin-query` 5.104.2 bật; grep `useEffect[\s\S]{0,200}fetch\(` trong `src/components` = 0.
-- [ ] `FE-STATE-002` **MUST** Query key sinh từ factory tập trung (`queryKeys.orders.detail(id)`), không chuỗi tự do. → Kiểm: grep `useQuery({ queryKey: \['` ngoài file factory = 0; test factory snapshot.
+- [ ] `FE-STATE-002` **MUST@L** Query key sinh từ factory tập trung (`queryKeys.orders.detail(id)`), không chuỗi tự do. → Kiểm: grep `useQuery({ queryKey: \['` ngoài file factory = 0; test factory snapshot.
 - [ ] `FE-STATE-003` **MUST** Mỗi mutation khai báo invalidation (key/tag) hoặc cập nhật cache trực tiếp; sau mutation thành công UI phản ánh dữ liệu mới không cần reload. → Kiểm: E2E tạo/sửa/xoá → danh sách cập nhật không `page.reload()`; review `onSuccess/onSettled` có `invalidateQueries`. · Nguồn: TanStack Query Optimistic Updates
-- [ ] `FE-STATE-004` **MUST** Optimistic update theo mẫu: huỷ refetch đang chạy → snapshot → set cache → rollback ở `onError` → invalidate ở `onSettled`; không dùng cho tiền/quyền/xoá vĩnh viễn. → Kiểm: test đơn vị mutation lỗi → cache bằng snapshot; grep `onMutate` trong module thanh toán = 0. · Nguồn: TanStack Query Optimistic Updates
+- [ ] `FE-STATE-004` **MUST@L** Optimistic update theo mẫu: huỷ refetch đang chạy → snapshot → set cache → rollback ở `onError` → invalidate ở `onSettled`; không dùng cho tiền/quyền/xoá vĩnh viễn. → Kiểm: test đơn vị mutation lỗi → cache bằng snapshot; grep `onMutate` trong module thanh toán = 0. · Nguồn: TanStack Query Optimistic Updates
 - [ ] `FE-STATE-005` **MUST** Retry chỉ với lỗi tạm thời (mạng, 408/429/5xx) có backoff và giới hạn; không retry 4xx (trừ 408/429); mutation không retry mặc định trừ khi idempotent. → Kiểm: cấu hình `retry: (count, err) => isTransient(err) && count < 3`; test 400 → không retry (đếm request). · Nguồn: [`../08-backend/reliability-and-errors.md`](../08-backend/reliability-and-errors.md)
-- [ ] `FE-STATE-006` **MUST** Request bị huỷ khi component unmount/route đổi (AbortSignal truyền vào `fetch`); có timeout client. → Kiểm: E2E điều hướng nhanh → request trước bị abort (Playwright `request.failure()` = aborted); `fetch` nhận `signal`.
-- [ ] `FE-STATE-007` **MUST** Lỗi fetch được chuẩn hoá thành một kiểu (`AppError { code, message, retryable }`) ở lớp API client; component không parse `error.response.data` rải rác. → Kiểm: file `api/client.ts` là nơi duy nhất xử lý `Response` → `AppError`; test map 401/403/404/422/500.
+- [ ] `FE-STATE-006` **MUST@L** Request bị huỷ khi component unmount/route đổi (AbortSignal truyền vào `fetch`); có timeout client. → Kiểm: E2E điều hướng nhanh → request trước bị abort (Playwright `request.failure()` = aborted); `fetch` nhận `signal`.
+- [ ] `FE-STATE-007` **MUST@L** Lỗi fetch được chuẩn hoá thành một kiểu (`AppError { code, message, retryable }`) ở lớp API client; component không parse `error.response.data` rải rác. → Kiểm: file `api/client.ts` là nơi duy nhất xử lý `Response` → `AppError`; test map 401/403/404/422/500.
 - [ ] `FE-STATE-008` **MUST** Không lưu token phiên, PII hay dữ liệu nhạy cảm trong store bền (localStorage/IndexedDB/persist) ngoài danh sách đã duyệt. → Kiểm: grep `persist(` / `localStorage.setItem` → danh sách key đối chiếu `docs/CLIENT-STORAGE.md`; test không có key chứa `token|session|email`. · Nguồn: [`client-security.md`](client-security.md)
-- [ ] `FE-STATE-009` **MUST@M** Mutation tạo mới gửi idempotency key; gửi lại khi mạng lỗi không tạo bản ghi trùng. → Kiểm: test mô phỏng timeout → retry với cùng key → server trả cùng id. · Nguồn: [`../08-backend/api-design.md`](../08-backend/api-design.md)
+- [ ] `FE-STATE-009` **MUST@L** Mutation tạo mới gửi idempotency key; gửi lại khi mạng lỗi không tạo bản ghi trùng. → Kiểm: test mô phỏng timeout → retry với cùng key → server trả cùng id. · Nguồn: [`../08-backend/api-design.md`](../08-backend/api-design.md)
 - [ ] `FE-STATE-010` **SHOULD** `staleTime` đặt theo loại dữ liệu (tham chiếu: phút/giờ; giao dịch: ngắn), không giữ mặc định 0 cho mọi query. → Kiểm: `QueryClient` có `defaultOptions.queries.staleTime` và ghi chú; review query nóng có override. · Nguồn: TanStack Query Important Defaults
 - [ ] `FE-STATE-011` **SHOULD** Dữ liệu suy ra không lưu trong state; tính bằng `useMemo`/computed/selector. → Kiểm: review store: không trường `total` tính được từ `items`; test selector.
 - [ ] `FE-STATE-012` **SHOULD** Store toàn cục có ≤ một vài slice rõ tên; mỗi slice có test; không đặt server data vào store. → Kiểm: grep `setItems(data)` sau `useQuery` = 0; số slice liệt kê trong `docs/STATE.md`.

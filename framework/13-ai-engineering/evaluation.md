@@ -56,11 +56,11 @@ updated: 2026-10-14
 
 - [ ] `AI-EVAL-001` **MUST** Mỗi tính năng LLM có bộ regression eval (pass rate mục tiêu ~100%) chạy trong CI trên PR đổi prompt/model/pipeline; giảm quá ngưỡng → đỏ. → Kiểm: job CI tồn tại; so với baseline lưu trong repo. · Nguồn: Anthropic *Demystifying evals*
 - [ ] `AI-EVAL-002` **MUST** CI trên PR không gọi model thật: dùng record/replay fixture có phiên bản; gọi thật chỉ ở job đêm có ngân sách. → Kiểm: job PR không có API key của nhà cung cấp; fixture trong repo/kho có hash. · Nguồn: stored 07
-- [ ] `AI-EVAL-003` **MUST** Bộ eval có negative control (≥ 10% ca phải từ chối/"không biết"/không gọi tool). → Kiểm: đếm nhãn `expected: refuse|unknown` trong dataset. · Nguồn: stored 07
+- [ ] `AI-EVAL-003` **MUST@L** Bộ eval có negative control (≥ 10% ca phải từ chối/"không biết"/không gọi tool). → Kiểm: đếm nhãn `expected: refuse|unknown` trong dataset. · Nguồn: stored 07
 - [ ] `AI-EVAL-004` **MUST** Grader ưu tiên tất định; model judge chỉ khi có rubric và hiệu chuẩn với ≥ 50 mẫu người chấm, báo cáo agreement. → Kiểm: file rubric; báo cáo agreement (vd Cohen's κ) trong repo. · Nguồn: Anthropic *Demystifying evals*
-- [ ] `AI-EVAL-005` **MUST** Judge khác họ model với hệ được chấm, hoặc có bằng chứng agreement với người đủ cao nếu cùng họ. → Kiểm: config judge ghi nhà cung cấp/họ model khác; ADR nếu cùng họ.
-- [ ] `AI-EVAL-006` **MUST** Mọi kết luận eval ghi hạng claim (real-path / faithful-fixture / asserted-not-measured); "asserted" không được báo là đạt. → Kiểm: báo cáo eval có cột hạng; review từ chối báo cáo thiếu. · Nguồn: stored 23 §2.3
-- [ ] `AI-EVAL-007` **MUST** Hệ agent/nhiều bước báo pass^k (k ≥ 3) và kiểm trạng thái cuối, không chỉ chấm văn bản trả lời. → Kiểm: báo cáo có pass^k; grader đọc DB/file. · Nguồn: [`agentic-systems.md`](agentic-systems.md)
+- [ ] `AI-EVAL-005` **MUST@L** Judge khác họ model với hệ được chấm, hoặc có bằng chứng agreement với người đủ cao nếu cùng họ. → Kiểm: config judge ghi nhà cung cấp/họ model khác; ADR nếu cùng họ.
+- [ ] `AI-EVAL-006` **MUST@L** Mọi kết luận eval ghi hạng claim (real-path / faithful-fixture / asserted-not-measured); "asserted" không được báo là đạt. → Kiểm: báo cáo eval có cột hạng; review từ chối báo cáo thiếu. · Nguồn: stored 23 §2.3
+- [ ] `AI-EVAL-007` **MUST@L** Hệ agent/nhiều bước báo pass^k (k ≥ 3) và kiểm trạng thái cuối, không chỉ chấm văn bản trả lời. → Kiểm: báo cáo có pass^k; grader đọc DB/file. · Nguồn: [`agentic-systems.md`](agentic-systems.md)
 - [ ] `AI-EVAL-008` **MUST** Dataset eval có phiên bản, nguồn, giấy phép, và không chứa PII thật chưa che; tách khỏi dữ liệu huấn luyện/few-shot. → Kiểm: metadata dataset; scan PII. · Nguồn: [`data-and-fine-tuning.md`](data-and-fine-tuning.md)
 - [ ] `AI-EVAL-009` **SHOULD** Bộ capability eval riêng (pass rate thấp) để đo tiến bộ theo thời gian; khi ca nào đạt ổn định → chuyển sang regression. · Nguồn: Anthropic *Demystifying evals*
 - [ ] `AI-EVAL-010` **SHOULD** Mỗi tuần đọc ≥ 20 transcript thất bại/được đánh giá thấp từ production; ca mới → thêm vào dataset qua pipeline đề xuất→duyệt.

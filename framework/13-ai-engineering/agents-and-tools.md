@@ -3,7 +3,7 @@ title: Agent & tool: ACI, allowlist, schema, HITL, memory
 kind: module
 prefix: AI-AGENT
 applies_to: [ai-agent, agentic-system, data-ml]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Agent & tool: ACI, allowlist, schema, HITL, memory
@@ -55,16 +55,16 @@ updated: 2026-10-13
 
 ## Checklist
 
-- [ ] `AI-AGENT-001` **MUST** Mỗi tool có schema tham số (JSON Schema) với mô tả, ví dụ và ràng buộc (enum, min/max, pattern); tham số tham chiếu dùng ID tra được. → Kiểm: lint schema tool; test tham số ngoài ràng buộc bị từ chối trước khi chạy.
+- [ ] `AI-AGENT-001` **MUST@L** Mỗi tool có schema tham số (JSON Schema) với mô tả, ví dụ và ràng buộc (enum, min/max, pattern); tham số tham chiếu dùng ID tra được. → Kiểm: lint schema tool; test tham số ngoài ràng buộc bị từ chối trước khi chạy.
 - [ ] `AI-AGENT-002` **MUST** Allowlist tool theo vai trò/agent và allowlist giá trị tham số nhạy cảm (đường dẫn, domain, số tiền, người nhận) kiểm ở code ngoài model. → Kiểm: test model yêu cầu tool/tham số ngoài allowlist → từ chối + log; không có "deny bằng prompt". · Nguồn: `research/2026-10-13-ai-agent-research.md` §2
 - [ ] `AI-AGENT-003` **MUST** Đầu ra hành động của model đi qua policy validator (schema + luật nghiệp vụ) trước khi thực thi; validator fail-closed. → Kiểm: test validator lỗi/ngoại lệ → hành động không chạy.
 - [ ] `AI-AGENT-004` **MUST** Hành động T3–T4 vào trạng thái `waiting_approval` với bản xem trước; timeout mặc định huỷ; người duyệt khác với người yêu cầu khi liên quan tiền/quyền. → Kiểm: test timeout → `cancelled`; log có `approved_by`.
-- [ ] `AI-AGENT-005` **MUST** Mọi tool ghi có idempotency key và kết quả `outcome_unknown` (timeout/mất kết nối) được reconcile bằng đọc lại trước khi retry. → Kiểm: test gọi 2 lần cùng key → 1 tác dụng; test timeout → reconcile. · Nguồn: [`../08-backend/integrations-and-webhooks.md`](../08-backend/integrations-and-webhooks.md)
-- [ ] `AI-AGENT-006` **MUST** Số tool model thấy mỗi lượt có trần (≤ 8 với model nhỏ, ≤ 20–30 với model lớn — eval lại); tool hiếm nạp theo ngữ cảnh. → Kiểm: đếm tool trong request; eval tỉ lệ chọn đúng tool. · Nguồn: stored 02
+- [ ] `AI-AGENT-005` **MUST@L** Mọi tool ghi có idempotency key và kết quả `outcome_unknown` (timeout/mất kết nối) được reconcile bằng đọc lại trước khi retry. → Kiểm: test gọi 2 lần cùng key → 1 tác dụng; test timeout → reconcile. · Nguồn: [`../08-backend/integrations-and-webhooks.md`](../08-backend/integrations-and-webhooks.md)
+- [ ] `AI-AGENT-006` **MUST@L** Số tool model thấy mỗi lượt có trần (≤ 8 với model nhỏ, ≤ 20–30 với model lớn — eval lại); tool hiếm nạp theo ngữ cảnh. → Kiểm: đếm tool trong request; eval tỉ lệ chọn đúng tool. · Nguồn: stored 02
 - [ ] `AI-AGENT-007` **MUST** Kết quả tool là dữ liệu untrusted: đặt trong ranh giới, cắt theo trần token, lọc chỉ thị; tool lấy nội dung ngoài (web, email) gắn nhãn nguồn. → Kiểm: test tool trả về chuỗi chứa chỉ thị → không hành động lệch. · Nguồn: [`../12-security/ai-security.md`](../12-security/ai-security.md)
-- [ ] `AI-AGENT-008` **MUST** Vòng lặp agent có trần: số bước, token, thời gian, số lần gọi cùng tool với cùng tham số (phát hiện lặp, k = 3). → Kiểm: test agent lặp → dừng với lý do `loop_detected`; config trần tồn tại. · Nguồn: `research/2026-10-13-ai-agent-research.md` §2
-- [ ] `AI-AGENT-009` **MUST** Memory dài hạn ghi qua pipeline đề xuất → duyệt → ghi, có nguồn, thời điểm, thời hạn; người dùng xem và xoá được. → Kiểm: không có đường ghi memory trực tiếp từ output model; endpoint xoá memory có test. · Nguồn: stored 02
-- [ ] `AI-AGENT-010` **MUST** Nhật ký hành động: tool, tham số (đã che PII), kết quả, người duyệt, trace id; lưu theo chính sách audit. → Kiểm: trace một phiên tái hiện được chuỗi hành động. · Nguồn: [`observability-and-cost.md`](observability-and-cost.md)
+- [ ] `AI-AGENT-008` **MUST@L** Vòng lặp agent có trần: số bước, token, thời gian, số lần gọi cùng tool với cùng tham số (phát hiện lặp, k = 3). → Kiểm: test agent lặp → dừng với lý do `loop_detected`; config trần tồn tại. · Nguồn: `research/2026-10-13-ai-agent-research.md` §2
+- [ ] `AI-AGENT-009` **MUST@L** Memory dài hạn ghi qua pipeline đề xuất → duyệt → ghi, có nguồn, thời điểm, thời hạn; người dùng xem và xoá được. → Kiểm: không có đường ghi memory trực tiếp từ output model; endpoint xoá memory có test. · Nguồn: stored 02
+- [ ] `AI-AGENT-010` **MUST@L** Nhật ký hành động: tool, tham số (đã che PII), kết quả, người duyệt, trace id; lưu theo chính sách audit. → Kiểm: trace một phiên tái hiện được chuỗi hành động. · Nguồn: [`observability-and-cost.md`](observability-and-cost.md)
 - [ ] `AI-AGENT-011` **SHOULD** Lỗi tool trả về cho model có mã + gợi ý sửa ("thiếu `customer_id`, dùng `search_customer` trước") thay vì stack trace.
 - [ ] `AI-AGENT-012` **SHOULD** Tool trả về tóm tắt + ID, có phân trang; không trả bảng hàng nghìn dòng vào context. · Nguồn: [`../11-autonomous-loop/context-and-token-budget.md`](../11-autonomous-loop/context-and-token-budget.md)
 - [ ] `AI-AGENT-013` **SHOULD** Tool đọc khai `readOnly`/idempotent để model được gọi song song; tool ghi khai rõ tác dụng phụ (`external_side_effects`). · Nguồn: Anthropic tool use docs

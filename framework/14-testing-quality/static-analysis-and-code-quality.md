@@ -3,7 +3,7 @@ title: Phân tích tĩnh: lint, type, complexity, dead code, trùng lặp, kiế
 kind: module
 prefix: QA-STATIC
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Phân tích tĩnh: lint, type, complexity, dead code, trùng lặp, kiến trúc
@@ -37,17 +37,17 @@ Mặc định cho repo mới: **Biome + TypeScript strict + knip + jscpd + depen
 ## Checklist
 
 - [ ] `QA-STATIC-001` **MUST** Lint 0 lỗi, 0 cảnh báo (hoặc baseline đã ghi) chạy ở hook và CI với cùng cấu hình. → Kiểm: `scripts/dev-task.sh lint` exit 0; job CI dùng cùng lệnh.
-- [ ] `QA-STATIC-002` **MUST** Formatter chạy tự động (hook PostToolUse/pre-commit) và CI kiểm `--check`. → Kiểm: `biome format --write`/`ruff format` ở hook; CI `biome ci`/`ruff format --check` exit 0.
+- [ ] `QA-STATIC-002` **MUST@L** Formatter chạy tự động (hook PostToolUse/pre-commit) và CI kiểm `--check`. → Kiểm: `biome format --write`/`ruff format` ở hook; CI `biome ci`/`ruff format --check` exit 0.
 - [ ] `QA-STATIC-003` **MUST** Kiểm kiểu chế độ nghiêm: TS `strict: true` + `noUncheckedIndexedAccess`; Python pyright `strict` hoặc mypy `--strict` cho mã mới. → Kiểm: `tsconfig.json`/`pyrightconfig.json` có khoá tương ứng; `tsc --noEmit`/`pyright` exit 0.
 - [ ] `QA-STATIC-004` **MUST** Không `any`/`@ts-ignore`/`# type: ignore`/`eslint-disable` không kèm lý do. → Kiểm: lint `no-explicit-any`, `ban-ts-comment` (`allow-with-description`), ruff `PGH003`; grep disable không có comment = 0.
 - [ ] `QA-STATIC-005` **MUST** Không bí mật, `console.log`/`print` debug, code comment-out "để phòng" trong nhánh chính. → Kiểm: gitleaks 0 finding; lint `no-console` (trừ logger), ruff `T201`; review diff.
-- [ ] `QA-STATIC-006` **MUST@M** Dead code/export/dependency không dùng = 0 (hoặc baseline ratchet không tăng). → Kiểm: `knip` / `vulture --min-confidence 80` + `deptry` exit 0 trong CI.
-- [ ] `QA-STATIC-007` **MUST@M** Trùng lặp ≤ ngưỡng ghi trong repo (mặc định 3% dòng; không tăng so với baseline). → Kiểm: `jscpd --threshold 3 --reporters console,sarif` exit 0.
-- [ ] `QA-STATIC-008` **MUST@M** Ranh giới kiến trúc được khai báo và kiểm máy (domain ← application ← infrastructure; UI không import DB). → Kiểm: `depcruise --validate .dependency-cruiser.cjs src` / `lint-imports` exit 0. · Nguồn: [`../05-architecture/boundaries-and-modularity.md`](../05-architecture/boundaries-and-modularity.md)
-- [ ] `QA-STATIC-009` **MUST** Độ phức tạp hàm có ngưỡng (cyclomatic ≤ 10 hoặc cognitive ≤ 15 mặc định) và CI đỏ khi vượt với mã mới. → Kiểm: rule `complexity`/`C901`/`noExcessiveCognitiveComplexity` mức `error`.
-- [ ] `QA-STATIC-010` **MUST** Refactor không đổi hành vi: PR `refactor:` không chứa đổi hành vi, có test bảo vệ vùng sửa, số đo trước–sau (dòng, dep, cảnh báo, bundle) trong mô tả PR. → Kiểm: template PR mục "Đo trước–sau"; CI kiểm PR `refactor:` không sửa file test kỳ vọng (chỉ thêm) và test xanh. · Nguồn: khung cũ Nhóm 2 mục 9
-- [ ] `QA-STATIC-011` **MUST@M** Trước khi đóng một mảng/tính năng: chạy checklist tối ưu mã nguồn (dead code, trùng lặp, dep thừa, bundle) và ghi kết quả vào PR cuối của mảng. → Kiểm: PR có mục "Tối ưu mã nguồn" với output knip/jscpd/size.
-- [ ] `QA-STATIC-012` **MUST@M** Dự án có sẵn: baseline số đo tĩnh commit vào repo (`docs/ops/static-baseline.json`), CI chặn tăng (ratchet), hạ dần theo "đụng đâu dọn đó". → Kiểm: script so output hiện tại với baseline; vượt → đỏ; baseline chỉ giảm.
+- [ ] `QA-STATIC-006` **MUST@L** Dead code/export/dependency không dùng = 0 (hoặc baseline ratchet không tăng). → Kiểm: `knip` / `vulture --min-confidence 80` + `deptry` exit 0 trong CI.
+- [ ] `QA-STATIC-007` **MUST@L** Trùng lặp ≤ ngưỡng ghi trong repo (mặc định 3% dòng; không tăng so với baseline). → Kiểm: `jscpd --threshold 3 --reporters console,sarif` exit 0.
+- [ ] `QA-STATIC-008` **MUST@L** Ranh giới kiến trúc được khai báo và kiểm máy (domain ← application ← infrastructure; UI không import DB). → Kiểm: `depcruise --validate .dependency-cruiser.cjs src` / `lint-imports` exit 0. · Nguồn: [`../05-architecture/boundaries-and-modularity.md`](../05-architecture/boundaries-and-modularity.md)
+- [ ] `QA-STATIC-009` **MUST@L** Độ phức tạp hàm có ngưỡng (cyclomatic ≤ 10 hoặc cognitive ≤ 15 mặc định) và CI đỏ khi vượt với mã mới. → Kiểm: rule `complexity`/`C901`/`noExcessiveCognitiveComplexity` mức `error`.
+- [ ] `QA-STATIC-010` **MUST@L** Refactor không đổi hành vi: PR `refactor:` không chứa đổi hành vi, có test bảo vệ vùng sửa, số đo trước–sau (dòng, dep, cảnh báo, bundle) trong mô tả PR. → Kiểm: template PR mục "Đo trước–sau"; CI kiểm PR `refactor:` không sửa file test kỳ vọng (chỉ thêm) và test xanh. · Nguồn: khung cũ Nhóm 2 mục 9
+- [ ] `QA-STATIC-011` **MUST@L** Trước khi đóng một mảng/tính năng: chạy checklist tối ưu mã nguồn (dead code, trùng lặp, dep thừa, bundle) và ghi kết quả vào PR cuối của mảng. → Kiểm: PR có mục "Tối ưu mã nguồn" với output knip/jscpd/size.
+- [ ] `QA-STATIC-012` **MUST@L** Dự án có sẵn: baseline số đo tĩnh commit vào repo (`docs/ops/static-baseline.json`), CI chặn tăng (ratchet), hạ dần theo "đụng đâu dọn đó". → Kiểm: script so output hiện tại với baseline; vượt → đỏ; baseline chỉ giảm.
 - [ ] `QA-STATIC-013` **SHOULD** Hook local không phải cổng cuối: CI chạy lại toàn bộ lint/type/format vì `--no-verify` bỏ qua được. → Kiểm: job CI `quality` có 3 bước này không `continue-on-error`.
 - [ ] `QA-STATIC-014` **SHOULD** Một job `quality`/`gate` gom mọi cổng tĩnh làm required check duy nhất; thêm cổng không cần sửa ruleset. → Kiểm: ruleset chỉ yêu cầu `gate`; `gate` `needs:` các job con. · Nguồn: catalog 23 §2.5 (ADR-0003)
 - [ ] `QA-STATIC-015` **SHOULD** Không gom thứ chỉ *trông* giống nhau khi DRY (quy tắc 3 lần); không gom trừu tượng sớm. → Kiểm: review; jscpd báo trùng nhưng PR giải thích nếu giữ.

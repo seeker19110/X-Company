@@ -3,7 +3,7 @@ title: SLO, error budget, cảnh báo có thể hành động, on-call
 kind: module
 prefix: OPS-SLO
 applies_to: [web-app, api-service, ai-agent, agentic-system, data-ml, monorepo, blockchain]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # SLO, error budget, cảnh báo có thể hành động, on-call
@@ -36,16 +36,16 @@ updated: 2026-10-13
 ## Checklist
 
 - [ ] `OPS-SLO-001` **MUST** Mỗi dịch vụ hướng người dùng có ≥ 1 SLI availability và ≥ 1 SLI latency định nghĩa dạng tỷ lệ tốt/tổng, với query cụ thể, lưu `docs/ops/SLO.md` (hoặc file sloth/OpenSLO) trong repo. → Kiểm: file SLO có query PromQL/SQL chạy được; CI validate cú pháp (sloth/OpenSLO schema). · Nguồn: Google SRE Workbook — Implementing SLOs
-- [ ] `OPS-SLO-002` **MUST** SLO có mục tiêu số, cửa sổ (28/30 ngày) và error budget tính được; mục tiêu không phải 100%. → Kiểm: dashboard hiện SLO, budget còn lại (%), burn rate; mục tiêu < 100%. · Nguồn: SRE Workbook (100% là sai mục tiêu)
-- [ ] `OPS-SLO-003` **MUST** Chính sách error budget viết sẵn, được sản phẩm + kỹ thuật + vận hành duyệt: budget hết → đóng băng tính năng/ưu tiên tin cậy; có đường leo thang. → Kiểm: `docs/ops/ERROR-BUDGET-POLICY.md` có chữ ký ba bên (tên/ngày) và được nhắc trong GO/NO-GO. · Nguồn: SRE Workbook — error budget policy
+- [ ] `OPS-SLO-002` **MUST@L** SLO có mục tiêu số, cửa sổ (28/30 ngày) và error budget tính được; mục tiêu không phải 100%. → Kiểm: dashboard hiện SLO, budget còn lại (%), burn rate; mục tiêu < 100%. · Nguồn: SRE Workbook (100% là sai mục tiêu)
+- [ ] `OPS-SLO-003` **MUST@L** Chính sách error budget viết sẵn, được sản phẩm + kỹ thuật + vận hành duyệt: budget hết → đóng băng tính năng/ưu tiên tin cậy; có đường leo thang. → Kiểm: `docs/ops/ERROR-BUDGET-POLICY.md` có chữ ký ba bên (tên/ngày) và được nhắc trong GO/NO-GO. · Nguồn: SRE Workbook — error budget policy
 - [ ] `OPS-SLO-004` **MUST** Cảnh báo page dựa trên burn rate nhiều cửa sổ (long + short) thay vì ngưỡng tĩnh; ít nhất 2 cặp (nhanh/chậm) + 1 ticket. → Kiểm: rule alert trong repo có biểu thức burn rate với 2 cửa sổ; không có alert page kiểu `cpu > 80%`. · Nguồn: SRE Workbook — Alerting on SLOs (14.4×/1h-5m, 6×/6h-30m, 1×/3d-6h cho 99.9%)
 - [ ] `OPS-SLO-005` **MUST** Mỗi alert có: `severity` (page/ticket), `runbook_url` trỏ runbook có thật, chủ sở hữu, mô tả tác động người dùng; alert không có runbook không được bật. → Kiểm: script đọc rule files: 100% alert có `runbook_url` tồn tại (HTTP 200/file) và `severity`. · Nguồn: SRE Book — Monitoring (alert phải hành động được); [`../templates/RUNBOOK.md`](../templates/RUNBOOK.md)
 - [ ] `OPS-SLO-006` **MUST** Mọi alert được **thử kích hoạt** trước khi tin cậy (inject lỗi/giả metric) và sau mỗi thay đổi rule; ghi ngày diễn tập. → Kiểm: `docs/ops/alert-drills.md` có ngày + kết quả cho từng alert; lifecycle G8 yêu cầu "cảnh báo đã thử kích hoạt". · Nguồn: lifecycle G8; P1
-- [ ] `OPS-SLO-007` **MUST** Alert rule, routing, lịch on-call là code trong repo (Alertmanager/Grafana/PagerDuty via Terraform), qua PR. → Kiểm: thư mục `alerts/` + `promtool check rules`/`amtool check-config` trong CI. · Nguồn: P5; P9
-- [ ] `OPS-SLO-008` **MUST@M** Có người trực nhận page 24/7 cho SEV1 (hoặc tuyên bố rõ giờ hỗ trợ trong SLA) với primary + secondary và đường leo thang; thông tin liên hệ trong RUNBOOK. → Kiểm: lịch on-call tồn tại trong công cụ; test page tới primary → ack ≤ 15 phút (ghi ngày thử). · Nguồn: PagerDuty Incident Response (roles, on-call); SRE Book
-- [ ] `OPS-SLO-009` **MUST@M** Giới hạn nhiễu: ≤ 2 page/ca (ngưỡng đội chọn, ghi rõ); vượt → tuần kế dành thời gian giảm nhiễu; alert không ai hành động trong 30 ngày bị xoá/hạ xuống ticket. → Kiểm: báo cáo tháng số page/ca, tỷ lệ alert có hành động; danh sách alert xoá. · Nguồn: SRE Book — Being On-Call (giới hạn page)
-- [ ] `OPS-SLO-010` **MUST@M** Synthetic check và business metric tham gia SLI (hệ thống "xanh" nhưng không có giao dịch = vi phạm SLO). → Kiểm: SLI correctness/business trong `SLO.md`; alert "0 giao dịch trong X phút giờ cao điểm". · Nguồn: SRE Workbook (SLI theo người dùng)
-- [ ] `OPS-SLO-011` **MUST@M** Review SLO hàng tháng (3 tháng đầu) rồi hàng quý: so budget đã dùng, số lần page, hành động; ghi biên bản. → Kiểm: `docs/ops/slo-reviews/` có file theo tháng/quý. · Nguồn: SRE Workbook (review frequency)
+- [ ] `OPS-SLO-007` **MUST@L** Alert rule, routing, lịch on-call là code trong repo (Alertmanager/Grafana/PagerDuty via Terraform), qua PR. → Kiểm: thư mục `alerts/` + `promtool check rules`/`amtool check-config` trong CI. · Nguồn: P5; P9
+- [ ] `OPS-SLO-008` **MUST@L** Có người trực nhận page 24/7 cho SEV1 (hoặc tuyên bố rõ giờ hỗ trợ trong SLA) với primary + secondary và đường leo thang; thông tin liên hệ trong RUNBOOK. → Kiểm: lịch on-call tồn tại trong công cụ; test page tới primary → ack ≤ 15 phút (ghi ngày thử). · Nguồn: PagerDuty Incident Response (roles, on-call); SRE Book
+- [ ] `OPS-SLO-009` **MUST@L** Giới hạn nhiễu: ≤ 2 page/ca (ngưỡng đội chọn, ghi rõ); vượt → tuần kế dành thời gian giảm nhiễu; alert không ai hành động trong 30 ngày bị xoá/hạ xuống ticket. → Kiểm: báo cáo tháng số page/ca, tỷ lệ alert có hành động; danh sách alert xoá. · Nguồn: SRE Book — Being On-Call (giới hạn page)
+- [ ] `OPS-SLO-010` **MUST@L** Synthetic check và business metric tham gia SLI (hệ thống "xanh" nhưng không có giao dịch = vi phạm SLO). → Kiểm: SLI correctness/business trong `SLO.md`; alert "0 giao dịch trong X phút giờ cao điểm". · Nguồn: SRE Workbook (SLI theo người dùng)
+- [ ] `OPS-SLO-011` **MUST@L** Review SLO hàng tháng (3 tháng đầu) rồi hàng quý: so budget đã dùng, số lần page, hành động; ghi biên bản. → Kiểm: `docs/ops/slo-reviews/` có file theo tháng/quý. · Nguồn: SRE Workbook (review frequency)
 - [ ] `OPS-SLO-012` **MUST@L** SLO cho phụ thuộc nội bộ (DB, queue, dịch vụ nền) và hợp đồng SLO giữa đội; SLA với khách có SLO nội bộ chặt hơn và báo cáo tự động. → Kiểm: bảng SLO theo đội; báo cáo SLA sinh từ dữ liệu, không tay. · Nguồn: SRE Workbook
 - [ ] `OPS-SLO-013` **SHOULD** Alert gom nhóm/ức chế (grouping, inhibition, silence có hạn) để một sự cố gốc không tạo 50 thông báo; silence quá hạn tự hết. → Kiểm: cấu hình `inhibit_rules`/`group_by`; silence có `ends_at`. · Nguồn: Alertmanager docs (chưa fetch lại 2026-10-13)
 - [ ] `OPS-SLO-014` **SHOULD** Alert ticket (burn chậm, cert sắp hết hạn, disk 80%, dependency EOL) đi vào hàng đợi việc, không vào kênh page. → Kiểm: routing theo `severity`; kênh page chỉ có `severity=page`. · Nguồn: SRE Workbook — Alerting on SLOs (ticket vs page)

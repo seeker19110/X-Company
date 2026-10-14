@@ -3,7 +3,7 @@ title: Dữ liệu test, fixture, seed, ẩn danh hoá, factory
 kind: module
 prefix: QA-DATA
 applies_to: [all]
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Dữ liệu test, fixture, seed, ẩn danh hoá, factory
@@ -35,14 +35,14 @@ updated: 2026-10-13
 
 - [ ] `QA-DATA-001` **MUST** Không có dump/export dữ liệu production trong repo, CI, staging hay máy dev; chính sách ghi trong `PROJECT.md`. → Kiểm: gitleaks + script quét file `.sql/.csv/.json` > 1 MB hoặc có cột PII; `PROJECT.md` mục "Dữ liệu test" có câu cấm. · Nguồn: Luật 91/2025/QH15; GDPR Art. 5(1)(c)
 - [ ] `QA-DATA-002` **MUST** Fixture/seed không chứa dữ liệu cá nhân thật (tên, email, SĐT, CCCD, địa chỉ); email test dùng domain dành riêng (`example.com`/`example.test`) hoặc `+tag`. → Kiểm: CI quét fixture bằng regex/Presidio: 0 email ngoài domain cho phép, 0 SĐT VN dạng thật trừ số mẫu ghi trong `docs/compliance/test-data-policy.md`.
-- [ ] `QA-DATA-003` **MUST** Faker/random có seed cố định trong test; cùng seed → cùng dữ liệu. → Kiểm: `faker.seed(…)`/`Faker.seed(…)` ở setup; test chạy 2 lần ra cùng snapshot dữ liệu.
-- [ ] `QA-DATA-004` **MUST** Mỗi bảng/aggregate chính có factory với default hợp lệ (qua validate/schema) và override theo trường. → Kiểm: thư mục `tests/factories/` có file cho mỗi aggregate trong `PROJECT.md`; test tạo factory mặc định pass validation.
-- [ ] `QA-DATA-005` **MUST** Seed chạy được từ DB rỗng sau migration, idempotent (chạy 2 lần không nhân đôi). → Kiểm: CI job `migrate && seed && seed` rồi đếm bản ghi = lần 1.
-- [ ] `QA-DATA-006` **MUST** Test tự dọn dữ liệu mình tạo (transaction rollback, truncate theo worker, hoặc xoá theo tag `e2e-<run-id>`). → Kiểm: sau suite, truy vấn đếm bản ghi có tag run = 0.
+- [ ] `QA-DATA-003` **MUST@L** Faker/random có seed cố định trong test; cùng seed → cùng dữ liệu. → Kiểm: `faker.seed(…)`/`Faker.seed(…)` ở setup; test chạy 2 lần ra cùng snapshot dữ liệu.
+- [ ] `QA-DATA-004` **MUST@L** Mỗi bảng/aggregate chính có factory với default hợp lệ (qua validate/schema) và override theo trường. → Kiểm: thư mục `tests/factories/` có file cho mỗi aggregate trong `PROJECT.md`; test tạo factory mặc định pass validation.
+- [ ] `QA-DATA-005` **MUST@L** Seed chạy được từ DB rỗng sau migration, idempotent (chạy 2 lần không nhân đôi). → Kiểm: CI job `migrate && seed && seed` rồi đếm bản ghi = lần 1.
+- [ ] `QA-DATA-006` **MUST@L** Test tự dọn dữ liệu mình tạo (transaction rollback, truncate theo worker, hoặc xoá theo tag `e2e-<run-id>`). → Kiểm: sau suite, truy vấn đếm bản ghi có tag run = 0.
 - [ ] `QA-DATA-007` **MUST@M** Bản sao ẩn danh hoá (nếu dùng) được tạo bằng script có phiên bản, kỹ thuật không đảo ngược (xoá/băm có muối/tổng quát hoá), có DPIA hoặc phê duyệt ghi trong repo; không giữ bảng ánh xạ. → Kiểm: `scripts/anonymize/` + `docs/compliance/anonymization.md` có `approved_by`; test mẫu: không tìm được bản ghi gốc từ bản sao. · Nguồn: [`../04-standards/data-privacy-standards.md`](../04-standards/data-privacy-standards.md) STD-PRIV-003
 - [ ] `QA-DATA-008` **MUST@M** Cassette record/replay được lọc header `Authorization`/`Cookie`/`Set-Cookie`, API key và PII trước khi ghi. → Kiểm: cấu hình filter (`filter_headers`, `before_record`) + gitleaks trên thư mục cassette = 0.
-- [ ] `QA-DATA-009` **MUST** Dữ liệu test có ca tiếng Việt (dấu NFC/NFD, tên 4–5 từ, địa chỉ có số/`/`), Unicode và chuỗi dài để bắt lỗi encode/so sánh/cắt. → Kiểm: factory `person` có ≥ 1 giá trị tiếng Việt có dấu; test tìm kiếm với NFD xanh.
-- [ ] `QA-DATA-010` **MUST** Dữ liệu thời gian trong test là UTC cố định bằng clock giả; fixture không chứa `now()`. → Kiểm: grep `new Date()`/`datetime.now()` trong `tests/` = 0 ngoài helper clock.
+- [ ] `QA-DATA-009` **MUST@L** Dữ liệu test có ca tiếng Việt (dấu NFC/NFD, tên 4–5 từ, địa chỉ có số/`/`), Unicode và chuỗi dài để bắt lỗi encode/so sánh/cắt. → Kiểm: factory `person` có ≥ 1 giá trị tiếng Việt có dấu; test tìm kiếm với NFD xanh.
+- [ ] `QA-DATA-010` **MUST@L** Dữ liệu thời gian trong test là UTC cố định bằng clock giả; fixture không chứa `now()`. → Kiểm: grep `new Date()`/`datetime.now()` trong `tests/` = 0 ngoài helper clock.
 - [ ] `QA-DATA-011` **SHOULD** Fixture lớn (> 200 dòng) thay bằng factory hoặc builder; fixture JSON chỉ cho golden/contract. → Kiểm: lint kích thước file `tests/fixtures/*.json` ≤ ngưỡng ghi trong repo.
 - [ ] `QA-DATA-012` **SHOULD** Dữ liệu perf sinh theo tỷ lệ production (số hàng, phân phối giá trị, tỷ lệ null) ghi trong `PROJECT.md`. → Kiểm: script `seed --profile perf` có tham số số hàng; load test dùng profile này.
 - [ ] `QA-DATA-013` **SHOULD** Golden dataset cho eval LLM có phiên bản, nguồn nhãn, tập holdout không dùng khi tinh chỉnh prompt; negative control. → Kiểm: `evals/dataset.jsonl` + `evals/README` ghi `version`, `holdout`; xem [`../13-ai-engineering/evaluation.md`](../13-ai-engineering/evaluation.md).
