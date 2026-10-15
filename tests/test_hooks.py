@@ -350,6 +350,9 @@ class GuardMatrixTest(unittest.TestCase):
                 "time -f %e git reset --hard",
                 "setsid git reset --hard",
                 "setsid -f nice -n 1 timeout 9 git reset --hard",
+                "xargs --replace git reset --hard",
+                "xargs --max-lines git reset --hard",
+                "xargs --eof git reset --hard",
             ],
         )
         self.check("ask", ["timeout 600 claude --bare -p hi", "setsid claude --bare", "nice -n 10 claude --bare"])
@@ -390,6 +393,17 @@ class GuardMatrixTest(unittest.TestCase):
                 "echo 'export CLAUDE_CODE_SIMPLE=1' >> ~/.bashrc",
                 "declare -x CLAUDE_CODE_SIMPLE=1",
                 "env -i CLAUDE_CODE_SAFE_MODE=1 claude -p x",
+                "env -u FOO CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "env -C /tmp CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "timeout 600 env CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "nohup env CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "echo CLAUDE_CODE_SIMPLE=1 >> ~/.bash_login",
+                "echo CLAUDE_CODE_SIMPLE=1 >> ~/.config/fish/config.fish",
+                'bash -c "CLAUDE_CODE_SIMPLE=1 claude -p x"',
+                "sh -c 'claude --bare -p x'",
+                "bash -c 'X=1; claude --bare'",
+                "npm x claude --bare",
+                "bun x claude --bare",
             ],
         )
         self.assertEqual(self.g._env_assigns(["A=1", "B=2"]), ["A", "B"])  # chỉ gán biến (bash_decision bỏ sớm)
@@ -410,6 +424,7 @@ class GuardMatrixTest(unittest.TestCase):
                 "sed -i 's/x/disableAllHooks/' notes.txt",
                 "claude -- --bare",
                 "npx prettier --write claude",
+                "bash -c 'echo CLAUDE_CODE_SIMPLE=1'",
             ],
         )
         self.assertIn("--bare", str(self.g.bash_decision("claude --bare", self.root)["reason"]))

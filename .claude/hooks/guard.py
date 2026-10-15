@@ -28,8 +28,8 @@ WRAPPERS = {"command", "builtin", "exec", "nohup", "time", "nice", "stdbuf", "xa
 WRAPPER_OPTS_WITH_VALUE: Dict[str, Set[str]] = {
     "nice": {"-n", "--adjustment"},
     "stdbuf": {"-i", "-o", "-e", "--input", "--output", "--error"},
-    "xargs": {"-n", "-I", "-L", "-P", "-d", "-s", "-E", "-a", "--max-args", "--max-lines", "--max-procs", "--delimiter"}
-    | {"--max-chars", "--eof", "--arg-file", "--replace"},
+    "xargs": {"-n", "-I", "-L", "-P", "-d", "-s", "-E", "-a", "--max-args", "--max-procs", "--delimiter", "--max-chars"}
+    | {"--arg-file"},  # `--replace`/`--eof`/`--max-lines`: giá trị chỉ đi dạng `--opt=v`, token sau là lệnh
     "time": {"-f", "-o", "--format", "--output"},
     "timeout": {"-s", "-k", "--signal", "--kill-after"},
 }
@@ -245,6 +245,14 @@ def _skip_wrapper_args(name: str, a: List[str]) -> None:
             a.pop(0)
     if name == "timeout" and a:
         a.pop(0)  # DURATION
+
+
+def _skip_env_args_keep_assigns(a: List[str]) -> None:
+    """Sau `env`: chỉ bỏ tuỳ chọn (`-u`/`-C`/`-S` kèm giá trị), giữ gán biến để còn đọc được tên biến."""
+    while a and a[0].startswith("-"):
+        opt = a.pop(0)
+        if opt in ("-u", "-C", "-S") and a:
+            a.pop(0)
 
 
 def _strip_prefixes(argv: List[str]) -> List[str]:
@@ -508,9 +516,12 @@ PKG_RUNNERS: Set[Tuple[str, ...]] = {
     ("pnpm", "dlx"),
     ("yarn", "dlx"),
     ("yarn", "exec"),
+    ("npm", "x"),
+    ("bun", "x"),
 }
 DECLARE_CMDS = {"export", "declare", "typeset", "readonly", "local"}
-RC_FILES = {".bashrc", ".zshrc", ".profile", ".bash_profile", ".zprofile", ".zshenv", ".envrc"}
+RC_FILES = {".bashrc", ".zshrc", ".profile", ".bash_profile", ".bash_login", ".bash_aliases", ".zprofile", ".zlogin"}
+RC_FILES |= {".zshenv", ".envrc", "config.fish"}
 
 
 def _is_claude_pkg(t: str) -> bool:
@@ -548,18 +559,21 @@ def _claude_args(n: List[str]) -> Optional[List[str]]:
 
 
 def _env_assigns(argv: List[str]) -> List[str]:
-    """Tên biến được gán thật: gán đầu lệnh, sau `env`, hoặc là đối số của `export`/`declare`…"""
+    """Tên biến được gán thật: gán đầu lệnh (kể cả sau `env [-u X] [-C d]` và wrapper), hoặc đối số của `export`/`declare`…"""
     if argv and argv[0] in DECLARE_CMDS:
         return [t.split("=", 1)[0] for t in argv[1:] if ENV_ASSIGN_RE.fullmatch(t)]
     names: List[str] = []
     a = list(argv)
     while a:
+        head = posixpath.basename(a[0])
         if ENV_ASSIGN_RE.fullmatch(a[0]):
             names.append(a.pop(0).split("=", 1)[0])
-        elif posixpath.basename(a[0]) == "env":
+        elif head == "env":
             a.pop(0)
-            while a and a[0].startswith("-"):
-                a.pop(0)
+            _skip_env_args_keep_assigns(a)
+        elif head in WRAPPERS:
+            a.pop(0)
+            _skip_wrapper_args(head, a)
         else:
             break
     return names
@@ -587,8 +601,24 @@ def _bypass_marker(argv: List[str], n: List[str], claude: List[str]) -> str:
     return ""
 
 
+def _shell_c_bypass(n: List[str]) -> str:
+    """`bash -c "<lệnh>"`: áp luật hook-bypass cho từng lệnh bên trong (đệ quy)."""
+    if n[0] not in SHELLS or "-c" not in n[:-1]:
+        return ""
+    for sub in split_commands(tokenize(n[n.index("-c") + 1])):
+        sn = normalize(sub)
+        if sn:  # chuỗi bên trong luôn ngắn hơn → đệ quy dừng
+            reason = hook_bypass(sub, sn)
+            if reason:
+                return reason
+    return ""
+
+
 def hook_bypass(argv: List[str], n: List[str]) -> str:
     """Lý do hỏi nếu lệnh tắt/bỏ qua hook của dự án; chuỗi rỗng nếu không."""
+    inner = _shell_c_bypass(n)
+    if inner:
+        return inner
     claude = _claude_args(n) or []
     hit = _bypass_marker(argv, n, claude)
     if hit:
