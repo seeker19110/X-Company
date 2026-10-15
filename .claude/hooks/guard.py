@@ -471,6 +471,55 @@ def command_rules(n: List[str], root: str) -> Tuple[str, str]:
     return "", ""
 
 
+# Cách mở phiên Claude Code KHÔNG chạy hook của dự án (LOOP-HARNESS-018): agent tự đặt được → người phải xác nhận.
+# Nguồn: Claude Code docs *CLI reference* (`--bare`, `--safe-mode`, `--settings`, `--setting-sources`, `--restricted`;
+# `CLAUDE_CODE_SIMPLE`, `CLAUDE_CODE_SAFE_MODE`) và *Hooks* (`disableAllHooks`), đọc 2026-10-15.
+# Giới hạn đã biết (phân tích tĩnh): lệnh bọc trong `sh -c`/`eval`, alias, biến chứa cờ, chuỗi ghép lúc chạy.
+HOOK_BYPASS_ENV = ("CLAUDE_CODE_SIMPLE", "CLAUDE_CODE_SAFE_MODE")
+HOOK_BYPASS_SETTING = "disableAllHooks"
+HOOK_BYPASS_FLAGS = {"--bare", "--safe-mode", "--settings", "--setting-sources", "--restricted"}
+CLAUDE_PKG = "@anthropic-ai/claude-code"
+
+
+def _is_claude_entry(i: int, t: str) -> bool:
+    """`claude` ở đầu lệnh, hoặc gói/đường dẫn claude-code ở bất kỳ đâu (npx, npm exec, pnpm/yarn dlx, node …/cli.js)."""
+    return (i == 0 and t == "claude") or t == CLAUDE_PKG or t.startswith(CLAUDE_PKG + "@") or f"/{CLAUDE_PKG}/" in t
+
+
+def _claude_args(n: List[str]) -> Optional[List[str]]:
+    """Tham số của Claude Code trong lệnh (dừng ở `--` tách tham số của chương trình khác); None nếu không gọi claude."""
+    for i, t in enumerate(n):
+        if _is_claude_entry(i, t):
+            rest = n[i + 1 :]
+            if rest[:1] == ["--"]:  # `npm exec <pkg> -- <args>`
+                rest = rest[1:]
+            return rest[: rest.index("--")] if "--" in rest else rest
+    return None
+
+
+def _bypass_marker(argv: List[str], n: List[str], claude: List[str]) -> str:
+    """Marker tắt hook ở vị trí có hiệu lực: gán biến môi trường, tham số của claude, hoặc nội dung lệnh ghi file.
+    Nhắc tên marker như dữ liệu (`grep`, `git commit -m`) không tính."""
+    for t in argv:
+        if ENV_ASSIGN_RE.fullmatch(t) and t.split("=", 1)[0] in HOOK_BYPASS_ENV:
+            return t.split("=", 1)[0]
+    if any(HOOK_BYPASS_SETTING in t for t in claude):
+        return HOOK_BYPASS_SETTING
+    if write_targets(n, argv) and any(HOOK_BYPASS_SETTING in t for t in argv):
+        return HOOK_BYPASS_SETTING
+    return ""
+
+
+def hook_bypass(argv: List[str], n: List[str]) -> str:
+    """Lý do hỏi nếu lệnh tắt/bỏ qua hook của dự án; chuỗi rỗng nếu không."""
+    claude = _claude_args(n) or []
+    hit = _bypass_marker(argv, n, claude)
+    if hit:
+        return f"lệnh đặt `{hit}` (tắt hook của khung)"
+    flag = next((a.split("=", 1)[0] for a in claude if a.split("=", 1)[0] in HOOK_BYPASS_FLAGS), "")
+    return f"phiên Claude với `{flag}` có thể bỏ qua hook của dự án" if flag else ""
+
+
 def write_targets(n: List[str], argv: List[str]) -> List[str]:
     """File mà lệnh có thể ghi: chuyển hướng `>`/`>>`, `sed -i`, `tee`, đích của cp/mv/install/truncate/ln."""
     out = [argv[i + 1] for i, t in enumerate(argv[:-1]) if t in (">", ">>", ">|", "&>")]
@@ -538,6 +587,9 @@ def _scan_command(argv: List[str], root: str, res: Dict[str, object], asks: List
         return f"Lệnh bị khung chặn ({why}): {' '.join(argv)[:300]}. Muốn làm thật thì người dùng tự chạy."
     if decision == "ask":
         asks.append(f"{why}: {' '.join(argv)[:200]}")
+    bypass = hook_bypass(argv, n)
+    if bypass:
+        asks.append(f"{bypass}: {' '.join(argv)[:200]}")
     asks.extend(_write_asks(n, argv, root))
     if n[:2] == ["git", "commit"]:
         return _scan_commit(n[2:], res, asks)
