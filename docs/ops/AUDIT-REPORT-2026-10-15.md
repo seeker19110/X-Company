@@ -154,3 +154,6 @@ CI #41 lần đầu (run 38711914500): `quality` đỏ ở bước tiêu đề P
 AUD-HAR-020 duyệt ("tiếp tục", 2026-10-15) và sửa trong #41: test hồi quy `test_progress_sha_from_merge_head_during_merge`
 đỏ trước sửa ("SHA … không phải tổ tiên của HEAD"), xanh sau; `progress-check` chấp nhận SHA là tổ tiên `MERGE_HEAD` chỉ
 khi đang merge (hết merge → đỏ lại, cùng test). `audit check --strict` exit 0, 0 phát hiện mở.
+Review độc lập phần mã: APPROVE, 0 🔴/🟠, 2 🟢 — nhánh/tag tên `MERGE_HEAD` lọt khi không merge; octopus chỉ xét đầu thứ
+nhất. Cả hai sửa (đọc file `MERGE_HEAD` qua `git rev-parse --git-path`), test `test_progress_merge_head_octopus_and_fake_ref`
+đỏ trước/xanh sau. `merge --squash` không tạo `MERGE_HEAD` nên vẫn đỏ (reviewer đo).

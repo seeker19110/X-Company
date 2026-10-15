@@ -935,8 +935,13 @@ def progress_base_ref(repo: Path) -> Optional[str]:
 
 
 def _progress_reachable(repo: Path, sha: str) -> bool:
-    """SHA là tổ tiên của HEAD — hoặc của MERGE_HEAD khi đang merge, vì commit merge sẽ chứa nó (AUD-HAR-020)."""
-    return any(_git(repo, "merge-base", "--is-ancestor", sha, ref).returncode == 0 for ref in ("HEAD", "MERGE_HEAD"))
+    """SHA là tổ tiên của HEAD — hoặc của một đầu trong file MERGE_HEAD khi đang merge (kể cả octopus), vì commit
+    merge sẽ chứa nó (AUD-HAR-020). Đọc file thay vì tên ref để nhánh/tag tên `MERGE_HEAD` không lọt."""
+    heads = ["HEAD"]
+    merge_head = repo / _git(repo, "rev-parse", "--git-path", "MERGE_HEAD").stdout.strip()
+    if merge_head.is_file():
+        heads += merge_head.read_text(encoding="utf-8").split()
+    return any(_git(repo, "merge-base", "--is-ancestor", sha, ref).returncode == 0 for ref in heads)
 
 
 def progress_check(path: Path) -> List[str]:
