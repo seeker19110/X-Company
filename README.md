@@ -83,7 +83,8 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 
 Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XS_FRAMEWORK_LINK` (gốc liên kết
 trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `XS_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
-`loop`; không đặt thì lấy thư mục cha gần nhất có `.autopilot`/`xs.yaml`/`.xstored`/`.git`, không thấy thì cwd) · `XS_DEBUG=1` (in traceback khi lỗi).
+`loop`; không đặt thì: bản cài `.xstored/scripts/xs.py` → cha của `.xstored`; nếu không, thư mục cha gần nhất có
+`.autopilot`/`xs.yaml`/`.xstored`, rồi gần nhất có `.git` — thư mục cha là repo khác (vd `$HOME` dotfiles) sẽ thắng; không thấy thì cwd) · `XS_DEBUG=1` (in traceback khi lỗi).
 
 Kiểm tra trước khi đóng góp (cần Python ≥ 3.11 và shellcheck; ruff/mypy/coverage khoá kèm hash ở `requirements-dev.txt`):
 

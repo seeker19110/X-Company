@@ -617,17 +617,26 @@ def blueprint_status_text(raw: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- loop (autopilot)
 
 
-PROJECT_MARKERS = (".autopilot", "xs.yaml", ".xstored", ".git")
+PROJECT_MARKERS = (".autopilot", "xs.yaml", ".xstored")
 
 
 def project_dir() -> Path:
-    """Gốc dự án: `CLAUDE_PROJECT_DIR`; không có thì thư mục cha gần nhất (tính cả cwd) có dấu hiệu dự án,
-    cùng gốc mà hook/dev-task.sh thấy (AUD-XFEAT-001); không thấy dấu hiệu nào thì cwd."""
+    """Gốc dự án, theo thứ tự: `CLAUDE_PROJECT_DIR` (hook luôn đặt) → cha của `.xstored/` khi đây là bản cài
+    (`<gốc>/.xstored/scripts/xs.py`, như dev-task.sh) → thư mục cha gần nhất (tính cả cwd) có dấu hiệu khung
+    (`.autopilot`/`xs.yaml`/`.xstored`) → thư mục cha gần nhất có `.git` → cwd (AUD-XFEAT-001).
+    Dấu hiệu khung xét trước `.git` để repo git lồng (submodule, apps/web) không thắng gốc dự án."""
     env = os.environ.get("CLAUDE_PROJECT_DIR")
     if env:
         return Path(env).resolve()
+    if SCRIPT_DIR.parent.name == ".xstored":
+        return SCRIPT_DIR.parent.parent.resolve()
     cwd = Path(os.getcwd()).resolve()
-    return next((d for d in (cwd, *cwd.parents) if any((d / m).exists() for m in PROJECT_MARKERS)), cwd)
+    chain = (cwd, *cwd.parents)
+    for markers in (PROJECT_MARKERS, (".git",)):
+        hit = next((d for d in chain if any((d / m).exists() for m in markers)), None)
+        if hit:
+            return hit
+    return cwd
 
 
 def state_dir(base: Optional[Path] = None) -> Path:
@@ -1850,13 +1859,18 @@ def cmd_loop(args: argparse.Namespace) -> int:
 
 
 CHANGELOG_GROUPS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
-CHANGELOG_VERSION_RE = re.compile(r"## \[(\d+)\.(\d+)\.(\d+)\] - \d{4}-\d{2}-\d{2}")
+CHANGELOG_VERSION_RE = re.compile(r"## \[(\d+)\.(\d+)\.(\d+)\] - (\d{4}-\d{2}-\d{2})(?: \[YANKED\])?")
 
 
 def _changelog_sections(text: str) -> List[Tuple[str, List[str]]]:
     """[(heading `## …`, [tên nhóm `### …`])] theo thứ tự trong file."""
     out: List[Tuple[str, List[str]]] = []
+    fence = False
     for line in text.splitlines():
+        if line.lstrip().startswith(("```", "~~~")):
+            fence = not fence
+        if fence:
+            continue
         if line.startswith("## "):
             out.append((line.rstrip(), []))
         elif line.startswith("### ") and out:
@@ -1871,8 +1885,20 @@ def _changelog_group_errors(head: str, groups: List[str], unreleased: bool) -> L
         if (g.split() or [""])[0] not in CHANGELOG_GROUPS
     ]
     if unreleased:  # bản đã phát hành là lịch sử (tag đã cắt) — chỉ chặn trùng ở phần đang viết
-        errors += [f"{head}: nhóm `### {g}` trùng" for g, n in Counter(groups).items() if n > 1]
+        kinds = Counter((g.split() or [""])[0] for g in groups)
+        errors += [f"{head}: nhóm `### {g}` trùng" for g, n in kinds.items() if n > 1]
     return errors
+
+
+def _changelog_date_errors(head: str, raw: str, dates: List[_dt.date]) -> List[str]:
+    """Ngày ISO 8601 hợp lệ và không tăng so với bản đứng trước (mới hơn) trong file."""
+    try:
+        d = _dt.date.fromisoformat(raw)
+    except ValueError:
+        return [f"`{head}`: ngày `{raw}` không hợp lệ"]
+    errs = [f"`{head}`: ngày phải giảm dần theo bản (bản cũ không mới hơn bản mới)"] if dates and d > dates[-1] else []
+    dates.append(d)
+    return errs
 
 
 def changelog_check(text: str, version: Optional[str]) -> List[str]:
@@ -1883,15 +1909,17 @@ def changelog_check(text: str, version: Optional[str]) -> List[str]:
         return ["mục `## ` đầu tiên phải là `## [Unreleased]`"]
     errors = _changelog_group_errors(*sections[0], unreleased=True)
     versions: List[Tuple[int, ...]] = []
+    dates: List[_dt.date] = []
     for head, groups in sections[1:]:
         m = CHANGELOG_VERSION_RE.fullmatch(head)
         if not m:
-            errors.append(f"`{head}`: phải dạng `## [X.Y.Z] - YYYY-MM-DD` (SemVer + ngày ISO 8601)")
+            errors.append(f"`{head}`: phải dạng `## [X.Y.Z] - YYYY-MM-DD` (X.Y.Z không pre-release, ngày ISO 8601)")
             continue
-        v = tuple(int(x) for x in m.groups())
+        v = tuple(int(x) for x in m.groups()[:3])
         if versions and v >= versions[-1]:
             errors.append(f"`{head}`: phiên bản phải giảm dần (bản mới nhất trước)")
         versions.append(v)
+        errors += _changelog_date_errors(head, m.group(4), dates)
         errors += _changelog_group_errors(head, groups, unreleased=False)
     latest = ".".join(map(str, versions[0])) if versions else None
     if version and latest != version:

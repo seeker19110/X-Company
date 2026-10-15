@@ -589,6 +589,33 @@ class ProjectDirTest(TmpDirCase):
                 self.assertEqual(xs.project_dir(), (self.tmp / "proj").resolve(), marker)
             m.rmdir() if marker != "xs.yaml" else m.unlink()
 
+    def test_nested_git_repo_does_not_win_over_project_marker(self):
+        # Review #38: repo git lồng (apps/web/.git) trong dự án có xs.yaml → gốc vẫn là dự án.
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        proj = self.tmp / "p1"
+        (proj / ".git").mkdir(parents=True)
+        (proj / "xs.yaml").write_text("", encoding="utf-8")
+        web = proj / "apps" / "web"
+        (web / ".git").mkdir(parents=True)
+        with (
+            unittest.mock.patch.dict(os.environ, env, clear=True),
+            unittest.mock.patch.object(os, "getcwd", return_value=str(web)),
+        ):
+            self.assertEqual(xs.project_dir(), proj.resolve())
+
+    def test_installed_copy_uses_parent_of_xstored(self):
+        # Như dev-task.sh: xs.py ở `<gốc>/.xstored/scripts/` → gốc = cha của `.xstored`, bất kể cwd.
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        proj = self.tmp / "dich"
+        scripts = proj / ".xstored" / "scripts"
+        scripts.mkdir(parents=True)
+        with (
+            unittest.mock.patch.dict(os.environ, env, clear=True),
+            unittest.mock.patch.object(xs, "SCRIPT_DIR", scripts),
+            unittest.mock.patch.object(os, "getcwd", return_value=str(self.tmp)),
+        ):
+            self.assertEqual(xs.project_dir(), proj.resolve())
+
     def test_no_marker_falls_back_to_cwd_and_env_wins(self):
         sub = self.tmp / "x"
         sub.mkdir()
@@ -623,11 +650,19 @@ class ChangelogCheckTest(TmpDirCase):
             "nhóm `### Misc`": self.GOOD.replace("### Fixed", "### Misc", 1),
             "ngày ISO": self.GOOD.replace("## [1.0.0] - 2026-01-02", "## [1.0.0] - 02/01/2026"),
             "giảm dần": self.GOOD.replace("[1.0.0] - 2026-01-02", "[3.0.0] - 2026-01-02"),
+            "ngày": self.GOOD.replace("2026-01-02", "2026-13-45"),
+            "ngày phải giảm": self.GOOD.replace("2026-01-02", "2027-01-02"),
+            "`### Added` trùng": self.GOOD.replace("### Fixed\n- b", "### Added (harness)\n- b", 1),
         }
         for want, text in cases.items():
             got = self.errs(text)
             self.assertTrue(any(want in e for e in got), f"{want}: {got}")
         self.assertTrue(any("VERSION" in e for e in self.errs(self.GOOD, "2.1.0")))
+
+    def test_fenced_code_and_yanked(self):
+        text = self.GOOD.replace("### Fixed\n- b", "### Fixed\n- b\n\n```\n## ví dụ\n### Misc\n```", 1)
+        self.assertEqual(self.errs(text), [])
+        self.assertEqual(self.errs(self.GOOD.replace("2026-01-02", "2026-01-02 [YANKED]")), [])
 
     def test_cli(self):
         (self.tmp / "CHANGELOG.md").write_text(self.GOOD, encoding="utf-8")
