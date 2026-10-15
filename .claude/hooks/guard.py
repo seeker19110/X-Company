@@ -471,6 +471,37 @@ def command_rules(n: List[str], root: str) -> Tuple[str, str]:
     return "", ""
 
 
+# Cách mở phiên Claude Code KHÔNG chạy hook của dự án (LOOP-HARNESS-018): agent tự đặt được → người phải xác nhận.
+# Nguồn: Claude Code docs *CLI reference* (`--bare`, `--safe-mode`, `--settings`, `--setting-sources`, `--restricted`) và
+# *Hooks* (`disableAllHooks`), đọc 2026-10-15.
+HOOK_BYPASS_MARKERS = ("disableAllHooks", "CLAUDE_CODE_SIMPLE", "CLAUDE_CODE_SAFE_MODE")
+HOOK_BYPASS_FLAGS = {"--bare", "--safe-mode", "--settings", "--setting-sources", "--restricted"}
+PKG_RUNNERS = {"npx", "pnpx", "bunx"}
+CLAUDE_PKG = "@anthropic-ai/claude-code"
+
+
+def _claude_args(n: List[str]) -> Optional[List[str]]:
+    """Tham số của lệnh `claude` (gọi thẳng hoặc qua npx/pnpx/bunx gói claude-code); None nếu không phải claude."""
+    if n[0] == "claude":
+        return n[1:]
+    if n[0] in PKG_RUNNERS:
+        for i, t in enumerate(n[1:], 1):
+            if t == CLAUDE_PKG or t.startswith(CLAUDE_PKG + "@"):
+                return n[i + 1 :]
+    return None
+
+
+def hook_bypass(argv: List[str], n: List[str]) -> str:
+    """Lý do hỏi nếu lệnh tắt/bỏ qua hook của dự án; chuỗi rỗng nếu không."""
+    for t in argv:
+        hit = next((m for m in HOOK_BYPASS_MARKERS if m in t), "")
+        if hit:
+            return f"lệnh chạm `{hit}` (tắt hook của khung)"
+    args = _claude_args(n) or []
+    flag = next((a.split("=", 1)[0] for a in args if a.split("=", 1)[0] in HOOK_BYPASS_FLAGS), "")
+    return f"phiên Claude với `{flag}` có thể bỏ qua hook của dự án" if flag else ""
+
+
 def write_targets(n: List[str], argv: List[str]) -> List[str]:
     """File mà lệnh có thể ghi: chuyển hướng `>`/`>>`, `sed -i`, `tee`, đích của cp/mv/install/truncate/ln."""
     out = [argv[i + 1] for i, t in enumerate(argv[:-1]) if t in (">", ">>", ">|", "&>")]
@@ -538,6 +569,9 @@ def _scan_command(argv: List[str], root: str, res: Dict[str, object], asks: List
         return f"Lệnh bị khung chặn ({why}): {' '.join(argv)[:300]}. Muốn làm thật thì người dùng tự chạy."
     if decision == "ask":
         asks.append(f"{why}: {' '.join(argv)[:200]}")
+    bypass = hook_bypass(argv, n)
+    if bypass:
+        asks.append(f"{bypass}: {' '.join(argv)[:200]}")
     asks.extend(_write_asks(n, argv, root))
     if n[:2] == ["git", "commit"]:
         return _scan_commit(n[2:], res, asks)

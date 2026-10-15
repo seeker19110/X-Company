@@ -313,6 +313,30 @@ class GuardMatrixTest(unittest.TestCase):
         self.check("deny", ["mkfs /dev/sda1", "mkfs.ext4 /dev/sda1", "chmod 777 /srv/app", "chmod -R 777 ."])
         self.check("", ["chmod 755 run.sh", "chmod 0777x f"])
 
+    def test_guard_hook_bypass_asks(self):
+        # LOOP-HARNESS-018: mở phiên Claude không hook / bật disableAllHooks → người xác nhận.
+        self.check(
+            "ask",
+            [
+                """claude -p x --settings '{"disableAllHooks":true}'""",
+                "claude --settings ./s.json -p x",
+                "claude --settings=./s.json",
+                "claude --bare -p x",
+                "claude --safe-mode",
+                "claude --restricted -p x",
+                "claude --setting-sources user -p x",
+                "/usr/local/bin/claude --bare",
+                "env A=1 claude --bare",
+                "npx @anthropic-ai/claude-code --bare -p x",
+                "bunx @anthropic-ai/claude-code@2.1.0 --safe-mode",
+                "CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "export CLAUDE_CODE_SAFE_MODE=1",
+                """echo '{"disableAllHooks": true}' > /tmp/s.json""",
+            ],
+        )
+        self.check("", ["claude -p 'giải thích'", "claude --version", "npx prettier --check .", "npx --yes"])
+        self.assertIn("--bare", str(self.g.bash_decision("claude --bare", self.root)["reason"]))
+
     def test_guard_rel_path_without_relative_form(self):
         # Windows (khác ổ đĩa): relpath ném ValueError → trả đường dẫn chuẩn hoá tuyệt đối.
         with mock.patch.object(self.g.os.path, "relpath", side_effect=ValueError("khác ổ đĩa")):

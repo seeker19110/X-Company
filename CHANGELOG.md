@@ -16,6 +16,9 @@ Thay đổi **mục checklist** (thêm ID, đổi mức, ngừng dùng) ghi rõ 
   `xs.py`) → exit 0, không ra quyết định; không hook nào chứa `DISABLE`/`SKIP_HOOK`; mọi hook trong `settings.json` được phủ.
 
 ### Added
+- Guard Bash hỏi người khi lệnh mở phiên Claude Code bỏ qua hook của dự án: `claude` (kể cả qua npx/pnpx/bunx
+  `@anthropic-ai/claude-code`) với `--bare`, `--safe-mode`, `--settings`, `--setting-sources`, `--restricted`; mọi token chứa
+  `disableAllHooks`, `CLAUDE_CODE_SIMPLE`, `CLAUDE_CODE_SAFE_MODE`. Phần *Kiểm* của `LOOP-HARNESS-018` thêm điều này (ID, mức giữ).
 - Workflow `release-tag.yml` (chạy tay trên `main`): tạo annotated tag `v<VERSION>` khi `CHANGELOG.md` có mục tương ứng
   và tag chưa tồn tại — đường phát hành không cần push tag từ máy (`BASE-REPO-006`).
 - Audit có máy đỡ (ADR-0005): phương pháp `framework/00-method/audit.md` (13 nhóm, thêm *Harness & quy trình agent*;
