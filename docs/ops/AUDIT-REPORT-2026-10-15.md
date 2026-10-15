@@ -138,3 +138,11 @@ lộ ra khi commit T-501 — PLAN viết lại mỗi lần autopilot); `BASE-REP
 phụ thuộc thật nội dung file đó. AUD-DOC-022: đo lại trên mã `05ec95d` (mã không đổi tới HEAD) — bandit 1.8.6 exit 1
 (chỉ B602 đã biết + 7 Low), vulture 2.14 exit 3 (4 báo nhầm đã biết), pip-audit 2.10.1 exit 0, ci-check exit 0, gitleaks
 exit 0 — ghi chú 5 dòng nhóm viết lại. `audit plan` → 0 bằng chứng blueprint cũ; `audit check --strict` exit 0, 0 phát hiện mở.
+
+Review độc lập (subagent `reviewer`, read-only): 0 🔴 · 1 🟠 · 4 🟢 — 🟠 xung đột PROGRESS với #40 (đã merge `main`);
+🟢 `LOOP-HARNESS-002` còn liệt kê task T-401… (cùng gốc AUD-HAR-019, máy dò không thấy vì không trích file — đã sửa),
+`LOOP-HARNESS-004` nhúng lại số byte (đã bỏ), tên hàm `project_dir` (đã sửa), ghi chú `LOOP-HARNESS-003` + dòng đầu
+PROGRESS cũ (đã sửa). Mọi trích dẫn file:dòng và số đo khác tái hiện được.
+
+Phát hiện mới khi merge: **AUD-HAR-020** 🟢 mở — `progress-check` bỏ qua `MERGE_HEAD` nên cổng commit chặn giải xung
+đột PROGRESS bằng SHA của `main`; sửa mã `xs.py` + test ở đợt sau, chờ duyệt.
