@@ -768,6 +768,40 @@ class ProgressCheckTest(unittest.TestCase):
         self.assertEqual(len(errs), 1)
         self.assertIn("không phải tổ tiên", errs[0])
 
+    def test_progress_sha_from_merge_head_during_merge(self):
+        # AUD-HAR-020: giải xung đột PROGRESS khi merge nhánh chính vào nhánh PR — SHA của nhánh chính chưa là tổ tiên
+        # HEAD nhưng commit merge sẽ chứa nó (MERGE_HEAD); cổng commit không được chặn. Hết merge thì lại đỏ.
+        self.git("checkout", "-q", "-b", "feat")
+        self.commit("feat")
+        self.git("checkout", "-q", "main")
+        tip = self.commit("main2")
+        self.git("checkout", "-q", "feat")
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": "main"}):
+            self.git("merge", "-q", "--no-ff", "--no-commit", "main")
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=tip)), [])
+            self.git("merge", "--abort")
+            errs = self.check(GOOD_PROGRESS.format(sha=tip))
+            self.assertEqual(len(errs), 1)
+            self.assertIn("không phải tổ tiên", errs[0])
+
+    def test_progress_merge_head_octopus_and_fake_ref(self):
+        # Octopus: MERGE_HEAD nhiều dòng — mọi đầu đều được commit merge chứa. Nhánh tên `MERGE_HEAD` (không đang
+        # merge) không được coi là đang merge.
+        self.git("checkout", "-q", "-b", "side")
+        side = self.commit("side")
+        self.git("checkout", "-q", "main")
+        tip = self.commit("main2")
+        self.git("checkout", "-q", "-b", "feat", self.base)
+        self.commit("feat")
+        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": ""}):
+            self.git("merge", "-q", "--no-ff", "--no-commit", "main", "side")
+            self.assertEqual(self.check(GOOD_PROGRESS.format(sha=side)), [])
+            self.git("merge", "--abort")
+            self.git("branch", "MERGE_HEAD", tip)
+            errs = self.check(GOOD_PROGRESS.format(sha=tip))
+            self.assertEqual(len(errs), 1)
+            self.assertIn("không phải tổ tiên", errs[0])
+
     def test_progress_unknown_sha(self):
         errs = self.check(GOOD_PROGRESS.format(sha="deadbeef"))
         self.assertEqual(len(errs), 1)

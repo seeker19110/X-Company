@@ -101,3 +101,59 @@ Blueprint biến mất → `loop status` = `done`: tái hiện được, nhưng 
 
 `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` → exit 0 (Definition of Complete);
 `blueprint-status BLUEPRINT.md --strict` → exit 0; `audit plan` → 0 bằng chứng blueprint cũ.
+
+## 8. Quét lại delta `b32e2a6` (sau #39)
+
+> Chế độ **delta**: `audit plan` chỉ liệt kê DOC, HAR (2 file đổi từ `05ec95d`: `PROGRESS.md`, sổ audit) + 1 bằng chứng
+> blueprint trỏ file đã đổi (`LOOP-HARNESS-004` ← `PROGRESS.md`). Người quét: phiên chính (delta 2 file tài liệu, không
+> giao subagent). Không có 🔴/🟠 nên không cần xác minh đối kháng.
+
+| Nhóm | Lệnh | Exit | Kết quả chính |
+|---|---|---|---|
+| tất cả | `scripts/dev-task.sh gate` (container mới: `pip install --require-hashes -r requirements-dev.txt`, shellcheck 0.9.0) | 0 | 308 test; coverage dòng + nhánh 100% (2098 dòng, 906 nhánh) |
+| SEC | `gitleaks git . --redact --log-opts=--all` (8.28.0, checksum khớp; clone đã `--unshallow`) | 0 | 128 commit, không lộ bí mật |
+| DOC | `xs.py progress-check` · `changelog-check` · `validate` · `check-links.py` (trong gate) | 0 | PROGRESS 4111 B, 4 mục; tag `v2.0.0` → `55de4d1` khớp PROGRESS |
+| HAR | `xs.py blueprint-status BLUEPRINT.md --strict` | 0 | 0 MUST mở |
+| HAR | `xs.py audit check docs/ops/AUDIT-STATUS.md --strict` | 0 | 0 🔴/🟠 mở; 2 🟢 mở |
+
+Phát hiện mới (🟢, đều đo được):
+
+- **AUD-HAR-019** — bằng chứng `LOOP-HARNESS-004` trích `PROGRESS.md`; file này đổi ở mọi commit bàn giao nên `audit plan`
+  cờ "bằng chứng cũ" sau **mọi** phiên (#39 chỉ đổi PROGRESS + sổ mà vẫn cờ). Nội dung bằng chứng xác minh lại vẫn đúng.
+  Sửa: trích máy kiểm (`xs.yaml` lint gọi `progress-check`, test `ProgressCheckTest`) thay vì file trạng thái.
+- **AUD-DOC-022** — #39 nâng cột SHA của SEC/CODE/TEST/CI/XFEAT lên `05ec95d` nhưng giữ ghi chú lần quét `5627657`
+  (TEST "295 test" ↔ đo 308; phát hiện đã sửa còn viết như hiện trạng). Bằng chứng quét lại thật chỉ gom ở dòng ARCH.
+
+Ghi chú: PROGRESS ghi "commit cuối `05ec95d` (#38)" trong khi `main` là `b32e2a6` (#39) — giới hạn tự tham chiếu của
+commit bàn giao (squash), `progress-check` xanh; không tính phát hiện.
+
+### Kế hoạch sửa (duyệt 2026-10-15 qua `/autopilot`, xong — PLAN T-501…T-503)
+
+| Đợt | PR | Phát hiện | Gate |
+|---|---|---|---|
+| 1 | 1 PR `docs:` | AUD-HAR-019, AUD-DOC-022 | `audit plan --json` → `stale_evidence` rỗng; `audit check --strict` exit 0 |
+
+Kết quả đợt 1: AUD-HAR-019 sửa ở `LOOP-HARNESS-004` và mục cùng gốc `LOOP-HARNESS-001` (trích `docs/autopilot/PLAN.md`,
+lộ ra khi commit T-501 — PLAN viết lại mỗi lần autopilot); `BASE-REPO-006/007` vẫn trích `CHANGELOG.md` vì khẳng định
+phụ thuộc thật nội dung file đó. AUD-DOC-022: đo lại trên mã `05ec95d` (mã không đổi tới HEAD) — bandit 1.8.6 exit 1
+(chỉ B602 đã biết + 7 Low), vulture 2.14 exit 3 (4 báo nhầm đã biết), pip-audit 2.10.1 exit 0, ci-check exit 0, gitleaks
+exit 0 — ghi chú 5 dòng nhóm viết lại. `audit plan` → 0 bằng chứng blueprint cũ; `audit check --strict` exit 0, 0 phát hiện mở.
+
+Review độc lập (subagent `reviewer`, read-only): 0 🔴 · 1 🟠 · 4 🟢 — 🟠 xung đột PROGRESS với #40 (đã merge `main`);
+🟢 `LOOP-HARNESS-002` còn liệt kê task T-401… (cùng gốc AUD-HAR-019, máy dò không thấy vì không trích file — đã sửa),
+`LOOP-HARNESS-004` nhúng lại số byte (đã bỏ), tên hàm `project_dir` (đã sửa), ghi chú `LOOP-HARNESS-003` + dòng đầu
+PROGRESS cũ (đã sửa). Mọi trích dẫn file:dòng và số đo khác tái hiện được.
+
+Phát hiện mới khi merge: **AUD-HAR-020** 🟢 mở — `progress-check` bỏ qua `MERGE_HEAD` nên cổng commit chặn giải xung
+đột PROGRESS bằng SHA của `main`; sửa mã `xs.py` + test ở đợt sau, chờ duyệt.
+
+CI #41 lần đầu (run 38711914500): `quality` đỏ ở bước tiêu đề PR — tiêu đề 88 ký tự > 72 (luật squash-title, chỉ CI kiểm,
+`dev-task.sh gate` không thấy); `protection-guard`, `gitleaks`, `dep-audit`, `codeql` xanh. Đã rút tiêu đề còn 63 ký tự
+(71 byte, qua cả khi runner đếm byte). Bài học cho PR sau: kiểm độ dài tiêu đề trước khi mở PR.
+
+AUD-HAR-020 duyệt ("tiếp tục", 2026-10-15) và sửa trong #41: test hồi quy `test_progress_sha_from_merge_head_during_merge`
+đỏ trước sửa ("SHA … không phải tổ tiên của HEAD"), xanh sau; `progress-check` chấp nhận SHA là tổ tiên `MERGE_HEAD` chỉ
+khi đang merge (hết merge → đỏ lại, cùng test). `audit check --strict` exit 0, 0 phát hiện mở.
+Review độc lập phần mã: APPROVE, 0 🔴/🟠, 2 🟢 — nhánh/tag tên `MERGE_HEAD` lọt khi không merge; octopus chỉ xét đầu thứ
+nhất. Cả hai sửa (đọc file `MERGE_HEAD` qua `git rev-parse --git-path`), test `test_progress_merge_head_octopus_and_fake_ref`
+đỏ trước/xanh sau. `merge --squash` không tạo `MERGE_HEAD` nên vẫn đỏ (reviewer đo).
