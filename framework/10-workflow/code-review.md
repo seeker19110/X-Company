@@ -3,7 +3,7 @@ title: Code review: người + AI, checklist, SLA, ranh giới
 kind: module
 prefix: WF-REVIEW
 applies_to: [all]
-updated: 2026-10-14
+updated: 2026-10-15
 ---
 
 # Code review: người + AI, checklist, SLA, ranh giới
@@ -56,6 +56,7 @@ updated: 2026-10-14
 - [ ] `WF-REVIEW-016` **SHOULD** Bài học lặp ≥ 2 lần từ review → hàng rào mới (lint rule, test, hook, mục checklist), không chỉ nhắc miệng (P12). → Kiểm: `TRAPS.md`/CHANGELOG ghi hàng rào mới kèm link PR gốc.
 - [ ] `WF-REVIEW-017` **MAY** Hai reviewer AI độc lập cùng rubric, cả hai phải pass trước khi người xem (giảm nhiễu); vẫn là claim. → Kiểm: cấu hình pipeline; nhãn kết quả. · Nguồn: catalog 23 §4.3 (`ecc-santa-method`)
 - [ ] `WF-REVIEW-018` **MAY** Spot-check: review ngẫu nhiên ≥ 10% PR fast-lane đã merge để hiệu chuẩn vị từ. → Kiểm: nhật ký spot-check hàng tuần. · Nguồn: khung cũ spec L2 (review mẫu ≥ 10%)
+- [ ] `WF-REVIEW-019` **SHOULD** PR template có mục bắt buộc **"Hỗ trợ AI"**: phần nào do AI sinh, phần nào người đã tự kiểm và kiểm thế nào, phần nào chỉ AI kiểm; không cần (và theo [`XC-DOCAI-005`](../18-cross-cutting/docs-for-ai-agents.md) không ghi) tên model/phiên. → Kiểm: `pull_request_template.md` có mục; `pr-policy` job kiểm mục không rỗng. · Nguồn: `seeker19110/stored` 13 §6d (PR template của Homebrew/BrewUI)
 
 ## Bẫy thường gặp
 
@@ -90,3 +91,4 @@ updated: 2026-10-14
 - DORA — Metrics (change lead time, change fail rate, rework rate): <https://dora.dev/guides/dora-metrics-four-keys/> — xác minh 2026-10-13
 - Khung cũ X-stored commit `1b80fe4`: `docs/specs/AI-HARNESS-AND-COMPANY-SPEC.md` §B3.1a (vị từ làn nhanh 5 điều kiện, fail-closed), §B10 (auto-merge tự chứng nhận vòng tròn), ASC-FR-14 (gate 24h leo thang).
 - `research/2026-10-13-stored-catalog-extraction.md` §2.11 (reviewer khác model; human gate 24h leo thang; `/hoc` thang mức bền), §4; catalog `23-own-repos-lessons` §2.3, §2.5, §2.6, §4.1, §4.3; `13-dev-stack-devops` §6 (AI code review, open-code-review).
+- Catalog `seeker19110/stored` 13 §6d (Homebrew/BrewUI: PR template có mục bắt buộc "AI assistance", tách phần người kiểm và phần AI kiểm) — đọc 2026-10-15.
