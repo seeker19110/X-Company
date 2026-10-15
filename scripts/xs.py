@@ -43,6 +43,7 @@ import shutil
 import subprocess
 import tempfile
 import sys
+import traceback
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1811,6 +1812,8 @@ def _loop_hook_stop(args: argparse.Namespace, base: Path) -> int:
         out, code = hook_stop(sys.stdin.read() if not sys.stdin.isatty() else "", base)
     except Exception as exc:  # fail-open: hook lỗi không được kẹt phiên
         print(f"[xs hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
+        # BASE-ERR-009: stacktrace + chuỗi nguyên nhân (`__cause__`/`__context__`) không cắt.
+        print("".join(traceback.format_exception(exc)), end="", file=sys.stderr)
         return 0
     if out:
         print(out)

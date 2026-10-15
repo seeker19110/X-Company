@@ -677,6 +677,21 @@ class LoopCommandsTest(TmpDirCase):
         self.assertEqual((rc, out), (0, ""))
         self.assertIn("[xs hook-stop] lỗi, cho dừng: RuntimeError: boom", err)
 
+    def test_hook_stop_exception_logs_stacktrace_and_cause(self):
+        # BASE-ERR-009 / AUD-HAR-014: lỗi bọc lỗi → stderr có stacktrace và nguyên nhân gốc.
+        def boom(*_a: object) -> None:
+            try:
+                raise KeyError("nguyen-nhan-goc")
+            except KeyError as root:
+                raise ValueError("loi-boc") from root
+
+        with unittest.mock.patch.object(xs, "hook_stop", side_effect=boom):
+            rc, out, err = run_main("loop", "hook-stop", stdin="{}")
+        self.assertEqual((rc, out), (0, ""))
+        self.assertIn("Traceback (most recent call last)", err)
+        self.assertIn("nguyen-nhan-goc", err)
+        self.assertIn("ValueError: loi-boc", err)
+
     def test_hook_stop_propagates_exit_code(self):
         with unittest.mock.patch.object(xs, "hook_stop", return_value=("", 3)):
             rc, out, _ = run_main("loop", "hook-stop", stdin="")
