@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Audit delta 2026-10-15 xong 3 đợt (#36, #37, #38): `audit check --strict` exit 0 — 0 🔴/🟠/🟢 mở.
+- Audit delta 2026-10-15 xong 3 đợt (#36, #37, #38) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) sửa ở PLAN T-501…T-503: `audit check --strict` exit 0 — 0 phát hiện mở.
 
 ## Tiếp theo
 1. Blueprint repo khung: 0 MUST mở (ruleset `main` active 2026-10-15, tag `v2.0.0`). Admin tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset còn bật — khác file, vô hại khi 0 approval.
@@ -31,9 +31,10 @@
 - 2026-10-14 `LOOP-HARNESS-012` → 018: không biến tắt hook riêng; tắt có chủ đích qua `disableAllHooks` của Claude Code; test fail-open 5 hook.
 
 - 2026-10-15 Commit/PR không ghi tên model hay URL phiên AI (giữ AGENTS.md §3; AUD-HAR-017).
+- 2026-10-15 Bằng chứng blueprint trích máy kiểm/test, không trích file trạng thái viết lại mỗi phiên (PROGRESS.md, PLAN) — nếu không `audit plan` cờ cũ sau mọi phiên (AUD-HAR-019).
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `05ec95d` (#38); tag `v2.0.0` → `55de4d1`; SHA quét audit `05ec95d`.
+- Commit cuối trên `main`: `b32e2a6` (#39); tag `v2.0.0` → `55de4d1`; SHA quét audit `05ec95d` (DOC/HAR `b32e2a6`).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: không. PLAN T-401…T-403 xong; `blueprint-status --strict` exit 0.
+- Đang chặn: không. PLAN T-501…T-503 (sửa audit delta) xong; `blueprint-status --strict` exit 0.
 - Câu hỏi cần người: mục Tiếp theo 3 (dự án thật để thử khung).

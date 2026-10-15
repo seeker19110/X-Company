@@ -22,4 +22,4 @@
 
 - [x] `T-501` AUD-HAR-019: bằng chứng `LOOP-HARNESS-004` (BLUEPRINT.md) trích `progress-check` trong cổng `lint` + `ProgressCheckTest`, không trích `PROGRESS.md`; mục khác trích `CHANGELOG.md` (BASE-REPO-006/007) giữ vì nội dung khẳng định thật sự phụ thuộc file đó — Gate: `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict && ! grep -nE '^- \[x\] .LOOP-HARNESS-004.*Bằng chứng:.*PROGRESS\.md' BLUEPRINT.md`
 - [x] `T-502` AUD-DOC-022: đo lại SEC/CODE/TEST/CI/XFEAT trên mã `05ec95d` (= HEAD, chỉ tài liệu đổi sau đó) bằng bandit/vulture/pip-audit/ci-check/gate, viết lại ghi chú 5 dòng; đánh dấu 2 phát hiện `đã sửa` — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict && ! grep -nE '^\| [0-9]+ \| .*(295 test|124 commit)' docs/ops/AUDIT-STATUS.md` (Gate sửa 2026-10-15: bản đầu grep cả file nên khớp chính dòng phát hiện trích số cũ làm bằng chứng; ý định là bảng nhóm)
-- [ ] `T-503` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`
+- [x] `T-503` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`
