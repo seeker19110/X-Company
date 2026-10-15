@@ -6,7 +6,7 @@
 # hook chỉ gọi `dev-task.sh <task>`; script này tự phân giải lệnh đúng cho dự án.
 #
 # Thứ tự phân giải (đầu tiên thắng):
-#   1) KHAI BÁO: nếu có xs.yaml (YAML phẳng `task: lệnh`, agent đọc được) hoặc
+#   1) KHAI BÁO: nếu có xt.yaml (YAML phẳng `task: lệnh`, agent đọc được) hoặc
 #      .claude/project-commands.sh (biến bash <task>=lệnh) → chạy lệnh khai báo.
 #   2) TỰ DÒ: nhận diện hệ sinh thái (node/python/go/rust/make) → chạy lệnh quy ước.
 #   3) NO-OP: không có gì khớp → in thông báo skip, exit 0 (KHÔNG làm gãy dự án nào).
@@ -19,12 +19,12 @@ set -uo pipefail
 
 TASK="${1:-}"
 # Gốc dự án: CLAUDE_PROJECT_DIR (hook) > thư mục cha của scripts/ — nhưng khi script nằm ở dự án đích
-# (.xstored/scripts/dev-task.sh) thì gốc là cha của .xstored/, không phải .xstored/ (AUD-HAR-001: từng "xanh giả").
+# (.xtemplates/scripts/dev-task.sh) thì gốc là cha của .xtemplates/, không phải .xtemplates/ (AUD-HAR-001: từng "xanh giả").
 _parent="$(cd "$(dirname "$0")/.." && pwd)"
-if [ "$(basename "$_parent")" = ".xstored" ]; then _parent="$(dirname "$_parent")"; fi
+if [ "$(basename "$_parent")" = ".xtemplates" ]; then _parent="$(dirname "$_parent")"; fi
 ROOT="${CLAUDE_PROJECT_DIR:-$_parent}"
 DECL="$ROOT/.claude/project-commands.sh"
-YAML="$ROOT/xs.yaml"
+YAML="$ROOT/xt.yaml"
 
 log() { printf '[dev-task] %s\n' "$*" >&2; }
 
@@ -35,11 +35,11 @@ fi
 
 # --- 1) Lệnh KHAI BÁO (escape hatch cho mọi dự án đặc thù) --------------------
 yaml_has() { [ -f "$YAML" ] && grep -Eq "^$1:" "$YAML"; }
-yaml_get() { # giá trị khoá $1 trong xs.yaml; bỏ nháy chỉ khi bọc cả hai đầu ("..." hoặc '...')
+yaml_get() { # giá trị khoá $1 trong xt.yaml; bỏ nháy chỉ khi bọc cả hai đầu ("..." hoặc '...')
   grep -E "^$1:" "$YAML" | head -1 | sed -E "s/^$1:[[:space:]]*//; s/[[:space:]]+\$//; s/^\"(.*)\"\$/\\1/; s/^'(.*)'\$/\\1/"
 }
 declared_cmd() {
-  # In ra lệnh khai báo cho $1 nếu có, ngược lại rỗng. xs.yaml (phẳng) ưu tiên hơn file bash.
+  # In ra lệnh khai báo cho $1 nếu có, ngược lại rỗng. xt.yaml (phẳng) ưu tiên hơn file bash.
   if yaml_has "$1"; then yaml_get "$1"; return 0; fi
   [ -f "$DECL" ] || return 0
   # Nạp trong subshell để không rò biến; lấy giá trị biến trùng tên task.
@@ -108,7 +108,7 @@ detected_cmd() {
   return 0
 }
 
-resolve() { # $1=task -> in lệnh (khai báo ưu tiên), rỗng nếu không có; khoá "" trong xs.yaml = cố ý bỏ qua
+resolve() { # $1=task -> in lệnh (khai báo ưu tiên), rỗng nếu không có; khoá "" trong xt.yaml = cố ý bỏ qua
   local c; c="$(declared_cmd "$1")"; { [ -n "$c" ] || yaml_has "$1"; } && { echo "$c"; return 0; }
   detected_cmd "$1"
 }
@@ -163,7 +163,7 @@ case "$TASK" in
       run_task "$t" || { rc=1; log "GATE ĐỎ ở '$t' → dừng"; break; }
     done
     if [ "$rc" -eq 0 ] && [ "$RAN" -eq 0 ]; then
-      log "GATE KHÔNG CHẠY LỆNH NÀO (no-op) — không thấy xs.yaml/lệnh ở $ROOT; đây KHÔNG phải bằng chứng xanh"
+      log "GATE KHÔNG CHẠY LỆNH NÀO (no-op) — không thấy xt.yaml/lệnh ở $ROOT; đây KHÔNG phải bằng chứng xanh"
     elif [ "$rc" -eq 0 ]; then
       log "GATE XANH ($RAN lệnh)"
     fi

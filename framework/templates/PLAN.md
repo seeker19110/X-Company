@@ -7,7 +7,7 @@ updated: 2026-10-14
 # Mẫu PLAN.md
 
 > **Ai viết:** phiên lập kế hoạch (người + AI) sau G0–G4, trước khi code; người duyệt một lần (cổng duyệt duy nhất của autopilot).
-> **Giai đoạn:** G4 → G6. **Cổng dùng:** `xs.py loop init --plan docs/autopilot/PLAN.md`, `xs.py loop status`, `PM-PLAN-*`. **Đường dẫn:** `docs/autopilot/PLAN.md`.
+> **Giai đoạn:** G4 → G6. **Cổng dùng:** `xt.py loop init --plan docs/autopilot/PLAN.md`, `xt.py loop status`, `PM-PLAN-*`. **Đường dẫn:** `docs/autopilot/PLAN.md`.
 > **Cú pháp bắt buộc cho máy:** mỗi task một dòng `- [ ] \`T-001\` <việc> — Gate: \`<lệnh>\`` — ID `T-` + ≥3 chữ số, tăng dần; Gate là lệnh chạy trong repo, exit 0 = đạt. Dòng không đúng dạng này máy bỏ qua.
 > **Trạng thái:** `[ ]` chưa · `[x]` xong (chỉ khi `.autopilot/evidence/T-NNN.json` có `exit_code: 0` và `cmd` đúng Gate) · `[~]` bỏ (ghi lý do).
 > Ba mục "Điểm dừng bắt buộc", "Ngân sách (4 con số)", "Hạn" là bắt buộc. 4 con số theo [`LOOP-DESIGN-001`](../11-autonomous-loop/loop-design.md): trần vòng · ngân sách tiền/token · timeout mỗi lệnh kiểm · hạn chót.
@@ -23,7 +23,7 @@ updated: 2026-10-14
 ## Ngân sách (4 con số)
 - Số vòng tối đa: <N> (`--max-iterations`)
 - Ngân sách: <token hoặc tiền> 
-- Timeout mỗi lệnh Gate: <giây> (`XS_RECORD_TIMEOUT`)
+- Timeout mỗi lệnh Gate: <giây> (`XT_RECORD_TIMEOUT`)
 - Ngày hết hạn: <YYYY-MM-DDThh:mm:ssZ> (`--hours`)
 
 ## Hạn
@@ -32,7 +32,7 @@ updated: 2026-10-14
 | Hạn thật | <ngày> | <hợp đồng/luật/sự kiện> | cắt Could → Should, không hạ cổng |
 | Hạn mong muốn | <ngày> | nội bộ | re-plan |
 
-## Điểm dừng bắt buộc (dừng và hỏi người — `xs.py loop block --reason "..."`)
+## Điểm dừng bắt buộc (dừng và hỏi người — `xt.py loop block --reason "..."`)
 - Xoá/đổi dữ liệu thật, migration phá vỡ, drop cột/bảng
 - Tiền thật, thanh toán, gửi thông báo ra ngoài, deploy production
 - Secret, quyền, ruleset, cấu hình cổng/CI/hook

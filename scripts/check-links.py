@@ -16,9 +16,9 @@ from collections.abc import Iterator
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-if ROOT.name == ".xstored":  # cài ở dự án đích (.xstored/scripts/) → gốc là dự án, không phải .xstored/
+if ROOT.name == ".xtemplates":  # cài ở dự án đích (.xtemplates/scripts/) → gốc là dự án, không phải .xtemplates/
     ROOT = ROOT.parent
-SKIP_DIRS = {".git", "node_modules", ".venv", ".autopilot", "__pycache__", ".xstored"}
+SKIP_DIRS = {".git", "node_modules", ".venv", ".autopilot", "__pycache__", ".xtemplates"}
 LINK_RE = re.compile(r"\[[^\]]*\]\((<[^>]+>|[^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 

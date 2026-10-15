@@ -17,7 +17,7 @@ updated: 2026-10-14
 1. **Trạng thái sống trên đĩa, không trong context** (stored 03 §6): `PROGRESS.md` (luật định dạng ở [`LOOP-HARNESS-004`](harness-files.md)); mọi quyết định,
    SHA, bước kế tiếp ghi file; context chỉ là bộ nhớ làm việc.
 2. **Think-in-code**: thay vì đọc log/JSON dài vào context, viết script lọc (grep/jq/python) rồi đọc 20–40 dòng
-   kết quả; `xs.py loop record` chỉ giữ `output_tail` 40 dòng vì lý do này.
+   kết quả; `xt.py loop record` chỉ giữ `output_tail` 40 dòng vì lý do này.
 3. **Lập kế hoạch một lần, chạy theo file**: không lập lại plan mỗi lượt; PLAN.md là nguồn, agent chỉ đọc task
    kế tiếp (old framework `models-and-automation.md` §5).
 4. **Ranh giới phiên = ranh giới mảng việc**: xong mảng → gate → commit → cập nhật PROGRESS → phiên mới. Phiên dài
@@ -44,7 +44,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 
 | Vào context | Ở ngoài (đọc khi cần, qua script/subagent) |
 |---|---|
-| `AGENTS.md` (≤ 200 dòng), 4 mục PROGRESS (≤ 8 KB), task hiện tại + Gate, SPEC của task | README dài, tài liệu khung (`.xstored/framework/**`, đọc đúng module), log CI, lockfile, dữ liệu mẫu |
+| `AGENTS.md` (≤ 200 dòng), 4 mục PROGRESS (≤ 8 KB), task hiện tại + Gate, SPEC của task | README dài, tài liệu khung (`.xtemplates/framework/**`, đọc đúng module), log CI, lockfile, dữ liệu mẫu |
 | Diff đang sửa, 20–40 dòng output lệnh | Output lệnh > 40 dòng → ghi file, grep; file > 1 MB không `cat` |
 | Kết quả tóm tắt của subagent (≤ 25 dòng) | Transcript subagent, nội dung web nguyên văn |
 
@@ -62,7 +62,7 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 - [ ] `LOOP-CTX-001` **MUST** SessionStart chỉ nạp 4 mục của `PROGRESS.md` (Đang làm · Tiếp theo · Quyết định · Bàn giao phiên) để phiên sau tiếp tục; định dạng và độ tươi theo [`LOOP-HARNESS-004`](harness-files.md)/[`LOOP-HARNESS-005`](harness-files.md). → Kiểm: chạy `session-start.sh` với PROGRESS mẫu chỉ in 4 mục đó (cắt ở 8 KB). · Nguồn: stored 03 §6; `.claude/hooks/session-start.sh`
 - [ ] `LOOP-CTX-002` **MUST** Mỗi lần chạy headless hoặc `loop init` khai trần: `--max-iterations`/`--hours` và (headless) `--max-turns` + `--max-budget-usd`. → Kiểm: `.autopilot/state.json` có `max_iterations`, `deadline`; JSON headless có `total_cost_usd`. · Nguồn: [`loop-design.md`](loop-design.md)
 - [ ] `LOOP-CTX-003` **MUST** Đến ≥ 80% trần vòng/giờ hoặc context lớn, agent chuyển sang bàn giao: ghi chỗ dở + bước kế tiếp + SHA vào PROGRESS, commit + push, không mở task mới. → Kiểm: PROGRESS mục "Bàn giao phiên" có SHA là tổ tiên HEAD; `loop status --json` `iterations/max_iterations` ≥ 0.8 không kèm task mới tick. · Nguồn: stored 21 §10
-- [ ] `LOOP-CTX-004` **MUST@L** Không `cat` file > 1 MB hoặc đổ output lệnh > 40 dòng vào context; lọc bằng script rồi đọc phần cần. → Kiểm: `.claude/settings.json`/hook chặn `cat` file lớn hoặc quy ước trong `AGENTS.md`; `xs.py loop record` giữ `output_tail` 40 dòng. · Nguồn: stored 03 §8b
+- [ ] `LOOP-CTX-004` **MUST@L** Không `cat` file > 1 MB hoặc đổ output lệnh > 40 dòng vào context; lọc bằng script rồi đọc phần cần. → Kiểm: `.claude/settings.json`/hook chặn `cat` file lớn hoặc quy ước trong `AGENTS.md`; `xt.py loop record` giữ `output_tail` 40 dòng. · Nguồn: stored 03 §8b
 - [ ] `LOOP-CTX-005` **MUST@L** Kế hoạch lập một lần và ghi `PLAN.md`; mỗi vòng chỉ đọc task kế tiếp, không lập lại kế hoạch. → Kiểm: `git log` của `PLAN.md` chỉ đổi dấu tick/ghi chú sau cổng duyệt; thay đổi danh sách task phải có lý do trong PROGRESS. · Nguồn: old framework `models-and-automation.md` §5
 - [ ] `LOOP-CTX-006` **MUST** Mọi thứ cần cho phiên sau nằm trong repo (PLAN, PROGRESS, SPEC, ADR, evidence hoặc link CI), không phụ thuộc trí nhớ phiên trước. → Kiểm: phiên mới với chỉ `AGENTS.md` + PROGRESS tiếp tục được đúng task (test bằng phiên thật). · Nguồn: stored 03 §6
 - [ ] `LOOP-CTX-007` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-006`](../18-cross-cutting/docs-for-ai-agents.md): `AGENTS.md`/`CLAUDE.md` của dự án ≤ 200 dòng, chi tiết để trong module và link tới.
@@ -93,16 +93,16 @@ Ngưỡng 80/100 tương ứng circuit breaker 80/90/100 của stored 21 §10; 9
 
 | Việc | Công cụ → lệnh | Đặt ở đâu | Ngưỡng |
 |---|---|---|---|
-| Định dạng PROGRESS | `xs.py progress-check` (luật ở [`LOOP-HARNESS-004`](harness-files.md)) | Cổng commit / CI | exit 0 |
+| Định dạng PROGRESS | `xt.py progress-check` (luật ở [`LOOP-HARNESS-004`](harness-files.md)) | Cổng commit / CI | exit 0 |
 | Kích thước AGENTS.md | `wc -l AGENTS.md` | Cổng commit | ≤ 200 dòng |
-| Trần vòng/giờ | `xs.py loop status --json` | Stop hook | `budget` khi `iterations ≥ max_iterations` hoặc quá `deadline` |
+| Trần vòng/giờ | `xt.py loop status --json` | Stop hook | `budget` khi `iterations ≥ max_iterations` hoặc quá `deadline` |
 | Trần chi phí headless | `claude -p … --max-turns N --max-budget-usd X --output-format json` | Workflow CI | `total_cost_usd` ≤ X |
-| Output lệnh trong bằng chứng | `xs.py loop record` (giữ 40 dòng cuối) | Mọi Gate | `output_tail` ≤ 40 dòng |
+| Output lệnh trong bằng chứng | `xt.py loop record` (giữ 40 dòng cuối) | Mọi Gate | `output_tail` ≤ 40 dòng |
 | Checkpoint trước nén | PreCompact hook ghi PROGRESS | `.claude/settings.json` | Hook exit 0 |
 
 ## Nguồn
 
-- Harness thật: `.claude/hooks/session-start.sh` (nạp 4 mục PROGRESS, cắt 8 KB), `.claude/skills/handover/SKILL.md`, `scripts/xs.py` (`output_tail` 40 dòng, `max_iterations`, `deadline`) — đọc 2026-10-13.
+- Harness thật: `.claude/hooks/session-start.sh` (nạp 4 mục PROGRESS, cắt 8 KB), `.claude/skills/handover/SKILL.md`, `scripts/xt.py` (`output_tail` 40 dòng, `max_iterations`, `deadline`) — đọc 2026-10-13.
 - Claude Code docs — env vars `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (100 000–1 000 000), `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` (1–100, chỉ hạ), `MAX_THINKING_TOKENS`: <https://code.claude.com/docs/en/env-vars> · hooks PreCompact: <https://code.claude.com/docs/en/hooks> · headless `--max-turns`/`--max-budget-usd`/`total_cost_usd`: <https://code.claude.com/docs/en/headless> — xác minh 2026-10-13 (`research/2026-10-13-claude-code-hooks-skills.md`).
 - Anthropic, *Effective context engineering for AI agents* (2025-09-29): <https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents> — theo `research/2026-10-13-ai-agent-research.md` §1 [F].
 - Agent Skills spec (progressive disclosure, SKILL.md < 500 dòng): <https://agentskills.io/specification> — xác minh 2026-10-13 (`research/2026-10-13-ai-agent-research.md` §4).

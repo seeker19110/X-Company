@@ -33,14 +33,14 @@ BLUEPRINT = Baseline (mọi phần mềm)
 
 ```bash
 # Liệt kê lựa chọn
-python3 .xstored/scripts/xs.py list profiles
-python3 .xstored/scripts/xs.py list industries
+python3 .xtemplates/scripts/xt.py list profiles
+python3 .xtemplates/scripts/xt.py list industries
 
 # Ghép blueprint: web app cho thương mại điện tử, quy mô production
-python3 .xstored/scripts/xs.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
+python3 .xtemplates/scripts/xt.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
 
 # Theo dõi tiến độ; --strict trả exit 1 nếu còn MUST chưa đạt (dùng làm cổng phát hành)
-python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict
+python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --strict
 ```
 
 ## Dùng blueprint thế nào

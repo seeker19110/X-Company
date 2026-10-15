@@ -55,7 +55,7 @@ updated: 2026-10-14
 - [ ] `WF-DOC-011` **MUST@L** Tài liệu người dùng/API có phiên bản theo release (docs vX.Y), changelog người dùng, và quy trình review nội dung bởi người không viết code. → Kiểm: site docs có version switcher; PR docs có reviewer khác tác giả.
 - [ ] `WF-DOC-012` **SHOULD** Đính chính giữ dấu vết: nội dung sai sửa kèm "đính chính ngày …", không xoá lịch sử; số liệu/phiên bản kèm ngày xác minh. → Kiểm: grep "đính chính" tồn tại khi có sửa số liệu; lint phiên bản thiếu ngày trong `docs/` (regex `v\d+\.\d+` không kèm `20\d\d-`). · Nguồn: `evidence-and-sources.md` §1 luật 4, 12
 - [ ] `WF-DOC-013` **SHOULD** Diagram dạng text (Mermaid/D2/PlantUML) trong repo, render trong CI; C4 mức 1–2 cho kiến trúc, cập nhật cùng ADR. → Kiểm: file `.mmd`/`.d2` render không lỗi; không PNG không có nguồn text.
-- [ ] `WF-DOC-014` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-002`](../18-cross-cutting/docs-for-ai-agents.md) (bridge chỉ trỏ về `AGENTS.md`) và [`XC-DOCAI-003`](../18-cross-cutting/docs-for-ai-agents.md) (lệnh trong `xs.yaml` khớp điểm vào thật).
+- [ ] `WF-DOC-014` **MAY** Ngừng dùng 2026-10-14 — gộp vào [`XC-DOCAI-002`](../18-cross-cutting/docs-for-ai-agents.md) (bridge chỉ trỏ về `AGENTS.md`) và [`XC-DOCAI-003`](../18-cross-cutting/docs-for-ai-agents.md) (lệnh trong `xt.yaml` khớp điểm vào thật).
 - [ ] `WF-DOC-015` **SHOULD** Mỗi thư mục tài liệu có `README.md` chỉ mục (file → nội dung → đọc khi nào); tài liệu không được link từ đâu → cảnh báo mồ côi. → Kiểm: script tìm `.md` không có inbound link.
 - [ ] `WF-DOC-016` **SHOULD** Bàn giao phiên/người (handover) ghi vào `PROGRESS.md` mục "Bàn giao": đang dở gì, bước tiếp theo, lệnh để tiếp tục, cái gì chưa xác minh. → Kiểm: mục "Bàn giao" không rỗng khi có việc dở ([`team-and-wip.md`](team-and-wip.md)); định dạng và độ tươi theo [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md).
 - [ ] `WF-DOC-017` **MAY** Site tài liệu build từ `docs/` (MkDocs/Docusaurus/VitePress) với search và link check; deploy preview cho PR docs. → Kiểm: job build docs + preview URL.
@@ -79,7 +79,7 @@ updated: 2026-10-14
 |---|---|---|---|
 | Link check | lychee 0.24.2 (MIT/Apache-2.0) `lychee --no-progress --cache --max-cache-age 1d docs/ README.md` hoặc `python3 scripts/check-links.py` | CI | Nội bộ 0 lỗi; ngoài 0 lỗi trừ allowlist |
 | docs-consistency | script quét backtick path trong `*.md` ↔ filesystem; danh sách tên cũ | CI | 0 |
-| progress-check | `xs.py progress-check` (luật ở [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md)) | pre-push + CI | Exit 0 |
+| progress-check | `xt.py progress-check` (luật ở [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md)) | pre-push + CI | Exit 0 |
 | markdownlint-cli2 (MIT) 0.23.3 | `markdownlint-cli2 "**/*.md"` | pre-commit + CI | 0 lỗi |
 | Reference docs | `docs:generate && git diff --exit-code docs/reference` | CI | Diff rỗng |
 | ADR lint | script: số liên tục, frontmatter status, không sửa ADR có status accepted (diff chỉ cho phép đổi status → superseded) | CI | 0 |

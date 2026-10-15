@@ -59,7 +59,7 @@ class PreBashGuardTest(unittest.TestCase):
         self.assertIsNone(self.d("ls -la && git status"))
         self.assertIsNone(self.d("rm -rf build/ dist/"))
         self.assertIsNone(self.d("git push -u origin feat/x"))
-        self.assertIsNone(self.d("python3 scripts/xs.py validate"))
+        self.assertIsNone(self.d("python3 scripts/xt.py validate"))
 
     def test_garbage_payload_fail_open(self):
         code, out, _ = run_hook("pre-bash-guard.sh", "not json")
@@ -69,11 +69,11 @@ class PreBashGuardTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
         shutil.copy(ROOT / "scripts" / "dev-task.sh", tmp / "scripts" / "dev-task.sh")
-        (tmp / "xs.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
+        (tmp / "xt.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
         code, out, err = run_hook("pre-bash-guard.sh", {"tool_input": {"command": "git commit -m x"}}, tmp)
         self.assertEqual(code, 2, err)
         self.assertIn("ĐỎ", err)
-        (tmp / "xs.yaml").write_text("test: true\n", encoding="utf-8")
+        (tmp / "xt.yaml").write_text("test: true\n", encoding="utf-8")
         code, out, err = run_hook("pre-bash-guard.sh", {"tool_input": {"command": "git commit -m x"}}, tmp)
         self.assertEqual(code, 0, err)
         code, out, err = run_hook("pre-bash-guard.sh", {"tool_input": {"command": "git commit --no-verify -m x"}}, tmp)
@@ -84,12 +84,12 @@ class PreBashGuardTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
         shutil.copy(ROOT / "scripts" / "dev-task.sh", tmp / "scripts" / "dev-task.sh")
-        (tmp / "xs.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
+        (tmp / "xt.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
         cmd = {"tool_input": {"command": "git commit -am 'fix: x' && git push origin main"}}
         code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
         self.assertEqual(code, 2, out + err)
         self.assertIn("ĐỎ", err)
-        (tmp / "xs.yaml").write_text("test: echo tieng-on-stdout\n", encoding="utf-8")
+        (tmp / "xt.yaml").write_text("test: echo tieng-on-stdout\n", encoding="utf-8")
         code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
         self.assertEqual((code, decision(out)), (0, "ask"), out + err)  # stdout chỉ còn JSON quyết định
         self.assertIn("[dev-task]", err)  # cổng đã chạy trước khi hỏi
@@ -104,7 +104,7 @@ class PreBashGuardTest(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
         shutil.copy(ROOT / "scripts" / "dev-task.sh", tmp / "scripts" / "dev-task.sh")
-        (tmp / "xs.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
+        (tmp / "xt.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
         for msg in ('git commit -m "fix: cờ -n của grep"', "git commit -m 'docs: nói về --no-verify'"):
             code, out, err = run_hook("pre-bash-guard.sh", {"tool_input": {"command": msg}}, tmp)
             self.assertEqual(code, 2, (msg, out, err))
@@ -267,9 +267,9 @@ class GuardMatrixTest(unittest.TestCase):
         self.check(
             "ask",
             [
-                "sed -i 's/^test:.*/test: true/' xs.yaml",
+                "sed -i 's/^test:.*/test: true/' xt.yaml",
                 "sed -i '/pytest/d' .github/workflows/ci.yml",
-                "echo x > xs.yaml",
+                "echo x > xt.yaml",
                 "cp /dev/null .claude/hooks/pre-bash-guard.sh",
                 "echo 'SECRET=x' > .env",
                 "tee frontend/tsconfig.json < a",
@@ -478,7 +478,7 @@ class GuardMatrixTest(unittest.TestCase):
             ("frontend/tsconfig.json", "ask"),
             ("./.github/workflows/ci.yml", "ask"),
             ("packages/api/pyproject.toml", "ask"),
-            ("sub/../xs.yaml", "ask"),
+            ("sub/../xt.yaml", "ask"),
             (".npmrc", "deny"),
             ("app/.envrc", "deny"),
             (".env.example", ""),
@@ -529,19 +529,19 @@ class StopAndSessionTest(unittest.TestCase):
         # Dự án tạm chưa `loop init` — không dùng ROOT, vì autopilot có thể đang bật trên chính repo này.
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
-        shutil.copy(ROOT / "scripts" / "xs.py", tmp / "scripts" / "xs.py")
+        shutil.copy(ROOT / "scripts" / "xt.py", tmp / "scripts" / "xt.py")
         code, out, _ = run_hook("stop-guard.sh", {"stop_hook_active": False}, tmp)
         self.assertEqual((code, out.strip()), (0, ""))
 
     def test_stop_guard_blocks_when_loop_active(self):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "scripts").mkdir()
-        shutil.copy(ROOT / "scripts" / "xs.py", tmp / "scripts" / "xs.py")
+        shutil.copy(ROOT / "scripts" / "xt.py", tmp / "scripts" / "xt.py")
         (tmp / "docs" / "autopilot").mkdir(parents=True)
         (tmp / "docs" / "autopilot" / "PLAN.md").write_text("- [ ] `T-001` việc — Gate: `true`\n", encoding="utf-8")
         env = dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp))
         subprocess.run(
-            [sys.executable, str(tmp / "scripts" / "xs.py"), "loop", "init"], check=True, env=env, capture_output=True
+            [sys.executable, str(tmp / "scripts" / "xt.py"), "loop", "init"], check=True, env=env, capture_output=True
         )
         code, out, _ = run_hook("stop-guard.sh", {"stop_hook_active": False}, tmp)
         self.assertEqual(code, 0)
@@ -579,13 +579,13 @@ class DevTaskTest(unittest.TestCase):
         evil = self.tmp / "x$(touch INJECTED).py"
         evil.write_text("print(1)\n", encoding="utf-8")
         for tmpl in ("cat {}", 'cat "{}"'):
-            (self.tmp / "xs.yaml").write_text(f"format_file: {tmpl}\n", encoding="utf-8")
+            (self.tmp / "xt.yaml").write_text(f"format_file: {tmpl}\n", encoding="utf-8")
             r = self.run_task("format-file", str(evil))
             self.assertFalse((self.tmp / "INJECTED").exists(), tmpl)
             self.assertNotIn("unexpected EOF", r.stderr, tmpl)
 
     def test_empty_declared_command_skips_autodetect(self):
-        (self.tmp / "xs.yaml").write_text('test: ""\n', encoding="utf-8")
+        (self.tmp / "xt.yaml").write_text('test: ""\n', encoding="utf-8")
         (self.tmp / "Makefile").write_text("test:\n\ttouch RAN\n", encoding="utf-8")
         r = self.run_task("test")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -595,7 +595,7 @@ class DevTaskTest(unittest.TestCase):
 @unittest.skipIf(shutil.which("bash") is None, "cần bash")
 class PreEditGateFilesTest(unittest.TestCase):
     def test_ask_when_editing_gate_definitions(self):
-        for rel in ("xs.yaml", "scripts/dev-task.sh"):
+        for rel in ("xt.yaml", "scripts/dev-task.sh"):
             code, out, _ = run_hook("pre-edit-guard.sh", {"tool_input": {"file_path": str(ROOT / rel)}})
             self.assertEqual(decision(out), "ask", rel)
 
@@ -607,11 +607,11 @@ class HookFailOpenTest(unittest.TestCase):
     HOOK_FILES = ("session-start.sh", "pre-bash-guard.sh", "pre-edit-guard.sh", "auto-format.sh", "stop-guard.sh")
 
     def test_every_hook_fail_open_on_empty_or_garbage_stdin(self):
-        # Dự án tạm có xs.py thật (chưa `loop init`) để stop-guard/session-start chạy tới nhánh gọi xs.py.
+        # Dự án tạm có xt.py thật (chưa `loop init`) để stop-guard/session-start chạy tới nhánh gọi xt.py.
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         (tmp / "scripts").mkdir()
-        shutil.copy(ROOT / "scripts" / "xs.py", tmp / "scripts" / "xs.py")
+        shutil.copy(ROOT / "scripts" / "xt.py", tmp / "scripts" / "xt.py")
         for name in self.HOOK_FILES:
             for payload in ("", "not json {"):
                 code, out, _ = run_hook(name, payload, project_dir=tmp)

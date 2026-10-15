@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,7 @@ import unittest.mock as mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import install
-import xs
+import xt
 
 
 class InstallTest(unittest.TestCase):
@@ -28,14 +29,14 @@ class InstallTest(unittest.TestCase):
 
     def test_fresh_install_layout(self):
         self.assertEqual(self.run_install(), 0)
-        self.assertTrue((self.target / ".xstored" / "framework" / "00-method" / "conventions.md").exists())
-        self.assertTrue((self.target / ".xstored" / "scripts" / "xs.py").exists())
-        self.assertEqual((self.target / ".xstored" / "VERSION").read_text(encoding="utf-8").strip(), "test")
+        self.assertTrue((self.target / ".xtemplates" / "framework" / "00-method" / "conventions.md").exists())
+        self.assertTrue((self.target / ".xtemplates" / "scripts" / "xt.py").exists())
+        self.assertEqual((self.target / ".xtemplates" / "VERSION").read_text(encoding="utf-8").strip(), "test")
         self.assertTrue((self.target / ".claude" / "settings.json").exists())
         self.assertTrue((self.target / ".claude" / "hooks" / "stop-guard.sh").exists())
         self.assertTrue((self.target / ".claude" / "skills" / "autopilot" / "SKILL.md").exists())
         self.assertIn(".autopilot/", (self.target / ".gitignore").read_text(encoding="utf-8"))
-        for name in ("AGENTS.md", "CLAUDE.md", "PROGRESS.md", "xs.yaml"):
+        for name in ("AGENTS.md", "CLAUDE.md", "PROGRESS.md", "xt.yaml"):
             self.assertTrue((self.target / name).exists(), name)
             self.assertFalse(
                 (self.target / name).read_text(encoding="utf-8").startswith("---"), f"{name} còn frontmatter"
@@ -46,28 +47,31 @@ class InstallTest(unittest.TestCase):
         self.run_install()
         text = (self.target / "PROGRESS.md").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("# PROGRESS.md"), text[:80])
-        self.assertEqual(tuple(n for n, _ in xs.progress_sections(text)), xs.PROGRESS_SECTIONS)
+        self.assertEqual(tuple(n for n, _ in xt.progress_sections(text)), xt.PROGRESS_SECTIONS)
 
     def test_dev_task_root_in_target_project(self):
-        # AUD-HAR-001: thiếu CLAUDE_PROJECT_DIR, .xstored/scripts/dev-task.sh từng lấy gốc = .xstored/ → "xanh giả".
+        # AUD-HAR-001: thiếu CLAUDE_PROJECT_DIR, .xtemplates/scripts/dev-task.sh từng lấy gốc = .xtemplates/ → "xanh giả".
         self.run_install()
-        (self.target / "xs.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: "false"\n', encoding="utf-8")
+        (self.target / "xt.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: "false"\n', encoding="utf-8")
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
-        script = self.target / ".xstored" / "scripts" / "dev-task.sh"
+        script = self.target / ".xtemplates" / "scripts" / "dev-task.sh"
         r = subprocess.run(["bash", str(script), "gate"], capture_output=True, text=True, env=env, cwd="/")
         self.assertNotEqual(r.returncode, 0, r.stderr)
         self.assertIn("GATE ĐỎ ở 'test'", r.stderr)
-        (self.target / "xs.yaml").write_text('test: "true"\n', encoding="utf-8")
+        (self.target / "xt.yaml").write_text('test: "true"\n', encoding="utf-8")
         r = subprocess.run(["bash", str(script), "gate"], capture_output=True, text=True, env=env, cwd="/")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("GATE XANH (1 lệnh)", r.stderr)
 
     def test_dev_task_noop_is_not_reported_green(self):
         self.run_install()
-        (self.target / "xs.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: ""\n', encoding="utf-8")
+        (self.target / "xt.yaml").write_text('build: ""\ntypecheck: ""\nlint: ""\ntest: ""\n', encoding="utf-8")
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
         r = subprocess.run(
-            ["bash", str(self.target / ".xstored/scripts/dev-task.sh"), "gate"], capture_output=True, text=True, env=env
+            ["bash", str(self.target / ".xtemplates/scripts/dev-task.sh"), "gate"],
+            capture_output=True,
+            text=True,
+            env=env,
         )
         self.assertEqual(r.returncode, 0)
         self.assertIn("KHÔNG CHẠY LỆNH NÀO", r.stderr)
@@ -98,20 +102,20 @@ class InstallTest(unittest.TestCase):
         self.run_install()
         (self.target / "doc.md").write_text("[hỏng](khong-co.md)\n", encoding="utf-8")
         r = subprocess.run(
-            [sys.executable, str(self.target / ".xstored/scripts/check-links.py")], capture_output=True, text=True
+            [sys.executable, str(self.target / ".xtemplates/scripts/check-links.py")], capture_output=True, text=True
         )
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("doc.md:1", r.stdout)
 
-    def test_installed_xs_validates_and_composes(self):
+    def test_installed_xt_validates_and_composes(self):
         self.run_install()
-        xs = self.target / ".xstored" / "scripts" / "xs.py"
-        r = subprocess.run([sys.executable, str(xs), "validate"], capture_output=True, text=True)
+        xt = self.target / ".xtemplates" / "scripts" / "xt.py"
+        r = subprocess.run([sys.executable, str(xt), "validate"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stdout)
         r = subprocess.run(
             [
                 sys.executable,
-                str(xs),
+                str(xt),
                 "compose",
                 "--profile",
                 "web-app",
@@ -135,12 +139,12 @@ class InstallTest(unittest.TestCase):
         self.run_install()
         self.assertEqual(agents.read_text(encoding="utf-8"), "của tôi\n")
         self.assertEqual(hook.read_text(encoding="utf-8"), "# hook tôi đã sửa\n")
-        self.assertTrue(hook.with_name("stop-guard.sh.xstored-new").exists())
+        self.assertTrue(hook.with_name("stop-guard.sh.xtemplates-new").exists())
         self.run_install("--force-harness")
         self.assertNotEqual(hook.read_text(encoding="utf-8"), "# hook tôi đã sửa\n")
 
     def test_install_merges_hooks_into_existing_settings(self):
-        # AUD-HAR-003: settings.json có sẵn từng chỉ sinh .xstored-new → hook copy mà không chạy.
+        # AUD-HAR-003: settings.json có sẵn từng chỉ sinh .xtemplates-new → hook copy mà không chạy.
         settings = self.target / ".claude" / "settings.json"
         settings.parent.mkdir(parents=True)
         settings.write_text('{"permissions": {"allow": ["Bash(make *)"]}}\n', encoding="utf-8")
@@ -156,17 +160,17 @@ class InstallTest(unittest.TestCase):
         # AUD-HAR-004: hook đã cài mà người dùng chưa sửa phải được cập nhật khi khung có bản mới.
         self.run_install()
         hook = self.target / ".claude" / "hooks" / "stop-guard.sh"
-        manifest = json.loads((self.target / ".xstored" / "harness.sha256.json").read_text(encoding="utf-8"))
+        manifest = json.loads((self.target / ".xtemplates" / "harness.sha256.json").read_text(encoding="utf-8"))
         self.assertIn(".claude/hooks/stop-guard.sh", manifest)
         old = "# bản khung cũ\n"
         hook.write_text(old, encoding="utf-8")
         manifest[".claude/hooks/stop-guard.sh"] = install.sha256(old.encode())  # giả lập: lần cài trước là bản cũ
-        (self.target / ".xstored" / "harness.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (self.target / ".xtemplates" / "harness.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
         self.run_install()
         self.assertEqual(
             hook.read_text(encoding="utf-8"), (ROOT / ".claude/hooks/stop-guard.sh").read_text(encoding="utf-8")
         )
-        self.assertFalse(hook.with_name("stop-guard.sh.xstored-new").exists())
+        self.assertFalse(hook.with_name("stop-guard.sh.xtemplates-new").exists())
 
     def test_install_symlink_not_followed(self):
         # AUD-HAR-010: symlink treo ở đích không được đi theo ra ngoài dự án.
@@ -193,11 +197,97 @@ class InstallTest(unittest.TestCase):
         rs.write_text("{}\n", encoding="utf-8")
         self.run_install("--with-github")
         self.assertEqual(rs.read_text(encoding="utf-8"), "{}\n")
-        self.assertTrue(rs.with_name("main.json.xstored-new").exists())
+        self.assertTrue(rs.with_name("main.json.xtemplates-new").exists())
 
     def test_refuses_self_and_missing(self):
         self.assertEqual(install.main([str(ROOT), "--label", "x"]), 2)
         self.assertEqual(install.main([str(self.target / "khong-co"), "--label", "x"]), 2)
+
+
+class LegacyMigrationTest(unittest.TestCase):
+    """ADR-0007: dự án cài bản ≤ 2.x (`.xstored/`, `xs.yaml`) chạy lại install là sang tên mới."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.target = Path(tmp.name).resolve()
+
+    def install_quiet(self) -> tuple[int, str]:
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = install.main([str(self.target), "--label", "t"])
+        return code, err.getvalue()
+
+    def make_legacy_install(self) -> Path:
+        """Cài bản hiện tại rồi đổi về bố cục 2.x; hook stop-guard giả lập bản cũ chưa sửa (hash khớp manifest)."""
+        self.install_quiet()
+        legacy = self.target / ".xstored"
+        (self.target / ".xtemplates").rename(legacy)
+        (self.target / "xt.yaml").rename(self.target / "xs.yaml")
+        (self.target / "xs.yaml").write_text('test: "true"\n', encoding="utf-8")
+        hook = self.target / ".claude" / "hooks" / "stop-guard.sh"
+        old = 'XS="$(xs_py)" || exit 0  # .xstored/scripts/xs.py\n'
+        hook.write_text(old, encoding="utf-8")
+        manifest = json.loads((legacy / "harness.sha256.json").read_text(encoding="utf-8"))
+        manifest[".claude/hooks/stop-guard.sh"] = install.sha256(old.encode())
+        (legacy / "harness.sha256.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (self.target / "AGENTS.md").write_text("Chạy `python3 .xstored/scripts/xs.py list`.\n", encoding="utf-8")
+        return hook
+
+    def test_upgrade_moves_dir_yaml_and_updates_pristine_hook(self):
+        hook = self.make_legacy_install()
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0, err)
+        self.assertFalse((self.target / ".xstored").exists())
+        self.assertTrue((self.target / ".xtemplates" / "scripts" / "xt.py").is_file())
+        self.assertFalse((self.target / "xs.yaml").exists())
+        self.assertEqual((self.target / "xt.yaml").read_text(encoding="utf-8"), 'test: "true"\n')
+        self.assertEqual(hook.read_text(encoding="utf-8"), (ROOT / ".claude/hooks/stop-guard.sh").read_text("utf-8"))
+        self.assertIn(".xstored/ → .xtemplates/", err)
+        self.assertIn("xs.yaml → xt.yaml", err)
+        self.assertIn("còn nhắc tên cũ", err)
+        self.assertIn("AGENTS.md", err)
+        self.assertNotIn("stop-guard.sh", err.split("còn nhắc tên cũ")[1])
+
+    def test_new_manifest_wins_and_legacy_dir_without_manifest_is_removed(self):
+        self.install_quiet()
+        manifest = (self.target / ".xtemplates" / "harness.sha256.json").read_text(encoding="utf-8")
+        (self.target / ".xstored").mkdir()
+        (self.target / ".xstored" / "harness.sha256.json").write_text("{}", encoding="utf-8")
+        self.install_quiet()
+        self.assertEqual((self.target / ".xtemplates" / "harness.sha256.json").read_text(encoding="utf-8"), manifest)
+        (self.target / ".xstored").mkdir()
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertFalse((self.target / ".xstored").exists())
+        self.assertNotIn("còn nhắc tên cũ", err)
+
+    def test_both_yaml_files_are_kept_with_warning(self):
+        self.install_quiet()
+        (self.target / "xs.yaml").write_text("test: cu\n", encoding="utf-8")
+        code, err = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertEqual((self.target / "xs.yaml").read_text(encoding="utf-8"), "test: cu\n")
+        self.assertIn("có cả xs.yaml và xt.yaml", err)
+
+    def test_legacy_symlink_is_not_followed(self):
+        outside = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        (outside / "giu.txt").write_text("x", encoding="utf-8")
+        (self.target / ".xstored").symlink_to(outside)
+        code, _ = self.install_quiet()
+        self.assertEqual(code, 0)
+        self.assertTrue((self.target / ".xstored").is_symlink())
+        self.assertTrue((outside / "giu.txt").exists())
+
+    def test_legacy_refs_scans_workflows_and_skips_binary(self):
+        wf = self.target / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "ci.yml").write_text("run: XS_DEBUG=1 bash scripts/dev-task.sh gate\n", encoding="utf-8")
+        (self.target / ".claude" / "bin").mkdir(parents=True)
+        (self.target / ".claude" / "bin" / "blob").write_bytes(b"\xff\xfe.xstored")
+        (self.target / "README.md").write_text("Dùng .xtemplates/scripts/xt.py và xt.yaml.\n", encoding="utf-8")
+        self.assertEqual(install.legacy_refs(self.target), [".github/workflows/ci.yml"])
 
 
 def make_fake_src(base: Path, ruleset: str | None = None) -> Path:
@@ -206,7 +296,7 @@ def make_fake_src(base: Path, ruleset: str | None = None) -> Path:
     (src / "framework").mkdir(parents=True)
     (src / "framework" / "x.md").write_text("x\n", encoding="utf-8")
     (src / "scripts").mkdir()
-    for f in ("xs.py", "dev-task.sh", "check-links.py"):
+    for f in ("xt.py", "dev-task.sh", "check-links.py"):
         (src / "scripts" / f).write_text("# giả\n", encoding="utf-8")
     (src / ".claude").mkdir()
     (src / ".claude" / "settings.json").write_text('{"hooks": {}}\n', encoding="utf-8")
@@ -311,8 +401,8 @@ class InstallEdgeTest(unittest.TestCase):
         code, _ = self.install_quiet("--no-harness")
         self.assertEqual(code, 0)
         self.assertFalse((self.target / ".claude").exists())
-        self.assertFalse((self.target / ".xstored" / "harness.sha256.json").exists())
-        self.assertTrue((self.target / ".xstored" / "framework").is_dir())
+        self.assertFalse((self.target / ".xtemplates" / "harness.sha256.json").exists())
+        self.assertTrue((self.target / ".xtemplates" / "framework").is_dir())
         self.assertTrue((self.target / "AGENTS.md").exists())
 
     def test_preexisting_modified_hook_gets_new_file_and_no_manifest_entry(self):
@@ -322,9 +412,9 @@ class InstallEdgeTest(unittest.TestCase):
         code, err = self.install_quiet()
         self.assertEqual(code, 0)
         self.assertEqual(hook.read_text(encoding="utf-8"), "# của tôi\n")
-        self.assertTrue(hook.with_name("stop-guard.sh.xstored-new").exists())
-        self.assertIn(".xstored-new", err)
-        manifest = json.loads((self.target / ".xstored" / "harness.sha256.json").read_text(encoding="utf-8"))
+        self.assertTrue(hook.with_name("stop-guard.sh.xtemplates-new").exists())
+        self.assertIn(".xtemplates-new", err)
+        manifest = json.loads((self.target / ".xtemplates" / "harness.sha256.json").read_text(encoding="utf-8"))
         self.assertNotIn(".claude/hooks/stop-guard.sh", manifest)  # không biết hash bản cài → không ghi
         self.assertIn(".claude/hooks/session-start.sh", manifest)
 
@@ -352,10 +442,10 @@ class InstallEdgeTest(unittest.TestCase):
         with mock.patch.object(install, "SRC", make_fake_src(self.tmp)):
             code, err = self.install_quiet()
         self.assertEqual(code, 0, err)
-        xs_dir = self.target / ".xstored"
-        self.assertFalse((xs_dir / "research").exists())
-        self.assertTrue((xs_dir / "framework" / "x.md").exists())
-        self.assertEqual((xs_dir / "VERSION").read_text(encoding="utf-8"), "t\n")
+        xt_dir = self.target / ".xtemplates"
+        self.assertFalse((xt_dir / "research").exists())
+        self.assertTrue((xt_dir / "framework" / "x.md").exists())
+        self.assertEqual((xt_dir / "VERSION").read_text(encoding="utf-8"), "t\n")
         self.assertFalse((self.target / "AGENTS.md").exists())  # không có mẫu → không tạo
         self.assertTrue((self.target / ".claude" / "settings.json").exists())
 
@@ -384,7 +474,7 @@ class InstallEdgeTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.target / ".xstored" / "VERSION").read_text(encoding="utf-8"), "cli\n")
+        self.assertEqual((self.target / ".xtemplates" / "VERSION").read_text(encoding="utf-8"), "cli\n")
         self.assertIn("[install] Xong.", r.stderr)
 
 

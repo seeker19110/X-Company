@@ -13,7 +13,7 @@ updated: 2026-10-13
 > [`../12-security/ai-security.md`](../12-security/ai-security.md); luật/quy định AI ở
 > [`../16-compliance-privacy/ai-regulation.md`](../16-compliance-privacy/ai-regulation.md); vòng lặp **phát triển** tự động
 > (agent viết code) ở [`../11-autonomous-loop/README.md`](../11-autonomous-loop/README.md). Hồ sơ không phải AI vẫn có thể ghép
-> từng module bằng `xs.py compose --add 13-ai-engineering/<module>`.
+> từng module bằng `xt.py compose --add 13-ai-engineering/<module>`.
 
 | File | Nội dung | Đọc khi nào |
 |---|---|---|

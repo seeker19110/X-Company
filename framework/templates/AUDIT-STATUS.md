@@ -7,8 +7,8 @@ updated: 2026-10-14
 # Mẫu AUDIT-STATUS.md — sổ audit máy đọc được
 
 > **Ai viết:** phiên chạy `/audit` (người hoặc AI), cập nhật sau mỗi lần quét/sửa. **Giai đoạn:** G0 brownfield, G7, định kỳ.
-> **Cổng dùng:** `xs.py audit check docs/ops/AUDIT-STATUS.md` (schema) · `--strict` = Definition of Complete
-> ([`../00-method/audit.md`](../00-method/audit.md) §7). `xs.py audit plan --status …` đọc cột SHA để biết nhóm cần quét lại.
+> **Cổng dùng:** `xt.py audit check docs/ops/AUDIT-STATUS.md` (schema) · `--strict` = Definition of Complete
+> ([`../00-method/audit.md`](../00-method/audit.md) §7). `xt.py audit plan --status …` đọc cột SHA để biết nhóm cần quét lại.
 > **Luật bảng** (máy kiểm): giữ đúng tiêu đề cột; ký tự `|` trong ô viết `\|`; ID `AUD-<MÃ>-NNN` không tái sử dụng;
 > Bằng chứng mở đầu `đo được:` / `suy luận:` / `chưa biết:`; 🔴/🟠 chưa `bác bỏ` phải có Gate (lệnh trong backtick hoặc `tay: <bước>`);
 > `đã sửa` ghi PR/SHA ở Ghi chú; `chấp nhận` ghi `chủ: <ai>` và `hạn: YYYY-MM-DD`; `bác bỏ`/`N/A` ghi lý do.

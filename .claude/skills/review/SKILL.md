@@ -6,7 +6,7 @@ argument-hint: "[PR number | branch | path]"
 
 # /review — review như người gác cổng, không như người viết
 
-`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+`<FW>` = `.xtemplates/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XT>` = `python3 .xtemplates/scripts/xt.py` (hoặc `python3 scripts/xt.py`).
 
 Giao cho subagent `reviewer` (model khác với executor) khi diff > 200 dòng; phiên chính tổng hợp.
 

@@ -1,6 +1,6 @@
 # ADR-0006: Đổi tên repo thành X-Templates, giữ định danh kỹ thuật `.xstored` / `xs`
 
-- **Trạng thái:** Đã chấp nhận
+- **Trạng thái:** Bị thay thế bởi [ADR-0007](0007-rename-technical-identifiers-to-xtemplates.md)
 - **Trạng thái triển khai:** Đã triển khai (PR #30: tên hiển thị, URL clone, harness, mẫu; định danh kỹ thuật không đổi)
 - **Ngày:** 2026-10-14
 

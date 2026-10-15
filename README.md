@@ -19,7 +19,7 @@
 | [`12-security`](framework/12-security/README.md) | Threat model, AppSec, bí mật, chuỗi cung ứng, hạ tầng, bảo mật AI, log & audit | 7 |
 | [`13-ai-engineering`](framework/13-ai-engineering/README.md) | LLM app, RAG, agent & tool, hệ agentic, eval, guardrail, MCP/A2A, quan sát & chi phí, dữ liệu | 9 |
 | [`14`](framework/14-testing-quality/README.md)–[`18`](framework/18-cross-cutting/README.md) | Kiểm thử · Vận hành · Tuân thủ & quyền riêng tư · Sản phẩm & dự án · Xuyên suốt (i18n, hiệu năng, DX, tài liệu cho AI, đơn vị/tiền/thời gian, bền vững, OSS) | 37 |
-| [`templates`](framework/templates/README.md) | PROJECT, PLAN, PROGRESS, SPEC, ADR, THREAT-MODEL, RUNBOOK, POST-MORTEM, DPIA, GO-NO-GO, RELEASE-NOTES, API-CONTRACT, AGENTS, CLAUDE, xs.yaml | 15 |
+| [`templates`](framework/templates/README.md) | PROJECT, PLAN, PROGRESS, SPEC, ADR, THREAT-MODEL, RUNBOOK, POST-MORTEM, DPIA, GO-NO-GO, RELEASE-NOTES, API-CONTRACT, AGENTS, CLAUDE, xt.yaml | 15 |
 
 Mỗi yêu cầu là một dòng có **ID ổn định**, mức **MUST/SHOULD/MAY**, cách **Kiểm** bằng máy và **Nguồn**:
 
@@ -38,12 +38,15 @@ python3 /tmp/x-templates/scripts/install.py /đường/dẫn/dự-án --with-git
 
 # 2) Chọn hồ sơ, ngành, quy mô rồi ghép checklist
 cd /đường/dẫn/dự-án
-python3 .xstored/scripts/xs.py list profiles
-python3 .xstored/scripts/xs.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
+python3 .xtemplates/scripts/xt.py list profiles
+python3 .xtemplates/scripts/xt.py compose --profile web-app --industry ecommerce --scale M --out BLUEPRINT.md
 
 # 3) Theo dõi; --strict trả exit 1 khi còn MUST chưa đạt (dùng làm cổng phát hành)
-python3 .xstored/scripts/xs.py blueprint-status BLUEPRINT.md --strict
+python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --strict
 ```
+
+Dự án đã cài bản ≤ 2.x (thư mục `.xstored/`, `xs.py`, `xs.yaml`): chạy lại bước 1 — `install.py` tự chuyển sang
+`.xtemplates/`, `xt.py`, `xt.yaml` và liệt kê file còn nhắc tên cũ để sửa tay ([ADR-0007](docs/adr/0007-rename-technical-identifiers-to-xtemplates.md)).
 
 Quy mô quyết định khối lượng: `web-app` có 70 MUST ở **S** (prototype), 468 ở **M** (production), 1.124 ở **L** (đo 2026-10-14).
 Ghép thêm module ngoài hồ sơ bằng `--add`, ví dụ web app có tính năng AI: `--add "13-ai-engineering/*"`.
@@ -54,7 +57,7 @@ Trong Claude Code, sau khi cài khung, gõ `/autopilot <mô tả yêu cầu>`:
 
 1. Agent lập kế hoạch G0–G4: `PROJECT.md`, `BLUEPRINT.md`, nghiên cứu phiên bản, spec, thiết kế, `PLAN.md` có task và lệnh kiểm.
 2. Bạn duyệt **một lần**.
-3. Vòng lặp chạy: làm task, `xs.py loop record` ghi bằng chứng, commit, push. Stop hook đọc bằng chứng trên đĩa để quyết làm tiếp.
+3. Vòng lặp chạy: làm task, `xt.py loop record` ghi bằng chứng, commit, push. Stop hook đọc bằng chứng trên đĩa để quyết làm tiếp.
 4. Dừng khi xong có bằng chứng, khi chạm ngân sách, khi cùng một lỗi lặp 3 lần, hoặc ở **điểm dừng bắt buộc**:
    thao tác không đảo ngược, tiền thật, dữ liệu người dùng thật, deploy/publish, đổi cấu hình cổng, spec mâu thuẫn.
 
@@ -66,32 +69,32 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 
 | Lệnh | Việc |
 |---|---|
-| `python3 scripts/xs.py validate` · `python3 scripts/xs.py list profiles` | Kiểm quy ước toàn khung: frontmatter, ID duy nhất, MUST có cách kiểm, liên kết |
-| `python3 scripts/xs.py compose ...` | Ghép blueprint theo hồ sơ, ngành, quy mô; ghép lại vào file có sẵn thì giữ trạng thái theo ID |
-| `python3 scripts/xs.py blueprint-status FILE --strict [--json]` | Đếm đạt/miễn/chưa; cổng phát hành; `FILE` là `-` thì đọc stdin |
-| `python3 scripts/xs.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
+| `python3 scripts/xt.py validate` · `python3 scripts/xt.py list profiles` | Kiểm quy ước toàn khung: frontmatter, ID duy nhất, MUST có cách kiểm, liên kết |
+| `python3 scripts/xt.py compose ...` | Ghép blueprint theo hồ sơ, ngành, quy mô; ghép lại vào file có sẵn thì giữ trạng thái theo ID |
+| `python3 scripts/xt.py blueprint-status FILE --strict [--json]` | Đếm đạt/miễn/chưa; cổng phát hành; `FILE` là `-` thì đọc stdin |
+| `python3 scripts/xt.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
 | `python3 scripts/install.py DỰ_ÁN [--with-github]` | Cài khung + harness vào dự án đích |
-| `python3 scripts/xs.py progress-check [FILE]` | `PROGRESS.md` ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính (`XS_PROGRESS_BASE`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; CI cần `fetch-depth: 0`) |
-| `python3 scripts/xs.py changelog-check [FILE]` | `CHANGELOG.md` theo Keep a Changelog 1.1.0: `## [Unreleased]` đầu tiên, bản `## [X.Y.Z] - YYYY-MM-DD` giảm dần, nhóm chuẩn, không trùng nhóm trong Unreleased; bản mới nhất == `VERSION` cùng thư mục (nếu có) |
-| `python3 scripts/xs.py ci-check [DIR]` | Fitness function cho workflow CI: `permissions:` cấp workflow, không `write-all`, `uses:` ghim SHA 40 ký tự (`docker://` ghim `@sha256:`), job có `timeout-minutes`, không `continue-on-error` (ngoại lệ `# ci-check-allow: <lý do>`) |
-| `python3 scripts/xs.py audit plan [--blueprint F] [--status F] [--json]` | Dò stack → nhóm audit áp dụng/rút gọn/N/A kèm lý do, công cụ có/thiếu, bằng chứng blueprint trỏ file đã đổi sau khi ghi, nhóm cần quét lại theo `docs/ops/AUDIT-STATUS.md` |
-| `python3 scripts/xs.py audit check STATUS [--strict]` | Kiểm sổ audit (schema phát hiện, SHA quét là tổ tiên HEAD, chấp nhận rủi ro có chủ + hạn); `--strict` = Definition of Complete |
-| `python3 scripts/xs.py stats` | Đếm file theo loại và mục theo mức |
-| `python3 scripts/xs.py --version` · `--help` | Phiên bản khung (file `VERSION`) · ví dụ và mã thoát (0 ổn · 1 chưa đạt · 2 sai cách dùng) |
+| `python3 scripts/xt.py progress-check [FILE]` | `PROGRESS.md` ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính (`XT_PROGRESS_BASE`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; CI cần `fetch-depth: 0`) |
+| `python3 scripts/xt.py changelog-check [FILE]` | `CHANGELOG.md` theo Keep a Changelog 1.1.0: `## [Unreleased]` đầu tiên, bản `## [X.Y.Z] - YYYY-MM-DD` giảm dần, nhóm chuẩn, không trùng nhóm trong Unreleased; bản mới nhất == `VERSION` cùng thư mục (nếu có) |
+| `python3 scripts/xt.py ci-check [DIR]` | Fitness function cho workflow CI: `permissions:` cấp workflow, không `write-all`, `uses:` ghim SHA 40 ký tự (`docker://` ghim `@sha256:`), job có `timeout-minutes`, không `continue-on-error` (ngoại lệ `# ci-check-allow: <lý do>`) |
+| `python3 scripts/xt.py audit plan [--blueprint F] [--status F] [--json]` | Dò stack → nhóm audit áp dụng/rút gọn/N/A kèm lý do, công cụ có/thiếu, bằng chứng blueprint trỏ file đã đổi sau khi ghi, nhóm cần quét lại theo `docs/ops/AUDIT-STATUS.md` |
+| `python3 scripts/xt.py audit check STATUS [--strict]` | Kiểm sổ audit (schema phát hiện, SHA quét là tổ tiên HEAD, chấp nhận rủi ro có chủ + hạn); `--strict` = Definition of Complete |
+| `python3 scripts/xt.py stats` | Đếm file theo loại và mục theo mức |
+| `python3 scripts/xt.py --version` · `--help` | Phiên bản khung (file `VERSION`) · ví dụ và mã thoát (0 ổn · 1 chưa đạt · 2 sai cách dùng) |
 | `python3 scripts/check-links.py` | Kiểm liên kết Markdown toàn repo |
-| `scripts/dev-task.sh gate` | Cổng commit: chạy lệnh trong `xs.yaml` (build · typecheck · lint · test), CI chạy đúng lệnh này |
+| `scripts/dev-task.sh gate` | Cổng commit: chạy lệnh trong `xt.yaml` (build · typecheck · lint · test), CI chạy đúng lệnh này |
 
-Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XS_FRAMEWORK_LINK` (gốc liên kết
-trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `XS_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
-`loop`; không đặt thì: bản cài `.xstored/scripts/xs.py` → cha của `.xstored`; nếu không, thư mục cha gần nhất có
-`.autopilot`/`xs.yaml`/`.xstored`, rồi gần nhất có `.git` — thư mục cha là repo khác (vd `$HOME` dotfiles) sẽ thắng; không thấy thì cwd) · `XS_DEBUG=1` (in traceback khi lỗi).
+Biến môi trường (đều tuỳ chọn): `XT_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XT_FRAMEWORK_LINK` (gốc liên kết
+trong blueprint, mặc định `.xtemplates/framework`) · `XT_RECORD_TIMEOUT` (giây, mặc định 1800) · `XT_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
+`loop`; không đặt thì: bản cài `.xtemplates/scripts/xt.py` → cha của `.xtemplates`; nếu không, thư mục cha gần nhất có
+`.autopilot`/`xt.yaml`/`.xtemplates`, rồi gần nhất có `.git` — thư mục cha là repo khác (vd `$HOME` dotfiles) sẽ thắng; không thấy thì cwd) · `XT_DEBUG=1` (in traceback khi lỗi).
 
 Kiểm tra trước khi đóng góp (cần Python ≥ 3.11 và shellcheck; ruff/mypy/coverage khoá kèm hash ở `requirements-dev.txt`):
 
 ```bash
 pip install --require-hashes -r requirements-dev.txt
 scripts/dev-task.sh gate                 # build · typecheck · lint · test — phần lõi của CI job quality
-python3 -m unittest discover -s tests    # chỉ test (cổng test còn đòi coverage dòng + nhánh 100%, xem xs.yaml)
+python3 -m unittest discover -s tests    # chỉ test (cổng test còn đòi coverage dòng + nhánh 100%, xem xt.yaml)
 ```
 
 ## Quyết định thiết kế
@@ -100,6 +103,9 @@ python3 -m unittest discover -s tests    # chỉ test (cổng test còn đòi co
 - [ADR-0002](docs/adr/0002-harness-stop-points-and-evidence-hooks.md): hook chặn hành động nguy hiểm, Stop hook đọc bằng chứng.
 - [ADR-0003](docs/adr/0003-scale-s-floor-only.md): ở quy mô S chỉ sàn (baseline, hồ sơ, ngành) là MUST.
 - [ADR-0004](docs/adr/0004-scale-m-module-must-cap.md): ở quy mô M mỗi module tối đa 4 MUST, phần vượt là `MUST@L`.
+- [ADR-0005](docs/adr/0005-audit-with-machine-support.md): audit có máy đỡ — sổ máy đọc, `xt.py audit plan/check`.
+- [ADR-0007](docs/adr/0007-rename-technical-identifiers-to-xtemplates.md): định danh kỹ thuật theo tên X-Templates
+  (`.xtemplates/`, `xt.py`, `xt.yaml`, `XT_*`); `install.py` tự chuyển dự án đã cài bản ≤ 2.x. Thay ADR-0006.
 
 Nghiên cứu nền ngày 2026-10-13 ở [`research/`](research/): phân tích khung cũ, trích xuất catalog `seeker19110/stored`,
 AI agent và giao thức, cơ chế Claude Code. Khung cũ khôi phục được bằng `git archive 1b80fe4`.

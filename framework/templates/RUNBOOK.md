@@ -36,7 +36,7 @@ curl -fsS https://<domain>/healthz && echo OK
 ```bash
 <lệnh rollback về bản trước, vd: <cli> rollback --to <phiên bản trước>>
 ```
-### Migration CSDL (xem docs ở .xstored/framework/09-database/migrations.md)
+### Migration CSDL (xem docs ở .xtemplates/framework/09-database/migrations.md)
 ```bash
 <lệnh áp migration> · <lệnh lùi migration>
 ```
@@ -82,7 +82,7 @@ curl -fsS https://<domain>/healthz && echo OK
 | 1 | sập / mất hoặc lộ dữ liệu / mất tiền | ≤ <phút> | ngay, mọi lúc | ≤ <phút> qua trang trạng thái |
 | 2 | luồng chính lỗi/chậm nặng | ≤ <giờ> | trong giờ làm | khi > <n> người ảnh hưởng |
 | 3 | lỗi ngoài luồng chính, có cách lách | ≤ <ngày> | lên lịch | không |
-Quy trình sự cố: `.xstored/framework/15-operations/incident-response.md`; mẫu post-mortem: `docs/ops/POST-MORTEM-<ngày>.md`.
+Quy trình sự cố: `.xtemplates/framework/15-operations/incident-response.md`; mẫu post-mortem: `docs/ops/POST-MORTEM-<ngày>.md`.
 
 ## 6. Lịch sử thay đổi runbook
 | Ngày | Gì | Vì sao (cảnh báo/sự cố nào) |

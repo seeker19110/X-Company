@@ -16,15 +16,15 @@ updated: 2026-10-14
 |---|---|---|
 | Nhận dự án có sẵn (brownfield, [`lifecycle.md`](lifecycle.md) G0) | Toàn bộ 13 nhóm | Sau khi có `BLUEPRINT.md`; kết quả là nợ ban đầu |
 | Trước phát hành lớn / cổng G7 | Toàn bộ, `--strict` | Còn 🔴 mở → không phát hành |
-| Định kỳ (gợi ý: mỗi quý, hoặc sau ~50 PR) | Chỉ nhóm có thay đổi (§6) | `xs.py audit plan` liệt kê nhóm cần quét lại |
+| Định kỳ (gợi ý: mỗi quý, hoặc sau ~50 PR) | Chỉ nhóm có thay đổi (§6) | `xt.py audit plan` liệt kê nhóm cần quét lại |
 | Sau sự cố / post-mortem | Nhóm liên quan | Phát hiện thành hàng rào máy (test, lint, Gate) |
 
 ## 2. Bước -1: đọc repo thật, không audit "khung trống"
 
-`xs.py audit plan` in tín hiệu dò được từ file thật (manifest, lockfile, CI, migration, UI, container, hạ tầng,
+`xt.py audit plan` in tín hiệu dò được từ file thật (manifest, lockfile, CI, migration, UI, container, hạ tầng,
 harness agent) và suy ra nhóm nào **áp dụng**, **rút gọn** hay **N/A** kèm lý do. Agent đọc output này trước khi
 quét, không đoán stack. Repo chỉ có tài liệu/cấu hình → audit tài liệu + cấu hình, **không bịa phát hiện về mã không tồn tại**.
-Repo khung (có `framework/00-method/` + `scripts/xs.py`) → nhóm 9 và 13 là trọng tâm (quy ước, ID, link, nguồn, harness).
+Repo khung (có `framework/00-method/` + `scripts/xt.py`) → nhóm 9 và 13 là trọng tâm (quy ước, ID, link, nguồn, harness).
 
 ## 3. Mười ba nhóm và nhà của yêu cầu
 
@@ -42,7 +42,7 @@ Repo khung (có `framework/00-method/` + `scripts/xs.py`) → nhóm 9 và 13 là
 | 10 | DATA | Dữ liệu | migration có đường lùi, backup đã thử khôi phục, PII map, xoá theo yêu cầu, thời gian/tiền | [`data-correctness`](../01-baseline/data-correctness.md), [`migrations`](../09-database/migrations.md), [`16-compliance-privacy`](../16-compliance-privacy/README.md) |
 | 11 | CFG | Cấu hình & bí mật | env validate lúc khởi động, không secret trong mã/log, theo môi trường, fail-closed | [`configuration-and-secrets`](../01-baseline/configuration-and-secrets.md), [`environments-and-config`](../10-workflow/environments-and-config.md) |
 | 12 | XFEAT | Thống nhất chéo tính năng | cùng khái niệm một cách xử lý (lỗi, phân trang, quyền, i18n, thời gian); A phá B | [`errors-and-logging`](../01-baseline/errors-and-logging.md), [`api-and-web-standards`](../04-standards/api-and-web-standards.md) |
-| 13 | HAR | Harness & quy trình agent | lệnh `xs.yaml` chạy được, hook fail-open/fail-closed đúng chỗ, PROGRESS tươi, miễn trừ/bằng chứng blueprint còn đúng | [`harness-files`](../11-autonomous-loop/harness-files.md), [`stop-points-and-escalation`](../11-autonomous-loop/stop-points-and-escalation.md) |
+| 13 | HAR | Harness & quy trình agent | lệnh `xt.yaml` chạy được, hook fail-open/fail-closed đúng chỗ, PROGRESS tươi, miễn trừ/bằng chứng blueprint còn đúng | [`harness-files`](../11-autonomous-loop/harness-files.md), [`stop-points-and-escalation`](../11-autonomous-loop/stop-points-and-escalation.md) |
 
 Nhóm **N/A** phải ghi lý do kiểm được (vd "không có UI: không có `*.html`/`*.tsx`/`*.vue`"). Nhóm **rút gọn** quét
 phần có thật (vd CLI: nhóm 5 chỉ đo thời gian lệnh chính).
@@ -62,11 +62,11 @@ Mỗi phát hiện là **một dòng** trong bảng "Phát hiện" của `docs/o
 - **Gate:** lệnh máy (trong backtick) đỏ trước khi sửa, xanh sau khi sửa — bắt buộc với 🔴/🟠. Không có Gate máy
   được → ghi bước kiểm tay cụ thể và hạ mức tin cậy.
 - **Trạng thái:** `mở` · `đã sửa` (kèm PR/SHA) · `chấp nhận` (kèm `chủ:` và `hạn: YYYY-MM-DD`) · `bác bỏ` (kèm lý do).
-  `xs.py audit check` chặn chấp nhận quá hạn và chấp nhận không có chủ/hạn.
+  `xt.py audit check` chặn chấp nhận quá hạn và chấp nhận không có chủ/hạn.
 
 ## 5. Quy trình
 
-1. **Plan** — `xs.py audit plan [--blueprint BLUEPRINT.md] [--status docs/ops/AUDIT-STATUS.md]`: nhóm áp dụng,
+1. **Plan** — `xt.py audit plan [--blueprint BLUEPRINT.md] [--status docs/ops/AUDIT-STATUS.md]`: nhóm áp dụng,
    công cụ có/thiếu, bằng chứng blueprint có thể đã cũ (file được trích đã đổi sau khi tick), nhóm cần quét lại.
 2. **Blueprint** — mỗi MUST/SHOULD mở có thể kiểm ngay → phát hiện; miễn trừ/bằng chứng bị đánh dấu cũ → xác minh lại.
 3. **Quét theo nhóm** — chạy lệnh thật, không đọc lướt. Nhóm độc lập về file có thể giao subagent chạy song song
@@ -74,21 +74,21 @@ Mỗi phát hiện là **một dòng** trong bảng "Phát hiện" của `docs/o
 4. **Xác minh đối kháng** — mọi 🔴/🟠 được một reviewer khác (model khác) tái hiện độc lập; không tái hiện được → hạ
    thành `suy luận` hoặc `bác bỏ`. Đây là chốt chặn ảo giác quan trọng nhất của audit.
 5. **Ghi** — cập nhật `AUDIT-STATUS.md` (nhóm đã quét + SHA, bảng phát hiện) và `AUDIT-REPORT-<ngày>.md`;
-   `xs.py audit check docs/ops/AUDIT-STATUS.md` phải exit 0 (schema đúng).
+   `xt.py audit check docs/ops/AUDIT-STATUS.md` phải exit 0 (schema đúng).
 6. **DỪNG CHỜ DUYỆT** — trình kế hoạch sửa theo đợt (mỗi đợt ≤ 1 PR, bug có test tái hiện trước khi sửa). Không sửa
    trước khi người duyệt, trừ khi đang trong autopilot đã duyệt trước và phát hiện thuộc phạm vi PLAN.
-7. **Hội tụ** — sửa → `/gate` → quét lại nhóm liên quan → lặp tới khi `xs.py audit check --strict` exit 0.
+7. **Hội tụ** — sửa → `/gate` → quét lại nhóm liên quan → lặp tới khi `xt.py audit check --strict` exit 0.
 
 ## 6. Quét lại theo thay đổi
 
-`AUDIT-STATUS.md` ghi SHA lúc quét từng nhóm. Lần sau, `xs.py audit plan --status …` lấy `git diff --name-only <SHA>..HEAD`
+`AUDIT-STATUS.md` ghi SHA lúc quét từng nhóm. Lần sau, `xt.py audit plan --status …` lấy `git diff --name-only <SHA>..HEAD`
 và ánh xạ file đổi sang nhóm (workflow → 8, lockfile/manifest → 7, test → 4, migration → 10, tài liệu → 9,
-`AGENTS.md`/`xs.yaml`/`.claude/` → 13, mã nguồn → 1·2·3·12). SHA không còn là tổ tiên HEAD (rebase/squash) → quét lại
+`AGENTS.md`/`xt.yaml`/`.claude/` → 13, mã nguồn → 1·2·3·12). SHA không còn là tổ tiên HEAD (rebase/squash) → quét lại
 nhóm đó từ đầu. Nhóm không đổi giữ kết quả cũ, nhưng phát hiện `chấp nhận` vẫn bị kiểm hạn.
 
 ## 7. Definition of Complete
 
-Audit **xong** khi và chỉ khi `xs.py audit check docs/ops/AUDIT-STATUS.md --strict` exit 0:
+Audit **xong** khi và chỉ khi `xt.py audit check docs/ops/AUDIT-STATUS.md --strict` exit 0:
 mọi nhóm `đã quét` (SHA tổ tiên HEAD) hoặc `N/A` có lý do · không còn 🔴/🟠 `mở` · mọi `chấp nhận` có chủ và còn hạn.
 Báo cáo cuối: đã quét gì · số phát hiện theo mức/trạng thái · bằng chứng (lệnh + exit code) · nợ 🟢 còn lại có chủ.
 

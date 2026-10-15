@@ -16,7 +16,7 @@ updated: 2026-10-14
 # AUDIT-REPORT — <Tên dự án> · <YYYY-MM-DD>
 
 > Commit: `<SHA>` · Phạm vi: <toàn bộ | nhóm …> · Người quét: <tên/agent> · Xác minh đối kháng: <reviewer/model>
-> `xs.py audit check docs/ops/AUDIT-STATUS.md` → exit <0/1>
+> `xt.py audit check docs/ops/AUDIT-STATUS.md` → exit <0/1>
 
 ## 1. Tóm tắt
 | Mức | Mở | Đã sửa | Chấp nhận | Bác bỏ |
@@ -27,7 +27,7 @@ updated: 2026-10-14
 Kết luận một câu: <có chặn phát hành không, vì sao>.
 
 ## 2. Phạm vi và tín hiệu
-Output rút gọn của `xs.py audit plan`: stack dò được, nhóm áp dụng / rút gọn / N/A (lý do), công cụ thiếu (→ `chưa biết`).
+Output rút gọn của `xt.py audit plan`: stack dò được, nhóm áp dụng / rút gọn / N/A (lý do), công cụ thiếu (→ `chưa biết`).
 
 ## 3. Lệnh đã chạy
 | Nhóm | Lệnh | Exit | Kết quả chính |

@@ -29,7 +29,7 @@ updated: 2026-10-14
 5. **Song song chỉ khi độc lập về file**: hai task chạm cùng file/schema/port → nối tiếp. Hợp đồng giao diện
    (OpenAPI, type, schema) chốt trước khi tách việc.
 6. **Kết quả subagent là dữ liệu**: "đã test xanh" của subagent chưa phải bằng chứng; phiên chính chạy lại Gate qua
-   `xs.py loop record` trước khi tick task (xem [`loop-design.md`](loop-design.md)).
+   `xt.py loop record` trước khi tick task (xem [`loop-design.md`](loop-design.md)).
 
 ## Quyết định
 
@@ -64,8 +64,8 @@ lệnh + exit code · còn treo). Thiếu `acceptance_criteria` → không giao.
 
 - [ ] `LOOP-ORCH-001` **MUST** Chỉ phiên chính điều phối; subagent không gọi subagent (vòng lặp phát triển; sản phẩm agentic theo [`AI-AGENTIC-007`](../13-ai-engineering/agentic-systems.md)). → Kiểm: `.claude/agents/*.md` không có `Agent` trong `tools:` **hoặc** môi trường đặt `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`. · Nguồn: stored 23 §4.4; Claude Code env-vars
 - [ ] `LOOP-ORCH-002` **MUST@L** Mỗi lần giao việc có gói handoff tối thiểu: mục tiêu, tiêu chí chấp nhận là lệnh máy, file trong phạm vi, ngân sách, phạm vi quyền ⊆ phiên chính. → Kiểm: prompt giao việc chứa đủ 5 trường; thiếu Gate → từ chối giao. · Nguồn: `research/2026-10-13-ai-agent-research.md` §2.3
-- [ ] `LOOP-ORCH-003` **MUST** Subagent không được cấp quyền/tool rộng hơn phiên chính và không tự nâng mức tin cậy T0–T4 của hành động. → Kiểm: `tools:` của agent là tập con; hành động T3–T4 trong output subagent bị phiên chính đưa về điểm dừng (`xs.py loop block`). · Nguồn: [`stop-points-and-escalation.md`](stop-points-and-escalation.md)
-- [ ] `LOOP-ORCH-004` **MUST** Kết quả "xanh" do subagent khai chỉ được tick task sau khi phiên chính chạy lại Gate bằng `xs.py loop record`. → Kiểm: `.autopilot/evidence/T-xxx.json` tồn tại cho task đã tick; `loop status` không trả `verify`.
+- [ ] `LOOP-ORCH-003` **MUST** Subagent không được cấp quyền/tool rộng hơn phiên chính và không tự nâng mức tin cậy T0–T4 của hành động. → Kiểm: `tools:` của agent là tập con; hành động T3–T4 trong output subagent bị phiên chính đưa về điểm dừng (`xt.py loop block`). · Nguồn: [`stop-points-and-escalation.md`](stop-points-and-escalation.md)
+- [ ] `LOOP-ORCH-004` **MUST** Kết quả "xanh" do subagent khai chỉ được tick task sau khi phiên chính chạy lại Gate bằng `xt.py loop record`. → Kiểm: `.autopilot/evidence/T-xxx.json` tồn tại cho task đã tick; `loop status` không trả `verify`.
 - [ ] `LOOP-ORCH-005` **MUST@L** Reviewer dùng model khác với executor, chỉ có tool đọc + Bash kiểm, không sửa file. → Kiểm: `.claude/agents/reviewer.md` có `model:` khác `executor.md` và `tools:` không chứa `Edit`/`Write`.
 - [ ] `LOOP-ORCH-006` **MUST@L** Hai task chạm cùng file, migration, port hoặc biến môi trường không chạy song song. → Kiểm: `PLAN.md` ghi `files:`/`depends_on:` cho task song song; script kiểm giao nhau tập file trước khi tách. · Nguồn: stored 21 §6
 - [ ] `LOOP-ORCH-007` **MUST@L** Trước khi chạy song song, hợp đồng giao diện (OpenAPI/schema/type) đã commit và có test contract. → Kiểm: `API-CONTRACT.md` hoặc file schema trong `git log` trước commit đầu của nhánh song song. · Nguồn: [`../08-backend/api-design.md`](../08-backend/api-design.md)
@@ -98,7 +98,7 @@ lệnh + exit code · còn treo). Thiếu `acceptance_criteria` → không giao.
 | Việc | Công cụ → lệnh | Đặt ở đâu | Ngưỡng |
 |---|---|---|---|
 | Cấm lồng subagent | Kiểm `tools:` của `.claude/agents/*.md` không có `Agent` (grep) | Test harness `tests/test_hooks.py` hoặc script CI | 0 vi phạm |
-| Bằng chứng task do subagent làm | `xs.py loop record --task T-xxx -- <Gate>` ở phiên chính | Trước khi tick `[x]` | `exit_code: 0` |
+| Bằng chứng task do subagent làm | `xt.py loop record --task T-xxx -- <Gate>` ở phiên chính | Trước khi tick `[x]` | `exit_code: 0` |
 | Giao nhau tập file giữa task song song | Script đọc `files:` trong PLAN, báo cặp giao nhau | Trước khi tách subagent | 0 cặp giao nhau |
 | Reviewer khác model, read-only | Kiểm frontmatter `model:`/`tools:` | Test harness | Khác `executor`; không `Edit/Write` |
 | Trần turn mỗi subagent | `maxTurns:` trong frontmatter agent | `.claude/agents/*.md` | Có giá trị (repo này: 40–60) |
