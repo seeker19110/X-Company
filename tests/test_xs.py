@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import xs  # noqa: E402
+import xs
 
 
 def write(path: Path, text: str) -> None:
@@ -804,7 +804,7 @@ class ProgressCheckTest(unittest.TestCase):
         f = self.repo / "PROGRESS.md"
         f.write_text(GOOD_PROGRESS.format(sha="deadbeef"), encoding="utf-8")
         run = lambda *a: (
-            subprocess.run(  # noqa: E731
+            subprocess.run(
                 [sys.executable, str(ROOT / "scripts" / "xs.py"), "progress-check", *a],
                 capture_output=True,
                 text=True,
@@ -916,7 +916,7 @@ class CiCheckTest(unittest.TestCase):
             wf.mkdir()
             (wf / "ci.yml").write_text(GOOD_WORKFLOW, encoding="utf-8")
             run = lambda *a: (
-                subprocess.run(  # noqa: E731
+                subprocess.run(
                     [sys.executable, str(ROOT / "scripts" / "xs.py"), "ci-check", *a],
                     capture_output=True,
                     text=True,
@@ -1182,7 +1182,7 @@ class AuditCheckTest(GitRepoMixin, unittest.TestCase):
         f = d / "S.md"
         f.write_text(audit_status_text(findings=[self.GOOD]), encoding="utf-8")
         run = lambda *a: (
-            subprocess.run(  # noqa: E731
+            subprocess.run(
                 [sys.executable, str(ROOT / "scripts" / "xs.py"), "audit", "check", *a],
                 capture_output=True,
                 text=True,

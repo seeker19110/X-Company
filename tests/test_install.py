@@ -15,8 +15,8 @@ import unittest.mock as mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import install  # noqa: E402
-import xs  # noqa: E402
+import install
+import xs
 
 
 class InstallTest(unittest.TestCase):

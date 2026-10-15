@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # `quality` = cổng chuẩn (validate khung + test + link + shell + cài thử). Ruleset `.github/rulesets/main.json` đòi 3 required check:
-  # `quality`, `protection-guard` (job bên dưới) và `gitleaks` (secret-scan.yml). Nguyên tắc: required check phải là job có thật (protection-guard đối chiếu).
+  # `quality` = cổng chuẩn (validate khung + test + link + shell + cài thử). Ruleset `.github/rulesets/main.json` đòi 4 required check:
+  # `quality`, `protection-guard` (job bên dưới), `gitleaks` (secret-scan.yml) và `dep-audit` (dep-audit.yml). Nguyên tắc: required check phải là job có thật (protection-guard đối chiếu).
   quality:
     name: quality
     runs-on: ubuntu-latest

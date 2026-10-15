@@ -45,6 +45,7 @@ import tempfile
 import sys
 import traceback
 import unicodedata
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
@@ -616,8 +617,17 @@ def blueprint_status_text(raw: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- loop (autopilot)
 
 
+PROJECT_MARKERS = (".autopilot", "xs.yaml", ".xstored", ".git")
+
+
 def project_dir() -> Path:
-    return Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()).resolve()
+    """Gốc dự án: `CLAUDE_PROJECT_DIR`; không có thì thư mục cha gần nhất (tính cả cwd) có dấu hiệu dự án,
+    cùng gốc mà hook/dev-task.sh thấy (AUD-XFEAT-001); không thấy dấu hiệu nào thì cwd."""
+    env = os.environ.get("CLAUDE_PROJECT_DIR")
+    if env:
+        return Path(env).resolve()
+    cwd = Path(os.getcwd()).resolve()
+    return next((d for d in (cwd, *cwd.parents) if any((d / m).exists() for m in PROJECT_MARKERS)), cwd)
 
 
 def state_dir(base: Optional[Path] = None) -> Path:
@@ -1721,9 +1731,10 @@ def cmd_blueprint_status(args: argparse.Namespace) -> int:
 
 
 def _loop_init(args: argparse.Namespace, base: Path) -> int:
-    if not (base / args.plan).exists():
-        print(f"✗ Không thấy {args.plan}", file=sys.stderr)
-        return 2
+    for path in (args.plan, args.blueprint):  # blueprint gõ nhầm → verdict lặng lẽ bỏ qua blueprint (AUD-HAR-016)
+        if path and not (base / path).exists():
+            print(f"✗ Không thấy {path}", file=sys.stderr)
+            return 2
     deadline = None
     if args.hours is not None:
         deadline = (
@@ -1836,6 +1847,70 @@ def cmd_loop(args: argparse.Namespace) -> int:
     base = project_dir()
     handler = LOOP_HANDLERS.get(args.loop_cmd)
     return handler(args, base) if handler else 2
+
+
+CHANGELOG_GROUPS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
+CHANGELOG_VERSION_RE = re.compile(r"## \[(\d+)\.(\d+)\.(\d+)\] - \d{4}-\d{2}-\d{2}")
+
+
+def _changelog_sections(text: str) -> List[Tuple[str, List[str]]]:
+    """[(heading `## …`, [tên nhóm `### …`])] theo thứ tự trong file."""
+    out: List[Tuple[str, List[str]]] = []
+    for line in text.splitlines():
+        if line.startswith("## "):
+            out.append((line.rstrip(), []))
+        elif line.startswith("### ") and out:
+            out[-1][1].append(line[4:].strip())
+    return out
+
+
+def _changelog_group_errors(head: str, groups: List[str], unreleased: bool) -> List[str]:
+    errors = [
+        f"{head}: nhóm `### {g}` không thuộc {'/'.join(CHANGELOG_GROUPS)}"
+        for g in groups
+        if (g.split() or [""])[0] not in CHANGELOG_GROUPS
+    ]
+    if unreleased:  # bản đã phát hành là lịch sử (tag đã cắt) — chỉ chặn trùng ở phần đang viết
+        errors += [f"{head}: nhóm `### {g}` trùng" for g, n in Counter(groups).items() if n > 1]
+    return errors
+
+
+def changelog_check(text: str, version: Optional[str]) -> List[str]:
+    """Keep a Changelog 1.1.0 (BASE-REPO-007): `## [Unreleased]` đầu tiên, bản có ngày ISO 8601, giảm dần,
+    nhóm chuẩn, không trùng nhóm trong Unreleased; bản mới nhất == `VERSION` (nếu có)."""
+    sections = _changelog_sections(text)
+    if not sections or sections[0][0] != "## [Unreleased]":
+        return ["mục `## ` đầu tiên phải là `## [Unreleased]`"]
+    errors = _changelog_group_errors(*sections[0], unreleased=True)
+    versions: List[Tuple[int, ...]] = []
+    for head, groups in sections[1:]:
+        m = CHANGELOG_VERSION_RE.fullmatch(head)
+        if not m:
+            errors.append(f"`{head}`: phải dạng `## [X.Y.Z] - YYYY-MM-DD` (SemVer + ngày ISO 8601)")
+            continue
+        v = tuple(int(x) for x in m.groups())
+        if versions and v >= versions[-1]:
+            errors.append(f"`{head}`: phiên bản phải giảm dần (bản mới nhất trước)")
+        versions.append(v)
+        errors += _changelog_group_errors(head, groups, unreleased=False)
+    latest = ".".join(map(str, versions[0])) if versions else None
+    if version and latest != version:
+        errors.append(f"VERSION = {version} nhưng bản mới nhất trong CHANGELOG là {latest or '(không có)'}")
+    return errors
+
+
+def cmd_changelog_check(args: argparse.Namespace) -> int:
+    path = Path(args.file)
+    vfile = path.parent / "VERSION"
+    version = vfile.read_text(encoding="utf-8").strip() if vfile.is_file() else None
+    errors = changelog_check(path.read_text(encoding="utf-8"), version)
+    for e in errors:
+        print(f"✗ {args.file}: {e}")
+    if not errors:
+        print(
+            f"✓ {args.file}: Keep a Changelog — Unreleased đầu, bản có ngày, giảm dần, khớp VERSION {version or '—'}."
+        )
+    return 1 if errors else 0
 
 
 def cmd_progress_check(args: argparse.Namespace) -> int:
@@ -2007,6 +2082,9 @@ def build_parser() -> argparse.ArgumentParser:
     lst.add_argument("--reason", default="dừng thủ công")
     lsub.add_parser("hook-stop")
     plp.set_defaults(fn=cmd_loop)
+    pcl = sub.add_parser("changelog-check")
+    pcl.add_argument("file", nargs="?", default="CHANGELOG.md")
+    pcl.set_defaults(fn=cmd_changelog_check)
     pp = sub.add_parser("progress-check")
     pp.add_argument("file", nargs="?", default="PROGRESS.md")
     pp.set_defaults(fn=cmd_progress_check)

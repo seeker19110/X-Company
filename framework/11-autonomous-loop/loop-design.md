@@ -3,7 +3,7 @@ title: Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằ
 kind: module
 prefix: LOOP-DESIGN
 applies_to: [all]
-updated: 2026-10-14
+updated: 2026-10-15
 ---
 
 # Thiết kế vòng lặp: 4 con số, tiêu chí dừng máy kiểm, bằng chứng
@@ -47,7 +47,7 @@ updated: 2026-10-14
 | `budget` | `iterations ≥ max_iterations` (mặc định 50) · quá `deadline` (`--hours`) | Cho dừng, `active=false` |
 | `continue` | Còn task `[ ]`, hoặc blueprint còn MUST mở / miễn trừ thiếu lý do | **Chặn dừng**, `iterations += 1`, nêu task kế |
 | `verify` | Task `[x]` nhưng không có evidence, `exit_code ≠ 0`, hoặc `cmd ≠ Gate` khai trong PLAN | **Chặn dừng**, yêu cầu `loop record` lại |
-| `done` | Mọi task có bằng chứng xanh đúng Gate và blueprint 0 MUST mở | Cho dừng, `active=false` |
+| `done` | Mọi task có bằng chứng xanh đúng Gate và blueprint 0 MUST mở (blueprint khai ở `loop init` phải tồn tại; biến mất giữa chừng thì PLAN là nguồn sự thật và lý do verdict ghi rõ blueprint không được kiểm) | Cho dừng, `active=false` |
 
 Mặc định khuyến nghị: `--max-iterations` 30–50 cho một PLAN ≤ 10 task; `--hours` ≤ 8; headless thêm `--max-turns`
 và `--max-budget-usd`. Tăng trần chỉ bằng `loop init` lại có chủ đích, không sửa tay `state.json`.
