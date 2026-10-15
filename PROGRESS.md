@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; tag `v2.0.0` tạo qua workflow `release-tag.yml` (#33); ruleset `main` đã khớp file. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
+- Audit delta 2026-10-15 (`docs/ops/AUDIT-REPORT-2026-10-15.md`): 4 🟠 + 11 🟢 mở, CHỜ NGƯỜI DUYỆT kế hoạch sửa 3 đợt (§5).
 
 ## Tiếp theo
 1. Blueprint repo khung: 0 MUST mở (ruleset `main` active 2026-10-15, tag `v2.0.0`). Admin tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset còn bật — khác file, vô hại khi 0 approval.
