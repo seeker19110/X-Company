@@ -79,6 +79,26 @@ class PreBashGuardTest(unittest.TestCase):
         code, out, err = run_hook("pre-bash-guard.sh", {"tool_input": {"command": "git commit --no-verify -m x"}}, tmp)
         self.assertEqual((code, decision(out)), (0, "ask"))  # AUD-SEC-005: bỏ cổng cần người xác nhận
 
+    def test_commit_gate_with_ask(self):
+        # AUD-HAR-013: lệnh commit kèm một câu hỏi (push main) vẫn phải qua cổng trước khi hỏi người.
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "scripts").mkdir()
+        shutil.copy(ROOT / "scripts" / "dev-task.sh", tmp / "scripts" / "dev-task.sh")
+        (tmp / "xs.yaml").write_text("test: sh -c 'echo FAIL; exit 1'\n", encoding="utf-8")
+        cmd = {"tool_input": {"command": "git commit -am 'fix: x' && git push origin main"}}
+        code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
+        self.assertEqual(code, 2, out + err)
+        self.assertIn("ĐỎ", err)
+        (tmp / "xs.yaml").write_text("test: echo tieng-on-stdout\n", encoding="utf-8")
+        code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
+        self.assertEqual((code, decision(out)), (0, "ask"), out + err)  # stdout chỉ còn JSON quyết định
+        self.assertIn("[dev-task]", err)  # cổng đã chạy trước khi hỏi
+        self.assertIn("tieng-on-stdout", err)
+        code, out, err = run_hook(
+            "pre-bash-guard.sh", {"tool_input": {"command": "git commit -am x && git reset --hard"}}, tmp
+        )
+        self.assertEqual((code, decision(out)), (0, "deny"))  # deny không cần chạy cổng
+
     def test_commit_gate_message_flags_are_data(self):
         # AUD-SEC-005: ` -n ` / `--no-verify` nằm trong message không được làm bỏ cổng.
         tmp = Path(tempfile.mkdtemp())
@@ -313,6 +333,32 @@ class GuardMatrixTest(unittest.TestCase):
         self.check("deny", ["mkfs /dev/sda1", "mkfs.ext4 /dev/sda1", "chmod 777 /srv/app", "chmod -R 777 ."])
         self.check("", ["chmod 755 run.sh", "chmod 0777x f"])
 
+    def test_guard_wrappers(self):
+        # AUD-SEC-011: wrapper có cờ kèm giá trị và timeout/setsid không được che lệnh thật.
+        self.check(
+            "deny",
+            [
+                "timeout 60 git reset --hard",
+                "timeout -s KILL 5 git reset --hard",
+                "timeout --kill-after=5 10 rm -rf /",
+                "timeout -k 5 10 git reset --hard",
+                "nice -n 5 git reset --hard",
+                "nice --adjustment 5 git reset --hard",
+                "stdbuf -o L git reset --hard",
+                "xargs -n 1 git reset --hard",
+                "xargs -I {} git reset --hard",
+                "time -f %e git reset --hard",
+                "setsid git reset --hard",
+                "setsid -f nice -n 1 timeout 9 git reset --hard",
+                "xargs --replace git reset --hard",
+                "xargs --max-lines git reset --hard",
+                "xargs --eof git reset --hard",
+            ],
+        )
+        self.check("ask", ["timeout 600 claude --bare -p hi", "setsid claude --bare", "nice -n 10 claude --bare"])
+        self.check("", ["timeout 60 ls", "nice -n 5 make", "timeout"])
+        self.assertTrue(self.g.bash_decision("timeout 60 git commit -m x", self.root)["commit"])
+
     def test_guard_hook_bypass_asks(self):
         # LOOP-HARNESS-018: mở phiên Claude không hook / bật disableAllHooks → người xác nhận.
         self.check(
@@ -338,8 +384,29 @@ class GuardMatrixTest(unittest.TestCase):
                 "node node_modules/@anthropic-ai/claude-code/cli.js --bare",
                 "claude config set disableAllHooks true",
                 "env CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "npx claude --bare",
+                "npm exec claude -- --bare",
+                "pnpm exec claude --bare",
+                "bunx claude --bare",
+                "npx -y claude --setting-sources user",
+                "node @anthropic-ai/claude-code/cli.js --bare",
+                "echo 'export CLAUDE_CODE_SIMPLE=1' >> ~/.bashrc",
+                "declare -x CLAUDE_CODE_SIMPLE=1",
+                "env -i CLAUDE_CODE_SAFE_MODE=1 claude -p x",
+                "env -u FOO CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "env -C /tmp CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "timeout 600 env CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "nohup env CLAUDE_CODE_SIMPLE=1 claude -p x",
+                "echo CLAUDE_CODE_SIMPLE=1 >> ~/.bash_login",
+                "echo CLAUDE_CODE_SIMPLE=1 >> ~/.config/fish/config.fish",
+                'bash -c "CLAUDE_CODE_SIMPLE=1 claude -p x"',
+                "sh -c 'claude --bare -p x'",
+                "bash -c 'X=1; claude --bare'",
+                "npm x claude --bare",
+                "bun x claude --bare",
             ],
         )
+        self.assertEqual(self.g._env_assigns(["A=1", "B=2"]), ["A", "B"])  # chỉ gán biến (bash_decision bỏ sớm)
         self.check(
             "",
             [
@@ -352,6 +419,12 @@ class GuardMatrixTest(unittest.TestCase):
                 "git commit -m 'fix: chặn disableAllHooks, --bare'",
                 "claude mcp add x -- npx foo --settings y",
                 "npm exec @anthropic-ai/claude-code",
+                "echo CLAUDE_CODE_SIMPLE=1",
+                "git commit -m 'CLAUDE_CODE_SIMPLE=1 la bien moi truong'",
+                "sed -i 's/x/disableAllHooks/' notes.txt",
+                "claude -- --bare",
+                "npx prettier --write claude",
+                "bash -c 'echo CLAUDE_CODE_SIMPLE=1'",
             ],
         )
         self.assertIn("--bare", str(self.g.bash_decision("claude --bare", self.root)["reason"]))

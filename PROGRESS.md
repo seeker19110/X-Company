@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; tag `v2.0.0` tạo qua workflow `release-tag.yml` (#33); ruleset `main` đã khớp file. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
+- Audit delta 2026-10-15 (`docs/ops/AUDIT-REPORT-2026-10-15.md`): 4 🟠 + 11 🟢 mở, đã duyệt, đang sửa đợt 1/3 (§5).
 
 ## Tiếp theo
 1. Blueprint repo khung: 0 MUST mở (ruleset `main` active 2026-10-15, tag `v2.0.0`). Admin tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset còn bật — khác file, vô hại khi 0 approval.
@@ -29,6 +29,8 @@
 
 - 2026-10-14 Repo đổi tên X-stored → X-Templates; giữ `.xstored/`, `xs.py`, `XS_*` (đổi = phá dự án đã cài) — ADR-0006.
 - 2026-10-14 `LOOP-HARNESS-012` → 018: không biến tắt hook riêng; tắt có chủ đích qua `disableAllHooks` của Claude Code; test fail-open 5 hook.
+
+- 2026-10-15 Commit/PR không ghi tên model hay URL phiên AI (giữ AGENTS.md §3; AUD-HAR-017).
 
 ## Bàn giao phiên
 - Commit cuối trên `main`: `4e4bcf7` (#33); tag `v2.0.0` → `55de4d1`; SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).

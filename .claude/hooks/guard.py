@@ -21,9 +21,18 @@ import posixpath
 import re
 import shlex
 import sys
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
-WRAPPERS = {"command", "builtin", "exec", "nohup", "time", "nice", "stdbuf", "xargs"}
+WRAPPERS = {"command", "builtin", "exec", "nohup", "time", "nice", "stdbuf", "xargs", "timeout", "setsid"}
+# Tuỳ chọn của wrapper ăn thêm một token giá trị (`nice -n 5`) — không bóc thì giá trị bị hiểu là tên lệnh (AUD-SEC-011).
+WRAPPER_OPTS_WITH_VALUE: Dict[str, Set[str]] = {
+    "nice": {"-n", "--adjustment"},
+    "stdbuf": {"-i", "-o", "-e", "--input", "--output", "--error"},
+    "xargs": {"-n", "-I", "-L", "-P", "-d", "-s", "-E", "-a", "--max-args", "--max-procs", "--delimiter", "--max-chars"}
+    | {"--arg-file"},  # `--replace`/`--eof`/`--max-lines`: giá trị chỉ đi dạng `--opt=v`, token sau là lệnh
+    "time": {"-f", "-o", "--format", "--output"},
+    "timeout": {"-s", "-k", "--signal", "--kill-after"},
+}
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "fish"}
 INTERPRETERS = SHELLS | {"python", "python3", "node", "perl", "ruby", "php", "deno", "bun", "pwsh"}
 FETCHERS = {"curl", "wget"}
@@ -227,6 +236,25 @@ def _skip_env_args(a: List[str]) -> None:
             a.pop(0)
 
 
+def _skip_wrapper_args(name: str, a: List[str]) -> None:
+    """Sau wrapper: bỏ tuỳ chọn (kèm giá trị nếu có) và đối số thời lượng của `timeout`."""
+    with_value = WRAPPER_OPTS_WITH_VALUE.get(name, set())
+    while a and a[0].startswith("-") and a[0] != "-":
+        opt = a.pop(0)
+        if opt in with_value and a:
+            a.pop(0)
+    if name == "timeout" and a:
+        a.pop(0)  # DURATION
+
+
+def _skip_env_args_keep_assigns(a: List[str]) -> None:
+    """Sau `env`: chỉ bỏ tuỳ chọn (`-u`/`-C`/`-S` kèm giá trị), giữ gán biến để còn đọc được tên biến."""
+    while a and a[0].startswith("-"):
+        opt = a.pop(0)
+        if opt in ("-u", "-C", "-S") and a:
+            a.pop(0)
+
+
 def _strip_prefixes(argv: List[str]) -> List[str]:
     """Bỏ gán biến đầu lệnh và wrapper (`command`, `env -i`, `nohup`…) cho tới khi gặp lệnh thật."""
     a = list(argv)
@@ -239,8 +267,7 @@ def _strip_prefixes(argv: List[str]) -> List[str]:
             _skip_env_args(a)
         elif posixpath.basename(head) in WRAPPERS:
             a.pop(0)
-            while a and a[0].startswith("-"):
-                a.pop(0)
+            _skip_wrapper_args(posixpath.basename(head), a)
         else:
             break
     return a
@@ -479,39 +506,119 @@ HOOK_BYPASS_ENV = ("CLAUDE_CODE_SIMPLE", "CLAUDE_CODE_SAFE_MODE")
 HOOK_BYPASS_SETTING = "disableAllHooks"
 HOOK_BYPASS_FLAGS = {"--bare", "--safe-mode", "--settings", "--setting-sources", "--restricted"}
 CLAUDE_PKG = "@anthropic-ai/claude-code"
+# Trình chạy gói: lệnh con đầu tiên (không phải cờ) là tên bin/gói được chạy (`npx claude`, `pnpm exec claude`).
+PKG_RUNNERS: Set[Tuple[str, ...]] = {
+    ("npx",),
+    ("pnpx",),
+    ("bunx",),
+    ("npm", "exec"),
+    ("pnpm", "exec"),
+    ("pnpm", "dlx"),
+    ("yarn", "dlx"),
+    ("yarn", "exec"),
+    ("npm", "x"),
+    ("bun", "x"),
+}
+DECLARE_CMDS = {"export", "declare", "typeset", "readonly", "local"}
+RC_FILES = {".bashrc", ".zshrc", ".profile", ".bash_profile", ".bash_login", ".bash_aliases", ".zprofile", ".zlogin"}
+RC_FILES |= {".zshenv", ".envrc", "config.fish"}
 
 
-def _is_claude_entry(i: int, t: str) -> bool:
-    """`claude` ở đầu lệnh, hoặc gói/đường dẫn claude-code ở bất kỳ đâu (npx, npm exec, pnpm/yarn dlx, node …/cli.js)."""
-    return (i == 0 and t == "claude") or t == CLAUDE_PKG or t.startswith(CLAUDE_PKG + "@") or f"/{CLAUDE_PKG}/" in t
+def _is_claude_pkg(t: str) -> bool:
+    """Gói/đường dẫn claude-code: tên gói (có thể kèm @phiên-bản) hoặc đường dẫn chứa thư mục gói."""
+    return t == CLAUDE_PKG or t.startswith(CLAUDE_PKG + "@") or t.startswith(CLAUDE_PKG + "/") or f"/{CLAUDE_PKG}/" in t
+
+
+def _runner_target(n: List[str]) -> int:
+    """Chỉ số token được trình chạy gói thực thi (`npx -y claude` → 2); -1 nếu không phải trình chạy gói."""
+    for prefix in PKG_RUNNERS:
+        if tuple(n[: len(prefix)]) == prefix:
+            i = len(prefix)
+            while i < len(n) and n[i].startswith("-"):
+                i += 1
+            return i if i < len(n) else -1
+    return -1
 
 
 def _claude_args(n: List[str]) -> Optional[List[str]]:
-    """Tham số của Claude Code trong lệnh (dừng ở `--` tách tham số của chương trình khác); None nếu không gọi claude."""
-    for i, t in enumerate(n):
-        if _is_claude_entry(i, t):
+    """Tham số của Claude Code trong lệnh (dừng ở `--`: sau đó là đối số vị trí/của chương trình khác); None nếu không gọi claude."""
+    if n[0] == "claude":
+        rest = n[1:]
+    else:
+        t = _runner_target(n)
+        if t >= 0 and n[t] == "claude":
+            rest = n[t + 1 :]
+        else:
+            i = next((k for k, tok in enumerate(n) if _is_claude_pkg(tok)), -1)
+            if i < 0:
+                return None
             rest = n[i + 1 :]
-            if rest[:1] == ["--"]:  # `npm exec <pkg> -- <args>`
-                rest = rest[1:]
-            return rest[: rest.index("--")] if "--" in rest else rest
-    return None
+        if rest[:1] == ["--"]:  # `npm exec <pkg> -- <args>`: `--` của trình chạy, không phải của claude
+            rest = rest[1:]
+    return rest[: rest.index("--")] if "--" in rest else rest
+
+
+def _env_assigns(argv: List[str]) -> List[str]:
+    """Tên biến được gán thật: gán đầu lệnh (kể cả sau `env [-u X] [-C d]` và wrapper), hoặc đối số của `export`/`declare`…"""
+    if argv and argv[0] in DECLARE_CMDS:
+        return [t.split("=", 1)[0] for t in argv[1:] if ENV_ASSIGN_RE.fullmatch(t)]
+    names: List[str] = []
+    a = list(argv)
+    while a:
+        head = posixpath.basename(a[0])
+        if ENV_ASSIGN_RE.fullmatch(a[0]):
+            names.append(a.pop(0).split("=", 1)[0])
+        elif head == "env":
+            a.pop(0)
+            _skip_env_args_keep_assigns(a)
+        elif head in WRAPPERS:
+            a.pop(0)
+            _skip_wrapper_args(head, a)
+        else:
+            break
+    return names
+
+
+def _risky_write(n: List[str], argv: List[str]) -> bool:
+    """Lệnh ghi vào file settings/JSON, `.env` hoặc rc của shell — nơi marker tắt hook có hiệu lực."""
+    for t in write_targets(n, argv):
+        b = posixpath.basename(t)
+        if b.endswith(".json") or b.endswith(".env") or b in RC_FILES:
+            return True
+    return False
 
 
 def _bypass_marker(argv: List[str], n: List[str], claude: List[str]) -> str:
-    """Marker tắt hook ở vị trí có hiệu lực: gán biến môi trường, tham số của claude, hoặc nội dung lệnh ghi file.
-    Nhắc tên marker như dữ liệu (`grep`, `git commit -m`) không tính."""
-    for t in argv:
-        if ENV_ASSIGN_RE.fullmatch(t) and t.split("=", 1)[0] in HOOK_BYPASS_ENV:
-            return t.split("=", 1)[0]
+    """Marker tắt hook ở vị trí có hiệu lực: gán biến môi trường, tham số của claude, hoặc nội dung ghi vào file cấu hình.
+    Nhắc tên marker như dữ liệu (`grep`, `echo`, `git commit -m`, ghi file thường) không tính."""
+    hit = next((v for v in _env_assigns(argv) if v in HOOK_BYPASS_ENV), "")
+    if hit:
+        return hit
     if any(HOOK_BYPASS_SETTING in t for t in claude):
         return HOOK_BYPASS_SETTING
-    if write_targets(n, argv) and any(HOOK_BYPASS_SETTING in t for t in argv):
-        return HOOK_BYPASS_SETTING
+    if _risky_write(n, argv):
+        return next((m for m in (HOOK_BYPASS_SETTING, *HOOK_BYPASS_ENV) for t in argv if m in t), "")
+    return ""
+
+
+def _shell_c_bypass(n: List[str]) -> str:
+    """`bash -c "<lệnh>"`: áp luật hook-bypass cho từng lệnh bên trong (đệ quy)."""
+    if n[0] not in SHELLS or "-c" not in n[:-1]:
+        return ""
+    for sub in split_commands(tokenize(n[n.index("-c") + 1])):
+        sn = normalize(sub)
+        if sn:  # chuỗi bên trong luôn ngắn hơn → đệ quy dừng
+            reason = hook_bypass(sub, sn)
+            if reason:
+                return reason
     return ""
 
 
 def hook_bypass(argv: List[str], n: List[str]) -> str:
     """Lý do hỏi nếu lệnh tắt/bỏ qua hook của dự án; chuỗi rỗng nếu không."""
+    inner = _shell_c_bypass(n)
+    if inner:
+        return inner
     claude = _claude_args(n) or []
     hit = _bypass_marker(argv, n, claude)
     if hit:
