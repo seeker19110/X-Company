@@ -1,27 +1,25 @@
-# PLAN.md — Khung X-Templates · chốt việc còn treo sau đổi tên
+# PLAN.md — Khung X-Templates · sửa audit delta `b32e2a6`
 
-> Lập ngày 2026-10-14. Người dùng yêu cầu: "tự quyết hết các việc còn lại đi" (mục Tiếp theo của PROGRESS + hệ quả đổi tên).
-> Việc ngoài tầm agent giữ cho người: import ruleset, bật PVR/Dependabot security updates, tạo tag (đổi quyền/cấu hình repo
-> = điểm dừng bắt buộc, phiên không có quyền admin); thử khung trên dự án sản phẩm thật (cần người chọn dự án).
+> Lập ngày 2026-10-15. Người dùng gọi `/autopilot` sau khi audit delta trình kế hoạch 1 đợt (báo cáo
+> `docs/ops/AUDIT-REPORT-2026-10-15.md` §8) — coi là duyệt kế hoạch đó. Kế hoạch trước (T-401…T-403) đã xong, xem lịch sử git.
 
 ## Mục tiêu của kế hoạch này
-- `LOOP-HARNESS-012` có quyết định (thay bằng 018): không biến tắt riêng trong hook (giữ hàng rào ADR-0002), tắt có chủ đích qua `disableAllHooks`
-  của harness; mọi hook fail-open với stdin rỗng/rác, có test.
-- Phạm vi đổi tên được chốt bằng ADR: giữ định danh kỹ thuật `.xstored/`, `xs.py`, `xs.yaml`, `XS_*`.
-- PROGRESS phản ánh trạng thái mới.
+- AUD-HAR-019: bằng chứng `LOOP-HARNESS-004` trích máy kiểm chạy trên mọi PR, không trích file trạng thái đổi mỗi phiên.
+- AUD-DOC-022: ghi chú các dòng nhóm trong sổ audit khớp SHA của chúng, có số đo của lần quét lại.
+- Không sửa mã; `audit check --strict` exit 0 với 0 phát hiện mở.
 
 ## Ngân sách (4 con số)
-- Số vòng tối đa: 15 (`--max-iterations 15`)
+- Số vòng tối đa: 10 (`--max-iterations 10`)
 - Chi phí: 0 đồng ngoài phiên (không phụ thuộc mới)
 - Timeout mỗi lệnh Gate: 300 giây (`XS_RECORD_TIMEOUT`)
-- Ngày hết hạn: 3 giờ sau `loop init` (`--hours 3`)
+- Ngày hết hạn: 2 giờ sau `loop init` (`--hours 2`)
 
 ## Điểm dừng bắt buộc (dừng và hỏi người — `xs.py loop block --reason "..."`)
-- Thêm biến môi trường làm hook guard cho qua lệnh nguy hiểm
-- Đổi ruleset/quyền repo, xoá nhánh, merge khi CI đỏ
+- Đổi cấu hình cổng (`xs.yaml`, workflow, ruleset, hook) hoặc mã `scripts/xs.py` — ngoài phạm vi đợt này
+- Merge PR, xoá nhánh, đổi quyền repo
 
 ## Task
 
-- [x] `T-401` `LOOP-HARNESS-012` ngừng dùng → `LOOP-HARNESS-018` + test mọi hook fail-open với stdin rỗng/rác + tick BLUEPRINT có bằng chứng — Gate: `python3 -m unittest tests.test_hooks`
-- [x] `T-402` ADR-0006 phạm vi đổi tên (giữ `.xstored`/`xs`) + CHANGELOG — Gate: `python3 scripts/xs.py validate`
-- [x] `T-403` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`
+- [x] `T-501` AUD-HAR-019: bằng chứng `LOOP-HARNESS-004` (BLUEPRINT.md) trích `progress-check` trong cổng `lint` + `ProgressCheckTest`, không trích `PROGRESS.md`; mục khác trích `CHANGELOG.md` (BASE-REPO-006/007) giữ vì nội dung khẳng định thật sự phụ thuộc file đó — Gate: `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict && ! grep -nE '^- \[x\] .LOOP-HARNESS-004.*Bằng chứng:.*PROGRESS\.md' BLUEPRINT.md`
+- [ ] `T-502` AUD-DOC-022: đo lại SEC/CODE/TEST/CI/XFEAT trên mã `05ec95d` (= HEAD, chỉ tài liệu đổi sau đó) bằng bandit/vulture/pip-audit/ci-check/gate, viết lại ghi chú 5 dòng; đánh dấu 2 phát hiện `đã sửa` — Gate: `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict && ! grep -nE '295 test|124 commit' docs/ops/AUDIT-STATUS.md`
+- [ ] `T-503` PROGRESS cập nhật + cổng đầy đủ — Gate: `scripts/dev-task.sh gate`
