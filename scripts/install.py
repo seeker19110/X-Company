@@ -2,14 +2,17 @@
 """install.py — cài khung X-Templates vào một dự án đích (mọi hệ điều hành, chỉ cần Python >= 3.11).
 
 Kết quả trong dự án đích:
-  .xstored/framework/        bản sao thư viện yêu cầu (chỉ đọc; cập nhật bằng cách chạy lại install)
-  .xstored/research/         bản nghiên cứu nền mà module trích dẫn
-  .xstored/scripts/xs.py     công cụ compose / blueprint-status / loop
-  .xstored/scripts/dev-task.sh
-  .xstored/VERSION           SHA/nhãn phiên bản khung đã cài
-  .claude/settings.json, hooks/, skills/, agents/   harness (COPY-IF-ABSENT: không đè file đã có; bản mới ghi .xstored-new)
+  .xtemplates/framework/        bản sao thư viện yêu cầu (chỉ đọc; cập nhật bằng cách chạy lại install)
+  .xtemplates/research/         bản nghiên cứu nền mà module trích dẫn
+  .xtemplates/scripts/xt.py     công cụ compose / blueprint-status / loop
+  .xtemplates/scripts/dev-task.sh
+  .xtemplates/VERSION           SHA/nhãn phiên bản khung đã cài
+  .claude/settings.json, hooks/, skills/, agents/   harness (COPY-IF-ABSENT: không đè file đã có; bản mới ghi .xtemplates-new)
   .github/rulesets/main.json, pull_request_template.md, dependabot.yml   chỉ khi --with-github (copy-if-absent)
-  AGENTS.md, CLAUDE.md, PROGRESS.md, xs.yaml       từ framework/templates (copy-if-absent, bỏ frontmatter YAML; mẫu bọc ```markdown thì lấy phần trong)
+  AGENTS.md, CLAUDE.md, PROGRESS.md, xt.yaml       từ framework/templates (copy-if-absent, bỏ frontmatter YAML; mẫu bọc ```markdown thì lấy phần trong)
+
+Dự án đã cài bản ≤ 2.x (`.xstored/`, `xs.py`, `xs.yaml`, `XS_*`): chạy lại install là chuyển sang tên mới (ADR-0007) —
+  giữ manifest hash, đổi `xs.yaml` → `xt.yaml`, xoá bản sao `.xstored/`; file người dùng còn nhắc tên cũ được liệt kê để sửa tay.
 
 Dùng:
   python3 scripts/install.py <thư-mục-dự-án> [--force-harness] [--no-harness] [--with-github] [--label v1.0.0]
@@ -23,6 +26,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -39,8 +43,12 @@ ROOT_TEMPLATES = {
     "AGENTS.md": "AGENTS.md",
     "CLAUDE.md": "CLAUDE.md",
     "PROGRESS.md": "PROGRESS.md",
-    "xs.yaml": "xs.yaml",
+    "xt.yaml": "xt.yaml",
 }
+# Tên trước 3.0.0 (ADR-0007): dự án đã cài bản ≤ 2.x được chuyển tự động khi chạy lại install.
+LEGACY_DIR = ".xstored"
+LEGACY_YAML = "xs.yaml"
+LEGACY_RE = re.compile(r"\.xstored\b|\bxs\.(?:py|yaml)\b|\bXS_[A-Z]")
 # --with-github: hàng rào GitHub mẫu của khung (copy-if-absent). Workflow KHÔNG copy vì job quality phụ thuộc stack.
 GITHUB_FILES = [".github/rulesets/main.json", ".github/pull_request_template.md", ".github/dependabot.yml"]
 
@@ -79,7 +87,7 @@ def copy_tree_replace(src: Path, dst: Path) -> None:
     tmp.rename(dst)
 
 
-MANIFEST = ".xstored/harness.sha256.json"
+MANIFEST = ".xtemplates/harness.sha256.json"
 
 
 def write_atomic(path: Path, text: str) -> None:
@@ -123,7 +131,7 @@ def copy_if_absent(
     if transform:
         data = transform(data.decode("utf-8")).encode("utf-8")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    new = dst.with_name(dst.name + ".xstored-new")
+    new = dst.with_name(dst.name + ".xtemplates-new")
     if dst.is_symlink() or new.is_symlink():
         log(f"  ⚠ bỏ qua symlink {dst} (không ghi qua liên kết)")
         return "skipped-symlink"
@@ -145,7 +153,7 @@ def copy_if_absent(
 def merge_hooks(src: Path, dst: Path) -> str:
     """settings.json của dự án đã có: thêm khoá `hooks` của khung còn thiếu (giữ nguyên permissions và hook riêng).
 
-    Trước đây file có sẵn chỉ sinh `.xstored-new` nên hook đã copy mà không chạy (AUD-HAR-003).
+    Trước đây file có sẵn chỉ sinh `.xtemplates-new` nên hook đã copy mà không chạy (AUD-HAR-003).
     """
     if dst.is_symlink():
         log(f"  ⚠ bỏ qua symlink {dst}")
@@ -154,7 +162,9 @@ def merge_hooks(src: Path, dst: Path) -> str:
         ours = json.loads(src.read_text(encoding="utf-8"))
         theirs = json.loads(dst.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        log(f"  ⚠ {dst}: không đọc được JSON ({exc}) — HOOK CHƯA ĐĂNG KÝ, gộp tay từ .claude/settings.json.xstored-new")
+        log(
+            f"  ⚠ {dst}: không đọc được JSON ({exc}) — HOOK CHƯA ĐĂNG KÝ, gộp tay từ .claude/settings.json.xtemplates-new"
+        )
         return "invalid-json"
     hooks = theirs.setdefault("hooks", {})
     added = 0
@@ -172,7 +182,7 @@ def merge_hooks(src: Path, dst: Path) -> str:
 
 
 def framework_label(explicit: str | None) -> str:
-    """Nhãn ghi vào .xstored/VERSION: --label, hoặc '<VERSION> (<git sha>)' của bản khung đang cài."""
+    """Nhãn ghi vào .xtemplates/VERSION: --label, hoặc '<VERSION> (<git sha>)' của bản khung đang cài."""
     if explicit:
         return explicit
     version = (SRC / "VERSION").read_text(encoding="utf-8").strip() if (SRC / "VERSION").exists() else "unknown"
@@ -196,24 +206,24 @@ def target_error(target: Path) -> str | None:
     return None
 
 
-def install_framework(xs_dir: Path, label: str | None) -> None:
-    """Bước 1: framework + research + scripts + VERSION + README vào .xstored/ — thay thế toàn bộ (bản chỉ đọc)."""
-    copy_tree_replace(SRC / "framework", xs_dir / "framework")
+def install_framework(xt_dir: Path, label: str | None) -> None:
+    """Bước 1: framework + research + scripts + VERSION + README vào .xtemplates/ — thay thế toàn bộ (bản chỉ đọc)."""
+    copy_tree_replace(SRC / "framework", xt_dir / "framework")
     # research/ đi kèm vì module trong framework/ trỏ tới nguồn nghiên cứu bằng đường dẫn tương đối.
     if (SRC / "research").is_dir():
-        copy_tree_replace(SRC / "research", xs_dir / "research")
-    (xs_dir / "scripts").mkdir(exist_ok=True)
-    for f in ("xs.py", "dev-task.sh", "check-links.py"):
-        shutil.copy2(SRC / "scripts" / f, xs_dir / "scripts" / f)
-    (xs_dir / "scripts" / "dev-task.sh").chmod(0o755)
+        copy_tree_replace(SRC / "research", xt_dir / "research")
+    (xt_dir / "scripts").mkdir(exist_ok=True)
+    for f in ("xt.py", "dev-task.sh", "check-links.py"):
+        shutil.copy2(SRC / "scripts" / f, xt_dir / "scripts" / f)
+    (xt_dir / "scripts" / "dev-task.sh").chmod(0o755)
     version = framework_label(label)
-    (xs_dir / "VERSION").write_text(version + "\n", encoding="utf-8")
-    (xs_dir / "README.md").write_text(
-        "# .xstored/\n\nBản sao khung X-Templates (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
-        "Ghép blueprint: `python3 .xstored/scripts/xs.py compose --profile <p> --scale <S|M|L> --out BLUEPRINT.md`.\n",
+    (xt_dir / "VERSION").write_text(version + "\n", encoding="utf-8")
+    (xt_dir / "README.md").write_text(
+        "# .xtemplates/\n\nBản sao khung X-Templates (chỉ đọc). Cập nhật: chạy lại `install.py` từ bản khung mới.\n"
+        "Ghép blueprint: `python3 .xtemplates/scripts/xt.py compose --profile <p> --scale <S|M|L> --out BLUEPRINT.md`.\n",
         encoding="utf-8",
     )
-    log(f"✓ .xstored/framework + scripts (phiên bản {version})")
+    log(f"✓ .xtemplates/framework + scripts (phiên bản {version})")
 
 
 def install_settings(target: Path, force_harness: bool, stats: Counter[str]) -> None:
@@ -261,7 +271,7 @@ def install_harness(target: Path, force_harness: bool) -> None:
     write_atomic(target / MANIFEST, json.dumps(new_manifest, indent=2, sort_keys=True) + "\n")
     log("✓ .claude/: " + " · ".join(f"{k} {v}" for k, v in sorted(stats.items())))
     if stats.get("updated-new"):
-        log("  ⚠ có file .xstored-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")
+        log("  ⚠ có file .xtemplates-new: bạn đã sửa bản cũ — so sánh và gộp tay bản mới của khung")
 
 
 def install_root_templates(target: Path) -> None:
@@ -316,25 +326,67 @@ def ensure_gitignore(target: Path) -> None:
         log("  .gitignore: tạo mới")
 
 
+def migrate_legacy(target: Path) -> None:
+    """Bước 0 (bản ≤ 2.x): giữ manifest hash để hook chưa sửa vẫn cập nhật tại chỗ, xoá bản sao chỉ đọc `.xstored/`
+    (cài lại được), đổi `xs.yaml` → `xt.yaml` — dev-task.sh chỉ đọc tên mới, để nguyên thì cổng thành no-op."""
+    legacy = target / LEGACY_DIR
+    if legacy.is_dir() and not legacy.is_symlink():
+        old_manifest = legacy / "harness.sha256.json"
+        if old_manifest.is_file() and not (target / MANIFEST).exists():
+            shutil.copy2(old_manifest, target / MANIFEST)
+        shutil.rmtree(legacy)
+        log(f"  {LEGACY_DIR}/ → .xtemplates/ (đã xoá bản sao cũ, giữ manifest hash)")
+    old_yaml, new_yaml = target / LEGACY_YAML, target / "xt.yaml"
+    if old_yaml.is_file() and not new_yaml.exists():
+        old_yaml.rename(new_yaml)
+        log(f"  {LEGACY_YAML} → xt.yaml")
+    elif old_yaml.is_file():
+        log(f"  ⚠ có cả {LEGACY_YAML} và xt.yaml — dev-task.sh chỉ đọc xt.yaml; gộp tay rồi xoá {LEGACY_YAML}")
+
+
+def legacy_refs(target: Path) -> list[str]:
+    """File của dự án còn nhắc tên trước 3.0.0 — copy-if-absent không đè file người dùng nên chỉ báo để sửa tay."""
+    candidates = [*target.glob("*.md"), target / "xt.yaml", *(target / ".claude").rglob("*")]
+    candidates += (target / ".github" / "workflows").glob("*")
+    hits = []
+    for p in candidates:
+        if not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if LEGACY_RE.search(text):
+            hits.append(p.relative_to(target).as_posix())
+    return sorted(hits)
+
+
 def install(target: Path, force_harness: bool, no_harness: bool, label: str | None, with_github: bool = False) -> int:
     target = target.resolve()
     error = target_error(target)
     if error:
         log(error)
         return 2
-    xs_dir = target / ".xstored"
-    xs_dir.mkdir(exist_ok=True)
+    xt_dir = target / ".xtemplates"
+    xt_dir.mkdir(exist_ok=True)
 
-    install_framework(xs_dir, label)
+    migrate_legacy(target)
+    install_framework(xt_dir, label)
     if not no_harness:
         install_harness(target, force_harness)
     install_root_templates(target)
     if with_github:
         install_github(target)
     ensure_gitignore(target)
+    stale = legacy_refs(target)
+    if stale:
+        log(
+            "  ⚠ còn nhắc tên cũ (.xstored/xs.py/xs.yaml/XS_*) — đổi tay sang .xtemplates/xt.py/xt.yaml/XT_*: "
+            + ", ".join(stale)
+        )
 
     log(
-        "Xong. Bước tiếp: đọc AGENTS.md, điền xs.yaml, rồi `python3 .xstored/scripts/xs.py list profiles` → compose BLUEPRINT.md."
+        "Xong. Bước tiếp: đọc AGENTS.md, điền xt.yaml, rồi `python3 .xtemplates/scripts/xt.py list profiles` → compose BLUEPRINT.md."
     )
     return 0
 
@@ -344,7 +396,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("target", help="thư mục gốc dự án đích")
     p.add_argument("--force-harness", action="store_true", help="đè .claude/ của dự án bằng bản khung")
     p.add_argument("--no-harness", action="store_true", help="không copy .claude/")
-    p.add_argument("--label", help="nhãn phiên bản ghi vào .xstored/VERSION (mặc định: git SHA)")
+    p.add_argument("--label", help="nhãn phiên bản ghi vào .xtemplates/VERSION (mặc định: git SHA)")
     p.add_argument(
         "--with-github", action="store_true", help="copy ruleset mẫu, PR template, Dependabot vào .github/ (không đè)"
     )

@@ -9,11 +9,11 @@
 - [ ] `feat` — module/hồ sơ/ngành/mẫu/công cụ mới
 - [ ] `fix` — sửa nội dung sai, link gãy, lỗi công cụ
 - [ ] `refactor` / `docs` / `test` / `chore` / `ci`
-- [ ] ⚠️ Đổi ID/mức của mục đã có hoặc đổi hành vi `xs.py` (ghi CHANGELOG + lý do)
+- [ ] ⚠️ Đổi ID/mức của mục đã có hoặc đổi hành vi `xt.py` (ghi CHANGELOG + lý do)
 
 ## Cổng (bằng chứng ở CI job `quality`)
 
-- [ ] `python3 scripts/xs.py validate` xanh (frontmatter, ID duy nhất, MUST có `→ Kiểm:`, link)
+- [ ] `python3 scripts/xt.py validate` xanh (frontmatter, ID duy nhất, MUST có `→ Kiểm:`, link)
 - [ ] `python3 -m unittest discover -s tests` xanh
 - [ ] Phiên bản/chuẩn/luật mới thêm có **nguồn + ngày xác minh**; không xác minh được ghi **(chưa xác minh)**
 - [ ] Không trùng nội dung với module khác ("một chủ đề một nhà"); chỗ khác chỉ liên kết

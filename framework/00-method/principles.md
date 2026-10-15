@@ -11,7 +11,7 @@ updated: 2026-10-13
 
 | # | Nguyên tắc | Nghĩa là | Kiểm bằng |
 |---|---|---|---|
-| P1 | **Bằng chứng, không lời khai** | "Đã xong / đã chạy / đã an toàn" chỉ có giá trị khi có bằng chứng máy tạo ra: exit code, báo cáo CI, file bằng chứng. Lời model hay người tự khai không phải bằng chứng. | `xs.py loop record`, CI xanh, `blueprint-status --strict` |
+| P1 | **Bằng chứng, không lời khai** | "Đã xong / đã chạy / đã an toàn" chỉ có giá trị khi có bằng chứng máy tạo ra: exit code, báo cáo CI, file bằng chứng. Lời model hay người tự khai không phải bằng chứng. | `xt.py loop record`, CI xanh, `blueprint-status --strict` |
 | P2 | **Nghiên cứu trước, đề xuất sau** | Không chọn công nghệ/phiên bản theo trí nhớ. Xác minh từ nguồn sống, ghi ngày. Không xác minh được → ghi "(chưa xác minh)". | Mục "Nguồn" có URL + ngày |
 | P3 | **Đúng › an toàn › ít hơn › kiểm được › nhanh** | Thứ tự ưu tiên khi phải đánh đổi: đúng nghiệp vụ và không mất dữ liệu trước; rồi bảo mật; rồi ít code/ít phụ thuộc hơn; rồi dễ kiểm chứng; cuối cùng mới tới tốc độ. | Lý do ghi ở ADR/PLAN |
 | P4 | **Nhàm chán ở lõi, cách tân một chỗ** | Lõi (ngôn ngữ, CSDL, auth, hạ tầng) dùng công nghệ trưởng thành; chỉ cách tân ở nơi tạo khác biệt sản phẩm. | ADR chọn stack |

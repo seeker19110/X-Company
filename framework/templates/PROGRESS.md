@@ -8,7 +8,7 @@ updated: 2026-10-14
 
 > **Ai viết:** mọi phiên (người hoặc AI) trước khi kết thúc; hook SessionStart nạp file này cho phiên sau.
 > **Giai đoạn:** suốt G1–G8. **Cổng dùng:** [`LOOP-HARNESS-004`](../11-autonomous-loop/harness-files.md)/[`005`](../11-autonomous-loop/harness-files.md) (≤ 8 KB, đúng 4 mục, SHA là tổ tiên HEAD và của nhánh chính), `/handover`.
-> **Luật:** chỉ 4 mục dưới đây; không chép lịch sử (lịch sử ở `CHANGELOG.md`/git log); không ghi secret; không quá 8192 byte. SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD và đã có trên nhánh chính. Kiểm bằng `xs.py progress-check`.
+> **Luật:** chỉ 4 mục dưới đây; không chép lịch sử (lịch sử ở `CHANGELOG.md`/git log); không ghi secret; không quá 8192 byte. SHA trong "Bàn giao phiên" phải là tổ tiên của HEAD và đã có trên nhánh chính. Kiểm bằng `xt.py progress-check`.
 
 ```markdown
 # PROGRESS.md — <Tên dự án>
@@ -32,7 +32,7 @@ updated: 2026-10-14
 ## Bàn giao phiên
 - Commit cuối trên nhánh chính: `<SHA đầy đủ>` (tổ tiên của HEAD; không ghi SHA của nhánh PR — squash-merge xoá nó) · CI: <xanh/đỏ — link>
 - Lệnh kiểm nhanh: `<lệnh gate>` → exit <0/1> lúc <hh:mm>
-- Đang chặn: <không | xs.py loop block: lý do>
+- Đang chặn: <không | xt.py loop block: lý do>
 - Việc dở chưa commit: <không | mô tả + file>
 - Câu hỏi cần người: <không | câu hỏi — hỏi ai>
 ```

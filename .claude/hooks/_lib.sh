@@ -2,11 +2,11 @@
 # _lib.sh — hàm dùng chung cho hook của khung X-Templates. Nguồn (source) từ hook khác.
 # Mọi hook: fail-open (lỗi của hook không được kẹt phiên), chỉ dùng bash + python3 (jq tùy chọn).
 
-XS_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+XT_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 
-# Đường dẫn xs.py: dự án đích cài khung vào .xstored/, còn repo khung thì ở scripts/.
-xs_py() {
-  for p in "$XS_ROOT/.xstored/scripts/xs.py" "$XS_ROOT/scripts/xs.py"; do
+# Đường dẫn xt.py: dự án đích cài khung vào .xtemplates/, còn repo khung thì ở scripts/.
+xt_py() {
+  for p in "$XT_ROOT/.xtemplates/scripts/xt.py" "$XT_ROOT/scripts/xt.py"; do
     [ -f "$p" ] && { printf '%s' "$p"; return 0; }
   done
   return 1

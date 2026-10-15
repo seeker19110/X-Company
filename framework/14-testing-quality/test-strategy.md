@@ -13,7 +13,7 @@ updated: 2026-10-14
 
 ## Nguyên tắc
 
-- **Test là cổng, không phải tài liệu.** Một lệnh chạy được toàn bộ (`scripts/dev-task.sh test` đọc `xs.yaml`), CI chạy nó trên mọi PR, đỏ thì không merge (P9).
+- **Test là cổng, không phải tài liệu.** Một lệnh chạy được toàn bộ (`scripts/dev-task.sh test` đọc `xt.yaml`), CI chạy nó trên mọi PR, đỏ thì không merge (P9).
 - **Tầng thấp nhất có thể bắt được lỗi.** Lỗi logic → unit; lỗi ghép nối (DB, API) → integration/contract; lỗi luồng người dùng → E2E. Không đẩy lên E2E thứ unit bắt được.
 - **Tất định hay không có.** Thời gian, ngẫu nhiên, mạng, thứ tự phải được kiểm soát; test flaky bị cách ly và có hạn sửa, không retry vô hạn.
 - **Bug sửa phải có test tái hiện đỏ trước, xanh sau** (P12, bằng chứng "đã sửa").
@@ -40,7 +40,7 @@ Mặc định: **tháp** (nhiều unit, vừa integration, ít E2E) cho backend/
 
 ## Checklist
 
-- [ ] `QA-STRAT-001` **MUST** Một lệnh chạy toàn bộ test khai trong `xs.yaml` (hoặc `package.json`/`Makefile`) và CI gọi đúng lệnh đó. → Kiểm: `scripts/dev-task.sh test` exit 0; job CI dùng cùng lệnh (grep trong workflow). · Nguồn: P9
+- [ ] `QA-STRAT-001` **MUST** Một lệnh chạy toàn bộ test khai trong `xt.yaml` (hoặc `package.json`/`Makefile`) và CI gọi đúng lệnh đó. → Kiểm: `scripts/dev-task.sh test` exit 0; job CI dùng cùng lệnh (grep trong workflow). · Nguồn: P9
 - [ ] `QA-STRAT-002` **MUST** CI chạy test trên mọi PR và là required check; merge bị chặn khi đỏ. → Kiểm: ruleset/branch protection liệt kê job test; không `continue-on-error`. · Nguồn: catalog 23 §2.5
 - [ ] `QA-STRAT-003` **MUST@L** `PROJECT.md` ghi chiến lược (tầng nào, cổng nào, ngưỡng) theo bảng Quyết định. → Kiểm: mục "Kiểm thử" trong `PROJECT.md` liệt kê ≥ 2 tầng và ngưỡng.
 - [ ] `QA-STRAT-004` **MUST@L** Mỗi tính năng MVP có ≥ 1 test chấp nhận tự động ánh xạ tiêu chí Given/When/Then trong spec. → Kiểm: tên test/tag chứa ID tính năng; script đối chiếu spec ↔ test không ID nào thiếu. · Nguồn: [`../17-product-project/specification.md`](../17-product-project/specification.md)
@@ -66,17 +66,17 @@ Mặc định: **tháp** (nhiều unit, vừa integration, ít E2E) cho backend/
 - **Kem ốc quế (ice-cream cone):** nhiều E2E chậm, ít unit. Chậm, flaky, không chỉ ra lỗi ở đâu. Cách tránh: bảng Quyết định; E2E chỉ luồng chính.
 - **Test chi tiết triển khai** (assert hàm private, cấu trúc state nội bộ) → refactor là đỏ dù hành vi đúng. Cách tránh: test qua giao diện công khai; `getByRole` thay selector CSS.
 - **Mock tất cả** → test xanh, production đỏ (DB thật khác mock). Cách tránh: integration với testcontainers ([`integration-and-contract.md`](integration-and-contract.md)).
-- **CI "advisory"**: job test không required, merge trước khi xong (baseline xboss: lead time 4,4 phút = thời gian CI). Cách tránh: QA-STRAT-002; `xs.py ci-check` + job `protection-guard` kiểm chính CI (ý gốc: catalog 23 §3.3).
+- **CI "advisory"**: job test không required, merge trước khi xong (baseline xboss: lead time 4,4 phút = thời gian CI). Cách tránh: QA-STRAT-002; `xt.py ci-check` + job `protection-guard` kiểm chính CI (ý gốc: catalog 23 §3.3).
 - **Làm cổng xanh bằng nới cấu hình**: skip test, hạ ngưỡng, tăng retry. Cách tránh: hook hỏi khi chạm cấu hình cổng; review diff cấu hình riêng.
 - **Snapshot làm oracle**: cập nhật snapshot "cho xanh" mà không đọc. Cách tránh: snapshot chỉ cho output ổn định (CLI golden), review diff snapshot như code.
 - **Retry che bug thật** (race condition xanh ở lần 2). Cách tránh: retry ≤ 2 + trace on-first-retry + ticket.
-- **Agent suy diễn lệnh test từ văn xuôi** → "evidence unverified" 11 lần liên tiếp (qlkh). Cách tránh: `xs.yaml`/`runtime.yaml` là nguồn lệnh duy nhất.
+- **Agent suy diễn lệnh test từ văn xuôi** → "evidence unverified" 11 lần liên tiếp (qlkh). Cách tránh: `xt.yaml`/`runtime.yaml` là nguồn lệnh duy nhất.
 
 ## Cổng tự động
 
 | Công cụ | Lệnh | Đặt ở | Ngưỡng |
 |---|---|---|---|
-| `scripts/dev-task.sh test` (đọc `xs.yaml`) | `scripts/dev-task.sh test` | pre-commit (tập `quick`) + CI (đầy đủ) | exit 0 |
+| `scripts/dev-task.sh test` (đọc `xt.yaml`) | `scripts/dev-task.sh test` | pre-commit (tập `quick`) + CI (đầy đủ) | exit 0 |
 | Vitest 5.0.4 / Jest 30.5.2 / pytest 9.1.1 / `go test` (Go 1.27) / JUnit 6.1.3 | `vitest run` · `pytest -q` · `go test ./... -shuffle=on -race` · `mvn test` | CI | 0 fail |
 | Lint test | ESLint `eslint-plugin-vitest`/`jest` rule `no-focused-tests`, `no-disabled-tests`; `pytest --strict-markers` | CI | 0 vi phạm |
 | Shuffle/isolation | `pytest -p randomly` · `vitest --sequence.shuffle` · `go test -shuffle=on` | CI nightly | xanh |

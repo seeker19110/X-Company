@@ -68,7 +68,7 @@ updated: 2026-10-14
 |---|---|---|---|
 | gitleaks (MIT) | `gitleaks detect --source tests/ --no-git` + `--log-opts=--all` tuần | CI + weekly | 0 finding |
 | Microsoft Presidio (MIT) / regex PII | `python3 scripts/scan-fixtures-pii.py tests/ evals/` | CI | 0 PII thật (danh sách mẫu cho phép ghi trong policy) |
-| Script seed idempotent | lệnh khoá `migrate` trong `xs.yaml` (lệnh khai báo, agent/CI chạy trực tiếp; `dev-task.sh` không chạy khoá này) `&& make seed && make seed && make seed-count` | CI | đếm lần 2 = lần 1 |
+| Script seed idempotent | lệnh khoá `migrate` trong `xt.yaml` (lệnh khai báo, agent/CI chạy trực tiếp; `dev-task.sh` không chạy khoá này) `&& make seed && make seed && make seed-count` | CI | đếm lần 2 = lần 1 |
 | Kiểm kích thước fixture | `find tests/fixtures -size +200k` | CI | rỗng (ngoại lệ ghi lý do) |
 | Grep thời gian thật | `grep -rnE "new Date\(\)|datetime\.now\(|time\.Now\(" tests/` | CI | 0 ngoài helper clock |
 | Faker seed | kiểm `faker.seed` trong setup toàn cục | CI (grep) | có |

@@ -9,7 +9,7 @@ set -uo pipefail
 . "$(dirname "$0")/_lib.sh"
 
 payload="$(cat)"
-res="$(printf '%s' "$payload" | CLAUDE_PROJECT_DIR="$XS_ROOT" python3 "$(dirname "$0")/guard.py" bash 2>/dev/null)" || exit 0
+res="$(printf '%s' "$payload" | CLAUDE_PROJECT_DIR="$XT_ROOT" python3 "$(dirname "$0")/guard.py" bash 2>/dev/null)" || exit 0
 [ -n "$res" ] || exit 0
 decision="$(json_field "$res" decision)"
 [ "$decision" = "deny" ] && pretool_decision deny "$(json_field "$res" reason)"
@@ -18,19 +18,19 @@ decision="$(json_field "$res" decision)"
 # `--no-verify` là chính câu hỏi "bỏ cổng?" → không chạy cổng, để người quyết.
 if [ "$(json_field "$res" commit)" = "true" ] && [ "$(json_field "$res" no_verify)" != "true" ]; then
   gate=""
-  for g in "$XS_ROOT/scripts/dev-task.sh" "$XS_ROOT/.xstored/scripts/dev-task.sh"; do
+  for g in "$XT_ROOT/scripts/dev-task.sh" "$XT_ROOT/.xtemplates/scripts/dev-task.sh"; do
     [ -x "$g" ] && { gate="$g"; break; }
   done
   if [ -n "$gate" ]; then
     # stdout của cổng sang stderr: stdout của hook chỉ được chứa JSON quyết định.
-    if ! CLAUDE_PROJECT_DIR="$XS_ROOT" "$gate" gate >&2; then
+    if ! CLAUDE_PROJECT_DIR="$XT_ROOT" "$gate" gate >&2; then
       echo "❌ Cổng trước commit ĐỎ (build/typecheck/lint/test). Sửa rồi commit lại." >&2
       exit 2
     fi
   fi
   # Nhắc (không chặn) khi diff lớn: cổng máy chỉ bắt lỗi cú pháp, không bắt lỗi logic.
-  lines="$(git -C "$XS_ROOT" diff --cached --numstat 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')"
-  files="$(git -C "$XS_ROOT" diff --cached --name-only 2>/dev/null | grep -c . || true)"
+  lines="$(git -C "$XT_ROOT" diff --cached --numstat 2>/dev/null | awk '{a+=$1; d+=$2} END{print a+d+0}')"
+  files="$(git -C "$XT_ROOT" diff --cached --name-only 2>/dev/null | grep -c . || true)"
   if [ "${lines:-0}" -ge 300 ] || [ "${files:-0}" -ge 10 ]; then
     echo "💡 Diff staged lớn (${files} file, ~${lines} dòng). Cân nhắc chia nhỏ commit hoặc chạy /review trước." >&2
   fi

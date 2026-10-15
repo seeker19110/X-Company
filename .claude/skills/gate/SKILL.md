@@ -6,9 +6,9 @@ argument-hint: "[commit|merge]"
 
 # /gate — cổng máy trước, người sau
 
-`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+`<FW>` = `.xtemplates/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XT>` = `python3 .xtemplates/scripts/xt.py` (hoặc `python3 scripts/xt.py`).
 
-`<DT>` = `scripts/dev-task.sh` (hoặc `.xstored/scripts/dev-task.sh`). Lệnh thật của dự án nằm ở `xs.yaml` (ưu tiên) → `.claude/project-commands.sh` → tự dò (package.json/pyproject/go.mod/Cargo.toml/Makefile). **Không suy diễn lệnh từ văn xuôi**; nếu `xs.yaml` thiếu khoá, đề xuất thêm.
+`<DT>` = `scripts/dev-task.sh` (hoặc `.xtemplates/scripts/dev-task.sh`). Lệnh thật của dự án nằm ở `xt.yaml` (ưu tiên) → `.claude/project-commands.sh` → tự dò (package.json/pyproject/go.mod/Cargo.toml/Makefile). **Không suy diễn lệnh từ văn xuôi**; nếu `xt.yaml` thiếu khoá, đề xuất thêm.
 
 ## Cổng commit
 1. `<DT> gate` (build → typecheck → lint → test; `lint` nên gồm kiểm format, format không phải bước riêng; đỏ một cái là dừng). Đọc output thật.

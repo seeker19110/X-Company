@@ -94,7 +94,7 @@ passthrough · scope tối thiểu. Server phát `WWW-Authenticate` chuẩn; cli
 | Snapshot tool | `npx @modelcontextprotocol/inspector --cli <server> --method tools/list` so snapshot | CI | Diff = 0 hoặc có changelog |
 | Auth remote MCP | Test PRM endpoint, token sai audience | CI | Từ chối đúng |
 | Dependency MCP | Bảng server có ngày xác minh; pin SHA | Review PR | Thiếu → đỏ |
-| AGENTS.md | `wc -l AGENTS.md` ≤ 200; lệnh khớp `xs.yaml` (theo [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md)) | Cổng commit | Xanh |
+| AGENTS.md | `wc -l AGENTS.md` ≤ 200; lệnh khớp `xt.yaml` (theo [`../18-cross-cutting/docs-for-ai-agents.md`](../18-cross-cutting/docs-for-ai-agents.md)) | Cổng commit | Xanh |
 | Skill | Review PR + lint không có tải mã lúc chạy | Repo | Bắt buộc |
 
 ## Nguồn

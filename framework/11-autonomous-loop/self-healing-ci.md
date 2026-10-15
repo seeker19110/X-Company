@@ -36,7 +36,7 @@ updated: 2026-10-14
 | Lint/format | Chạy formatter/linter fix cục bộ, commit riêng `style:` | Tắt rule, thêm `eslint-disable` diện rộng |
 | Typecheck | Sửa kiểu; không `any`/`@ts-ignore` để qua | Nới `strict` trong tsconfig |
 | Coverage dưới ngưỡng | Thêm test cho nhánh thiếu | Hạ ngưỡng trong config |
-| Secret scan / SAST bắt lỗi | **Dừng**, `xs.py loop block`, người xem; xoay bí mật nếu đã lộ | Thêm vào allowlist của scanner |
+| Secret scan / SAST bắt lỗi | **Dừng**, `xt.py loop block`, người xem; xoay bí mật nếu đã lộ | Thêm vào allowlist của scanner |
 | Dependency có CVE | Nâng lên phiên bản vá nếu semver tương thích; breaking → hỏi | Ghi đè audit level |
 | Migration đỏ | Chỉ sửa migration **chưa áp**; migration đã áp → điểm dừng | Sửa file migration đã chạy ở môi trường chung |
 
@@ -91,9 +91,9 @@ updated: 2026-10-14
 |---|---|---|---|
 | Chặn nới cổng | `pre-edit-guard.sh` (ask khi sửa eslint/tsconfig/coverage/workflows/migration); grep diff `skip(|xfail|\.only\(|eslint-disable` | PreToolUse Edit/Write; job CI | 0 vi phạm không giải thích |
 | Chặn lệnh phá huỷ | `pre-bash-guard.sh` deny `push --force`, `reset --hard`, `clean`; `settings.json` deny | PreToolUse Bash | Deny |
-| Trần sửa cùng lỗi | `xs.py loop status --json` → `blocked` | Stop hook `stop-guard.sh` | `same_failure_count` ≥ 3 |
+| Trần sửa cùng lỗi | `xt.py loop status --json` → `blocked` | Stop hook `stop-guard.sh` | `same_failure_count` ≥ 3 |
 | Trần chi phí headless | `claude -p … --max-turns N --max-budget-usd X --output-format json` | Workflow | `total_cost_usd` ≤ X |
-| Cổng commit | `scripts/dev-task.sh gate` (đọc `xs.yaml`) | Hook trước `git commit` | Exit 0 |
+| Cổng commit | `scripts/dev-task.sh gate` (đọc `xt.yaml`) | Hook trước `git commit` | Exit 0 |
 | Pin action | Linter workflow (vd `zizmor`/`actionlint`) | CI | 0 action chưa pin |
 
 ## Nguồn

@@ -7,7 +7,7 @@ updated: 2026-10-13
 # Mẫu PROJECT.md
 
 > **Ai viết:** người chủ sản phẩm cùng AI (G0–G1), cập nhật khi đổi phạm vi. **Giai đoạn:** G0 Frame (mục 1–3, 8) → G1 Classify (mục 0) → G2 Research (mục 6–7).
-> **Cổng dùng:** G0 (≥1 chỉ số đo được, "không làm" ghi rõ), G1 (`xs.py compose` chạy được), `PM-REQ-*`, `PM-PRIO-*`.
+> **Cổng dùng:** G0 (≥1 chỉ số đo được, "không làm" ghi rõ), G1 (`xt.py compose` chạy được), `PM-REQ-*`, `PM-PRIO-*`.
 > **Cách điền:** thay `<...>`; không có thì ghi "không áp dụng — lý do", không xoá mục. ID `R-NNN`/`F-NNN`/`RK-NNN` không tái sử dụng.
 > Đây là nguồn sự thật về *cái gì cần xây*; quyết định kỹ thuật ở ADR, kế hoạch ở `PLAN.md`.
 
@@ -17,10 +17,10 @@ updated: 2026-10-13
 > Cổng G0: duyệt bởi <tên> ngày <YYYY-MM-DD> · Cổng G1: <tên> ngày <YYYY-MM-DD> · Phiên bản tài liệu: <n>
 
 ## 0. Loại dự án & hồ sơ
-- Hồ sơ (`xs.py list profiles`): <web-app | api-service | mobile-app | ...>
+- Hồ sơ (`xt.py list profiles`): <web-app | api-service | mobile-app | ...>
 - Gói ngành (0..n): <ecommerce, fintech, ... | không>
 - Quy mô: <S | M | L> — lý do: <người dùng thật? tiền thật? dữ liệu nhạy cảm?>
-- Blueprint: `python3 .xstored/scripts/xs.py compose --profile <p> [--industry <i>] --scale <S|M|L> --out BLUEPRINT.md`
+- Blueprint: `python3 .xtemplates/scripts/xt.py compose --profile <p> [--industry <i>] --scale <S|M|L> --out BLUEPRINT.md`
 
 ## 1. Vấn đề & người dùng
 - Vấn đề (1–2 câu, không chứa giải pháp): <ai, trong tình huống nào, đau ở đâu>

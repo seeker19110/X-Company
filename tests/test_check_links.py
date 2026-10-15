@@ -35,16 +35,16 @@ class CheckLinksModuleTest(unittest.TestCase):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
 
-    def test_root_is_project_when_installed_under_xstored(self):
-        # Bản cài ở <dự án>/.xstored/scripts/ → gốc là dự án; biên dịch với tên file thật để coverage đếm đúng file.
-        fake = self.repo.resolve() / ".xstored" / "scripts" / "check-links.py"
+    def test_root_is_project_when_installed_under_xtemplates(self):
+        # Bản cài ở <dự án>/.xtemplates/scripts/ → gốc là dự án; biên dịch với tên file thật để coverage đếm đúng file.
+        fake = self.repo.resolve() / ".xtemplates" / "scripts" / "check-links.py"
         ns: dict[str, object] = {"__file__": str(fake), "__name__": "check_links_installed"}
         exec(compile(SCRIPT.read_text(encoding="utf-8"), str(SCRIPT), "exec"), ns)
         self.assertEqual(ns["ROOT"], self.repo.resolve())
         self.assertEqual(self.cl.ROOT, ROOT)  # chạy từ repo khung: gốc là repo
 
     def test_iter_md_skips_tooling_dirs(self):
-        for rel in ("a.md", "docs/b.md", "node_modules/x.md", ".git/y.md", "sub/.xstored/z.md", ".venv/w.md"):
+        for rel in ("a.md", "docs/b.md", "node_modules/x.md", ".git/y.md", "sub/.xtemplates/z.md", ".venv/w.md"):
             self.write(rel, "x\n")
         names = [p.relative_to(self.repo).as_posix() for p in self.cl.iter_md(self.repo)]
         self.assertEqual(names, ["a.md", "docs/b.md"])

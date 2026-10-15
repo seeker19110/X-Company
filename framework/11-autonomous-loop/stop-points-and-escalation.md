@@ -32,7 +32,7 @@ updated: 2026-10-14
 | Thao tác không đảo ngược | `rm -rf`, `git push --force`, `reset --hard`, drop/alter phá vỡ, xoá dữ liệu | `pre-bash-guard.sh` → **deny**; `permissions.deny` | Người tự chạy tay |
 | Tiền thật | Thanh toán, hoàn tiền, đổi giá, gọi API thu phí ngoài sandbox | `loop block --reason` + SPEC phải có ca test | Chủ sản phẩm |
 | Dữ liệu người dùng thật | Migration trên DB production, export PII, xoá tài khoản | `pre-edit-guard.sh` ask khi sửa migration đã tồn tại; deploy → ask | Người trực + chủ dữ liệu |
-| Đổi quyền / nới cổng | Sửa `eslint`/`tsconfig`/coverage/workflows/ruleset/`.claude/settings.json`/`.xstored/` | `pre-edit-guard.sh` → **ask** kèm lý do | Tech lead |
+| Đổi quyền / nới cổng | Sửa `eslint`/`tsconfig`/coverage/workflows/ruleset/`.claude/settings.json`/`.xtemplates/` | `pre-edit-guard.sh` → **ask** kèm lý do | Tech lead |
 | Hành động đối ngoại | `gh pr merge`, `gh release`, `npm publish`, `docker push`, `terraform apply`, gửi email/thông báo, đăng bài | `pre-bash-guard.sh` → **ask**; Routine chỉ đề xuất | Người duyệt T4 |
 | Mâu thuẫn spec | SPEC ↔ code ↔ test không khớp, yêu cầu nhiều cách hiểu | `loop block --reason "spec: ..."`; không tự route lại để né hỏi | Chủ sản phẩm |
 | Bảo mật / pháp lý mơ hồ | Chạm auth, mật mã, dữ liệu nhạy cảm, luật ngành | Luôn làn kiến trúc; `risk_tags` ≠ rỗng → thêm review bảo mật | Người phê duyệt bảo mật |
@@ -75,7 +75,7 @@ Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã lu�
 - [ ] `LOOP-STOP-001` **MUST** Lệnh phá huỷ/không đảo ngược bị **deny** ở PreToolUse (không chỉ `ask`), sau khi tách lệnh nối `; && | ||`. → Kiểm: hook trả `permissionDecision: deny` cho `ls; rm -rf /` và `git push --force`; test hook xanh. · Nguồn: stored 12 §4 quy tắc 6
 - [ ] `LOOP-STOP-002` **MUST** Hành động đối ngoại (merge, release, publish, deploy, gửi thông báo) qua `ask` hoặc `loop block`, không bao giờ tự chạy trong autopilot. → Kiểm: `.claude/settings.json` `permissions.ask` có `gh pr merge`, `npm publish`, `docker push`; log phiên không có lệnh đó chạy tự động.
 - [ ] `LOOP-STOP-003` **MUST** Sửa cấu hình cổng (lint/type/coverage/workflows/ruleset/hook) và migration đã tồn tại đi qua `ask` kèm lý do ghi ở PR. → Kiểm: `pre-edit-guard.sh` trả `ask` cho `.github/workflows/x.yml` và file trong `migrations/` đã có; PR mô tả lý do. · Nguồn: stored 23 §4.3
-- [ ] `LOOP-STOP-004` **MUST@L** Mâu thuẫn spec hoặc yêu cầu nhiều cách hiểu → `xs.py loop block --reason` và dừng; không tự chọn một cách hiểu. → Kiểm: `state.json.blocked_reason` bắt đầu bằng `spec:`; PROGRESS ghi câu hỏi cần người. · Nguồn: stored 23 §2.3
+- [ ] `LOOP-STOP-004` **MUST@L** Mâu thuẫn spec hoặc yêu cầu nhiều cách hiểu → `xt.py loop block --reason` và dừng; không tự chọn một cách hiểu. → Kiểm: `state.json.blocked_reason` bắt đầu bằng `spec:`; PROGRESS ghi câu hỏi cần người. · Nguồn: stored 23 §2.3
 - [ ] `LOOP-STOP-005` **MUST** Việc chạm tiền thật, dữ liệu người dùng thật, xác thực/phân quyền, mật mã luôn có người duyệt trước merge (T4/làn kiến trúc). → Kiểm: PR có nhãn `risk:` tương ứng và required review của người; CI chặn merge khi thiếu.
 - [ ] `LOOP-STOP-006` **MUST@L** Mỗi task giao cho subagent ghi `model_tier` (T0–T4) và `external_side_effects`; subagent không tự nâng tier. → Kiểm: task pack có hai trường; test từ chối task thiếu trường. · Nguồn: stored 23 §4.5
 - [ ] `LOOP-STOP-007` **MUST@L** Cổng chờ người có hạn (mặc định 24 h) và nhắc giữa hạn; quá hạn **không tự pass, không tự huỷ**. → Kiểm: cấu hình `gate_timeout_hours: 24`; test quá hạn → trạng thái `escalated`. · Nguồn: spec cũ ASC-FR-14
@@ -109,7 +109,7 @@ Ngoại lệ cứng: **xác thực/phân quyền · thanh toán · mật mã lu�
 | `pre-bash-guard.sh` | PreToolUse(Bash) | `.claude/settings.json` | deny phá huỷ; ask đối ngoại/push main |
 | `pre-edit-guard.sh` | PreToolUse(Edit\|Write) | `.claude/settings.json` | deny file bí mật; ask cấu hình cổng, migration cũ |
 | `permissions.deny/ask` | `claude -p --permission-mode dontAsk` trong CI | settings | deny thắng allow |
-| `xs.py loop block` | `xs.py loop block --reason "..."` | Agent khi gặp điểm dừng | verdict `blocked` |
+| `xt.py loop block` | `xt.py loop block --reason "..."` | Agent khi gặp điểm dừng | verdict `blocked` |
 | Phân làn | script đọc `git diff --numstat` + đường dẫn + `risk_tags` | CI `pr-policy` | 5 điều kiện; mặc định làn chuẩn |
 | Ruleset | `.github/rulesets/main.json` | GitHub | PR bắt buộc, required check `quality` + `protection-guard` + `gitleaks` + `dep-audit`, không bypass |
 

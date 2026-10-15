@@ -6,7 +6,7 @@ updated: 2026-10-14
 
 # Quy ước viết module của khung
 
-> Hợp đồng định dạng cho **mọi file trong `framework/`**. Máy (`scripts/xs.py validate`) kiểm các quy ước
+> Hợp đồng định dạng cho **mọi file trong `framework/`**. Máy (`scripts/xt.py validate`) kiểm các quy ước
 > có dấu 🔒; vi phạm làm CI đỏ. Người/AI viết module mới đọc file này trước.
 
 ## 1. Ngôn ngữ và tên
@@ -51,7 +51,7 @@ Mỗi yêu cầu kiểm được là **một dòng**:
 - **Mức** (theo RFC 2119): `MUST` — thiếu là chưa đạt; `SHOULD` — bỏ phải ghi lý do; `MAY` — tùy chọn.
 - **Ngưỡng quy mô** (tùy chọn): `MUST@M` hoặc `MUST@L` — bắt buộc từ quy mô đó trở lên; nhỏ hơn thì máy hạ thành `SHOULD`.
   Ở quy mô S, máy còn hạ MUST trơn của module chuyên sâu thành SHOULD (ADR-0003). Vì vậy yêu cầu mà **mọi** phần mềm, kể cả prototype, phải có thì đặt ở `01-baseline/`, không đặt ở module.
-  Mỗi module/chuẩn có **tối đa 4** mục hiệu lực MUST ở quy mô M (`MUST` trơn + `MUST@M`); phần vượt là `MUST@L` — `xs.py validate` chặn (ADR-0004).
+  Mỗi module/chuẩn có **tối đa 4** mục hiệu lực MUST ở quy mô M (`MUST` trơn + `MUST@M`); phần vượt là `MUST@L` — `xt.py validate` chặn (ADR-0004).
   Bốn mục giữ là mục mà thiếu thì gây hại khó đảo ngược (dữ liệu, quyền, tiền, luật, sập không khôi phục), rồi mục nền móng, rồi mục kiểm rẻ bằng máy.
   - `S` = thử nghiệm/MVP nội bộ, ít người dùng · `M` = production có người dùng thật · `L` = quy mô lớn, nhiều đội, hoặc ngành bị quản lý.
 - **`→ Kiểm:`** (bắt buộc với `MUST`, nên có với `SHOULD`): cách chứng minh bằng máy hoặc bằng chứng cụ thể (lệnh, test, file, cấu hình). Không viết "đảm bảo X" mà không nói kiểm thế nào.
@@ -125,7 +125,7 @@ Gói ngành thêm: **Khung pháp lý** (Việt Nam + quốc tế, số hiệu v�
 | Tài liệu cho AI agent (AGENTS.md, SKILL.md) | `18-cross-cutting/docs-for-ai-agents.md` | — |
 | PROGRESS/PLAN/file harness | `11-autonomous-loop/harness-files.md` | 01-baseline: sàn `BASE-DOC-008` |
 | "4 con số" của vòng lặp; lỗi lặp 3 lần → BLOCKED | `11-autonomous-loop/loop-design.md` (`LOOP-DESIGN-001`, `LOOP-DESIGN-005`) | PLAN/skill/README: trỏ |
-| Bộ khoá `xs.yaml` (dev-task chạy khoá nào) | `templates/xs.yaml` + `LOOP-HARNESS-008` | 01 quality-gates, 18 docs-for-ai-agents: trỏ |
+| Bộ khoá `xt.yaml` (dev-task chạy khoá nào) | `templates/xt.yaml` + `LOOP-HARNESS-008` | 01 quality-gates, 18 docs-for-ai-agents: trỏ |
 | ADR | `05-architecture/decision-records.md` | — |
 | Spec | `17-product-project/specification.md` | 10 spec-driven: quy trình |
 | Sự cố | `15-operations/incident-response.md` | 12 logging-audit: phần bảo mật |
@@ -136,4 +136,4 @@ Gói ngành thêm: **Khung pháp lý** (Việt Nam + quốc tế, số hiệu v�
 
 - Thêm/sửa mục: giữ ID cũ ổn định; cập nhật `updated`; ghi `CHANGELOG.md`.
 - Đổi quyết định lớn về cấu trúc khung: ghi ADR ở `docs/adr/`.
-- Chạy `python3 scripts/xs.py validate` và `python3 -m unittest discover -s tests` trước khi commit.
+- Chạy `python3 scripts/xt.py validate` và `python3 -m unittest discover -s tests` trước khi commit.

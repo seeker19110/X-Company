@@ -1,4 +1,4 @@
-"""Test cho scripts/xs.py — chạy: python3 -m unittest discover -s tests -v"""
+"""Test cho scripts/xt.py — chạy: python3 -m unittest discover -s tests -v"""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import xs
+import xt
 
 
 def write(path: Path, text: str) -> None:
@@ -193,19 +193,19 @@ def make_framework(tmp: Path) -> Path:
 
 class FrontmatterTest(unittest.TestCase):
     def test_parse_list_and_scalar(self):
-        meta, body, n = xs.parse_frontmatter("---\ntitle: A\nmodules: [a/b, c/*]\n---\n# A\n")
+        meta, body, n = xt.parse_frontmatter("---\ntitle: A\nmodules: [a/b, c/*]\n---\n# A\n")
         self.assertEqual(meta["title"], "A")
         self.assertEqual(meta["modules"], ["a/b", "c/*"])
         self.assertEqual(n, 4)
         self.assertTrue(body.startswith("# A"))
 
     def test_missing_frontmatter(self):
-        with self.assertRaises(xs.FrontmatterError):
-            xs.parse_frontmatter("# no fm\n")
+        with self.assertRaises(xt.FrontmatterError):
+            xt.parse_frontmatter("# no fm\n")
 
     def test_unclosed_frontmatter(self):
-        with self.assertRaises(xs.FrontmatterError):
-            xs.parse_frontmatter("---\ntitle: A\n")
+        with self.assertRaises(xt.FrontmatterError):
+            xt.parse_frontmatter("---\ntitle: A\n")
 
 
 class ValidateTest(unittest.TestCase):
@@ -214,10 +214,10 @@ class ValidateTest(unittest.TestCase):
         self.fw = make_framework(self.tmp)
 
     def test_valid_fixture(self):
-        self.assertEqual(xs.validate(self.fw), [])
+        self.assertEqual(xt.validate(self.fw), [])
 
     def test_fenced_items_ignored(self):
-        docs, _ = xs.load_docs(self.fw)
+        docs, _ = xt.load_docs(self.fw)
         ids = {it.id for d in docs for it in d.items}
         self.assertNotIn("BE-API-999", ids)
 
@@ -227,28 +227,28 @@ class ValidateTest(unittest.TestCase):
             p.read_text(encoding="utf-8").replace("## Nguồn", "- [ ] `BE-API-001` **SHOULD** trùng.\n\n## Nguồn", 1),
             encoding="utf-8",
         )
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("ID trùng BE-API-001" in e for e in errs), errs)
 
     def test_must_without_check(self):
         p = self.fw / "08-backend" / "api.md"
         p.write_text(p.read_text(encoding="utf-8").replace(" → Kiểm: test contract.", ""), encoding="utf-8")
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("thiếu '→ Kiểm:'" in e for e in errs), errs)
 
     def test_module_must_at_m_capped(self):
         p = self.fw / "08-backend" / "api.md"
-        extra = "".join(f"- [ ] `BE-API-0{n}` **MUST** x. → Kiểm: y.\n" for n in range(10, 10 + xs.MAX_MUST_AT_M))
+        extra = "".join(f"- [ ] `BE-API-0{n}` **MUST** x. → Kiểm: y.\n" for n in range(10, 10 + xt.MAX_MUST_AT_M))
         p.write_text(p.read_text(encoding="utf-8").replace("## Nguồn", extra + "\n## Nguồn", 1), encoding="utf-8")
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("MUST hiệu lực ở quy mô M" in e for e in errs), errs)
         p.write_text(p.read_text(encoding="utf-8").replace("**MUST** x.", "**MUST@L** x."), encoding="utf-8")
-        self.assertEqual(xs.validate(self.fw), [])  # MUST@L không tính vào trần M
+        self.assertEqual(xt.validate(self.fw), [])  # MUST@L không tính vào trần M
 
     def test_prefix_mismatch(self):
         p = self.fw / "08-backend" / "api.md"
         p.write_text(p.read_text(encoding="utf-8").replace("`BE-API-001`", "`BE-XYZ-001`"), encoding="utf-8")
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("không khớp prefix" in e for e in errs), errs)
 
     def test_malformed_item_reported(self):
@@ -257,13 +257,13 @@ class ValidateTest(unittest.TestCase):
             p.read_text(encoding="utf-8").replace("## Nguồn", "- [ ] `BE-API-002` MUST thiếu in đậm.\n\n## Nguồn", 1),
             encoding="utf-8",
         )
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("sai định dạng" in e for e in errs), errs)
 
     def test_broken_link(self):
         p = self.fw / "08-backend" / "api.md"
         p.write_text(p.read_text(encoding="utf-8") + "\n[x](khong-co.md)\n", encoding="utf-8")
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("liên kết hỏng" in e for e in errs), errs)
 
     def test_missing_module_in_profile(self):
@@ -271,7 +271,7 @@ class ValidateTest(unittest.TestCase):
         p.write_text(
             p.read_text(encoding="utf-8").replace("08-backend/cli-only", "08-backend/khong-co"), encoding="utf-8"
         )
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("không tồn tại" in e for e in errs), errs)
 
     def test_missing_readme_in_dir(self):
@@ -279,13 +279,13 @@ class ValidateTest(unittest.TestCase):
         (self.fw / "09-database" / "x.md").write_text(
             "---\ntitle: X\nkind: method\nupdated: 2026-10-13\n---\n# X\n", encoding="utf-8"
         )
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("thiếu README.md" in e for e in errs), errs)
 
     def test_unknown_applies_to(self):
         p = self.fw / "08-backend" / "api.md"
         p.write_text(p.read_text(encoding="utf-8").replace("[web-app]", "[khong-co-ho-so]"), encoding="utf-8")
-        errs = xs.validate(self.fw)
+        errs = xt.validate(self.fw)
         self.assertTrue(any("applies_to" in e for e in errs), errs)
 
 
@@ -295,7 +295,7 @@ class ComposeTest(unittest.TestCase):
         self.fw = make_framework(self.tmp)
 
     def test_compose_web_fintech_scale_m(self):
-        out = xs.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
+        out = xt.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
         self.assertIn("`BASE-SEC-001` **MUST**", out)
         self.assertIn("`BASE-SEC-002` **SHOULD**", out)  # MUST@L hạ xuống ở quy mô M
         self.assertNotIn("BASE-SEC-003", out)  # MAY bị bỏ khi không --include-may
@@ -306,25 +306,25 @@ class ComposeTest(unittest.TestCase):
         self.assertIn("generated: 2026-10-13", out)
 
     def test_compose_scale_s_keeps_floor_demotes_modules(self):
-        out = xs.compose(self.fw, "web-app", ["fintech"], "S", include_may=False, today="2026-10-13")
+        out = xt.compose(self.fw, "web-app", ["fintech"], "S", include_may=False, today="2026-10-13")
         self.assertIn("`BASE-SEC-001` **MUST**", out)  # baseline: sàn, giữ MUST
         self.assertIn("`IND-FIN-001` **MUST**", out)  # gói ngành: giữ MUST
         self.assertIn("`BE-API-001` **SHOULD**", out)  # module chuyên sâu: S hạ SHOULD
         self.assertIn("`BASE-SEC-002` **SHOULD**", out)  # MUST@L vẫn hạ
 
     def test_compose_scale_l_keeps_must(self):
-        out = xs.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
+        out = xt.compose(self.fw, "web-app", [], "L", include_may=True, today="2026-10-13")
         self.assertIn("`BASE-SEC-002` **MUST**", out)
         self.assertIn("`BASE-SEC-003` **MAY**", out)
 
     def test_compose_add_extra_module_bypasses_applies_to(self):
-        out = xs.compose(
+        out = xt.compose(
             self.fw, "web-app", [], "M", include_may=False, today="2026-10-13", extra=["08-backend/cli-only"]
         )
         self.assertIn("`BE-CLI-001`", out)  # applies_to chỉ cli-tool nhưng --add là có chủ đích
         self.assertIn("extra: [08-backend/cli-only]", out)
         with self.assertRaises(SystemExit):
-            xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["08-backend/khong-co"])
+            xt.compose(self.fw, "web-app", [], "M", include_may=False, extra=["08-backend/khong-co"])
 
     def test_compose_filters_standards_by_applies_to(self):
         write(self.fw / "04-standards" / "README.md", "---\ntitle: S\nkind: index\nupdated: 2026-10-14\n---\n\n# S\n")
@@ -355,10 +355,10 @@ class ComposeTest(unittest.TestCase):
             p.read_text(encoding="utf-8").replace("[08-backend/cli-only]", "[08-backend/cli-only, 04-standards/*]"),
             encoding="utf-8",
         )
-        self.assertEqual(xs.validate(self.fw), [])
-        self.assertNotIn("STD-A11Y-001", xs.compose(self.fw, "cli-tool", [], "M", include_may=False))
+        self.assertEqual(xt.validate(self.fw), [])
+        self.assertNotIn("STD-A11Y-001", xt.compose(self.fw, "cli-tool", [], "M", include_may=False))
         self.assertIn(
-            "STD-A11Y-001", xs.compose(self.fw, "web-app", [], "M", include_may=False, extra=["04-standards/*"])
+            "STD-A11Y-001", xt.compose(self.fw, "web-app", [], "M", include_may=False, extra=["04-standards/*"])
         )
 
     def test_compose_rebases_relative_links(self):
@@ -370,28 +370,28 @@ class ComposeTest(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        os.environ["XS_FRAMEWORK_LINK"] = ".xstored/framework"
+        os.environ["XT_FRAMEWORK_LINK"] = ".xtemplates/framework"
         try:
-            out = xs.compose(self.fw, "web-app", [], "M", include_may=False)
+            out = xt.compose(self.fw, "web-app", [], "M", include_may=False)
         finally:
-            os.environ.pop("XS_FRAMEWORK_LINK", None)
-        self.assertIn("(.xstored/framework/01-baseline/security.md#a)", out)
+            os.environ.pop("XT_FRAMEWORK_LINK", None)
+        self.assertIn("(.xtemplates/framework/01-baseline/security.md#a)", out)
         self.assertIn("(https://x.y)", out)
 
     def test_compose_unknown_profile(self):
         with self.assertRaises(SystemExit):
-            xs.compose(self.fw, "khong-co", [], "M", include_may=False)
+            xt.compose(self.fw, "khong-co", [], "M", include_may=False)
 
     def test_blueprint_roundtrip_status(self):
-        out = xs.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
+        out = xt.compose(self.fw, "web-app", ["fintech"], "M", include_may=False, today="2026-10-13")
         bp = self.tmp / "BLUEPRINT.md"
         bp.write_text(out, encoding="utf-8")
-        s = xs.blueprint_status(bp)
+        s = xt.blueprint_status(bp)
         self.assertEqual(s["levels"]["MUST"]["open"], 3)
         text = out.replace("- [ ] `BASE-SEC-001`", "- [x] `BASE-SEC-001`")
         text = text.replace("- [ ] `BE-API-001`", "- [~] `BE-API-001`")  # miễn trừ thiếu lý do
         bp.write_text(text, encoding="utf-8")
-        s = xs.blueprint_status(bp)
+        s = xt.blueprint_status(bp)
         self.assertEqual(s["levels"]["MUST"]["done"], 1)
         self.assertEqual(s["open_must"], ["IND-FIN-001"])
         self.assertEqual(len(s["bad_waivers"]), 1)
@@ -420,15 +420,15 @@ class LoopTest(unittest.TestCase):
 
     def run_cli(self, *args) -> int:
         with redirect_stdout(io.StringIO()):
-            return xs.main(list(args))
+            return xt.main(list(args))
 
     def test_gateless_task_needs_gate(self):
         # AUD-HAR-008: task tick mà không có Gate thì không được tính xong chỉ vì một lệnh xanh bất kỳ.
         write(self.base / "docs" / "autopilot" / "PLAN.md", "- [x] `T-001` viết toàn bộ tính năng\n")
         self.assertEqual(self.run_cli("loop", "init"), 0)
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-001", ["true"], self.base)
-        v = xs.loop_verdict(self.base)
+            xt.loop_record("T-001", ["true"], self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "verify")
         self.assertIn("không có Gate", v["reason"])
 
@@ -437,16 +437,16 @@ class LoopTest(unittest.TestCase):
         write(self.base / "docs" / "autopilot" / "PLAN.md", "- [x] `T-001` x — Gate: `echo ok -- --run`\n")
         self.assertEqual(self.run_cli("loop", "init"), 0)
         self.assertEqual(self.run_cli("loop", "record", "--task", "T-001", "--", "echo", "ok", "--", "--run"), 0)
-        self.assertEqual(xs.read_evidence("T-001", self.base)["cmd"], "echo ok -- --run")
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
+        self.assertEqual(xt.read_evidence("T-001", self.base)["cmd"], "echo ok -- --run")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "done")
         self.assertEqual(
             self.run_cli("loop", "record", "--task", "T-002", "--", "python3", "-c", "print('hi there')"), 0
         )
-        self.assertTrue(xs.same_command("python3 -c \"print('a b')\"", "python3 -c 'print('\"'\"'a b'\"'\"')'"))
+        self.assertTrue(xt.same_command("python3 -c \"print('a b')\"", "python3 -c 'print('\"'\"'a b'\"'\"')'"))
 
     def test_task_id_rejects_trailing_newline(self):
         with self.assertRaises(argparse.ArgumentTypeError):
-            xs._task_id("T-003\n")
+            xt._task_id("T-003\n")
 
     def test_redact_common_secrets(self):
         # Chuỗi giả ghép lúc chạy để mã nguồn không chứa literal giống bí mật (gitleaks quét lịch sử).
@@ -471,84 +471,84 @@ class LoopTest(unittest.TestCase):
             + f"-----BEGIN RSA {key_word}-----\n{fake['pem']}\n-----END RSA {key_word}-----\n"
             + f"TOKEN={fake['tok']}"
         )
-        out = xs.redact(raw)
+        out = xt.redact(raw)
         for name, leak in fake.items():
             self.assertNotIn(leak if name != "aws" else leak[4:], out, name)
         self.assertIn("postgres://admin:***@db/x", out)
 
     def test_redact_applies_to_evidence_cmd(self):
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-009", ["echo --token SUPERSECRETVALUE; exit 1"], self.base)
-        ev = xs.read_evidence("T-009", self.base)
+            xt.loop_record("T-009", ["echo --token SUPERSECRETVALUE; exit 1"], self.base)
+        ev = xt.read_evidence("T-009", self.base)
         self.assertNotIn("SUPERSECRETVALUE", ev["cmd"] + ev["output_tail"])
 
     def test_inactive_allows_stop(self):
-        out, code = xs.hook_stop("{}", self.base)
+        out, code = xt.hook_stop("{}", self.base)
         self.assertEqual((out, code), ("", 0))
 
     def test_continue_then_verify_then_done(self):
         self.assertEqual(self.run_cli("loop", "init", "--max-iterations", "10"), 0)
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("continue", "T-001"))
-        out, _ = xs.hook_stop("{}", self.base)
+        out, _ = xt.hook_stop("{}", self.base)
         self.assertEqual(json.loads(out)["decision"], "block")
-        self.assertEqual(xs.read_state(self.base)["iterations"], 1)
+        self.assertEqual(xt.read_state(self.base)["iterations"], 1)
 
         plan = self.base / "docs" / "autopilot" / "PLAN.md"
         plan.write_text(plan.read_text(encoding="utf-8").replace("- [ ] `T-001`", "- [x] `T-001`"), encoding="utf-8")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("verify", "T-001"))  # tick mà chưa có bằng chứng
 
         # Bằng chứng chạy lệnh KHÁC với Gate khai báo -> vẫn verify
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-001", ["true"], self.base)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "verify")
+            xt.loop_record("T-001", ["true"], self.base)
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "verify")
 
         with redirect_stdout(io.StringIO()):
-            code = xs.loop_record("T-001", ['python3 -c "import sys; sys.exit(0)"'], self.base)
+            code = xt.loop_record("T-001", ['python3 -c "import sys; sys.exit(0)"'], self.base)
         self.assertEqual(code, 0)
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("continue", "T-002"))
 
         plan.write_text(plan.read_text(encoding="utf-8").replace("- [ ] `T-002`", "- [x] `T-002`"), encoding="utf-8")
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-002", ["true"], self.base)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
-        out, code = xs.hook_stop("{}", self.base)
+            xt.loop_record("T-002", ["true"], self.base)
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "done")
+        out, code = xt.hook_stop("{}", self.base)
         self.assertEqual((out, code), ("", 0))
-        self.assertFalse(xs.read_state(self.base)["active"])
+        self.assertFalse(xt.read_state(self.base)["active"])
 
     def test_same_failure_three_times_blocks(self):
         self.run_cli("loop", "init")
         with redirect_stdout(io.StringIO()):
             for _ in range(3):
-                xs.loop_record("T-001", ["sh -c 'echo boom at line 12; exit 3'"], self.base)
-        v = xs.loop_verdict(self.base)
+                xt.loop_record("T-001", ["sh -c 'echo boom at line 12; exit 3'"], self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
-        out, _ = xs.hook_stop("{}", self.base)
+        out, _ = xt.hook_stop("{}", self.base)
         self.assertEqual(out, "")  # blocked -> cho dừng
 
     def test_different_failures_do_not_block(self):
         self.run_cli("loop", "init")
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-001", ["sh -c 'echo A; exit 1'"], self.base)
-            xs.loop_record("T-001", ["sh -c 'echo B; exit 1'"], self.base)
-            xs.loop_record("T-001", ["sh -c 'echo C; exit 1'"], self.base)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
+            xt.loop_record("T-001", ["sh -c 'echo A; exit 1'"], self.base)
+            xt.loop_record("T-001", ["sh -c 'echo B; exit 1'"], self.base)
+            xt.loop_record("T-001", ["sh -c 'echo C; exit 1'"], self.base)
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "continue")
 
     def test_iteration_cap(self):
         self.run_cli("loop", "init", "--max-iterations", "2")
         for _ in range(2):
-            out, _ = xs.hook_stop("{}", self.base)
+            out, _ = xt.hook_stop("{}", self.base)
             self.assertIn("block", out)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "budget")
-        out, _ = xs.hook_stop("{}", self.base)
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "budget")
+        out, _ = xt.hook_stop("{}", self.base)
         self.assertEqual(out, "")
 
     def test_manual_block(self):
         self.run_cli("loop", "init")
         self.run_cli("loop", "block", "--reason", "cần duyệt thanh toán thật")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("thanh toán", v["reason"])
 
@@ -556,19 +556,19 @@ class LoopTest(unittest.TestCase):
         self.run_cli("loop", "init")
         with redirect_stdout(io.StringIO()):
             for _ in range(3):
-                xs.loop_record("T-001", ["sh -c 'echo boom; exit 3'"], self.base)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "blocked")
-        out, _ = xs.hook_stop("{}", self.base)  # blocked -> cho dừng, active=false
-        self.assertFalse(xs.read_state(self.base)["active"])
+                xt.loop_record("T-001", ["sh -c 'echo boom; exit 3'"], self.base)
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "blocked")
+        out, _ = xt.hook_stop("{}", self.base)  # blocked -> cho dừng, active=false
+        self.assertFalse(xt.read_state(self.base)["active"])
         self.assertEqual(self.run_cli("loop", "resume", "--reason", "đã sửa tay"), 0)
-        st = xs.read_state(self.base)
+        st = xt.read_state(self.base)
         self.assertTrue(st["active"])
         self.assertEqual(st["same_failure_count"], 0)
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "continue")
 
     def test_cli_hook_stop_fail_open_on_garbage(self):
         r = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "xs.py"), "loop", "hook-stop"],
+            [sys.executable, str(ROOT / "scripts" / "xt.py"), "loop", "hook-stop"],
             input="not json",
             capture_output=True,
             text=True,
@@ -587,7 +587,7 @@ class AuditRegressionTest(unittest.TestCase):
 
     def cli(self, *args, env=None) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "xs.py"), *args],
+            [sys.executable, str(ROOT / "scripts" / "xt.py"), *args],
             capture_output=True,
             text=True,
             cwd=self.tmp,
@@ -628,7 +628,7 @@ class AuditRegressionTest(unittest.TestCase):
         bp.write_text(
             unicodedata.normalize("NFD", "- [~] `X-001` **MUST** a — Miễn: không áp dụng\n"), encoding="utf-8"
         )
-        self.assertEqual(xs.blueprint_status(bp)["bad_waivers"], [])
+        self.assertEqual(xt.blueprint_status(bp)["bad_waivers"], [])
 
     def test_record_rejects_path_like_task_id(self):
         plan = self.tmp / "docs" / "autopilot" / "PLAN.md"
@@ -644,21 +644,21 @@ class AuditRegressionTest(unittest.TestCase):
         write(self.tmp / "docs" / "autopilot" / "PLAN.md", "- [ ] `T-001` x\n")
         env = {"CLAUDE_PROJECT_DIR": str(self.tmp)}
         self.cli("loop", "init", "--hours", "0", env=env)
-        self.assertIsNotNone(xs.read_state(self.tmp)["deadline"])
+        self.assertIsNotNone(xt.read_state(self.tmp)["deadline"])
 
     def test_evidence_redacts_secret_like_values(self):
         write(self.tmp / "docs" / "autopilot" / "PLAN.md", "- [ ] `T-001` x\n")
         with redirect_stdout(io.StringIO()):
-            xs.loop_record("T-001", ["echo API_KEY=sk-live-123 password: hunter2"], self.tmp)
-        tail = xs.read_evidence("T-001", self.tmp)["output_tail"]
+            xt.loop_record("T-001", ["echo API_KEY=sk-live-123 password: hunter2"], self.tmp)
+        tail = xt.read_evidence("T-001", self.tmp)["output_tail"]
         self.assertNotIn("sk-live-123", tail)
         self.assertNotIn("hunter2", tail)
 
 
 class CliContractTest(unittest.TestCase):
-    def run_xs(self, *args, stdin=None):
+    def run_xt(self, *args, stdin=None):
         return subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "xs.py"), *args],
+            [sys.executable, str(ROOT / "scripts" / "xt.py"), *args],
             input=stdin,
             capture_output=True,
             text=True,
@@ -666,26 +666,26 @@ class CliContractTest(unittest.TestCase):
         )
 
     def test_version_from_version_file(self):
-        r = self.run_xs("--version")
+        r = self.run_xt("--version")
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "xs.py " + (ROOT / "VERSION").read_text(encoding="utf-8").strip())
+        self.assertEqual(r.stdout.strip(), "xt.py " + (ROOT / "VERSION").read_text(encoding="utf-8").strip())
 
     def test_help_has_examples_and_exit_codes(self):
-        out = self.run_xs("--help").stdout
+        out = self.run_xt("--help").stdout
         self.assertIn("ví dụ:", out)
         self.assertIn("mã thoát:", out)
 
     def test_blueprint_status_json_from_stdin(self):
         bp = "- [x] `A-001` **MUST** a\n- [ ] `A-002` **MUST** b\n- [~] `A-003` **SHOULD** c\n"
-        r = self.run_xs("blueprint-status", "-", "--json", "--strict", stdin=bp)
+        r = self.run_xt("blueprint-status", "-", "--json", "--strict", stdin=bp)
         self.assertEqual(r.returncode, 1)
         d = json.loads(r.stdout)
         self.assertEqual((d["ok"], d["open_must"], d["bad_waivers"]), (False, ["A-002"], ["A-003 (dòng 3)"]))
 
     def test_readme_lists_every_subcommand(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        sub = next(a for a in xs.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
-        missing = [c for c in sub.choices if f"xs.py {c}" not in readme]
+        sub = next(a for a in xt.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
+        missing = [c for c in sub.choices if f"xt.py {c}" not in readme]
         self.assertEqual(missing, [], "README thiếu lệnh — cập nhật bảng Công cụ")
 
 
@@ -733,7 +733,7 @@ class ProgressCheckTest(unittest.TestCase):
     def check(self, text: str):
         f = self.repo / "PROGRESS.md"
         f.write_text(text, encoding="utf-8")
-        return xs.progress_check(f)
+        return xt.progress_check(f)
 
     def test_progress_ok_with_ancestor_sha(self):
         self.commit("b")
@@ -776,7 +776,7 @@ class ProgressCheckTest(unittest.TestCase):
         self.git("checkout", "-q", "main")
         tip = self.commit("main2")
         self.git("checkout", "-q", "feat")
-        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": "main"}):
+        with unittest.mock.patch.dict(os.environ, {"XT_PROGRESS_BASE": "main"}):
             self.git("merge", "-q", "--no-ff", "--no-commit", "main")
             self.assertEqual(self.check(GOOD_PROGRESS.format(sha=tip)), [])
             self.git("merge", "--abort")
@@ -793,7 +793,7 @@ class ProgressCheckTest(unittest.TestCase):
         tip = self.commit("main2")
         self.git("checkout", "-q", "-b", "feat", self.base)
         self.commit("feat")
-        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": ""}):
+        with unittest.mock.patch.dict(os.environ, {"XT_PROGRESS_BASE": ""}):
             self.git("merge", "-q", "--no-ff", "--no-commit", "main", "side")
             self.assertEqual(self.check(GOOD_PROGRESS.format(sha=side)), [])
             self.git("merge", "--abort")
@@ -811,20 +811,20 @@ class ProgressCheckTest(unittest.TestCase):
         # Squash-merge: SHA của nhánh PR là tổ tiên HEAD của nhánh nhưng không bao giờ vào nhánh chính.
         self.git("checkout", "-q", "-b", "feat")
         feat = self.commit("feat")
-        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": "main"}):
+        with unittest.mock.patch.dict(os.environ, {"XT_PROGRESS_BASE": "main"}):
             errs = self.check(GOOD_PROGRESS.format(sha=feat))
             self.assertEqual(len(errs), 1)
             self.assertIn("chưa nằm trên `main`", errs[0])
             self.assertEqual(self.check(GOOD_PROGRESS.format(sha=self.base)), [])
-        with unittest.mock.patch.dict(os.environ, {"XS_PROGRESS_BASE": ""}):
+        with unittest.mock.patch.dict(os.environ, {"XT_PROGRESS_BASE": ""}):
             self.assertEqual(self.check(GOOD_PROGRESS.format(sha=feat)), [])
 
     def test_progress_base_ref_from_origin(self):
         with unittest.mock.patch.dict(os.environ):
-            os.environ.pop("XS_PROGRESS_BASE", None)
-            self.assertIsNone(xs.progress_base_ref(self.repo))
+            os.environ.pop("XT_PROGRESS_BASE", None)
+            self.assertIsNone(xt.progress_base_ref(self.repo))
             self.git("update-ref", "refs/remotes/origin/main", self.base)
-            self.assertEqual(xs.progress_base_ref(self.repo), "origin/main")
+            self.assertEqual(xt.progress_base_ref(self.repo), "origin/main")
 
     def test_progress_uppercase_sha_tilde_fence_closing_hashes(self):
         text = (
@@ -839,7 +839,7 @@ class ProgressCheckTest(unittest.TestCase):
         f.write_text(GOOD_PROGRESS.format(sha="deadbeef"), encoding="utf-8")
         run = lambda *a: (
             subprocess.run(
-                [sys.executable, str(ROOT / "scripts" / "xs.py"), "progress-check", *a],
+                [sys.executable, str(ROOT / "scripts" / "xt.py"), "progress-check", *a],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -878,7 +878,7 @@ env:
 
 class CiCheckTest(unittest.TestCase):
     def errs(self, text: str):
-        return xs.ci_check_text(text)
+        return xt.ci_check_text(text)
 
     def test_ci_check_good_workflow(self):
         self.assertEqual(self.errs(GOOD_WORKFLOW), [])
@@ -951,7 +951,7 @@ class CiCheckTest(unittest.TestCase):
             (wf / "ci.yml").write_text(GOOD_WORKFLOW, encoding="utf-8")
             run = lambda *a: (
                 subprocess.run(
-                    [sys.executable, str(ROOT / "scripts" / "xs.py"), "ci-check", *a],
+                    [sys.executable, str(ROOT / "scripts" / "xt.py"), "ci-check", *a],
                     capture_output=True,
                     text=True,
                     check=False,
@@ -966,7 +966,7 @@ class CiCheckTest(unittest.TestCase):
 
     def test_ci_check_repo_workflows(self):
         self.assertEqual(
-            xs.ci_check(ROOT / ".github" / "workflows"),
+            xt.ci_check(ROOT / ".github" / "workflows"),
             {p.name: [] for p in (ROOT / ".github" / "workflows").iterdir() if p.suffix in (".yml", ".yaml")},
         )
 
@@ -974,7 +974,7 @@ class CiCheckTest(unittest.TestCase):
 def audit_status_text(groups=None, findings=()):
     groups = groups or {}
     rows = []
-    for no, code, name in xs.AUDIT_GROUPS:
+    for no, code, name in xt.AUDIT_GROUPS:
         state, sha, day, note = groups.get(no, ("N/A", "", "", "không áp dụng cho repo thử"))
         rows.append(f"| {no} | {code} | {name} | {state} | {sha} | {day} | {note} |")
     head = "| ID | Mức | Trạng thái | Tóm tắt | Bằng chứng | Gate | Ghi chú |\n|---|---|---|---|---|---|---|\n"
@@ -996,9 +996,9 @@ class GitTimeoutTest(unittest.TestCase):
             fake.chmod(0o755)
             with (
                 unittest.mock.patch.dict(os.environ, {"PATH": f"{d}:{os.environ['PATH']}"}),
-                unittest.mock.patch.object(xs, "GIT_TIMEOUT", 1),
+                unittest.mock.patch.object(xt, "GIT_TIMEOUT", 1),
             ):
-                r = xs._git(Path(d), "status")
+                r = xt._git(Path(d), "status")
         self.assertEqual(r.returncode, 124)
 
 
@@ -1011,7 +1011,7 @@ class WriteAtomicTest(unittest.TestCase):
             victim.write_text("giữ nguyên", encoding="utf-8")
             (d / "out").mkdir()
             (d / "out" / "BLUEPRINT.md.tmp").symlink_to(victim)
-            xs.write_atomic(d / "out" / "BLUEPRINT.md", "mới")
+            xt.write_atomic(d / "out" / "BLUEPRINT.md", "mới")
             self.assertEqual(victim.read_text(encoding="utf-8"), "giữ nguyên")
             self.assertEqual((d / "out" / "BLUEPRINT.md").read_text(encoding="utf-8"), "mới")
             self.assertEqual(sorted(p.name for p in (d / "out").iterdir()), ["BLUEPRINT.md", "BLUEPRINT.md.tmp"])
@@ -1057,14 +1057,14 @@ class AuditPlanTest(GitRepoMixin, unittest.TestCase):
             "Dockerfile",
             "AGENTS.md",
         ]
-        sig = xs.audit_signals(Path("."), files)
-        a = xs.audit_applicability(sig)
+        sig = xt.audit_signals(Path("."), files)
+        a = xt.audit_applicability(sig)
         self.assertEqual(sig["langs"], {"js/ts": 2})
         self.assertEqual((a[6][0], a[10][0], a[5][0], a[13][0]), ("áp dụng", "áp dụng", "áp dụng", "áp dụng"))
         self.assertIn("package-lock.json", a[7][1])
 
     def test_audit_plan_docs_only_repo(self):
-        a = xs.audit_applicability(xs.audit_signals(Path("."), ["README.md", "docs/x.md"]))
+        a = xt.audit_applicability(xt.audit_signals(Path("."), ["README.md", "docs/x.md"]))
         self.assertEqual([a[n][0] for n in (1, 3, 4, 6, 10, 12, 13)], ["N/A"] * 7)
         self.assertIn("KHÔNG có CI", a[8][1])
 
@@ -1077,8 +1077,8 @@ class AuditPlanTest(GitRepoMixin, unittest.TestCase):
         )
         self.commit_files({"lib/a.py": "1", "b.py": "1", "BLUEPRINT.md": bp}, 1_700_000_000)
         self.commit_files({"lib/a.py": "2"}, 1_700_000_100)
-        files = xs._repo_files(self.repo)
-        stale = xs.blueprint_stale_evidence(self.repo, self.repo / "BLUEPRINT.md", files)
+        files = xt._repo_files(self.repo)
+        stale = xt.blueprint_stale_evidence(self.repo, self.repo / "BLUEPRINT.md", files)
         self.assertEqual(stale, [{"id": "A-001", "kind": "Bằng chứng", "files": ["lib/a.py"]}])
 
     def test_audit_plan_rescan_from_status(self):
@@ -1092,7 +1092,7 @@ class AuditPlanTest(GitRepoMixin, unittest.TestCase):
         }
         self.commit_files({"docs/ops/AUDIT-STATUS.md": audit_status_text(groups)}, 1_700_000_050)
         self.commit_files({".github/workflows/ci.yml": "b"}, 1_700_000_100)
-        r = xs.audit_rescan(self.repo, self.repo / "docs/ops/AUDIT-STATUS.md")
+        r = xt.audit_rescan(self.repo, self.repo / "docs/ops/AUDIT-STATUS.md")
         self.assertIn("1 file đổi", r[8])
         self.assertEqual(r[1], "chưa quét")
         self.assertIn("không còn là tổ tiên", r[2])
@@ -1103,7 +1103,7 @@ class AuditPlanTest(GitRepoMixin, unittest.TestCase):
         self.init_repo()
         self.commit_files({"main.py": "print(1)", "tests/test_main.py": "x"}, 1_700_000_000)
         r = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "xs.py"), "audit", "plan", "--json"],
+            [sys.executable, str(ROOT / "scripts" / "xt.py"), "audit", "plan", "--json"],
             capture_output=True,
             text=True,
             check=False,
@@ -1121,7 +1121,7 @@ class AuditCheckTest(GitRepoMixin, unittest.TestCase):
         d = Path(root or self.enterContext(tempfile.TemporaryDirectory()))
         f = d / "AUDIT-STATUS.md"
         f.write_text(text, encoding="utf-8")
-        return xs.audit_check(f, strict=strict, today=xs._dt.date(2026, 10, 14))[0]
+        return xt.audit_check(f, strict=strict, today=xt._dt.date(2026, 10, 14))[0]
 
     GOOD = "AUD-SEC-001 | 🟠 | mở | lệnh `a \\| b` lọt guard | đo được: chạy hook → exit 0 | `python3 -m unittest` | "
 
@@ -1185,7 +1185,7 @@ class AuditCheckTest(GitRepoMixin, unittest.TestCase):
             self.assertIn(frag, errs)
 
     def test_audit_check_placeholder_inside_code_is_content(self):
-        row = "AUD-SEC-001 | 🟠 | mở | `git -C <dir> reset --hard` lọt | đo được: `<XS> loop` | `t` | "
+        row = "AUD-SEC-001 | 🟠 | mở | `git -C <dir> reset --hard` lọt | đo được: `<XT> loop` | `t` | "
         self.assertEqual(self.check(audit_status_text(findings=[row])), [])
 
     def test_audit_check_fixed_and_accepted_ok(self):
@@ -1217,7 +1217,7 @@ class AuditCheckTest(GitRepoMixin, unittest.TestCase):
         f.write_text(audit_status_text(findings=[self.GOOD]), encoding="utf-8")
         run = lambda *a: (
             subprocess.run(
-                [sys.executable, str(ROOT / "scripts" / "xs.py"), "audit", "check", *a],
+                [sys.executable, str(ROOT / "scripts" / "xt.py"), "audit", "check", *a],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -1232,7 +1232,7 @@ class RealFrameworkTest(unittest.TestCase):
     """Khung thật trong repo phải luôn hợp lệ."""
 
     def test_repo_framework_valid(self):
-        errs = xs.validate(xs.DEFAULT_FRAMEWORK)
+        errs = xt.validate(xt.DEFAULT_FRAMEWORK)
         self.assertEqual(errs, [], "\n".join(errs[:30]))
 
 
