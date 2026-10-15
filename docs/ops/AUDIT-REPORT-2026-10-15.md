@@ -157,3 +157,18 @@ khi đang merge (hết merge → đỏ lại, cùng test). `audit check --strict
 Review độc lập phần mã: APPROVE, 0 🔴/🟠, 2 🟢 — nhánh/tag tên `MERGE_HEAD` lọt khi không merge; octopus chỉ xét đầu thứ
 nhất. Cả hai sửa (đọc file `MERGE_HEAD` qua `git rev-parse --git-path`), test `test_progress_merge_head_octopus_and_fake_ref`
 đỏ trước/xanh sau. `merge --squash` không tạo `MERGE_HEAD` nên vẫn đỏ (reviewer đo).
+
+## 9. Sau merge #41 (`8e64aac`) — xác minh lại bằng chứng, quét lại delta
+
+`audit plan` cờ 31 bằng chứng blueprint trích file đổi ở #41 (`scripts/xs.py`, `tests/test_xs.py`, `CHANGELOG.md`) và 7 nhóm
+(ARCH, SEC, CODE, TEST, DOC, XFEAT, HAR). PLAN T-601…T-602 (duyệt qua `/autopilot`):
+
+| Lệnh | Exit | Kết quả |
+|---|---|---|
+| đối chiếu 21 dòng trích `xs.py` cũ (`425c269`) ↔ mới (dời +10 từ dòng 937 theo `git diff -U0`) | 0 | 21/21 khớp nội dung |
+| `changelog-check` · `ci-check` · `diff` mục `[2.0.0]` 55de4d1↔HEAD · grep ANSI/URL/`os.environ` | 0 | khẳng định giữ nguyên; 6 biến env |
+| bandit 1.8.6 · vulture 2.14 · gitleaks 8.28.0 `--all` | 1 · 3 · 0 | như trước (B602 đã biết + 7 Low; 4 báo nhầm); 139 commit sạch |
+| `scripts/dev-task.sh gate` | 0 | 310 test, coverage dòng + nhánh 100% |
+| `audit plan --json` | 0 | `stale_evidence` rỗng |
+
+Phát hiện mới: 0. Sửa: 5 số dòng, "11 ca" → "13 ca" (`BASE-DOC-008`), `LOOP-HARNESS-005` nêu `MERGE_HEAD`.
