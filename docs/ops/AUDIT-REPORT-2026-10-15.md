@@ -146,3 +146,7 @@ PROGRESS cũ (đã sửa). Mọi trích dẫn file:dòng và số đo khác tái
 
 Phát hiện mới khi merge: **AUD-HAR-020** 🟢 mở — `progress-check` bỏ qua `MERGE_HEAD` nên cổng commit chặn giải xung
 đột PROGRESS bằng SHA của `main`; sửa mã `xs.py` + test ở đợt sau, chờ duyệt.
+
+CI #41 lần đầu (run 38711914500): `quality` đỏ ở bước tiêu đề PR — tiêu đề 88 ký tự > 72 (luật squash-title, chỉ CI kiểm,
+`dev-task.sh gate` không thấy); `protection-guard`, `gitleaks`, `dep-audit`, `codeql` xanh. Đã rút tiêu đề còn 63 ký tự
+(71 byte, qua cả khi runner đếm byte). Bài học cho PR sau: kiểm độ dài tiêu đề trước khi mở PR.
