@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-15 · Nhánh: claude/vibrant-davinci-mbt518
 
 ## Đang làm
-- Đổi định danh kỹ thuật sang `.xtemplates/`/`xt.py`/`xt.yaml`/`XT_*` (ADR-0007, thay ADR-0006) trên nhánh `claude/modest-dijkstra-ltup0k`; chờ PR + CI. Trước đó không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) + AUD-HAR-020 (`progress-check` xét `MERGE_HEAD` khi merge) sửa ở #41 (đã merge); sau đó 31 bằng chứng blueprint xác minh lại (PLAN T-601…T-602): `audit check --strict` exit 0, 0 phát hiện mở; blueprint repo khung 0 MUST mở.
+- Đổi định danh kỹ thuật sang `.xtemplates/`/`xt.py`/`xt.yaml`/`XT_*` (ADR-0007, thay ADR-0006) trên nhánh `claude/modest-dijkstra-ltup0k` (PR #43, CI xanh ở `1c95604`); 24 bằng chứng blueprint trích file đổi đã xác minh lại cùng PR (0 khẳng định sai; sửa số dòng/run CI cũ). Còn: quét lại các nhóm audit theo delta sau merge. Trước đó không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) + AUD-HAR-020 (`progress-check` xét `MERGE_HEAD` khi merge) sửa ở #41 (đã merge); sau đó 31 bằng chứng blueprint xác minh lại (PLAN T-601…T-602): `audit check --strict` exit 0, 0 phát hiện mở; blueprint repo khung 0 MUST mở.
 
 ## Tiếp theo
 1. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
