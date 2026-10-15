@@ -3,10 +3,10 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; tag `v2.0.0` tạo qua workflow `release-tag.yml` (#33); autopilot chờ admin (Tiếp theo 1). Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
+- Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; tag `v2.0.0` tạo qua workflow `release-tag.yml` (#33); ruleset `main` đã khớp file. Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
 
 ## Tiếp theo
-1. Việc của admin (3 MUST mở: GATE-007, REPO-008/013): ruleset `main` id 25128933 đã active + 4 check; còn bật "Require branches to be up to date" (strict) và thêm rule "Require a pull request before merging" (0 approval, squash). Dependabot security updates: proxy chặn API, người tự kiểm.
+1. Blueprint repo khung: 0 MUST mở (ruleset `main` active 2026-10-15, tag `v2.0.0`). Admin tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset còn bật — khác file, vô hại khi 0 approval.
 2. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100% — hàm mới vượt thì tách, không `noqa`/pragma.
 3. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
 4. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận chuỗi tên mới.
@@ -33,5 +33,5 @@
 ## Bàn giao phiên
 - Commit cuối trên `main`: `4e4bcf7` (#33); tag `v2.0.0` → `55de4d1`; SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Đang chặn: 3 MUST cần admin sửa ruleset (Tiếp theo 1); người xong chạy `xs.py loop resume --reason ...`. PLAN T-401…T-403 xong.
-- Câu hỏi cần người: mục Tiếp theo 1 và 3.
+- Đang chặn: không. PLAN T-401…T-403 xong; `blueprint-status --strict` exit 0.
+- Câu hỏi cần người: mục Tiếp theo 3 (dự án thật để thử khung).
