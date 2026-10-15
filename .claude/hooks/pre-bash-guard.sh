@@ -22,7 +22,8 @@ if [ "$(json_field "$res" commit)" = "true" ] && [ "$(json_field "$res" no_verif
     [ -x "$g" ] && { gate="$g"; break; }
   done
   if [ -n "$gate" ]; then
-    if ! CLAUDE_PROJECT_DIR="$XS_ROOT" "$gate" gate; then
+    # stdout của cổng sang stderr: stdout của hook chỉ được chứa JSON quyết định.
+    if ! CLAUDE_PROJECT_DIR="$XS_ROOT" "$gate" gate >&2; then
       echo "❌ Cổng trước commit ĐỎ (build/typecheck/lint/test). Sửa rồi commit lại." >&2
       exit 2
     fi

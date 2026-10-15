@@ -89,10 +89,11 @@ class PreBashGuardTest(unittest.TestCase):
         code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
         self.assertEqual(code, 2, out + err)
         self.assertIn("ĐỎ", err)
-        (tmp / "xs.yaml").write_text("test: true\n", encoding="utf-8")
+        (tmp / "xs.yaml").write_text("test: echo tieng-on-stdout\n", encoding="utf-8")
         code, out, err = run_hook("pre-bash-guard.sh", cmd, tmp)
-        self.assertEqual((code, decision(out)), (0, "ask"), err)
+        self.assertEqual((code, decision(out)), (0, "ask"), out + err)  # stdout chỉ còn JSON quyết định
         self.assertIn("[dev-task]", err)  # cổng đã chạy trước khi hỏi
+        self.assertIn("tieng-on-stdout", err)
         code, out, err = run_hook(
             "pre-bash-guard.sh", {"tool_input": {"command": "git commit -am x && git reset --hard"}}, tmp
         )
