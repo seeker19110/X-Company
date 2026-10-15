@@ -127,8 +127,14 @@ Phát hiện mới (🟢, đều đo được):
 Ghi chú: PROGRESS ghi "commit cuối `05ec95d` (#38)" trong khi `main` là `b32e2a6` (#39) — giới hạn tự tham chiếu của
 commit bàn giao (squash), `progress-check` xanh; không tính phát hiện.
 
-### Kế hoạch sửa (chờ duyệt)
+### Kế hoạch sửa (duyệt 2026-10-15 qua `/autopilot`, xong — PLAN T-501…T-503)
 
 | Đợt | PR | Phát hiện | Gate |
 |---|---|---|---|
 | 1 | 1 PR `docs:` | AUD-HAR-019, AUD-DOC-022 | `audit plan --json` → `stale_evidence` rỗng; `audit check --strict` exit 0 |
+
+Kết quả đợt 1: AUD-HAR-019 sửa ở `LOOP-HARNESS-004` và mục cùng gốc `LOOP-HARNESS-001` (trích `docs/autopilot/PLAN.md`,
+lộ ra khi commit T-501 — PLAN viết lại mỗi lần autopilot); `BASE-REPO-006/007` vẫn trích `CHANGELOG.md` vì khẳng định
+phụ thuộc thật nội dung file đó. AUD-DOC-022: đo lại trên mã `05ec95d` (mã không đổi tới HEAD) — bandit 1.8.6 exit 1
+(chỉ B602 đã biết + 7 Low), vulture 2.14 exit 3 (4 báo nhầm đã biết), pip-audit 2.10.1 exit 0, ci-check exit 0, gitleaks
+exit 0 — ghi chú 5 dòng nhóm viết lại. `audit plan` → 0 bằng chứng blueprint cũ; `audit check --strict` exit 0, 0 phát hiện mở.
