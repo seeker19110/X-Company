@@ -1,24 +1,24 @@
 # AUDIT-STATUS — Khung X-Templates
 
-> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` · SHA quét = `main` `5627657` (sau #30–#35: đổi tên X-Templates, release-tag, guard hook-bypass) · delta từ 6490f7b.
+> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` · SHA quét = `main` `05ec95d` (sau #36–#38) · `audit check --strict` exit 0.
 
 ## Nhóm
 
 | # | Mã | Nhóm | Trạng thái | SHA | Ngày | Ghi chú |
 |---|---|---|---|---|---|---|
-| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: 4 script vẫn một file stdlib (ADR-0001); hook .sh mỏng gọi guard.py; ADR-0006 giữ `.xstored`/`XS_*` — không phát hiện mới |
-| 2 | SEC | Bảo mật | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: gitleaks 8.28.0 toàn lịch sử (124 commit) sạch; bandit chỉ B602 `loop record` shell=True (thiết kế, SECURITY.md); guard lọt wrapper (AUD-SEC-011) + hook-bypass 🟢 (012–014) |
-| 3 | CODE | Chất lượng mã | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: ruff/mypy --strict/shellcheck xanh; vulture chỉ báo nhầm shlex + `stdin_text`; refactor C901 đọc lại không đổi hành vi; noqa vô hiệu (AUD-CODE-003) |
-| 4 | TEST | Kiểm thử | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: 295 test, coverage dòng+nhánh 100%; quét AST không test thiếu assert; ca biên wrapper thiếu (AUD-SEC-011); đỏ giả coverage khi cổng chạy song song (AUD-TEST-002, suy luận) |
+| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | quét lại sau 3 đợt sửa (#36–#38, mỗi PR có reviewer độc lập): gate xanh 308 test coverage 100%, gitleaks 133 commit sạch, pip-audit sạch, bandit chỉ B602 đã biết, audit plan 0 bằng chứng cũ — không phát hiện mới |
+| 2 | SEC | Bảo mật | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: gitleaks 8.28.0 toàn lịch sử (124 commit) sạch; bandit chỉ B602 `loop record` shell=True (thiết kế, SECURITY.md); guard lọt wrapper (AUD-SEC-011) + hook-bypass 🟢 (012–014) |
+| 3 | CODE | Chất lượng mã | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: ruff/mypy --strict/shellcheck xanh; vulture chỉ báo nhầm shlex + `stdin_text`; refactor C901 đọc lại không đổi hành vi; noqa vô hiệu (AUD-CODE-003) |
+| 4 | TEST | Kiểm thử | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: 295 test, coverage dòng+nhánh 100%; quét AST không test thiếu assert; ca biên wrapper thiếu (AUD-SEC-011); đỏ giả coverage khi cổng chạy song song (AUD-TEST-002, suy luận) |
 | 5 | PERF | Hiệu năng | rút gọn | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | CLI: đo thời gian cổng (lint 1,3 s · typecheck 1,8 s · test 10,4 s); không phát hiện |
 | 6 | A11Y | A11y & UX | N/A | | | không có UI (`audit plan`: 0 file *.html/*.tsx/*.vue/*.css) |
 | 7 | DEP | Phụ thuộc | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: pip-audit 2.9.0 `--require-hashes --strict` 2 file: không lỗ hổng; coverage 7.16.2 Apache-2.0 có hash — không phát hiện mới |
-| 8 | CI | CI/CD | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: ci-check 7 workflow xanh; release-tag.yml: write chỉ ở job, input qua env, kiểm tổ tiên/SemVer/CHANGELOG/tag; ruleset main active 4 check; comment ci.yml lệch (AUD-DOC-021) |
-| 9 | DOC | Tài liệu | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: validate/check-links/progress-check xanh; đổi tên nhất quán; CHANGELOG trùng nhóm (AUD-DOC-020); 56 bằng chứng blueprint xác minh lại: 34 đúng, 2 sai (AUD-HAR-014/015), 20 lệch dòng (AUD-HAR-018) |
+| 8 | CI | CI/CD | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: ci-check 7 workflow xanh; release-tag.yml: write chỉ ở job, input qua env, kiểm tổ tiên/SemVer/CHANGELOG/tag; ruleset main active 4 check; comment ci.yml lệch (AUD-DOC-021) |
+| 9 | DOC | Tài liệu | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: validate/check-links/progress-check xanh; đổi tên nhất quán; CHANGELOG trùng nhóm (AUD-DOC-020); 56 bằng chứng blueprint xác minh lại: 34 đúng, 2 sai (AUD-HAR-014/015), 20 lệch dòng (AUD-HAR-018) |
 | 10 | DATA | Dữ liệu | N/A | | | không có CSDL/migration (`audit plan`: 0 file SQL/schema) |
 | 11 | CFG | Cấu hình & bí mật | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | biến `XS_*`, che bí mật trong bằng chứng |
-| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: gốc dự án xác định 3 cách khác nhau (AUD-XFEAT-001, suy luận) |
-| 13 | HAR | Harness & quy trình agent | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: ask bỏ qua cổng commit (AUD-HAR-013); blueprint mất → loop done (AUD-HAR-016, cố ý); trailer commit tên model (AUD-HAR-017) |
+| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: gốc dự án xác định 3 cách khác nhau (AUD-XFEAT-001, suy luận) |
+| 13 | HAR | Harness & quy trình agent | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: ask bỏ qua cổng commit (AUD-HAR-013); blueprint mất → loop done (AUD-HAR-016, cố ý); trailer commit tên model (AUD-HAR-017) |
 
 ## Phát hiện
 

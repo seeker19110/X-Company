@@ -33,7 +33,7 @@
 - 2026-10-15 Commit/PR không ghi tên model hay URL phiên AI (giữ AGENTS.md §3; AUD-HAR-017).
 
 ## Bàn giao phiên
-- Commit cuối trên `main`: `4e4bcf7` (#33); tag `v2.0.0` → `55de4d1`; SHA quét audit vẫn `6490f7b` (nhóm CODE/TEST cập nhật ở #26, #28).
+- Commit cuối trên `main`: `05ec95d` (#38); tag `v2.0.0` → `55de4d1`; SHA quét audit `05ec95d`.
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
 - Đang chặn: không. PLAN T-401…T-403 xong; `blueprint-status --strict` exit 0.
 - Câu hỏi cần người: mục Tiếp theo 3 (dự án thật để thử khung).
