@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import xs  # noqa: E402
+import xs
 
 SECTION_DIRS = ("01-baseline", "02-profiles", "03-industries", "08-backend")
 

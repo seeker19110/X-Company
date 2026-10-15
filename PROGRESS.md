@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-14 · Nhánh: claude/inspiring-darwin-k9eaud
 
 ## Đang làm
-- Audit delta 2026-10-15 (`docs/ops/AUDIT-REPORT-2026-10-15.md`): 4 🟠 + 11 🟢 mở, đã duyệt; đợt 1 #36 merge, đợt 2 #37, còn đợt 3 (§5).
+- Audit delta 2026-10-15 xong 3 đợt (#36, #37, #38): `audit check --strict` exit 0 — 0 🔴/🟠/🟢 mở.
 
 ## Tiếp theo
 1. Blueprint repo khung: 0 MUST mở (ruleset `main` active 2026-10-15, tag `v2.0.0`). Admin tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset còn bật — khác file, vô hại khi 0 approval.

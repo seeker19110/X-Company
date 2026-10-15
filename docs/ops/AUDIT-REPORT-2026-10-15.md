@@ -77,7 +77,7 @@ Blueprint biến mất → `loop status` = `done`: tái hiện được, nhưng 
 `test_xs_core.py:604`, CHANGELOG *Fixed*) và `loop stop` vốn thoát vòng lặp được. Còn đáng sửa: `loop init` nhận
 `--blueprint` không tồn tại; bảng verdict ở `loop-design.md` không nêu ngoại lệ.
 
-## 5. Kế hoạch sửa theo đợt (chờ duyệt)
+## 5. Kế hoạch sửa theo đợt (đã duyệt 2026-10-15, xong — xem §7)
 
 | Đợt | PR | Phát hiện | Gate đỏ trước khi sửa |
 |---|---|---|---|
@@ -90,3 +90,14 @@ Blueprint biến mất → `loop status` = `done`: tái hiện được, nhưng 
 
 - AUD-HAR-017: phiên audit này đã ngừng thêm trailer từ 2026-10-15; lịch sử cũ không rewrite (luật P8).
 - Đã biết, không tính phát hiện: guard không bóc `sh -c`/`eval`/alias/biến chứa cờ (giới hạn phân tích tĩnh, CHANGELOG).
+
+## 7. Kết quả sau sửa
+
+| Đợt | PR | Đóng | Ghi chú |
+|---|---|---|---|
+| 1 | #36 | AUD-SEC-011, AUD-HAR-013, AUD-SEC-012/013/014, AUD-HAR-017 (quyết định) | review phát hiện thêm 2 hồi quy (env -u/-C, `xargs --replace`) + 1 tự phát hiện (stdout cổng làm hỏng JSON ask) — sửa trong cùng PR, so sánh 65 lệnh cũ/mới |
+| 2 | #37 | AUD-HAR-014, AUD-HAR-015, AUD-HAR-018 | `BASE-REPO-007` mở lại tạm thời |
+| 3 | #38 | AUD-HAR-016, AUD-DOC-020/021, AUD-CODE-003, AUD-XFEAT-001, AUD-TEST-002 | `xs.py changelog-check` vào cổng lint → `BASE-REPO-007` đạt |
+
+`python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` → exit 0 (Definition of Complete);
+`blueprint-status BLUEPRINT.md --strict` → exit 0; `audit plan` → 0 bằng chứng blueprint cũ.

@@ -19,8 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import xs  # noqa: E402
-from test_xs import audit_status_text, make_framework  # noqa: E402
+import xs
+from test_xs import audit_status_text, make_framework
 
 
 def run_main(*args, stdin: str | None = None) -> tuple[int, str, str]:
@@ -572,6 +572,117 @@ class BlueprintStatusTextTest(TmpDirCase):
 # --------------------------------------------------------------------------- loop
 
 
+class ProjectDirTest(TmpDirCase):
+    """AUD-XFEAT-001: không có CLAUDE_PROJECT_DIR → gốc dự án = thư mục cha gần nhất có dấu hiệu dự án, không phải cwd."""
+
+    def test_walks_up_to_project_marker(self):
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        sub = self.tmp / "proj" / "a" / "b"
+        sub.mkdir(parents=True)
+        for marker in (".git", "xs.yaml", ".xstored", ".autopilot"):
+            m = self.tmp / "proj" / marker
+            m.mkdir() if marker != "xs.yaml" else m.write_text("", encoding="utf-8")
+            with (
+                unittest.mock.patch.dict(os.environ, env, clear=True),
+                unittest.mock.patch.object(os, "getcwd", return_value=str(sub)),
+            ):
+                self.assertEqual(xs.project_dir(), (self.tmp / "proj").resolve(), marker)
+            m.rmdir() if marker != "xs.yaml" else m.unlink()
+
+    def test_nested_git_repo_does_not_win_over_project_marker(self):
+        # Review #38: repo git lồng (apps/web/.git) trong dự án có xs.yaml → gốc vẫn là dự án.
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        proj = self.tmp / "p1"
+        (proj / ".git").mkdir(parents=True)
+        (proj / "xs.yaml").write_text("", encoding="utf-8")
+        web = proj / "apps" / "web"
+        (web / ".git").mkdir(parents=True)
+        with (
+            unittest.mock.patch.dict(os.environ, env, clear=True),
+            unittest.mock.patch.object(os, "getcwd", return_value=str(web)),
+        ):
+            self.assertEqual(xs.project_dir(), proj.resolve())
+
+    def test_installed_copy_uses_parent_of_xstored(self):
+        # Như dev-task.sh: xs.py ở `<gốc>/.xstored/scripts/` → gốc = cha của `.xstored`, bất kể cwd.
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+        proj = self.tmp / "dich"
+        scripts = proj / ".xstored" / "scripts"
+        scripts.mkdir(parents=True)
+        with (
+            unittest.mock.patch.dict(os.environ, env, clear=True),
+            unittest.mock.patch.object(xs, "SCRIPT_DIR", scripts),
+            unittest.mock.patch.object(os, "getcwd", return_value=str(self.tmp)),
+        ):
+            self.assertEqual(xs.project_dir(), proj.resolve())
+
+    def test_no_marker_falls_back_to_cwd_and_env_wins(self):
+        sub = self.tmp / "x"
+        sub.mkdir()
+        with (
+            unittest.mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": ""}),
+            unittest.mock.patch.object(os, "getcwd", return_value=str(sub)),
+        ):
+            self.assertEqual(xs.project_dir(), sub.resolve())
+        with unittest.mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(self.tmp)}):
+            self.assertEqual(xs.project_dir(), self.tmp.resolve())
+
+
+class ChangelogCheckTest(TmpDirCase):
+    """BASE-REPO-007 / AUD-DOC-020: cấu trúc CHANGELOG theo Keep a Changelog, bản mới nhất khớp VERSION."""
+
+    GOOD = (
+        "# Changelog\n\n## [Unreleased]\n\n### Added\n- a\n\n### Fixed\n- b\n\n"
+        "## [2.0.0] - 2026-10-14\n\n### Added\n- c\n\n## [1.0.0] - 2026-01-02\n\n### Added\n- d\n"
+    )
+
+    def errs(self, text: str, version: str | None = "2.0.0") -> list[str]:
+        return xs.changelog_check(text, version)
+
+    def test_good(self):
+        self.assertEqual(self.errs(self.GOOD), [])
+        self.assertEqual(self.errs(self.GOOD, None), [])
+
+    def test_violations(self):
+        cases = {
+            "Unreleased": self.GOOD.replace("## [Unreleased]", "## [Chưa phát hành]"),
+            "trùng": self.GOOD.replace("### Fixed\n- b", "### Added\n- b", 1),
+            "nhóm `### Misc`": self.GOOD.replace("### Fixed", "### Misc", 1),
+            "ngày ISO": self.GOOD.replace("## [1.0.0] - 2026-01-02", "## [1.0.0] - 02/01/2026"),
+            "giảm dần": self.GOOD.replace("[1.0.0] - 2026-01-02", "[3.0.0] - 2026-01-02"),
+            "ngày": self.GOOD.replace("2026-01-02", "2026-13-45"),
+            "ngày phải giảm": self.GOOD.replace("2026-01-02", "2027-01-02"),
+            "`### Added` trùng": self.GOOD.replace("### Fixed\n- b", "### Added (harness)\n- b", 1),
+        }
+        for want, text in cases.items():
+            got = self.errs(text)
+            self.assertTrue(any(want in e for e in got), f"{want}: {got}")
+        self.assertTrue(any("VERSION" in e for e in self.errs(self.GOOD, "2.1.0")))
+
+    def test_fenced_code_and_yanked(self):
+        text = self.GOOD.replace("### Fixed\n- b", "### Fixed\n- b\n\n```\n## ví dụ\n### Misc\n```", 1)
+        self.assertEqual(self.errs(text), [])
+        self.assertEqual(self.errs(self.GOOD.replace("2026-01-02", "2026-01-02 [YANKED]")), [])
+
+    def test_cli(self):
+        (self.tmp / "CHANGELOG.md").write_text(self.GOOD, encoding="utf-8")
+        (self.tmp / "VERSION").write_text("2.0.0\n", encoding="utf-8")
+        rc, out, _ = run_main("changelog-check", self.tmp / "CHANGELOG.md")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("✓", out)
+        (self.tmp / "VERSION").write_text("9.9.9\n", encoding="utf-8")
+        rc, out, _ = run_main("changelog-check", self.tmp / "CHANGELOG.md")
+        self.assertEqual(rc, 1)
+        self.assertIn("✗", out)
+        (self.tmp / "VERSION").unlink()
+        rc, out, _ = run_main("changelog-check", self.tmp / "CHANGELOG.md")
+        self.assertEqual(rc, 0, out)
+
+    def test_repo_changelog_passes(self):
+        rc, out, _ = run_main("changelog-check", ROOT / "CHANGELOG.md")
+        self.assertEqual(rc, 0, out)
+
+
 class LoopCommandsTest(TmpDirCase):
     def setUp(self):
         super().setUp()
@@ -587,6 +698,14 @@ class LoopCommandsTest(TmpDirCase):
         rc, out, err = run_main("loop", "init")
         self.assertEqual((rc, out), (2, ""))
         self.assertIn("✗ Không thấy docs/autopilot/PLAN.md", err)
+        self.assertIsNone(xs.read_state(self.tmp))
+
+    def test_init_with_missing_blueprint_is_exit_2(self):
+        # AUD-HAR-016: --blueprint trỏ file không có → báo lỗi, không bật vòng lặp (gõ nhầm sẽ làm verdict bỏ qua blueprint).
+        self.write_plan()
+        rc, out, err = run_main("loop", "init", "--blueprint", "TYPO.md")
+        self.assertEqual((rc, out), (2, ""))
+        self.assertIn("✗ Không thấy TYPO.md", err)
         self.assertIsNone(xs.read_state(self.tmp))
 
     def test_init_then_status_text_and_json(self):

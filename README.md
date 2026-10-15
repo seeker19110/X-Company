@@ -72,6 +72,7 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 | `python3 scripts/xs.py loop init/status/record/block/resume/stop` | Vòng lặp autopilot có bằng chứng |
 | `python3 scripts/install.py DỰ_ÁN [--with-github]` | Cài khung + harness vào dự án đích |
 | `python3 scripts/xs.py progress-check [FILE]` | `PROGRESS.md` ≤ 8 KB, đúng 4 mục, SHA ở Bàn giao phiên là tổ tiên HEAD và có trên nhánh chính (`XS_PROGRESS_BASE`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; CI cần `fetch-depth: 0`) |
+| `python3 scripts/xs.py changelog-check [FILE]` | `CHANGELOG.md` theo Keep a Changelog 1.1.0: `## [Unreleased]` đầu tiên, bản `## [X.Y.Z] - YYYY-MM-DD` giảm dần, nhóm chuẩn, không trùng nhóm trong Unreleased; bản mới nhất == `VERSION` cùng thư mục (nếu có) |
 | `python3 scripts/xs.py ci-check [DIR]` | Fitness function cho workflow CI: `permissions:` cấp workflow, không `write-all`, `uses:` ghim SHA 40 ký tự (`docker://` ghim `@sha256:`), job có `timeout-minutes`, không `continue-on-error` (ngoại lệ `# ci-check-allow: <lý do>`) |
 | `python3 scripts/xs.py audit plan [--blueprint F] [--status F] [--json]` | Dò stack → nhóm audit áp dụng/rút gọn/N/A kèm lý do, công cụ có/thiếu, bằng chứng blueprint trỏ file đã đổi sau khi ghi, nhóm cần quét lại theo `docs/ops/AUDIT-STATUS.md` |
 | `python3 scripts/xs.py audit check STATUS [--strict]` | Kiểm sổ audit (schema phát hiện, SHA quét là tổ tiên HEAD, chấp nhận rủi ro có chủ + hạn); `--strict` = Definition of Complete |
@@ -82,7 +83,8 @@ chạy cổng chất lượng trước mỗi commit. Luật cho mọi harness �
 
 Biến môi trường (đều tuỳ chọn): `XS_FRAMEWORK` (thư mục khung, mặc định cạnh `scripts/`) · `XS_FRAMEWORK_LINK` (gốc liên kết
 trong blueprint, mặc định `.xstored/framework`) · `XS_RECORD_TIMEOUT` (giây, mặc định 1800) · `XS_PROGRESS_BASE` (nhánh chính cho `progress-check`, mặc định `origin/HEAD` → `origin/main` → `origin/master`; rỗng = tắt) · `CLAUDE_PROJECT_DIR` (gốc dự án cho
-`loop`) · `XS_DEBUG=1` (in traceback khi lỗi).
+`loop`; không đặt thì: bản cài `.xstored/scripts/xs.py` → cha của `.xstored`; nếu không, thư mục cha gần nhất có
+`.autopilot`/`xs.yaml`/`.xstored`, rồi gần nhất có `.git` — thư mục cha là repo khác (vd `$HOME` dotfiles) sẽ thắng; không thấy thì cwd) · `XS_DEBUG=1` (in traceback khi lỗi).
 
 Kiểm tra trước khi đóng góp (cần Python ≥ 3.11 và shellcheck; ruff/mypy/coverage khoá kèm hash ở `requirements-dev.txt`):
 
