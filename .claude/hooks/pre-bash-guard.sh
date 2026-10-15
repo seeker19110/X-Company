@@ -12,12 +12,11 @@ payload="$(cat)"
 res="$(printf '%s' "$payload" | CLAUDE_PROJECT_DIR="$XS_ROOT" python3 "$(dirname "$0")/guard.py" bash 2>/dev/null)" || exit 0
 [ -n "$res" ] || exit 0
 decision="$(json_field "$res" decision)"
-if [ "$decision" = "deny" ] || [ "$decision" = "ask" ]; then
-  pretool_decision "$decision" "$(json_field "$res" reason)"
-fi
+[ "$decision" = "deny" ] && pretool_decision deny "$(json_field "$res" reason)"
 
-# ---- 3) Cổng trước commit ------------------------------------------------------
-if [ "$(json_field "$res" commit)" = "true" ]; then
+# ---- 3) Cổng trước commit (chạy TRƯỚC khi hỏi người — ask không được bỏ cổng, AUD-HAR-013) ----
+# `--no-verify` là chính câu hỏi "bỏ cổng?" → không chạy cổng, để người quyết.
+if [ "$(json_field "$res" commit)" = "true" ] && [ "$(json_field "$res" no_verify)" != "true" ]; then
   gate=""
   for g in "$XS_ROOT/scripts/dev-task.sh" "$XS_ROOT/.xstored/scripts/dev-task.sh"; do
     [ -x "$g" ] && { gate="$g"; break; }
@@ -35,4 +34,5 @@ if [ "$(json_field "$res" commit)" = "true" ]; then
     echo "💡 Diff staged lớn (${files} file, ~${lines} dòng). Cân nhắc chia nhỏ commit hoặc chạy /review trước." >&2
   fi
 fi
+[ "$decision" = "ask" ] && pretool_decision ask "$(json_field "$res" reason)"
 exit 0
