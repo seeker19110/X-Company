@@ -1,6 +1,6 @@
-"""Test lõi cho scripts/xs.py (frontmatter, validate, compose, vòng lặp autopilot, ghi nguyên tử).
+"""Test lõi cho scripts/xt.py (frontmatter, validate, compose, vòng lặp autopilot, ghi nguyên tử).
 
-Bổ sung cho test_xs.py: phủ các nhánh lỗi/biên. Chạy: python3 -m unittest discover -s tests -v
+Bổ sung cho test_xt.py: phủ các nhánh lỗi/biên. Chạy: python3 -m unittest discover -s tests -v
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import xs
+import xt
 
 SECTION_DIRS = ("01-baseline", "02-profiles", "03-industries", "08-backend")
 
@@ -75,33 +75,33 @@ class TmpMixin:
 
 class FrontmatterEdgeTest(unittest.TestCase):
     def test_blank_and_comment_lines_are_skipped(self):
-        meta, body, n = xs.parse_frontmatter("---\n\n# ghi chú\ntitle: A\n   \n---\n# Thân\n")
+        meta, body, n = xt.parse_frontmatter("---\n\n# ghi chú\ntitle: A\n   \n---\n# Thân\n")
         self.assertEqual(meta, {"title": "A"})
         self.assertEqual(body, "# Thân")
         self.assertEqual(n, 6)
 
     def test_line_without_colon(self):
-        with self.assertRaisesRegex(xs.FrontmatterError, "dòng frontmatter 2 không có dạng"):
-            xs.parse_frontmatter("---\nkhong co hai cham\n---\n")
+        with self.assertRaisesRegex(xt.FrontmatterError, "dòng frontmatter 2 không có dạng"):
+            xt.parse_frontmatter("---\nkhong co hai cham\n---\n")
 
     def test_invalid_key(self):
-        with self.assertRaisesRegex(xs.FrontmatterError, "khoá frontmatter không hợp lệ"):
-            xs.parse_frontmatter("---\nBad-Key: 1\n---\n")
+        with self.assertRaisesRegex(xt.FrontmatterError, "khoá frontmatter không hợp lệ"):
+            xt.parse_frontmatter("---\nBad-Key: 1\n---\n")
 
     def test_duplicate_key(self):
-        with self.assertRaisesRegex(xs.FrontmatterError, "khoá frontmatter lặp: title"):
-            xs.parse_frontmatter("---\ntitle: a\ntitle: b\n---\n")
+        with self.assertRaisesRegex(xt.FrontmatterError, "khoá frontmatter lặp: title"):
+            xt.parse_frontmatter("---\ntitle: a\ntitle: b\n---\n")
 
     def test_unclosed_and_missing_frontmatter(self):
-        with self.assertRaisesRegex(xs.FrontmatterError, "không có dòng '---' đóng"):
-            xs.parse_frontmatter("---\ntitle: a\n")
-        with self.assertRaisesRegex(xs.FrontmatterError, "thiếu frontmatter"):
-            xs.parse_frontmatter("")
-        with self.assertRaisesRegex(xs.FrontmatterError, "thiếu frontmatter"):
-            xs.parse_frontmatter("# không có\n")
+        with self.assertRaisesRegex(xt.FrontmatterError, "không có dòng '---' đóng"):
+            xt.parse_frontmatter("---\ntitle: a\n")
+        with self.assertRaisesRegex(xt.FrontmatterError, "thiếu frontmatter"):
+            xt.parse_frontmatter("")
+        with self.assertRaisesRegex(xt.FrontmatterError, "thiếu frontmatter"):
+            xt.parse_frontmatter("# không có\n")
 
     def test_values_quotes_lists_unicode(self):
-        meta, _, _ = xs.parse_frontmatter(
+        meta, _, _ = xt.parse_frontmatter(
             '---\na: "có dấu: ví dụ"\nb: \'x\'\nc: [p, "q r", ]\nd: []\ne: "\nf: \'\n---\n'
         )
         self.assertEqual(meta["a"], "có dấu: ví dụ")
@@ -113,10 +113,10 @@ class FrontmatterEdgeTest(unittest.TestCase):
         self.assertEqual(meta["f"], "'")
 
     def test_as_list(self):
-        self.assertEqual(xs._as_list(None), [])
-        self.assertEqual(xs._as_list("all"), ["all"])
-        self.assertEqual(xs._as_list(["a", 3]), ["a", "3"])
-        self.assertEqual(xs._as_list(""), [""])
+        self.assertEqual(xt._as_list(None), [])
+        self.assertEqual(xt._as_list("all"), ["all"])
+        self.assertEqual(xt._as_list(["a", 3]), ["a", "3"])
+        self.assertEqual(xt._as_list(""), [""])
 
 
 # --------------------------------------------------------------------------- load_docs / resolve_modules
@@ -125,7 +125,7 @@ class FrontmatterEdgeTest(unittest.TestCase):
 class LoadDocsTest(TmpMixin, unittest.TestCase):
     def test_bad_frontmatter_is_reported_and_doc_skipped(self):
         fw = make_fw(self.tmpdir(), {"08-backend/bad.md": "---\ntitle a\n---\n# x\n"})
-        docs, errors = xs.load_docs(fw)
+        docs, errors = xt.load_docs(fw)
         self.assertNotIn("08-backend/bad", {d.rel for d in docs})
         self.assertEqual(len(errors), 1)
         self.assertTrue(errors[0].startswith("08-backend/bad.md: dòng frontmatter 2"))
@@ -136,7 +136,7 @@ class LoadDocsTest(TmpMixin, unittest.TestCase):
             "- [ ] `OK-001` **SHOULD** hợp lệ\n"
         )
         fw = make_fw(self.tmpdir(), {"08-backend/m.md": md({"prefix": "OK"}, body)})
-        docs, errors = xs.load_docs(fw)
+        docs, errors = xt.load_docs(fw)
         doc = next(d for d in docs if d.rel == "08-backend/m")
         self.assertEqual([i.id for i in doc.items], ["OK-001"])
         self.assertEqual(len(errors), 1)
@@ -150,9 +150,9 @@ class LoadDocsTest(TmpMixin, unittest.TestCase):
                 "08-backend/idx.md": md({"kind": "index"}),
             },
         )
-        docs, _ = xs.load_docs(fw)
+        docs, _ = xt.load_docs(fw)
         by_rel = {d.rel: d for d in docs}
-        mods, missing = xs.resolve_modules(["08-backend/*", "99-none/*", "08-backend/api", "08-backend/zzz"], by_rel)
+        mods, missing = xt.resolve_modules(["08-backend/*", "99-none/*", "08-backend/api", "08-backend/zzz"], by_rel)
         self.assertEqual([m.rel for m in mods], ["08-backend/api"])  # README bị loại, index không phải module, bỏ trùng
         self.assertEqual(missing, ["99-none/*", "08-backend/zzz"])
 
@@ -162,7 +162,7 @@ class LoadDocsTest(TmpMixin, unittest.TestCase):
 
 class ValidateBranchesTest(TmpMixin, unittest.TestCase):
     def errors_for(self, files: dict[str, str]) -> list[str]:
-        return xs.validate(make_fw(self.tmpdir(), files))
+        return xt.validate(make_fw(self.tmpdir(), files))
 
     def assertHas(self, errors: list[str], needle: str) -> None:
         self.assertTrue(any(needle in e for e in errors), f"không thấy {needle!r} trong {errors}")
@@ -274,7 +274,7 @@ class ValidateBranchesTest(TmpMixin, unittest.TestCase):
     def test_directory_without_readme(self):
         fw = make_fw(self.tmpdir())
         (fw / "09-orphan").mkdir()
-        self.assertIn("09-orphan/: thiếu README.md (chỉ mục thư mục)", xs.validate(fw))
+        self.assertIn("09-orphan/: thiếu README.md (chỉ mục thư mục)", xt.validate(fw))
 
     def test_frontmatter_error_surfaces_from_validate(self):
         errors = self.errors_for({"08-backend/x.md": "# không frontmatter\n"})
@@ -309,7 +309,7 @@ class ValidateBranchesTest(TmpMixin, unittest.TestCase):
         )
         (fw / "09-orphan").mkdir()
         self.assertEqual(
-            xs.validate(fw),
+            xt.validate(fw),
             [
                 "02-profiles/p.md: thiếu mục '## Nguồn'",
                 "02-profiles/p.md: thiếu 'slug'",
@@ -356,27 +356,27 @@ class ComposeBranchesTest(TmpMixin, unittest.TestCase):
     def test_compose_refuses_framework_with_errors(self):
         fw = self.build({"08-backend/bad.md": "không frontmatter"})
         with self.assertRaises(SystemExit) as cm:
-            xs.compose(fw, "web", [], "M", False, today="2026-01-01")
-        self.assertIn("Khung có lỗi, chạy 'xs.py validate' trước", str(cm.exception))
+            xt.compose(fw, "web", [], "M", False, today="2026-01-01")
+        self.assertIn("Khung có lỗi, chạy 'xt.py validate' trước", str(cm.exception))
         self.assertIn("bad.md", str(cm.exception))
 
     def test_unknown_profile_and_industry(self):
         fw = self.build()
         with self.assertRaises(SystemExit) as cm:
-            xs.compose(fw, "nope", [], "M", False)
+            xt.compose(fw, "nope", [], "M", False)
         self.assertIn("Không có hồ sơ 'nope'", str(cm.exception))
         with self.assertRaises(SystemExit) as cm:
-            xs.compose(fw, "web", ["ghost"], "M", False)
+            xt.compose(fw, "web", ["ghost"], "M", False)
         self.assertIn("Không có gói ngành 'ghost'", str(cm.exception))
 
     def test_applies_to_filters_modules_unless_added_explicitly(self):
         fw = self.build()
         # Hồ sơ web dùng glob nên bắt cả hai module, nhưng module chỉ-mobile bị lọc theo applies_to.
-        out = xs.compose(fw, "web", [], "M", False, today="2026-01-01")
+        out = xt.compose(fw, "web", [], "M", False, today="2026-01-01")
         self.assertIn("`WEB-001`", out)
         self.assertNotIn("`MOB-001`", out)
         # --add là lựa chọn có chủ đích: bỏ lọc applies_to.
-        out = xs.compose(fw, "web", [], "M", False, today="2026-01-01", extra=["08-backend/mobile-only"])
+        out = xt.compose(fw, "web", [], "M", False, today="2026-01-01", extra=["08-backend/mobile-only"])
         self.assertIn("`MOB-001`", out)
         self.assertIn("extra: [08-backend/mobile-only]", out)
 
@@ -400,14 +400,14 @@ class ComposeBranchesTest(TmpMixin, unittest.TestCase):
             }
         )
         # Baseline lặp qua modules của ngành; ngành lặp hai lần trên CLI → mỗi mục chỉ xuất hiện một lần.
-        out = xs.compose(fw, "web", ["shop", "shop"], "M", False, today="2026-01-01")
+        out = xt.compose(fw, "web", ["shop", "shop"], "M", False, today="2026-01-01")
         self.assertEqual(out.count("`BAS-001`"), 1)
         self.assertEqual(out.count("`SHOP-001`"), 1)
         self.assertEqual(out.count("### Ngành shop"), 1)
 
     def test_bad_extra_module(self):
         with self.assertRaises(SystemExit) as cm:
-            xs.compose(self.build(), "web", [], "M", False, extra=["08-backend/khong-co"])
+            xt.compose(self.build(), "web", [], "M", False, extra=["08-backend/khong-co"])
         self.assertIn("Module --add không tồn tại: 08-backend/khong-co", str(cm.exception))
 
     def test_scale_s_demotes_module_must_and_may_toggle(self):
@@ -420,24 +420,24 @@ class ComposeBranchesTest(TmpMixin, unittest.TestCase):
                 )
             }
         )
-        out = xs.compose(fw, "web", [], "S", True, today="2026-01-01")
+        out = xt.compose(fw, "web", [], "S", True, today="2026-01-01")
         self.assertIn("`BAS-001` **MUST**", out)
         self.assertIn("`WEB-001` **SHOULD**", out)
         self.assertIn("| MAY | 1 |", out)
         self.assertIn("generated: 2026-01-01", out)
-        out_no_may = xs.compose(fw, "web", [], "S", False, today="2026-01-01")
+        out_no_may = xt.compose(fw, "web", [], "S", False, today="2026-01-01")
         self.assertNotIn("BAS-002", out_no_may)
         self.assertNotIn("| MAY |", out_no_may)
 
     def test_effective_level_and_find_by_slug(self):
-        item = xs.Item("X-001", "MUST", "L", "t", " ", 1)
-        self.assertEqual(xs.effective_level(item, "M"), "SHOULD")
-        self.assertEqual(xs.effective_level(item, "L"), "MUST")
-        may = xs.Item("X-002", "MAY", None, "t", " ", 1)
-        self.assertEqual(xs.effective_level(may, "S", "module"), "MAY")
-        docs, _ = xs.load_docs(self.build())
-        self.assertIsNotNone(xs.find_by_slug(docs, "profile", "web"))
-        self.assertIsNone(xs.find_by_slug(docs, "industry", "web"))
+        item = xt.Item("X-001", "MUST", "L", "t", " ", 1)
+        self.assertEqual(xt.effective_level(item, "M"), "SHOULD")
+        self.assertEqual(xt.effective_level(item, "L"), "MUST")
+        may = xt.Item("X-002", "MAY", None, "t", " ", 1)
+        self.assertEqual(xt.effective_level(may, "S", "module"), "MAY")
+        docs, _ = xt.load_docs(self.build())
+        self.assertIsNotNone(xt.find_by_slug(docs, "profile", "web"))
+        self.assertIsNone(xt.find_by_slug(docs, "industry", "web"))
 
 
 # --------------------------------------------------------------------------- JSON / write_atomic
@@ -446,47 +446,47 @@ class ComposeBranchesTest(TmpMixin, unittest.TestCase):
 class JsonAndAtomicTest(TmpMixin, unittest.TestCase):
     def test_read_json_obj_variants(self):
         d = self.tmpdir()
-        self.assertIsNone(xs._read_json_obj(d / "missing.json"))
+        self.assertIsNone(xt._read_json_obj(d / "missing.json"))
         (d / "bad.json").write_text("{không phải json", encoding="utf-8")
-        self.assertIsNone(xs._read_json_obj(d / "bad.json"))
+        self.assertIsNone(xt._read_json_obj(d / "bad.json"))
         (d / "list.json").write_text("[1, 2]", encoding="utf-8")
-        self.assertIsNone(xs._read_json_obj(d / "list.json"))
+        self.assertIsNone(xt._read_json_obj(d / "list.json"))
         (d / "ok.json").write_text('{"a": "ký tự có dấu"}', encoding="utf-8")
-        self.assertEqual(xs._read_json_obj(d / "ok.json"), {"a": "ký tự có dấu"})
+        self.assertEqual(xt._read_json_obj(d / "ok.json"), {"a": "ký tự có dấu"})
 
     def test_read_json_obj_unreadable_is_none(self):
         d = self.tmpdir()
         (d / "dir.json").mkdir()  # tồn tại nhưng đọc ra OSError
-        self.assertIsNone(xs._read_json_obj(d / "dir.json"))
+        self.assertIsNone(xt._read_json_obj(d / "dir.json"))
 
     def test_read_state_corrupt_is_fail_open(self):
         base = self.tmpdir()
         write(base / ".autopilot" / "state.json", "{hỏng")
-        self.assertIsNone(xs.read_state(base))
-        self.assertEqual(xs.loop_verdict(base)["verdict"], "inactive")
+        self.assertIsNone(xt.read_state(base))
+        self.assertEqual(xt.loop_verdict(base)["verdict"], "inactive")
 
     def test_write_atomic_cleans_temp_on_failure(self):
         d = self.tmpdir()
         target = d / "sub" / "out.txt"
-        with unittest.mock.patch("xs.os.replace", side_effect=OSError("đĩa đầy")):
+        with unittest.mock.patch("xt.os.replace", side_effect=OSError("đĩa đầy")):
             with self.assertRaisesRegex(OSError, "đĩa đầy"):
-                xs.write_atomic(target, "nội dung")
+                xt.write_atomic(target, "nội dung")
         self.assertFalse(target.exists())
         self.assertEqual(list(target.parent.iterdir()), [])
 
     def test_write_atomic_cleans_temp_on_keyboard_interrupt(self):
         d = self.tmpdir()
         target = d / "out.txt"
-        with unittest.mock.patch("xs.os.replace", side_effect=KeyboardInterrupt):
+        with unittest.mock.patch("xt.os.replace", side_effect=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):
-                xs.write_atomic(target, "x")
+                xt.write_atomic(target, "x")
         self.assertEqual(list(d.iterdir()), [])
 
     def test_write_atomic_writes_utf8_and_overwrites(self):
         d = self.tmpdir()
         target = d / "a" / "b.txt"
-        xs.write_atomic(target, "một")
-        xs.write_atomic(target, "hai — ✓")
+        xt.write_atomic(target, "một")
+        xt.write_atomic(target, "hai — ✓")
         self.assertEqual(target.read_text(encoding="utf-8"), "hai — ✓")
         self.assertEqual([p.name for p in target.parent.iterdir()], ["b.txt"])
 
@@ -502,7 +502,7 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
     def activate(self, **extra) -> None:
         st = {"active": True, "iterations": 0, "max_iterations": 50, "plan": "docs/autopilot/PLAN.md"}
         st.update(extra)
-        xs.write_state(st, self.base)
+        xt.write_state(st, self.base)
 
     def evidence(self, task: str, code: int, cmd: str) -> None:
         write(
@@ -511,65 +511,65 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
         )
 
     def test_inactive_and_blocked(self):
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "inactive")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "inactive")
         self.activate(blocked=True, blocked_reason="cần người")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["reason"]), ("blocked", "cần người"))
 
     def test_repeated_failure_blocks(self):
         self.activate(same_failure_count=3, last_failure_task="T-001")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("cùng một lỗi lặp 3 lần (T-001)", v["reason"])
 
     def test_budget_iterations(self):
         self.activate(iterations=2, max_iterations=2)
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "budget")
         self.assertIn("trần 2 vòng", v["reason"])
 
     def test_budget_deadline_passed_and_future(self):
         write(self.plan, "- [ ] `T-001` việc — Gate: `true`\n")
         self.activate(deadline="2000-01-01T00:00:00+00:00")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "budget")
         self.assertIn("quá hạn 2000-01-01", v["reason"])
         self.activate(deadline="2999-01-01T00:00:00+00:00")
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "continue")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "continue")
 
     def test_missing_plan_and_empty_plan(self):
         self.activate()
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("không thấy PLAN", v["reason"])
         write(self.plan, "# PLAN\n\nkhông có task nào\n")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "blocked")
         self.assertIn("PLAN không có task", v["reason"])
 
     def test_waived_task_is_skipped_and_next_open_is_continue(self):
         write(self.plan, "- [~] `T-001` bỏ qua\n- [ ] `T-002` làm tiếp — Gate: `true`\n")
         self.activate()
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("continue", "T-002"))
 
     def test_only_waived_tasks_is_done(self):
         write(self.plan, "- [~] `T-001` bỏ qua\n")
         self.activate()
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "done")
 
     def test_ticked_task_evidence_paths(self):
         write(self.plan, "- [x] `T-001` xong — Gate: `echo ok`\n")
         self.activate()
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("verify", "T-001"))
         self.assertIn("chưa có bằng chứng xanh", v["reason"])
         self.evidence("T-001", 1, "echo ok")
-        self.assertIn("chưa có bằng chứng xanh", xs.loop_verdict(self.base)["reason"])
+        self.assertIn("chưa có bằng chứng xanh", xt.loop_verdict(self.base)["reason"])
         self.evidence("T-001", 0, "echo khac")
-        self.assertIn("bằng chứng chạy lệnh khác", xs.loop_verdict(self.base)["reason"])
+        self.assertIn("bằng chứng chạy lệnh khác", xt.loop_verdict(self.base)["reason"])
         self.evidence("T-001", 0, "echo   'ok'")
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "done")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "done")
 
     def test_blueprint_open_must_continues(self):
         write(self.plan, "- [x] `T-001` xong — Gate: `true`\n")
@@ -579,7 +579,7 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
             "- [ ] `AAA-001` **MUST** a → Kiểm: t\n- [ ] `AAA-002` **MUST** b → Kiểm: t\n- [ ] `AAA-003` **SHOULD** c\n",
         )
         self.activate(blueprint="BP.md")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("continue", "AAA-001"))
         self.assertIn("còn 2 mục MUST", v["reason"])
 
@@ -588,7 +588,7 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
         self.evidence("T-001", 0, "true")
         write(self.base / "BP.md", "- [~] `AAA-001` **MUST** a → Kiểm: t\n- [x] `AAA-002` **MUST** b → Kiểm: t\n")
         self.activate(blueprint="BP.md")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "continue")
         self.assertIn("mục miễn trừ thiếu lý do: AAA-001 (dòng 1)", v["reason"])
 
@@ -597,18 +597,18 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
         self.evidence("T-001", 0, "true")
         write(self.base / "BP.md", "- [x] `AAA-001` **MUST** a\n- [~] `AAA-002` **MAY** b — Miễn: không cần\n")
         self.activate(blueprint="BP.md")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(
             (v["verdict"], v["reason"]), ("done", "mọi task có bằng chứng xanh và blueprint không còn MUST mở")
         )
         # Không kiểm được blueprint thì vẫn done (PLAN là nguồn sự thật) nhưng KHÔNG được khai "blueprint sạch".
         self.activate(blueprint="khong-co.md")
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "done")
         self.assertIn("không thấy blueprint khong-co.md", v["reason"])
         self.assertNotIn("không còn MUST mở", v["reason"])
         self.activate()
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual(v["verdict"], "done")
         self.assertIn("loop init không có --blueprint", v["reason"])
         self.assertNotIn("không còn MUST mở", v["reason"])
@@ -624,19 +624,19 @@ class LoopVerdictBranchesTest(TmpMixin, unittest.TestCase):
             iterations=50,
             deadline=past,
         )
-        self.assertEqual(xs.loop_verdict(self.base), {"verdict": "blocked", "reason": "r"})
+        self.assertEqual(xt.loop_verdict(self.base), {"verdict": "blocked", "reason": "r"})
         self.activate(same_failure_count=3, last_failure_task="T-009", iterations=50, deadline=past)
-        self.assertIn("cùng một lỗi lặp 3 lần (T-009)", xs.loop_verdict(self.base)["reason"])
+        self.assertIn("cùng một lỗi lặp 3 lần (T-009)", xt.loop_verdict(self.base)["reason"])
         self.activate(iterations=50, deadline=past)
-        self.assertEqual(xs.loop_verdict(self.base), {"verdict": "budget", "reason": "đã chạm trần 50 vòng"})
+        self.assertEqual(xt.loop_verdict(self.base), {"verdict": "budget", "reason": "đã chạm trần 50 vòng"})
         self.activate(deadline=past)  # PLAN chưa có nhưng hạn đã quá: budget thắng blocked-vì-thiếu-PLAN
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "budget")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "budget")
         write(self.base / "BP.md", "- [ ] `AAA-001` **MUST** a → Kiểm: t\n")
         write(self.plan, "- [x] `T-001` xong — Gate: `true`\n- [ ] `T-002` làm — Gate: `true`\n")
         self.activate(blueprint="BP.md")  # task tick thiếu bằng chứng đứng trước task chưa làm
-        self.assertEqual(xs.loop_verdict(self.base)["verdict"], "verify")
+        self.assertEqual(xt.loop_verdict(self.base)["verdict"], "verify")
         self.evidence("T-001", 0, "true")  # task chưa làm thắng blueprint còn MUST mở
-        v = xs.loop_verdict(self.base)
+        v = xt.loop_verdict(self.base)
         self.assertEqual((v["verdict"], v["task"]), ("continue", "T-002"))
 
 
@@ -651,45 +651,45 @@ class LoopRecordBranchesTest(TmpMixin, unittest.TestCase):
         ceiling.start()
         self.addCleanup(ceiling.stop)
         write(self.base / "docs" / "autopilot" / "PLAN.md", "- [ ] `T-001` việc — Gate: `true`\n")
-        xs.write_state({"active": True, "plan": "docs/autopilot/PLAN.md"}, self.base)
+        xt.write_state({"active": True, "plan": "docs/autopilot/PLAN.md"}, self.base)
         patcher = unittest.mock.patch.dict(os.environ)
         patcher.start()
         self.addCleanup(patcher.stop)
-        os.environ.pop("XS_RECORD_TIMEOUT", None)
+        os.environ.pop("XT_RECORD_TIMEOUT", None)
 
     def record(self, cmd, task="T-001"):
         out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out), redirect_stderr(err):
-            code = xs.loop_record(task, cmd, self.base)
+            code = xt.loop_record(task, cmd, self.base)
         return code, out.getvalue(), err.getvalue()
 
     def test_same_command_unbalanced_quote_falls_back_to_strip(self):
-        self.assertTrue(xs.same_command("echo 'a", "  echo 'a  "))
-        self.assertFalse(xs.same_command("echo 'a", "echo 'b"))
-        self.assertTrue(xs.same_command("echo  a", "echo 'a'"))
+        self.assertTrue(xt.same_command("echo 'a", "  echo 'a  "))
+        self.assertFalse(xt.same_command("echo 'a", "echo 'b"))
+        self.assertTrue(xt.same_command("echo  a", "echo 'a'"))
 
     def test_invalid_timeout_env_returns_2_and_writes_nothing(self):
-        os.environ["XS_RECORD_TIMEOUT"] = "abc"
+        os.environ["XT_RECORD_TIMEOUT"] = "abc"
         code, out, err = self.record(["true"])
         self.assertEqual(code, 2)
         self.assertEqual(out, "")
-        self.assertIn("XS_RECORD_TIMEOUT phải là số giây", err)
+        self.assertIn("XT_RECORD_TIMEOUT phải là số giây", err)
         self.assertFalse((self.base / ".autopilot" / "evidence").exists())
 
     def test_timeout_records_124_and_counts_failure(self):
         exc = subprocess.TimeoutExpired(cmd="sleep 9", timeout=1)
         with (
-            unittest.mock.patch("xs.subprocess.run", side_effect=exc),
-            unittest.mock.patch("xs._git_head", return_value=None),
+            unittest.mock.patch("xt.subprocess.run", side_effect=exc),
+            unittest.mock.patch("xt._git_head", return_value=None),
         ):
             code, out, _ = self.record(["sleep 9"])
             self.assertEqual(code, 124)
             self.assertIn("timeout", out)
             code, _, _ = self.record(["sleep 9"])
-        ev = xs.read_evidence("T-001", self.base)
+        ev = xt.read_evidence("T-001", self.base)
         self.assertEqual((ev["exit_code"], ev["cmd"], ev["head"]), (124, "sleep 9", None))
         self.assertIn("timeout", ev["output_tail"])
-        st = xs.read_state(self.base)
+        st = xt.read_state(self.base)
         self.assertEqual(st["same_failure_count"], 2)  # cùng chữ ký lỗi hai lần liền
         self.assertEqual(st["last_failure_task"], "T-001")
 
@@ -700,27 +700,27 @@ class LoopRecordBranchesTest(TmpMixin, unittest.TestCase):
         self.assertNotIn(secret, out)
         ev_raw = (self.base / ".autopilot" / "evidence" / "T-001.json").read_text(encoding="utf-8")
         self.assertNotIn(secret, ev_raw)
-        self.assertEqual(xs.read_state(self.base)["same_failure_count"], 1)
+        self.assertEqual(xt.read_state(self.base)["same_failure_count"], 1)
         code, _, _ = self.record(["true"])
         self.assertEqual(code, 0)
-        st = xs.read_state(self.base)
+        st = xt.read_state(self.base)
         self.assertEqual(st["same_failure_count"], 0)
         self.assertIsNone(st["last_failure_signature"])
 
     def test_record_without_state_still_writes_evidence(self):
         bare = self.tmpdir()
         with redirect_stdout(io.StringIO()):
-            self.assertEqual(xs.loop_record("T-009", ["true"], bare), 0)
-        self.assertEqual(xs.read_evidence("T-009", bare)["exit_code"], 0)
-        self.assertIsNone(xs.read_state(bare))
+            self.assertEqual(xt.loop_record("T-009", ["true"], bare), 0)
+        self.assertEqual(xt.read_evidence("T-009", bare)["exit_code"], 0)
+        self.assertIsNone(xt.read_state(bare))
 
     def test_git_head_failures_return_none(self):
         for exc in (FileNotFoundError("git"), subprocess.TimeoutExpired(cmd="git", timeout=10)):
-            with unittest.mock.patch("xs.subprocess.run", side_effect=exc):
-                self.assertIsNone(xs._git_head(self.base))
+            with unittest.mock.patch("xt.subprocess.run", side_effect=exc):
+                self.assertIsNone(xt._git_head(self.base))
 
     def test_git_head_real_repo_and_non_repo(self):
-        self.assertIsNone(xs._git_head(self.base))  # thư mục tạm không phải repo → stdout rỗng
+        self.assertIsNone(xt._git_head(self.base))  # thư mục tạm không phải repo → stdout rỗng
         subprocess.run(["git", "init", "-q", str(self.base)], check=True)
         subprocess.run(
             [
@@ -741,7 +741,7 @@ class LoopRecordBranchesTest(TmpMixin, unittest.TestCase):
             ],
             check=True,
         )
-        head = xs._git_head(self.base)
+        head = xt._git_head(self.base)
         self.assertRegex(head or "", r"^[0-9a-f]{40}$")
 
 

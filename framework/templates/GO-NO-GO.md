@@ -7,14 +7,14 @@ updated: 2026-10-13
 # Mẫu GO-NO-GO.md — báo cáo phát hành
 
 > **Ai viết:** AI/người kiểm chạy ở chế độ **report-only** (không deploy, không sửa); **người có thẩm quyền ký** quyết định cuối. **Giai đoạn:** G7 Verify & Release, trước mỗi phát hành production; cũng dùng cho nghiệm thu bàn giao.
-> **Cổng dùng:** G7 (`xs.py blueprint-status --strict` = 0 MUST mở, 0 BLOCKER FAIL), `PM-HANDOVER-006`.
+> **Cổng dùng:** G7 (`xt.py blueprint-status --strict` = 0 MUST mở, 0 BLOCKER FAIL), `PM-HANDOVER-006`.
 > **Luật "Evidence or FAIL":** mỗi mục ghi PASS / FAIL / N/A kèm bằng chứng cụ thể (file:dòng, giá trị cấu hình, output lệnh, link CI); "trông ổn", "framework lo rồi" = FAIL; N/A phải có lý do một dòng. Quét artefact thật (kể cả lịch sử git), không chỉ working tree.
 > **Mức:** `BLOCKER` — FAIL thì NO-GO; `SHOULD` — được GO nếu có ticket + chủ + hạn; `NICE` — ghi nhận. Thứ tự output cố định: đếm → bảng FAIL → kết luận → chữ ký.
 
 ```markdown
 # GO/NO-GO — <Tên dự án> · phát hành <phiên bản/tag> · <YYYY-MM-DD>
 
-> Commit: `<SHA>` · Blueprint: `xs.py blueprint-status BLUEPRINT.md --strict` → exit <0/1> (MUST mở: <n>) · CI: <link, xanh/đỏ>
+> Commit: `<SHA>` · Blueprint: `xt.py blueprint-status BLUEPRINT.md --strict` → exit <0/1> (MUST mở: <n>) · CI: <link, xanh/đỏ>
 > Người kiểm: <tên/agent> (report-only) · Phạm vi: <web/mobile/API — bỏ phần không áp dụng, ghi lý do>
 
 ## 1. Đếm
@@ -29,7 +29,7 @@ updated: 2026-10-13
 |---|---|---|---|---|
 | 1 | BLOCKER | Build tái lập từ clone sạch, không lỗi type/lint, không cờ giấu lỗi | PASS/FAIL/N/A | CI job `<tên>` run #<n>; `rg -n "ignoreBuildErrors|continue-on-error" ` → 0 |
 | 2 | BLOCKER | Toàn bộ test xanh (unit/integration/E2E luồng chính) | | run #<n>: <X/Y> |
-| 3 | BLOCKER | Blueprint: 0 MUST mở; miễn trừ có lý do | | `xs.py blueprint-status --strict` exit 0 |
+| 3 | BLOCKER | Blueprint: 0 MUST mở; miễn trừ có lý do | | `xt.py blueprint-status --strict` exit 0 |
 | 4 | BLOCKER | Không secret trong repo và lịch sử git | | `gitleaks detect --redact` → 0 |
 | 5 | BLOCKER | Phụ thuộc: 0 lỗ hổng mức cao chưa xử lý; license trong allowlist | | `<npm audit / pip-audit / osv-scanner>` output; `license-checker` |
 | 6 | BLOCKER | Kiểm quyền phía server cho mọi thao tác nhạy cảm; test "vượt quyền" xanh | | `tests/auth/*` run #<n> |

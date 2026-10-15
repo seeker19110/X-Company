@@ -6,7 +6,7 @@ argument-hint: "<tiêu đề quyết định>"
 
 # /adr — một quyết định, một bản ghi
 
-`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+`<FW>` = `.xtemplates/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XT>` = `python3 .xtemplates/scripts/xt.py` (hoặc `python3 scripts/xt.py`).
 
 1. Mẫu: `<FW>/templates/ADR.md`. Thư mục dự án: `docs/adr/NNNN-<slug>.md` (4 chữ số, tăng dần; `ls docs/adr` để lấy số kế).
 2. Viết đủ: **Bối cảnh** (vấn đề + ràng buộc + bằng chứng đã nghiên cứu, có ngày) · **Phương án đã xét** (≥ 2, ưu/nhược, chi phí) · **Quyết định** (một câu) · **Hệ quả** (tốt/xấu/nợ) · **Status** (Proposed/Accepted/Superseded by NNNN/Deprecated) · **Implementation status** (chưa/đang/đã — do code chứng minh, kèm PR).

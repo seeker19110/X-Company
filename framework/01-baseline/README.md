@@ -6,7 +6,7 @@ updated: 2026-10-14
 
 # 01 — Nền tảng chung — mọi phần mềm đều cần
 
-> Tám module `kind: baseline` **luôn được ghép** vào mọi blueprint (`xs.py compose`), bất kể hồ sơ hay ngành: chúng là
+> Tám module `kind: baseline` **luôn được ghép** vào mọi blueprint (`xt.py compose`), bất kể hồ sơ hay ngành: chúng là
 > sàn mà web, mobile, CLI, thư viện, data/ML, AI agent, game, nhúng… đều phải đạt. Viết **trung lập stack**; mục nào chỉ
 > đúng cho server/UI thì đặt ở module chuyên sâu của mảng khác, ở đây chỉ trỏ tới. Mức `MUST` là "thiếu là chưa đạt";
 > `MUST@M`/`MUST@L` hạ thành `SHOULD` ở quy mô nhỏ hơn.
@@ -24,7 +24,7 @@ updated: 2026-10-14
 
 ## Cách dùng
 
-1. `xs.py compose …` tự ghép cả tám file; không cần chọn.
+1. `xt.py compose …` tự ghép cả tám file; không cần chọn.
 2. Với dự án có sẵn: audit tám file này **trước** mọi module khác — đa số lỗ hổng vận hành thật nằm ở sàn (bí mật trong
    repo, CI xanh rỗng, runtime hết hỗ trợ, log có token).
 3. Mỗi mục `MUST` có `→ Kiểm:` là lệnh/test/cấu hình; blueprint chỉ tick khi có bằng chứng máy (P1).

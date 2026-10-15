@@ -1,4 +1,4 @@
-"""Test cho nửa sau scripts/xs.py: progress-check, ci-check, audit plan/check, các lệnh cmd_*, parser, main.
+"""Test cho nửa sau scripts/xt.py: progress-check, ci-check, audit plan/check, các lệnh cmd_*, parser, main.
 
 Gọi hàm/`main([...])` trong tiến trình (không subprocess) trừ khi cần git thật (repo tạm).
 """
@@ -19,19 +19,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import xs
-from test_xs import audit_status_text, make_framework
+import xt
+from test_xt import audit_status_text, make_framework
 
 
 def run_main(*args, stdin: str | None = None) -> tuple[int, str, str]:
-    """Chạy xs.main trong tiến trình; trả (exit code, stdout, stderr)."""
+    """Chạy xt.main trong tiến trình; trả (exit code, stdout, stderr)."""
     out, err = io.StringIO(), io.StringIO()
     with redirect_stdout(out), redirect_stderr(err):
         if stdin is None:
-            rc = xs.main([str(a) for a in args])
+            rc = xt.main([str(a) for a in args])
         else:
             with unittest.mock.patch.object(sys, "stdin", io.StringIO(stdin)):
-                rc = xs.main([str(a) for a in args])
+                rc = xt.main([str(a) for a in args])
     return rc, out.getvalue(), err.getvalue()
 
 
@@ -79,14 +79,14 @@ class ProgressCheckEdgeTest(TmpDirCase):
     def test_missing_handover_section_returns_early(self):
         f = self.tmp / "PROGRESS.md"
         f.write_text("## Đang làm\n\nx\n\n## Tiếp theo\n\ny\n", encoding="utf-8")
-        errors = xs.progress_check(f)
+        errors = xt.progress_check(f)
         self.assertEqual(len(errors), 1)
         self.assertIn("đang có: Đang làm · Tiếp theo", errors[0])
 
     def test_no_sections_at_all_reports_placeholder(self):
         f = self.tmp / "PROGRESS.md"
         f.write_text("chỉ có chữ\n", encoding="utf-8")
-        errors = xs.progress_check(f)
+        errors = xt.progress_check(f)
         self.assertIn("đang có: (không có)", errors[0])
 
     def test_sha_outside_git_repo_raises_oserror(self):
@@ -95,7 +95,7 @@ class ProgressCheckEdgeTest(TmpDirCase):
             "## Đang làm\n\n## Tiếp theo\n\n## Quyết định\n\n## Bàn giao phiên\n\ncommit `abcdef1`\n", encoding="utf-8"
         )
         with self.assertRaises(OSError) as cm:
-            xs.progress_check(f)
+            xt.progress_check(f)
         self.assertIn("không phải repo git", str(cm.exception))
         rc, out, err = run_main("progress-check", f)
         self.assertEqual((rc, out), (2, ""))
@@ -107,14 +107,14 @@ class ProgressCheckEdgeTest(TmpDirCase):
 
 class CiCheckEdgeTest(unittest.TestCase):
     def test_workflow_without_jobs_key(self):
-        self.assertEqual(xs.ci_check_text("permissions: read-all\non:\n  push:\n"), [])
+        self.assertEqual(xt.ci_check_text("permissions: read-all\non:\n  push:\n"), [])
 
     def test_jobs_key_without_body(self):
-        self.assertEqual(xs.ci_check_text("permissions: read-all\njobs:\n"), [])
+        self.assertEqual(xt.ci_check_text("permissions: read-all\njobs:\n"), [])
 
     def test_job_missing_timeout_still_reported_with_deeper_lines(self):
         text = "permissions: read-all\njobs:\n  a:\n    runs-on: x\n    steps:\n      - run: y\n"
-        errors = xs.ci_check_text(text)
+        errors = xt.ci_check_text(text)
         self.assertEqual(len(errors), 1)
         self.assertIn("job `a` thiếu `timeout-minutes`", errors[0])
 
@@ -126,7 +126,7 @@ class CiCheckEdgeTest(unittest.TestCase):
         )
         coe = "`continue-on-error` trên job/bước — ngoại lệ ghi `# ci-check-allow: <lý do + hạn>`"
         self.assertEqual(
-            xs.ci_check_text(text),
+            xt.ci_check_text(text),
             [
                 "thiếu `permissions:` cấp workflow (mặc định `contents: read`)",
                 "dòng 6: `a/b@v1` chưa ghim SHA 40 ký tự",
@@ -144,28 +144,28 @@ class CiCheckEdgeTest(unittest.TestCase):
 
 class MarkdownTableTest(unittest.TestCase):
     def test_split_row_without_outer_pipes(self):
-        self.assertEqual(xs.split_md_row("a | b"), ["a", "b"])
+        self.assertEqual(xt.split_md_row("a | b"), ["a", "b"])
 
     def test_split_row_with_outer_pipes_and_escaped_pipe(self):
-        self.assertEqual(xs.split_md_row("| a \\| b | c |"), ["a | b", "c"])
+        self.assertEqual(xt.split_md_row("| a \\| b | c |"), ["a | b", "c"])
 
     def test_split_row_trailing_escaped_pipe_is_content(self):
-        self.assertEqual(xs.split_md_row("| a \\|"), ["a |"])
+        self.assertEqual(xt.split_md_row("| a \\|"), ["a |"])
 
     def test_md_tables_ignores_fenced_rows(self):
         text = (
             "## Nhóm\n\n```\n| x | y |\n~~~\n| z |\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n~~~\n## Giả\n| q |\n~~~\n"
         )
-        tables = xs.md_tables(text)
+        tables = xt.md_tables(text)
         self.assertEqual(list(tables), ["Nhóm"])
         self.assertEqual(tables["Nhóm"], [{"a": "1", "b": "2"}])
 
     def test_md_tables_only_first_table_per_heading(self):
         text = "## T\n\n| a |\n|---|\n| 1 |\n\ntext\n\n| b |\n|---|\n| 2 |\n"
-        self.assertEqual(xs.md_tables(text), {"T": [{"a": "1"}]})
+        self.assertEqual(xt.md_tables(text), {"T": [{"a": "1"}]})
 
     def test_md_tables_pads_short_rows(self):
-        self.assertEqual(xs.md_tables("## T\n| a | b |\n|---|---|\n| 1 |\n"), {"T": [{"a": "1", "b": ""}]})
+        self.assertEqual(xt.md_tables("## T\n| a | b |\n|---|---|\n| 1 |\n"), {"T": [{"a": "1", "b": ""}]})
 
 
 # --------------------------------------------------------------------------- audit helpers
@@ -177,17 +177,17 @@ class RepoFilesTest(TmpDirCase):
             p = self.tmp / rel
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text("x", encoding="utf-8")
-        self.assertEqual(sorted(xs._repo_files(self.tmp)), ["a.py", "sub/b.md"])
+        self.assertEqual(sorted(xt._repo_files(self.tmp)), ["a.py", "sub/b.md"])
 
     def test_empty_directory(self):
-        self.assertEqual(xs._repo_files(self.tmp), [])
+        self.assertEqual(xt._repo_files(self.tmp), [])
 
 
 class AuditToolsTest(TmpDirCase):
     def test_group_without_relevant_stack_tool_is_omitted(self):
-        sig = xs.audit_signals(self.tmp, ["lib.rs"])
-        appl = xs.audit_applicability(sig)
-        tools = xs.audit_tools(self.tmp, sig, appl)
+        sig = xt.audit_signals(self.tmp, ["lib.rs"])
+        appl = xt.audit_applicability(sig)
+        tools = xt.audit_tools(self.tmp, sig, appl)
         self.assertNotIn(1, tools)  # lint-imports/depcruise/go: không cái nào hợp rust
         self.assertIn(3, tools)  # jscpd áp dụng mọi stack
         self.assertIn("jscpd", tools[3]["có"] + tools[3]["thiếu"])
@@ -197,29 +197,29 @@ class AuditToolsTest(TmpDirCase):
 class ToolPresentTest(TmpDirCase):
     """Tất định, không phụ thuộc PATH của máy chạy test."""
 
-    def test_xs_builtin_is_always_present(self):
-        with unittest.mock.patch.object(xs.shutil, "which", return_value=None):
-            self.assertTrue(xs._tool_present(self.tmp, "xs:ci-check"))
+    def test_xt_builtin_is_always_present(self):
+        with unittest.mock.patch.object(xt.shutil, "which", return_value=None):
+            self.assertTrue(xt._tool_present(self.tmp, "xt:ci-check"))
 
     def test_tool_on_path(self):
-        with unittest.mock.patch.object(xs.shutil, "which", return_value="/usr/bin/gitleaks") as which:
-            self.assertTrue(xs._tool_present(self.tmp, "gitleaks"))
+        with unittest.mock.patch.object(xt.shutil, "which", return_value="/usr/bin/gitleaks") as which:
+            self.assertTrue(xt._tool_present(self.tmp, "gitleaks"))
         which.assert_called_once_with("gitleaks")
 
     def test_tool_in_node_modules_bin(self):
         (self.tmp / "node_modules" / ".bin").mkdir(parents=True)
         (self.tmp / "node_modules" / ".bin" / "jscpd").write_text("", encoding="utf-8")
-        with unittest.mock.patch.object(xs.shutil, "which", return_value=None):
-            self.assertTrue(xs._tool_present(self.tmp, "jscpd"))
-            self.assertFalse(xs._tool_present(self.tmp, "lychee"))
+        with unittest.mock.patch.object(xt.shutil, "which", return_value=None):
+            self.assertTrue(xt._tool_present(self.tmp, "jscpd"))
+            self.assertFalse(xt._tool_present(self.tmp, "lychee"))
 
     def test_python_tool_falls_back_to_importable_module(self):
         with (
-            unittest.mock.patch.object(xs.shutil, "which", return_value=None),
-            unittest.mock.patch.object(xs.importlib.util, "find_spec", return_value=object()) as spec,
+            unittest.mock.patch.object(xt.shutil, "which", return_value=None),
+            unittest.mock.patch.object(xt.importlib.util, "find_spec", return_value=object()) as spec,
         ):
-            self.assertTrue(xs._tool_present(self.tmp, "pip-audit"))
-            self.assertFalse(xs._tool_present(self.tmp, "osv-scanner"))  # không phải gói Python: không dò module
+            self.assertTrue(xt._tool_present(self.tmp, "pip-audit"))
+            self.assertFalse(xt._tool_present(self.tmp, "osv-scanner"))  # không phải gói Python: không dò module
         spec.assert_called_once_with("pip_audit")
 
 
@@ -227,16 +227,16 @@ class ResolveRefTest(unittest.TestCase):
     FILES = ["a/x.py", "b/x.py", "c/y.py"]
 
     def test_exact_match(self):
-        self.assertEqual(xs._resolve_ref("a/x.py", self.FILES), "a/x.py")
+        self.assertEqual(xt._resolve_ref("a/x.py", self.FILES), "a/x.py")
 
     def test_unique_suffix_match(self):
-        self.assertEqual(xs._resolve_ref("y.py", self.FILES), "c/y.py")
+        self.assertEqual(xt._resolve_ref("y.py", self.FILES), "c/y.py")
 
     def test_ambiguous_suffix_is_none(self):
-        self.assertIsNone(xs._resolve_ref("x.py", self.FILES))
+        self.assertIsNone(xt._resolve_ref("x.py", self.FILES))
 
     def test_unknown_is_none(self):
-        self.assertIsNone(xs._resolve_ref("z.py", self.FILES))
+        self.assertIsNone(xt._resolve_ref("z.py", self.FILES))
 
 
 class PathGroupsTest(unittest.TestCase):
@@ -262,7 +262,7 @@ class PathGroupsTest(unittest.TestCase):
         }
         for path, expected in cases.items():
             with self.subTest(path=path):
-                self.assertEqual(xs._path_groups(path), expected)
+                self.assertEqual(xt._path_groups(path), expected)
 
 
 class AuditStatusGroupsTest(TmpDirCase):
@@ -272,14 +272,14 @@ class AuditStatusGroupsTest(TmpDirCase):
             "## Nhóm\n\n| # | Mã | Trạng thái |\n|---|---|---|\n| x | FOO | N/A |\n| 1 | ARCH | đã quét |\n",
             encoding="utf-8",
         )
-        groups = xs.audit_status_groups(f)
+        groups = xt.audit_status_groups(f)
         self.assertEqual(list(groups), [1])
         self.assertEqual(groups[1]["Trạng thái"], "đã quét")
 
     def test_missing_table_gives_empty(self):
         f = self.tmp / "S.md"
         f.write_text("# trống\n", encoding="utf-8")
-        self.assertEqual(xs.audit_status_groups(f), {})
+        self.assertEqual(xt.audit_status_groups(f), {})
 
 
 class AuditRescanTest(TmpRepoCase):
@@ -289,7 +289,7 @@ class AuditRescanTest(TmpRepoCase):
         status = self.tmp / "S.md"
         groups = {1: ("đã quét", c1, "2026-10-14", ""), 3: ("đã quét", "", "2026-10-14", "")}
         status.write_text(audit_status_text(groups), encoding="utf-8")
-        rescan = xs.audit_rescan(self.repo, status)
+        rescan = xt.audit_rescan(self.repo, status)
         self.assertNotIn(1, rescan)  # không file nào đổi từ SHA quét
         self.assertIn("SHA `—` không còn là tổ tiên HEAD", rescan[3])
         self.assertEqual(set(rescan), {3})  # còn lại N/A
@@ -299,19 +299,19 @@ class ShaOkTest(TmpRepoCase):
     def test_sha_validation(self):
         self.init_repo()
         c1 = self.commit_files({"a": "1"}, 1_700_000_000)
-        self.assertEqual(xs._sha_ok(self.repo, "not-a-sha"), "SHA không hợp lệ")
-        self.assertEqual(xs._sha_ok(self.repo, "abc"), "SHA không hợp lệ")  # quá ngắn
-        self.assertIn("không có trong lịch sử", xs._sha_ok(self.repo, "deadbeef"))
-        self.assertIsNone(xs._sha_ok(self.repo, c1))
+        self.assertEqual(xt._sha_ok(self.repo, "not-a-sha"), "SHA không hợp lệ")
+        self.assertEqual(xt._sha_ok(self.repo, "abc"), "SHA không hợp lệ")  # quá ngắn
+        self.assertIn("không có trong lịch sử", xt._sha_ok(self.repo, "deadbeef"))
+        self.assertIsNone(xt._sha_ok(self.repo, c1))
         self.git("checkout", "-q", "--orphan", "other")
         self.commit_files({"b": "1"}, 1_700_000_100)
-        self.assertIn("không phải tổ tiên HEAD", xs._sha_ok(self.repo, c1))
+        self.assertIn("không phải tổ tiên HEAD", xt._sha_ok(self.repo, c1))
 
 
 class StaleEvidenceTest(TmpRepoCase):
     def test_unreadable_blueprint_gives_empty(self):
         self.init_repo()
-        self.assertEqual(xs.blueprint_stale_evidence(self.repo, self.repo / "khong-co.md", []), [])
+        self.assertEqual(xt.blueprint_stale_evidence(self.repo, self.repo / "khong-co.md", []), [])
 
     def test_skips_and_caches(self):
         self.init_repo()
@@ -328,8 +328,8 @@ class StaleEvidenceTest(TmpRepoCase):
         # dòng chưa commit: blame trả hash toàn số 0 → bỏ qua
         with (self.repo / "BLUEPRINT.md").open("a", encoding="utf-8") as f:
             f.write("- [x] `A-007` **MUST** mới sửa → Kiểm: x — Bằng chứng: lib/a.py\n")
-        files = xs._repo_files(self.repo)
-        stale = xs.blueprint_stale_evidence(self.repo, self.repo / "BLUEPRINT.md", files)
+        files = xt._repo_files(self.repo)
+        stale = xt.blueprint_stale_evidence(self.repo, self.repo / "BLUEPRINT.md", files)
         self.assertEqual(
             stale,
             [
@@ -343,7 +343,7 @@ class StaleEvidenceTest(TmpRepoCase):
         self.commit_files({"lib/a.py": "1"}, 1_700_000_000)
         bp = self.repo / "BLUEPRINT.md"  # chưa git add → blame lỗi
         bp.write_text("- [x] `A-001` **MUST** x → Kiểm: y — Bằng chứng: lib/a.py\n", encoding="utf-8")
-        self.assertEqual(xs.blueprint_stale_evidence(self.repo, bp, xs._repo_files(self.repo)), [])
+        self.assertEqual(xt.blueprint_stale_evidence(self.repo, bp, xt._repo_files(self.repo)), [])
 
 
 # --------------------------------------------------------------------------- audit check
@@ -353,7 +353,7 @@ class AuditCheckEdgeTest(TmpDirCase):
     def check(self, text: str, strict: bool = False) -> list[str]:
         f = self.tmp / "AUDIT-STATUS.md"
         f.write_text(text, encoding="utf-8")
-        return xs.audit_check(f, strict=strict, today=xs._dt.date(2026, 10, 14))[0]
+        return xt.audit_check(f, strict=strict, today=xt._dt.date(2026, 10, 14))[0]
 
     def test_missing_both_tables(self):
         errors = self.check("# không có bảng\n")
@@ -378,7 +378,7 @@ class AuditCheckEdgeTest(TmpDirCase):
         self.assertIn("nhóm `²`: số nhóm phải 1–13", errors)
         self.assertIn("nhóm 1: phải có đúng 1 dòng (đang có 0)", errors)
         f = self.tmp / "AUDIT-STATUS.md"
-        self.assertNotIn(1, xs.audit_status_groups(f))
+        self.assertNotIn(1, xt.audit_status_groups(f))
 
     def test_impossible_due_date_is_an_error_not_a_crash(self):
         # "2026-13-45" khớp regex YYYY-MM-DD nhưng không phải ngày thật → từng văng ValueError.
@@ -411,8 +411,8 @@ class AuditCheckEdgeTest(TmpDirCase):
         text = audit_status_text(groups, findings).replace("| 5 | PERF |", "| 5 | SPEED |")
         f = self.tmp / "AUDIT-STATUS.md"
         f.write_text(text.replace("| 7 | DEP |", "| 99 | DEP |"), encoding="utf-8")
-        errors, counts = xs.audit_check(f, strict=True, today=xs._dt.date(2026, 10, 14))
-        id_form = "ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc " + ", ".join(xs.AUDIT_CODES)
+        errors, counts = xt.audit_check(f, strict=True, today=xt._dt.date(2026, 10, 14))
+        id_form = "ID phải dạng AUD-<MÃ>-NNN với MÃ thuộc " + ", ".join(xt.AUDIT_CODES)
         self.assertEqual(
             errors,
             [
@@ -579,42 +579,42 @@ class ProjectDirTest(TmpDirCase):
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
         sub = self.tmp / "proj" / "a" / "b"
         sub.mkdir(parents=True)
-        for marker in (".git", "xs.yaml", ".xstored", ".autopilot"):
+        for marker in (".git", "xt.yaml", ".xtemplates", ".autopilot"):
             m = self.tmp / "proj" / marker
-            m.mkdir() if marker != "xs.yaml" else m.write_text("", encoding="utf-8")
+            m.mkdir() if marker != "xt.yaml" else m.write_text("", encoding="utf-8")
             with (
                 unittest.mock.patch.dict(os.environ, env, clear=True),
                 unittest.mock.patch.object(os, "getcwd", return_value=str(sub)),
             ):
-                self.assertEqual(xs.project_dir(), (self.tmp / "proj").resolve(), marker)
-            m.rmdir() if marker != "xs.yaml" else m.unlink()
+                self.assertEqual(xt.project_dir(), (self.tmp / "proj").resolve(), marker)
+            m.rmdir() if marker != "xt.yaml" else m.unlink()
 
     def test_nested_git_repo_does_not_win_over_project_marker(self):
-        # Review #38: repo git lồng (apps/web/.git) trong dự án có xs.yaml → gốc vẫn là dự án.
+        # Review #38: repo git lồng (apps/web/.git) trong dự án có xt.yaml → gốc vẫn là dự án.
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
         proj = self.tmp / "p1"
         (proj / ".git").mkdir(parents=True)
-        (proj / "xs.yaml").write_text("", encoding="utf-8")
+        (proj / "xt.yaml").write_text("", encoding="utf-8")
         web = proj / "apps" / "web"
         (web / ".git").mkdir(parents=True)
         with (
             unittest.mock.patch.dict(os.environ, env, clear=True),
             unittest.mock.patch.object(os, "getcwd", return_value=str(web)),
         ):
-            self.assertEqual(xs.project_dir(), proj.resolve())
+            self.assertEqual(xt.project_dir(), proj.resolve())
 
-    def test_installed_copy_uses_parent_of_xstored(self):
-        # Như dev-task.sh: xs.py ở `<gốc>/.xstored/scripts/` → gốc = cha của `.xstored`, bất kể cwd.
+    def test_installed_copy_uses_parent_of_xtemplates(self):
+        # Như dev-task.sh: xt.py ở `<gốc>/.xtemplates/scripts/` → gốc = cha của `.xtemplates`, bất kể cwd.
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
         proj = self.tmp / "dich"
-        scripts = proj / ".xstored" / "scripts"
+        scripts = proj / ".xtemplates" / "scripts"
         scripts.mkdir(parents=True)
         with (
             unittest.mock.patch.dict(os.environ, env, clear=True),
-            unittest.mock.patch.object(xs, "SCRIPT_DIR", scripts),
+            unittest.mock.patch.object(xt, "SCRIPT_DIR", scripts),
             unittest.mock.patch.object(os, "getcwd", return_value=str(self.tmp)),
         ):
-            self.assertEqual(xs.project_dir(), proj.resolve())
+            self.assertEqual(xt.project_dir(), proj.resolve())
 
     def test_no_marker_falls_back_to_cwd_and_env_wins(self):
         sub = self.tmp / "x"
@@ -623,9 +623,9 @@ class ProjectDirTest(TmpDirCase):
             unittest.mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": ""}),
             unittest.mock.patch.object(os, "getcwd", return_value=str(sub)),
         ):
-            self.assertEqual(xs.project_dir(), sub.resolve())
+            self.assertEqual(xt.project_dir(), sub.resolve())
         with unittest.mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(self.tmp)}):
-            self.assertEqual(xs.project_dir(), self.tmp.resolve())
+            self.assertEqual(xt.project_dir(), self.tmp.resolve())
 
 
 class ChangelogCheckTest(TmpDirCase):
@@ -637,7 +637,7 @@ class ChangelogCheckTest(TmpDirCase):
     )
 
     def errs(self, text: str, version: str | None = "2.0.0") -> list[str]:
-        return xs.changelog_check(text, version)
+        return xt.changelog_check(text, version)
 
     def test_good(self):
         self.assertEqual(self.errs(self.GOOD), [])
@@ -687,7 +687,7 @@ class LoopCommandsTest(TmpDirCase):
     def setUp(self):
         super().setUp()
         self.env = self.enterContext(unittest.mock.patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": str(self.tmp)}))
-        os.environ.pop("XS_DEBUG", None)
+        os.environ.pop("XT_DEBUG", None)
 
     def write_plan(self, text: str = "- [ ] `T-001` làm gì đó — Gate: `true`\n") -> None:
         p = self.tmp / "docs" / "autopilot" / "PLAN.md"
@@ -698,7 +698,7 @@ class LoopCommandsTest(TmpDirCase):
         rc, out, err = run_main("loop", "init")
         self.assertEqual((rc, out), (2, ""))
         self.assertIn("✗ Không thấy docs/autopilot/PLAN.md", err)
-        self.assertIsNone(xs.read_state(self.tmp))
+        self.assertIsNone(xt.read_state(self.tmp))
 
     def test_init_with_missing_blueprint_is_exit_2(self):
         # AUD-HAR-016: --blueprint trỏ file không có → báo lỗi, không bật vòng lặp (gõ nhầm sẽ làm verdict bỏ qua blueprint).
@@ -706,7 +706,7 @@ class LoopCommandsTest(TmpDirCase):
         rc, out, err = run_main("loop", "init", "--blueprint", "TYPO.md")
         self.assertEqual((rc, out), (2, ""))
         self.assertIn("✗ Không thấy TYPO.md", err)
-        self.assertIsNone(xs.read_state(self.tmp))
+        self.assertIsNone(xt.read_state(self.tmp))
 
     def test_init_then_status_text_and_json(self):
         self.write_plan()
@@ -737,11 +737,11 @@ class LoopCommandsTest(TmpDirCase):
         rc, out, _ = run_main("loop", "record", "--task", "T-001", "--", "true")
         self.assertEqual(rc, 0)
         self.assertIn("T-001: exit 0", out)
-        self.assertEqual(xs.read_evidence("T-001", self.tmp)["exit_code"], 0)
+        self.assertEqual(xt.read_evidence("T-001", self.tmp)["exit_code"], 0)
 
     def test_block_without_state_creates_blocked_state(self):
         rc, out, _ = run_main("loop", "block", "--reason", "cần người quyết")
-        st = xs.read_state(self.tmp)
+        st = xt.read_state(self.tmp)
         self.assertEqual((rc, out), (0, "■ BLOCKED: cần người quyết\n"))
         self.assertTrue(st["active"] and st["blocked"])
         self.assertEqual(st["blocked_reason"], "cần người quyết")
@@ -754,18 +754,18 @@ class LoopCommandsTest(TmpDirCase):
     def test_stop_without_state_is_noop(self):
         rc, out, _ = run_main("loop", "stop")
         self.assertEqual((rc, out), (0, "■ Autopilot tắt.\n"))
-        self.assertIsNone(xs.read_state(self.tmp))
+        self.assertIsNone(xt.read_state(self.tmp))
 
     def test_stop_with_state_deactivates(self):
         self.write_plan()
         run_main("loop", "init")
         rc, out, _ = run_main("loop", "stop", "--reason", "xong việc")
-        st = xs.read_state(self.tmp)
+        st = xt.read_state(self.tmp)
         self.assertEqual((rc, out), (0, "■ Autopilot tắt.\n"))
         self.assertFalse(st["active"])
         self.assertEqual(st["stop_reason"], "xong việc")
         self.assertIn("ended", st)
-        self.assertEqual(xs.loop_verdict(self.tmp)["verdict"], "inactive")
+        self.assertEqual(xt.loop_verdict(self.tmp)["verdict"], "inactive")
 
     def test_hook_stop_blocks_with_json_when_work_remains(self):
         self.write_plan()
@@ -775,7 +775,7 @@ class LoopCommandsTest(TmpDirCase):
         decision = json.loads(out)
         self.assertEqual(decision["decision"], "block")
         self.assertIn("autopilot vòng 1/50", decision["reason"])
-        self.assertEqual(xs.read_state(self.tmp)["iterations"], 1)
+        self.assertEqual(xt.read_state(self.tmp)["iterations"], 1)
 
     def test_hook_stop_allows_stop_when_inactive(self):
         rc, out, err = run_main("loop", "hook-stop", stdin="{}")
@@ -786,15 +786,15 @@ class LoopCommandsTest(TmpDirCase):
         fake.isatty.return_value = True
         fake.read.side_effect = AssertionError("không được đọc stdin khi là tty")
         with unittest.mock.patch.object(sys, "stdin", fake), redirect_stdout(io.StringIO()) as out:
-            rc = xs.main(["loop", "hook-stop"])
+            rc = xt.main(["loop", "hook-stop"])
         self.assertEqual((rc, out.getvalue()), (0, ""))
         fake.read.assert_not_called()  # fail-open nuốt mọi exception nên phải kiểm trực tiếp
 
     def test_hook_stop_exception_is_fail_open(self):
-        with unittest.mock.patch.object(xs, "hook_stop", side_effect=RuntimeError("boom")):
+        with unittest.mock.patch.object(xt, "hook_stop", side_effect=RuntimeError("boom")):
             rc, out, err = run_main("loop", "hook-stop", stdin="{}")
         self.assertEqual((rc, out), (0, ""))
-        self.assertIn("[xs hook-stop] lỗi, cho dừng: RuntimeError: boom", err)
+        self.assertIn("[xt hook-stop] lỗi, cho dừng: RuntimeError: boom", err)
 
     def test_hook_stop_exception_logs_stacktrace_and_cause(self):
         # BASE-ERR-009 / AUD-HAR-014: lỗi bọc lỗi → stderr có stacktrace và nguyên nhân gốc.
@@ -804,7 +804,7 @@ class LoopCommandsTest(TmpDirCase):
             except KeyError as root:
                 raise ValueError("loi-boc") from root
 
-        with unittest.mock.patch.object(xs, "hook_stop", side_effect=boom):
+        with unittest.mock.patch.object(xt, "hook_stop", side_effect=boom):
             rc, out, err = run_main("loop", "hook-stop", stdin="{}")
         self.assertEqual((rc, out), (0, ""))
         self.assertIn("Traceback (most recent call last)", err)
@@ -812,14 +812,14 @@ class LoopCommandsTest(TmpDirCase):
         self.assertIn("ValueError: loi-boc", err)
 
     def test_hook_stop_propagates_exit_code(self):
-        with unittest.mock.patch.object(xs, "hook_stop", return_value=("", 3)):
+        with unittest.mock.patch.object(xt, "hook_stop", return_value=("", 3)):
             rc, out, _ = run_main("loop", "hook-stop", stdin="")
         self.assertEqual((rc, out), (3, ""))
 
     def test_unknown_loop_subcommand_returns_2(self):
         import argparse
 
-        self.assertEqual(xs.cmd_loop(argparse.Namespace(loop_cmd="khong-co")), 2)
+        self.assertEqual(xt.cmd_loop(argparse.Namespace(loop_cmd="khong-co")), 2)
 
 
 # --------------------------------------------------------------------------- audit CLI
@@ -859,14 +859,14 @@ class AuditPlanCliTest(TmpRepoCase):
         self.init_repo()
         self.point_at(self.repo)
         self.commit_files({"a.py": "1"}, 1_700_000_000)
-        real = xs.audit_plan
+        real = xt.audit_plan
 
         def fake(*a, **k):
             plan = real(*a, **k)
             plan["stale_evidence"] = [{"id": f"A-{i:03d}", "kind": "Miễn", "files": ["a.py"]} for i in range(1, 28)]
             return plan
 
-        with unittest.mock.patch.object(xs, "audit_plan", side_effect=fake):
+        with unittest.mock.patch.object(xt, "audit_plan", side_effect=fake):
             rc, out, _ = run_main("audit", "plan")
         self.assertEqual(rc, 0)
         self.assertIn("(27) — xác minh lại", out)
@@ -876,7 +876,7 @@ class AuditPlanCliTest(TmpRepoCase):
 
     def test_non_git_framework_repo_with_clean_status(self):
         root = self.tmp / "proj"
-        for rel in ("framework/00-method/conventions.md", "scripts/xs.py", "AGENTS.md", ".claude/settings.json"):
+        for rel in ("framework/00-method/conventions.md", "scripts/xt.py", "AGENTS.md", ".claude/settings.json"):
             p = root / rel
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text("x", encoding="utf-8")
@@ -932,29 +932,29 @@ class VersionAndMainTest(TmpDirCase):
     def test_framework_version_unknown_without_file(self):
         scripts = self.tmp / "scripts"
         scripts.mkdir()
-        with unittest.mock.patch.object(xs, "SCRIPT_DIR", scripts):
-            self.assertEqual(xs.framework_version(), "unknown")
+        with unittest.mock.patch.object(xt, "SCRIPT_DIR", scripts):
+            self.assertEqual(xt.framework_version(), "unknown")
             (self.tmp / "VERSION").write_text(" 1.2.3\n", encoding="utf-8")
-            self.assertEqual(xs.framework_version(), "1.2.3")
+            self.assertEqual(xt.framework_version(), "1.2.3")
 
     def test_oserror_is_one_line_unless_debug(self):
         missing = self.tmp / "khong-co.md"
         with unittest.mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("XS_DEBUG", None)
+            os.environ.pop("XT_DEBUG", None)
             rc, out, err = run_main("progress-check", missing)
         self.assertEqual((rc, out), (2, ""))
         self.assertTrue(err.startswith("✗ "))
         self.assertEqual(len(err.splitlines()), 1)
 
-    def test_oserror_reraised_with_xs_debug(self):
+    def test_oserror_reraised_with_xt_debug(self):
         missing = self.tmp / "khong-co.md"
-        with unittest.mock.patch.dict(os.environ, {"XS_DEBUG": "1"}):
+        with unittest.mock.patch.dict(os.environ, {"XT_DEBUG": "1"}):
             with self.assertRaises(OSError):
                 run_main("progress-check", missing)
 
     def test_no_subcommand_is_usage_error(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as cm:
-            xs.main([])
+            xt.main([])
         self.assertEqual(cm.exception.code, 2)
 
 

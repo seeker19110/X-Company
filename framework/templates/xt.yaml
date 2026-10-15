@@ -1,4 +1,4 @@
-# xs.yaml — lệnh chuẩn của dự án cho agent và hook (YAML PHẲNG `task: lệnh`, do .xstored/scripts/dev-task.sh đọc).
+# xt.yaml — lệnh chuẩn của dự án cho agent và hook (YAML PHẲNG `task: lệnh`, do .xtemplates/scripts/dev-task.sh đọc).
 # Agent KHÔNG suy diễn lệnh từ văn xuôi; đọc file này. Để trống "" = không có; thiếu khoá = tự dò (package.json/pyproject/go.mod/Cargo.toml/Makefile).
 # Nhà của bộ khoá: LOOP-HARNESS-008 (framework/11-autonomous-loop/harness-files.md). `scripts/dev-task.sh` CHỈ chạy các khoá format · lint · typecheck · test · build · format_file
 # (`gate` = build → typecheck → lint → test; lint nên gồm kiểm format). Khoá khác (install, dev, e2e, migrate, init, smoke, audit…) là lệnh KHAI BÁO để agent ĐỌC và chạy trực tiếp; dev-task không chạy.

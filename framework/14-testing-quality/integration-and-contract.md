@@ -61,7 +61,7 @@ updated: 2026-10-14
 - **Cassette chứa token thật** commit lên repo. Cách tránh: filter header trước ghi; gitleaks trên fixture.
 - **Pact cho mọi thứ** → chi phí broker, provider verify chậm khi chỉ một đội sở hữu cả hai đầu. Cách tránh: bảng Quyết định.
 - **Test authz chỉ ở unit** (gọi hàm `can()`), bỏ middleware/route. Cách tránh: QA-INT-006 qua HTTP thật.
-- **Cổng authz-gate `continue-on-error`** khi đã có endpoint PII. Cách tránh: fitness function cho chính CI (`xs.py ci-check` + job `protection-guard`; xem Nguồn).
+- **Cổng authz-gate `continue-on-error`** khi đã có endpoint PII. Cách tránh: fitness function cho chính CI (`xt.py ci-check` + job `protection-guard`; xem Nguồn).
 - **Container mới cho mỗi test** → suite 40 phút. Cách tránh: QA-INT-013 reuse + cách ly dữ liệu.
 
 ## Cổng tự động

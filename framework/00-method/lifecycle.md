@@ -14,13 +14,13 @@ updated: 2026-10-14
 | GĐ | Tên | Câu hỏi trả lời | Đầu ra bắt buộc | Cổng (máy/người kiểm) |
 |---|---|---|---|---|
 | G0 | **Khung (Frame)** | Vấn đề gì, cho ai, đo thành công thế nào? | `PROJECT.md` mục Vấn đề + Người dùng + Chỉ số thành công | Có ≥1 chỉ số đo được; phạm vi "không làm" ghi rõ |
-| G1 | **Phân loại (Classify)** | Phần mềm loại gì, ngành gì, quy mô nào? | Hồ sơ + gói ngành + quy mô S/M/L; `BLUEPRINT.md` sinh bằng `xs.py compose` | `xs.py compose` chạy được; blueprint commit vào repo |
+| G1 | **Phân loại (Classify)** | Phần mềm loại gì, ngành gì, quy mô nào? | Hồ sơ + gói ngành + quy mô S/M/L; `BLUEPRINT.md` sinh bằng `xt.py compose` | `xt.py compose` chạy được; blueprint commit vào repo |
 | G2 | **Nghiên cứu (Research)** | Công nghệ/phiên bản nào, ràng buộc pháp lý gì? | ADR chọn stack; bảng phiên bản kèm ngày xác minh; danh sách luật áp dụng | Mỗi phiên bản có nguồn + ngày; luật ngành có số hiệu |
 | G3 | **Đặc tả (Specify)** | Xây chính xác cái gì? | Spec tính năng (luồng, dữ liệu, API, ca biên, tiêu chí chấp nhận dạng Given/When/Then) | Mỗi tính năng MVP có tiêu chí chấp nhận kiểm được |
 | G4 | **Thiết kế (Design)** | Kiến trúc, dữ liệu, giao diện, mối đe doạ? | Sơ đồ C4 mức 1–2; schema; hợp đồng API; threat model; wireframe/tokens | Threat model có biện pháp cho mỗi mối đe doạ mức cao |
 | G5 | **Dựng nền (Scaffold)** | Hàng rào chất lượng đã chạy chưa? | Repo + CI (lint/type/test/scan) + môi trường + secrets + observability tối thiểu | CI xanh trên commit rỗng tính năng; cổng commit chặn được lỗi |
 | G6 | **Xây (Build)** | Tính năng đã chạy đúng chưa? | Code + test theo từng lát dọc (vertical slice); mỗi lát một PR | PR qua cổng merge; blueprint tick theo bằng chứng |
-| G7 | **Kiểm & phát hành (Verify & Release)** | Đủ tốt để người thật dùng chưa? | Báo cáo GO/NO-GO; E2E luồng chính; bảo mật; hiệu năng; a11y; tài liệu; kế hoạch rollback | `xs.py blueprint-status --strict` = 0 MUST mở; 0 mục BLOCKER |
+| G7 | **Kiểm & phát hành (Verify & Release)** | Đủ tốt để người thật dùng chưa? | Báo cáo GO/NO-GO; E2E luồng chính; bảo mật; hiệu năng; a11y; tài liệu; kế hoạch rollback | `xt.py blueprint-status --strict` = 0 MUST mở; 0 mục BLOCKER |
 | G8 | **Vận hành & tiến hoá (Operate)** | Có chạy ổn và tốt dần lên không? | SLO + cảnh báo; runbook; quy trình sự cố; post-mortem; lịch bảo trì phụ thuộc | Cảnh báo đã thử kích hoạt; backup đã thử khôi phục |
 
 ## Quy tắc chung của cổng

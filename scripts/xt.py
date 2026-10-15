@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""xs.py — công cụ dòng lệnh của khung X-Templates (chỉ dùng thư viện chuẩn Python >= 3.11).
+"""xt.py — công cụ dòng lệnh của khung X-Templates (chỉ dùng thư viện chuẩn Python >= 3.11).
 
 Lệnh:
   validate                      Kiểm quy ước toàn khung (frontmatter, ID, liên kết, hồ sơ/gói ngành).
@@ -420,12 +420,12 @@ def _pick_sources(docs: List[Doc], profile: str, industries: List[str]) -> Tuple
     """Hồ sơ + các gói ngành theo slug; không có thì thoát kèm gợi ý lệnh `list`."""
     prof = find_by_slug(docs, "profile", profile)
     if prof is None:
-        raise SystemExit(f"Không có hồ sơ '{profile}'. Xem: xs.py list profiles")
+        raise SystemExit(f"Không có hồ sơ '{profile}'. Xem: xt.py list profiles")
     inds: List[Doc] = []
     for s in industries:
         ind = find_by_slug(docs, "industry", s)
         if ind is None:
-            raise SystemExit(f"Không có gói ngành '{s}'. Xem: xs.py list industries")
+            raise SystemExit(f"Không có gói ngành '{s}'. Xem: xt.py list industries")
         inds.append(ind)
     return prof, inds
 
@@ -449,7 +449,7 @@ def _compose_order(docs: List[Doc], profile: str, prof: Doc, inds: List[Doc], ex
     mods, missing = resolve_modules(patterns, by_rel)
     bad_extra = [m for m in missing if m in extra]
     if bad_extra:
-        raise SystemExit("Module --add không tồn tại: " + ", ".join(bad_extra) + " (xem: xs.py list modules)")
+        raise SystemExit("Module --add không tồn tại: " + ", ".join(bad_extra) + " (xem: xt.py list modules)")
 
     extra_rels = {d.rel for d in resolve_modules(extra, by_rel)[0]}
     ordered: List[Doc] = []
@@ -509,9 +509,9 @@ def _compose_header(
         "",
         "# Blueprint dự án",
         "",
-        f"> Sinh bởi `xs.py compose` ngày {today} — hồ sơ **{profile}**, ngành **{ind_names}**, quy mô **{scale}**.",
+        f"> Sinh bởi `xt.py compose` ngày {today} — hồ sơ **{profile}**, ngành **{ind_names}**, quy mô **{scale}**.",
         "> Trạng thái: `[ ]` chưa · `[x]` đạt (kèm bằng chứng ở PR/CI) · `[~]` miễn trừ — bắt buộc ghi `— Miễn: <lý do>`.",
-        "> Kiểm tiến độ: `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict` (còn MUST chưa đạt → exit 1).",
+        "> Kiểm tiến độ: `python3 scripts/xt.py blueprint-status BLUEPRINT.md --strict` (còn MUST chưa đạt → exit 1).",
         "",
         "| Mức | Số mục |",
         "|---|---|",
@@ -535,7 +535,7 @@ def compose(
 ) -> str:
     docs, errors = load_docs(root)
     if errors:
-        raise SystemExit("Khung có lỗi, chạy 'xs.py validate' trước:\n  " + "\n  ".join(errors[:20]))
+        raise SystemExit("Khung có lỗi, chạy 'xt.py validate' trước:\n  " + "\n  ".join(errors[:20]))
     prof, inds = _pick_sources(docs, profile, industries)
     extra = extra or []
     ordered = _compose_order(docs, profile, prof, inds, extra)
@@ -580,7 +580,7 @@ def _rebase_links(text: str, doc_rel: str, link_root: str) -> str:
 
 def _rel_link(root: Path) -> str:
     """Đường dẫn tới framework/ để đặt trong blueprint (ưu tiên vị trí cài trong dự án)."""
-    return os.environ.get("XS_FRAMEWORK_LINK", ".xstored/framework")
+    return os.environ.get("XT_FRAMEWORK_LINK", ".xtemplates/framework")
 
 
 # --------------------------------------------------------------------------- blueprint-status
@@ -617,18 +617,18 @@ def blueprint_status_text(raw: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- loop (autopilot)
 
 
-PROJECT_MARKERS = (".autopilot", "xs.yaml", ".xstored")
+PROJECT_MARKERS = (".autopilot", "xt.yaml", ".xtemplates")
 
 
 def project_dir() -> Path:
-    """Gốc dự án, theo thứ tự: `CLAUDE_PROJECT_DIR` (hook luôn đặt) → cha của `.xstored/` khi đây là bản cài
-    (`<gốc>/.xstored/scripts/xs.py`, như dev-task.sh) → thư mục cha gần nhất (tính cả cwd) có dấu hiệu khung
-    (`.autopilot`/`xs.yaml`/`.xstored`) → thư mục cha gần nhất có `.git` → cwd (AUD-XFEAT-001).
+    """Gốc dự án, theo thứ tự: `CLAUDE_PROJECT_DIR` (hook luôn đặt) → cha của `.xtemplates/` khi đây là bản cài
+    (`<gốc>/.xtemplates/scripts/xt.py`, như dev-task.sh) → thư mục cha gần nhất (tính cả cwd) có dấu hiệu khung
+    (`.autopilot`/`xt.yaml`/`.xtemplates`) → thư mục cha gần nhất có `.git` → cwd (AUD-XFEAT-001).
     Dấu hiệu khung xét trước `.git` để repo git lồng (submodule, apps/web) không thắng gốc dự án."""
     env = os.environ.get("CLAUDE_PROJECT_DIR")
     if env:
         return Path(env).resolve()
-    if SCRIPT_DIR.parent.name == ".xstored":
+    if SCRIPT_DIR.parent.name == ".xtemplates":
         return SCRIPT_DIR.parent.parent.resolve()
     cwd = Path(os.getcwd()).resolve()
     chain = (cwd, *cwd.parents)
@@ -732,7 +732,7 @@ def _verdict_task(t: Dict[str, Any], base: Path) -> Optional[Dict[str, Any]]:
         return {
             "verdict": "verify",
             "task": t["id"],
-            "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xs.py loop record --task {t['id']} -- <lệnh kiểm>",
+            "reason": f"task {t['id']} đã tick nhưng chưa có bằng chứng xanh — chạy: xt.py loop record --task {t['id']} -- <lệnh kiểm>",
         }
     if not t["gate"]:
         return {
@@ -809,9 +809,9 @@ def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
     base = base or project_dir()
     st = read_state(base) or {}
     try:
-        timeout = int(os.environ.get("XS_RECORD_TIMEOUT", "1800"))
+        timeout = int(os.environ.get("XT_RECORD_TIMEOUT", "1800"))
     except ValueError:
-        print("✗ XS_RECORD_TIMEOUT phải là số giây nguyên dương", file=sys.stderr)
+        print("✗ XT_RECORD_TIMEOUT phải là số giây nguyên dương", file=sys.stderr)
         return 2
     started = now_iso()
     # Một đối số = chuỗi shell nguyên văn (cho phép `a && b`, ống); nhiều đối số = argv, ghép bằng shlex để giữ nháy (AUD-HAR-002).
@@ -846,7 +846,7 @@ def loop_record(task: str, cmd: List[str], base: Optional[Path] = None) -> int:
                 st["last_failure_signature"] = sig
             st["last_failure_task"] = task
         write_state(st, base)
-    print(f"[xs] {task}: exit {code} — bằng chứng: .autopilot/evidence/{task}.json")
+    print(f"[xt] {task}: exit {code} — bằng chứng: .autopilot/evidence/{task}.json")
     if code != 0:
         print(ev["output_tail"][-2000:])
     return code
@@ -871,9 +871,9 @@ def hook_stop(stdin_text: str, base: Optional[Path] = None) -> Tuple[str, int]:
         write_state(st, base)
         reason = (
             f"[autopilot vòng {st['iterations']}/{st.get('max_iterations', 50)}] Chưa xong: {v['reason']}. "
-            "Làm tiếp theo PLAN; chạy `python3 .xstored/scripts/xs.py loop record --task <ID> -- <lệnh kiểm>` "
+            "Làm tiếp theo PLAN; chạy `python3 .xtemplates/scripts/xt.py loop record --task <ID> -- <lệnh kiểm>` "
             "để ghi bằng chứng; commit+push sau mỗi task. Nếu cần người quyết (§dừng-bắt-buộc) thì "
-            "`xs.py loop block --reason ...`."
+            "`xt.py loop block --reason ...`."
         )
         return json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False), 0
     if st and st.get("active") and v["verdict"] in ("done", "blocked", "budget"):
@@ -922,9 +922,9 @@ def progress_sections(text: str) -> List[Tuple[str, List[str]]]:
 def progress_base_ref(repo: Path) -> Optional[str]:
     """Nhánh chính để kiểm SHA bàn giao còn sống sau squash-merge.
 
-    `XS_PROGRESS_BASE` (rỗng = tắt) > `origin/HEAD` > `origin/main` > `origin/master`; không có thì bỏ qua.
+    `XT_PROGRESS_BASE` (rỗng = tắt) > `origin/HEAD` > `origin/main` > `origin/master`; không có thì bỏ qua.
     """
-    env = os.environ.get("XS_PROGRESS_BASE")
+    env = os.environ.get("XT_PROGRESS_BASE")
     if env is not None:
         return env.strip() or None
     head = _git(repo, "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD").stdout.strip()
@@ -1179,14 +1179,14 @@ SKIP_DIRS = {
     ".venv",
     "venv",
     "__pycache__",
-    ".xstored",
+    ".xtemplates",
     "vendor",
     "dist",
     "build",
     ".autopilot",
 }
 
-# Công cụ gợi ý theo nhóm: (tên, ngăn xếp áp dụng hoặc None = mọi repo). "xs:" = lệnh có sẵn của khung.
+# Công cụ gợi ý theo nhóm: (tên, ngăn xếp áp dụng hoặc None = mọi repo). "xt:" = lệnh có sẵn của khung.
 AUDIT_TOOLS: Dict[int, Tuple[Tuple[str, Optional[str]], ...]] = {
     1: (("lint-imports", "python"), ("depcruise", "js/ts"), ("go", "go")),
     2: (("gitleaks", None), ("semgrep", None), ("osv-scanner", None), ("bandit", "python")),
@@ -1212,10 +1212,10 @@ AUDIT_TOOLS: Dict[int, Tuple[Tuple[str, Optional[str]], ...]] = {
         ("govulncheck", "go"),
         ("cargo-audit", "rust"),
     ),
-    8: (("xs:ci-check", None), ("actionlint", None), ("zizmor", None)),
-    9: (("xs:progress-check", None), ("lychee", None)),
+    8: (("xt:ci-check", None), ("actionlint", None), ("zizmor", None)),
+    9: (("xt:progress-check", None), ("lychee", None)),
     11: (("gitleaks", None),),
-    13: (("xs:blueprint-status", None), ("xs:progress-check", None)),
+    13: (("xt:blueprint-status", None), ("xt:progress-check", None)),
 }
 
 
@@ -1309,9 +1309,9 @@ def audit_signals(root: Path, files: Optional[List[str]] = None) -> Dict[str, An
         "tests": len(tests),
         "iac": sum(1 for f in files if f.endswith(".tf")),
         "docs": sum(1 for f in files if f.endswith(".md")),
-        "harness": sorted(n for n in ("AGENTS.md", "xs.yaml", "PROGRESS.md", "BLUEPRINT.md") if n in files)
+        "harness": sorted(n for n in ("AGENTS.md", "xt.yaml", "PROGRESS.md", "BLUEPRINT.md") if n in files)
         + ([".claude/"] if any(f.startswith(".claude/") for f in files) else []),
-        "framework_repo": "framework/00-method/conventions.md" in files and "scripts/xs.py" in files,
+        "framework_repo": "framework/00-method/conventions.md" in files and "scripts/xt.py" in files,
     }
     return sig
 
@@ -1365,12 +1365,12 @@ def audit_applicability(sig: Dict[str, Any]) -> Dict[int, Tuple[str, str]]:
     if sig["harness"]:
         a[13] = ("áp dụng", ", ".join(sig["harness"]) + (" · repo khung" if sig["framework_repo"] else ""))
     else:
-        a[13] = ("N/A", "chưa cài harness khung (không AGENTS.md/xs.yaml/.claude/)")
+        a[13] = ("N/A", "chưa cài harness khung (không AGENTS.md/xt.yaml/.claude/)")
     return a
 
 
 def _tool_present(root: Path, name: str) -> bool:
-    if name.startswith("xs:"):
+    if name.startswith("xt:"):
         return True
     if shutil.which(name) or (root / "node_modules" / ".bin" / name).exists():
         return True
@@ -1468,7 +1468,7 @@ def _path_groups(path: str) -> List[int]:
         g.append(4)
     if "/migrations/" in f"/{path}" or path.endswith((".sql", "schema.prisma")):
         g.append(10)
-    if name in ("AGENTS.md", "CLAUDE.md", "xs.yaml", "PROGRESS.md", "BLUEPRINT.md") or path.startswith(".claude/"):
+    if name in ("AGENTS.md", "CLAUDE.md", "xt.yaml", "PROGRESS.md", "BLUEPRINT.md") or path.startswith(".claude/"):
         g.append(13)
     if name.startswith(".env") or name in ("Dockerfile", "compose.yaml", "docker-compose.yml"):
         g += [11, 8]
@@ -1841,7 +1841,7 @@ def _loop_hook_stop(args: argparse.Namespace, base: Path) -> int:
     try:
         out, code = hook_stop(sys.stdin.read() if not sys.stdin.isatty() else "", base)
     except Exception as exc:  # fail-open: hook lỗi không được kẹt phiên
-        print(f"[xs hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(f"[xt hook-stop] lỗi, cho dừng: {type(exc).__name__}: {exc}", file=sys.stderr)
         # BASE-ERR-009: stacktrace + chuỗi nguyên nhân (`__cause__`/`__context__`) không cắt.
         print("".join(traceback.format_exception(exc)), end="", file=sys.stderr)
         return 0
@@ -2051,7 +2051,7 @@ def _task_id(value: str) -> str:
 
 
 def framework_version() -> str:
-    """Phiên bản khung: file VERSION cạnh thư mục scripts/ (repo khung hoặc .xstored/ của dự án)."""
+    """Phiên bản khung: file VERSION cạnh thư mục scripts/ (repo khung hoặc .xtemplates/ của dự án)."""
     try:
         return (SCRIPT_DIR.parent / "VERSION").read_text(encoding="utf-8").strip()
     except OSError:
@@ -2060,21 +2060,21 @@ def framework_version() -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="xs.py",
+        prog="xt.py",
         description="Công cụ khung X-Templates",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="ví dụ:\n"
-        "  xs.py list profiles\n"
-        "  xs.py compose --profile web-app --industry fintech --scale M --out BLUEPRINT.md\n"
-        "  xs.py blueprint-status BLUEPRINT.md --strict\n"
-        "  xs.py loop record --task T-001 -- python3 -m unittest\n\n"
+        "  xt.py list profiles\n"
+        "  xt.py compose --profile web-app --industry fintech --scale M --out BLUEPRINT.md\n"
+        "  xt.py blueprint-status BLUEPRINT.md --strict\n"
+        "  xt.py loop record --task T-001 -- python3 -m unittest\n\n"
         "mã thoát: 0 ổn · 1 vi phạm/chưa đạt · 2 sai cách dùng hoặc không đọc được file/thư mục",
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {framework_version()}")
     p.add_argument(
         "--framework",
         type=Path,
-        default=Path(os.environ.get("XS_FRAMEWORK", DEFAULT_FRAMEWORK)),
+        default=Path(os.environ.get("XT_FRAMEWORK", DEFAULT_FRAMEWORK)),
         help="thư mục framework/ (mặc định: cạnh scripts/)",
     )
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -2152,8 +2152,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         rc: int = args.fn(args)
         return rc
-    except OSError as exc:  # file thiếu/không đọc được: một dòng dễ hiểu; XS_DEBUG=1 để xem traceback
-        if os.environ.get("XS_DEBUG"):
+    except OSError as exc:  # file thiếu/không đọc được: một dòng dễ hiểu; XT_DEBUG=1 để xem traceback
+        if os.environ.get("XT_DEBUG"):
             raise
         print(f"✗ {exc}", file=sys.stderr)
         return 2

@@ -31,7 +31,7 @@ updated: 2026-10-14
 |---|---|---|
 | Quản lý phiên bản công cụ | **mise** (`mise.toml`, đa runtime, MIT) hoặc file bản địa (`.nvmrc`, `.python-version`, `.tool-versions`); Nix khi cần tái lập tuyệt đối. | Cài runtime toàn cục bằng tay theo README. |
 | Môi trường tái lập | **Dev Container** (`.devcontainer/devcontainer.json`, chuẩn mở containers.dev; chạy trong VS Code/Codespaces/CLI) + `docker compose` cho dịch vụ phụ. | Dự án CLI/lib thuần không dịch vụ phụ: mise + lockfile là đủ. |
-| Điểm vào lệnh | `package.json#scripts` (JS) · `justfile`/`Makefile` (đa ngôn ngữ) · `noxfile`/`tox` (Python) · `Taskfile.yml`; **và** bản sao máy đọc phẳng (`xs.yaml`/`runtime.yaml`) cho agent. | Lệnh dài trong README; script shell rải rác không tên chuẩn. |
+| Điểm vào lệnh | `package.json#scripts` (JS) · `justfile`/`Makefile` (đa ngôn ngữ) · `noxfile`/`tox` (Python) · `Taskfile.yml`; **và** bản sao máy đọc phẳng (`xt.yaml`/`runtime.yaml`) cho agent. | Lệnh dài trong README; script shell rải rác không tên chuẩn. |
 | Hook cục bộ | pre-commit/lefthook tự cài sau `install`; chỉ chạy file thay đổi. | Hook > 30 s → người dùng `--no-verify`. |
 | Cấu hình editor | `.editorconfig` + cấu hình formatter trong repo + đề xuất extension (`.vscode/extensions.json`) — không ép IDE. | Commit `settings.json` cá nhân. |
 | Đo DX | DORA 4 chỉ số (+ rework rate) từ CI/Git tự động; khảo sát SPACE định kỳ ngắn; thời gian onboarding đo thật với người mới. | Đếm commit/dòng code làm KPI. |
@@ -39,7 +39,7 @@ updated: 2026-10-14
 ## Checklist
 
 - [ ] `XC-DX-001` **MUST** Từ clone sạch đến test xanh bằng **≤ 3 lệnh** ghi ở đầu README (vd `mise install && npm ci && npm test`), không bước tay nào ngoài lấy bí mật dev từ nơi đã ghi. → Kiểm: job CI `onboarding-smoke` chạy đúng các lệnh đó trên runner mới, exit 0; thời gian đo ghi lại. · Nguồn: 12-factor II ("một lệnh build tất định"); OpenSSF Badge `documentation_basics`
-- [ ] `XC-DX-002` **MUST** Bộ lệnh chuẩn (`dev`, `build`, `test`, `lint`, `format`, `typecheck`, `migrate` nếu có) khai báo **một nơi máy đọc** và được hook/CI/agent gọi nguyên văn; thêm bản phẳng `xs.yaml`/`runtime.yaml` (key: value) cho agent. → Kiểm: file tồn tại; grep workflow/hook/`AGENTS.md` dùng đúng tên lệnh; không có lệnh chỉ nằm trong văn xuôi. · Nguồn: catalog 23 §3.3 (`runtime.yaml` sau 11 lần `unverified`)
+- [ ] `XC-DX-002` **MUST** Bộ lệnh chuẩn (`dev`, `build`, `test`, `lint`, `format`, `typecheck`, `migrate` nếu có) khai báo **một nơi máy đọc** và được hook/CI/agent gọi nguyên văn; thêm bản phẳng `xt.yaml`/`runtime.yaml` (key: value) cho agent. → Kiểm: file tồn tại; grep workflow/hook/`AGENTS.md` dùng đúng tên lệnh; không có lệnh chỉ nằm trong văn xuôi. · Nguồn: catalog 23 §3.3 (`runtime.yaml` sau 11 lần `unverified`)
 - [ ] `XC-DX-003` **MUST** Phiên bản runtime và công cụ **ghim trong repo** (`mise.toml`/`.tool-versions`/`.nvmrc`/`.python-version`/`go.mod`/`global.json`) và CI dùng đúng file đó (`setup-node` `node-version-file`, `setup-python` `python-version-file`, `mise-action`). → Kiểm: workflow không hard-code phiên bản khác file; `mise install` thành công từ clone. · Nguồn: [`../01-baseline/dependencies.md`](../01-baseline/dependencies.md) BASE-DEP-003
 - [ ] `XC-DX-004` **MUST@L** Dịch vụ phụ cho dev (CSDL, cache, queue, mock API) khởi động bằng **một lệnh** từ cấu hình trong repo (`docker compose up -d` / devcontainer `features`), cùng loại và phiên bản major với prod (dev/prod parity). → Kiểm: `compose.yaml` tồn tại; image tag khớp phiên bản prod; `test` chạy được sau `compose up`. · Nguồn: 12-factor X (dev/prod parity)
 - [ ] `XC-DX-005` **MUST@L** `.editorconfig` ở gốc (`root = true`, `charset = utf-8`, `end_of_line = lf`, `insert_final_newline = true`, `indent_*`) và formatter cấu hình trong repo; CI kiểm tuân thủ. → Kiểm: `editorconfig-checker` 0 lỗi; `format --check` 0 diff. · Nguồn: EditorConfig spec
@@ -52,7 +52,7 @@ updated: 2026-10-14
 - [ ] `XC-DX-012` **SHOULD** Test chạy được **một file/một case** nhanh (`test -- path`, `-k`, `--filter`) và watch mode; thời gian suite unit < 2 phút tại chỗ. → Kiểm: README DX ghi cách chạy một test; `time test` < 120 s. · Nguồn: SPACE (efficiency & flow)
 - [ ] `XC-DX-013` **SHOULD** Onboarding được **đo thật** với người (hoặc agent) mới: thời gian clone → PR đầu tiên qua cổng; ghi lại điểm vướng thành issue; mục tiêu < 1 giờ đến test xanh, < 1 ngày đến PR đầu. → Kiểm: `docs/onboarding-log.md` có ≥ 1 lần đo với ngày và thời gian. · Nguồn: SPACE (satisfaction, performance)
 - [ ] `XC-DX-014` **SHOULD** Khảo sát DX ngắn (5–7 câu theo SPACE) mỗi quý; kết quả thành ≤ 3 hành động có owner. → Kiểm: kết quả và hành động ghi trong `docs/dx/`. · Nguồn: SPACE framework (Forsgren et al., ACM Queue 2021)
-- [ ] `XC-DX-015` **SHOULD** Tài liệu "cách làm việc" cho người **và** agent là một nguồn: `AGENTS.md` (lệnh, quy ước, ranh giới) được README trỏ tới; không hai bộ hướng dẫn lệch nhau. → Kiểm: README link `AGENTS.md`; lệnh trong `AGENTS.md` khớp `xs.yaml` (script so sánh). · Nguồn: [`docs-for-ai-agents.md`](docs-for-ai-agents.md)
+- [ ] `XC-DX-015` **SHOULD** Tài liệu "cách làm việc" cho người **và** agent là một nguồn: `AGENTS.md` (lệnh, quy ước, ranh giới) được README trỏ tới; không hai bộ hướng dẫn lệch nhau. → Kiểm: README link `AGENTS.md`; lệnh trong `AGENTS.md` khớp `xt.yaml` (script so sánh). · Nguồn: [`docs-for-ai-agents.md`](docs-for-ai-agents.md)
 - [ ] `XC-DX-016` **SHOULD** Cấu hình editor khuyến nghị commit ở dạng không ép buộc: `.vscode/extensions.json` (recommendations), `.vscode/settings.json` chỉ các khoá dự án (formatter mặc định), không khoá cá nhân. → Kiểm: `.vscode/settings.json` không chứa `window.*`/`workbench.colorTheme`. · Nguồn: EditorConfig (quy ước độc lập IDE)
 - [ ] `XC-DX-017` **MAY** Script `doctor` kiểm môi trường (phiên bản runtime, biến env, dịch vụ phụ, hook) và in cách sửa từng mục. → Kiểm: `npm run doctor`/`just doctor` tồn tại, exit ≠ 0 khi thiếu. · Nguồn: clig.dev
 - [ ] `XC-DX-018` **MAY** Review app/preview cho mỗi PR (web) hoặc artefact tải về (CLI/mobile) để người review và agent kiểm thật thay vì đọc diff. → Kiểm: PR có link preview/artefact tự động. · Nguồn: [`../10-workflow/ci-cd-pipeline.md`](../10-workflow/ci-cd-pipeline.md)
@@ -76,7 +76,7 @@ updated: 2026-10-14
 | Việc kiểm | Công cụ (license) | Lệnh | Đặt ở | Ngưỡng |
 |---|---|---|---|---|
 | Onboarding smoke | job CI chạy 3 lệnh README trên runner mới | theo README | CI tuần + khi README/lockfile đổi | exit 0; thời gian ghi artefact |
-| Lệnh chuẩn khớp | script so `xs.yaml`/`runtime.yaml` ↔ `package.json#scripts`/`justfile` ↔ workflow | `check:commands` | CI | 0 lệch |
+| Lệnh chuẩn khớp | script so `xt.yaml`/`runtime.yaml` ↔ `package.json#scripts`/`justfile` ↔ workflow | `check:commands` | CI | 0 lệch |
 | Phiên bản công cụ | mise v2026.10.8 (MIT) · `setup-*` với `*-version-file` | `mise install && mise doctor` | CI | thành công |
 | EditorConfig | editorconfig-checker 7.0.0 (MIT) | `editorconfig-checker` | hook + CI | 0 |
 | Devcontainer | devcontainers/cli (MIT; không có release tag ngày 2026-10-13) · `devcontainers/ci` action | `devcontainer up --workspace-folder .` | CI tuần | thành công |

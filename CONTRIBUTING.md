@@ -4,10 +4,10 @@
 
 ## Trước khi bắt đầu
 - Một thay đổi = một nhánh (`feat/...`, `fix/...`, `docs/...`) = một PR nhỏ. Mọi merge vào `main` qua PR, **squash**, tiêu đề dạng conventional commit.
-- Việc lớn (thêm mảng, đổi cấu trúc, đổi hành vi `xs.py`): mở issue/ADR trước (`docs/adr/`, `/adr`).
+- Việc lớn (thêm mảng, đổi cấu trúc, đổi hành vi `xt.py`): mở issue/ADR trước (`docs/adr/`, `/adr`).
 
 ## Vòng làm việc
-1. `python3 scripts/xs.py validate` và `python3 -m unittest discover -s tests` phải xanh **trước** khi commit (hook `pre-bash-guard` tự chạy qua `scripts/dev-task.sh gate` đọc `xs.yaml`).
+1. `python3 scripts/xt.py validate` và `python3 -m unittest discover -s tests` phải xanh **trước** khi commit (hook `pre-bash-guard` tự chạy qua `scripts/dev-task.sh gate` đọc `xt.yaml`).
 2. Thêm/sửa mục checklist: giữ ID cũ, không tái sử dụng ID; mục bỏ → `MAY` + "Ngừng dùng". Mọi MUST có `→ Kiểm:`.
 3. Phiên bản/chuẩn/luật: nguồn chính thống + ngày xác minh; không xác minh được → "(chưa xác minh)".
 4. Cập nhật README chỉ mục của mảng và `CHANGELOG.md` (mục *Unreleased*).

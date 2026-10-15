@@ -50,7 +50,7 @@ updated: 2026-10-14
 - [ ] `PM-PRIO-010` **SHOULD** Backlog có "cut line" rõ: mục dưới vạch không được bắt đầu khi còn mục trên vạch dở (phối hợp WIP ở [`planning-and-estimation.md`](planning-and-estimation.md)). → Kiểm: board/`PLAN.md` có dòng `--- cut line ---` hoặc nhãn tương đương.
 - [ ] `PM-PRIO-011` **SHOULD** Ưu tiên lại định kỳ (mỗi mốc hoặc mỗi 2–4 tuần) với bảng có ngày và lý do thay đổi thứ hạng. → Kiểm: lịch sử git của bảng ưu tiên ≥1 lần/mốc.
 - [ ] `PM-PRIO-012` **SHOULD** Tính năng "nhỏ thôi" vẫn qua spec và tiêu chí chấp nhận; không có đường tắt bỏ cổng vì kích thước. → Kiểm: PR `feat:` không có spec bị CI chặn (xem `PM-SPEC-006`).
-- [ ] `PM-PRIO-013` **SHOULD** Yêu cầu pháp lý/bảo mật bắt buộc (luật ngành, MUST của blueprint) luôn là Must bất kể giá trị người dùng. → Kiểm: `xs.py blueprint-status --strict` không mở MUST tại cổng G7.
+- [ ] `PM-PRIO-013` **SHOULD** Yêu cầu pháp lý/bảo mật bắt buộc (luật ngành, MUST của blueprint) luôn là Must bất kể giá trị người dùng. → Kiểm: `xt.py blueprint-status --strict` không mở MUST tại cổng G7.
 - [ ] `PM-PRIO-014` **MAY** Dùng Kano (cơ bản / tuyến tính / gây thích thú) để nhận ra mục "cơ bản" người dùng không nêu nhưng thiếu là bỏ sản phẩm. → Kiểm: cột Kano trong bảng ưu tiên.
 - [ ] `PM-PRIO-015` **MAY** Lộ trình công khai (cho người dùng) chỉ nêu mục tiêu theo quý và trạng thái "đang xét / đang làm / đã ra", không hứa ngày cho từng tính năng. → Kiểm: file `ROADMAP.md` không có cột ngày cụ thể cho mục chưa bắt đầu.
 - [ ] `PM-PRIO-016` **MAY** Ghi "chi phí cơ hội" khi nhận yêu cầu ngoài kế hoạch: nêu mục nào bị đẩy ra. → Kiểm: comment/issue ghi "nhận X → đẩy Y".
@@ -78,7 +78,7 @@ updated: 2026-10-14
 | Phạm vi bị đổi có hồ sơ | `git log --format=%s -- PROJECT.md \| rg "^docs\(scope\)"` khi diff mục MVP | CI | Diff mục MVP mà không có commit `docs(scope)` → đỏ |
 | Ý tưởng từ chối có file | `ls .out-of-scope/*.md`; issue template checkbox | Issue template + CI | ≥1 file khi dự án ≥ M |
 | Cổng chất lượng không bị tắt | `rg -n "continue-on-error: true\|--no-verify\|ignoreBuildErrors" .github/ package.json` | CI | 0 kết quả ngoài allowlist có lý do |
-| MUST blueprint mở | `xs.py blueprint-status BLUEPRINT.md --strict` | CI trước release | exit 0 |
+| MUST blueprint mở | `xt.py blueprint-status BLUEPRINT.md --strict` | CI trước release | exit 0 |
 | Walking skeleton có deploy | `rg -n "T-00[1-3].*Gate: \`.*(deploy|smoke)" PLAN.md` | CI (job docs) | ≥1 task trong lát 1 |
 
 ## Nguồn

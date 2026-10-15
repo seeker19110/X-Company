@@ -18,7 +18,7 @@ updated: 2026-10-14
 1. **Một cổng chất lượng, một tên.** `quality` (gate aggregator) gom mọi job cổng; thêm job mới không phải sửa ruleset;
    ruleset đòi đúng 4 required check `quality` · `protection-guard` · `gitleaks` · `dep-audit`, mỗi cái là job có thật; đổi tên job có guard bắt.
 2. **CI là nguồn sự thật của "xanh".** Hook local có thể bị bỏ qua; mọi lint/format/type/test/scan đều chạy lại
-   ở CI với cùng lệnh (đọc từ `xs.yaml`/`package.json`, không viết lại).
+   ở CI với cùng lệnh (đọc từ `xt.yaml`/`package.json`, không viết lại).
 3. **Quyền tối thiểu, fail-closed.** `permissions: contents: read` cấp workflow; job cần ghi tự nâng; không
    `continue-on-error` trên job bảo mật; không chạy PR từ fork với secrets.
 4. **Nhanh để được dùng.** Mục tiêu cổng commit < 10 phút: cache theo lockfile, chạy song song, huỷ run cũ
@@ -41,7 +41,7 @@ updated: 2026-10-14
 ## Checklist
 
 - [ ] `WF-CI-001` **MUST** Có job `quality` gom mọi cổng chất lượng (một job luôn chạy; nếu tách job con thì `needs` mọi job cổng và fail khi bất kỳ job con không `success`). Ruleset đòi đúng 4 required check `quality` · `protection-guard` · `gitleaks` · `dep-audit`; mỗi context phải là job có thật, `protection-guard` đối chiếu tên ([`git-and-branching.md`](git-and-branching.md)). → Kiểm: `.github/rulesets/main.json` có đúng 3 context đó; `protection-guard` đỏ khi context không khớp job nào trong `.github/workflows/`; nếu tách job con, `quality` có `if: always()` kiểm `needs`. · Nguồn: catalog 23 §2.5 (gate aggregator ADR-0003), 13 §4b
-- [ ] `WF-CI-002` **MUST@L** CI chạy lại mọi kiểm của hook local (lint, format check, type, test, secret scan) bằng **cùng lệnh** từ một nguồn (`xs.yaml`/`package.json`/`Makefile`), không viết lệnh khác trong YAML. → Kiểm: diff lệnh hook ↔ CI = cùng script; `pre-commit run --all-files` hoặc `scripts/dev-task.sh gate` trong CI. · Nguồn: pre-commit docs (CI), catalog 23 §4.3 (`/gate` đọc động job CI)
+- [ ] `WF-CI-002` **MUST@L** CI chạy lại mọi kiểm của hook local (lint, format check, type, test, secret scan) bằng **cùng lệnh** từ một nguồn (`xt.yaml`/`package.json`/`Makefile`), không viết lệnh khác trong YAML. → Kiểm: diff lệnh hook ↔ CI = cùng script; `pre-commit run --all-files` hoặc `scripts/dev-task.sh gate` trong CI. · Nguồn: pre-commit docs (CI), catalog 23 §4.3 (`/gate` đọc động job CI)
 - [ ] `WF-CI-003` **MUST** `permissions:` khai báo tường minh ở cấp workflow với mặc định `contents: read`; job cần ghi (release, comment) tự nâng tối thiểu; không dùng `write-all`. → Kiểm: actionlint/zizmor không cảnh báo thiếu permissions; grep `permissions: write-all` = 0. · Nguồn: GitHub Security hardening for Actions
 - [ ] `WF-CI-004` **MUST** Không nội suy input không tin cậy (`github.event.pull_request.title/body`, branch name, issue) trực tiếp vào `run:`; đưa qua `env:` và quote; `pull_request_target`/`workflow_run` không checkout code PR. → Kiểm: zizmor `template-injection`/`dangerous-triggers` = 0 finding. · Nguồn: GitHub Security hardening (script injection)
 - [ ] `WF-CI-005` **MUST** Action bên thứ ba ghim full commit SHA (kèm comment version); Dependabot ecosystem `github-actions` bật; chi tiết chuỗi cung ứng ở [`../12-security/supply-chain.md`](../12-security/supply-chain.md). → Kiểm: `pinact`/zizmor `unpinned-uses` = 0; `dependabot.yml` có `github-actions`. · Nguồn: GitHub Security hardening (pin SHA)
@@ -59,7 +59,7 @@ updated: 2026-10-14
 - [ ] `WF-CI-017` **SHOULD** Monorepo: path filter/affected graph để chỉ chạy phần đổi, nhưng `quality` vẫn tổng hợp; job bỏ qua báo `skipped` được `quality` chấp nhận có điều kiện. → Kiểm: `quality` xử lý `needs.*.result in ['success','skipped']` theo quy tắc rõ.
 - [ ] `WF-CI-018` **SHOULD** Test flaky: retry có trần (vd 2) **kèm** ghi nhận và ticket; không retry vô hạn để che lỗi; theo dõi tỉ lệ flaky. → Kiểm: cấu hình retries ≤ 2; dashboard flaky; xem [`../14-testing-quality/test-strategy.md`](../14-testing-quality/test-strategy.md).
 - [ ] `WF-CI-019` **SHOULD** Báo cáo/log test upload làm artefact (retention ngắn, vd 7 ngày); không upload secrets/dump. → Kiểm: `upload-artifact` với `retention-days`; không có `.env` trong artefact.
-- [ ] `WF-CI-020` **SHOULD** Fitness function cho chính CI: script kiểm `permissions` có mặt, không `write-all`, mọi `uses:` ghim SHA, job gate không `continue-on-error`, required check ↔ job khớp. → Kiểm: `xs.py ci-check` exit 0 trong cổng `lint` (bản có sẵn của khung; required check ↔ job do `protection-guard`); test thay đổi xấu → đỏ. · Nguồn: catalog 23 §3.3
+- [ ] `WF-CI-020` **SHOULD** Fitness function cho chính CI: script kiểm `permissions` có mặt, không `write-all`, mọi `uses:` ghim SHA, job gate không `continue-on-error`, required check ↔ job khớp. → Kiểm: `xt.py ci-check` exit 0 trong cổng `lint` (bản có sẵn của khung; required check ↔ job do `protection-guard`); test thay đổi xấu → đỏ. · Nguồn: catalog 23 §3.3
 - [ ] `WF-CI-021` **MAY** Preview deploy cho mỗi PR (URL trong PR) dùng environment riêng, dữ liệu giả, tự xoá khi đóng PR ([`environments-and-config.md`](environments-and-config.md)). → Kiểm: job preview + job cleanup on `closed`.
 - [ ] `WF-CI-022` **MAY** Agent tự sửa CI đỏ: trần số lần re-run/sửa (vd 3), cấm skip/disable test, cấm rewrite history; xem [`../11-autonomous-loop/self-healing-ci.md`](../11-autonomous-loop/self-healing-ci.md). → Kiểm: cấu hình trần; log số lần.
 
@@ -75,7 +75,7 @@ updated: 2026-10-14
 - **Deploy prod trong job test.** Test đỏ nửa chừng đã deploy. CD tách, environment gate.
 - **Cron `0 0 * * *`.** Trễ/drop ở đầu giờ do tải chung. Phút lệch.
 - **`continue-on-error` trên secret scan "để CI xanh".** Lỗ hổng âm thầm. Cổng bảo mật fail-closed; sửa nguyên nhân.
-- **Lệnh CI khác lệnh hook.** Local xanh, CI đỏ (hoặc ngược lại). Một nguồn lệnh (`xs.yaml`), hook và CI cùng gọi.
+- **Lệnh CI khác lệnh hook.** Local xanh, CI đỏ (hoặc ngược lại). Một nguồn lệnh (`xt.yaml`), hook và CI cùng gọi.
 
 ## Cổng tự động
 
@@ -84,7 +84,7 @@ updated: 2026-10-14
 | actionlint (MIT) v1.7.12 | `actionlint` | pre-commit + CI | 0 lỗi |
 | zizmor (MIT) 1.30.1 | `zizmor --min-severity medium .github/workflows` | CI | 0 finding ≥ medium |
 | pinact / ratchet | `pinact run --check` | CI | 100% `uses:` ghim SHA (chi tiết [`../12-security/supply-chain.md`](../12-security/supply-chain.md)) |
-| `xs.py ci-check` | `xs.py ci-check` (đọc YAML workflow: `permissions`, ghim SHA, `timeout-minutes`, `continue-on-error`) | CI (trong `lint`) | 0 vi phạm |
+| `xt.py ci-check` | `xt.py ci-check` (đọc YAML workflow: `permissions`, ghim SHA, `timeout-minutes`, `continue-on-error`) | CI (trong `lint`) | 0 vi phạm |
 | protection-guard | job trong `ci.yml`: `required_status_checks` của `.github/rulesets/main.json` ↔ tên job thật; API rules kiểm ruleset đang áp | CI required | Đỏ khi required check không khớp job; cảnh báo khi ruleset chưa hiệu lực (đổi `::warning` thành `exit 1` để ép) |
 | Thời gian cổng | đo `quality` end-to-end | CI | < 10–15 phút, cảnh báo khi vượt |
 | Cache | `actions/setup-node@<sha>` `cache: npm` · `actions/setup-python` `cache: pip` · `actions/setup-go` | CI | Hit ratio theo dõi |

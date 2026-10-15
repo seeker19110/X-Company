@@ -6,7 +6,7 @@ argument-hint: "<chủ đề hoặc danh sách công nghệ cần xác minh>"
 
 # /research — nghiên cứu trước, đề xuất sau
 
-`<FW>` = `.xstored/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XS>` = `python3 .xstored/scripts/xs.py` (hoặc `python3 scripts/xs.py`).
+`<FW>` = `.xtemplates/framework` trong dự án đích, hoặc `framework` trong repo khung. `<XT>` = `python3 .xtemplates/scripts/xt.py` (hoặc `python3 scripts/xt.py`).
 
 Luật: `<FW>/00-method/evidence-and-sources.md` (13 luật). Không chọn theo trí nhớ. Không xác minh được → ghi **(chưa xác minh)**.
 

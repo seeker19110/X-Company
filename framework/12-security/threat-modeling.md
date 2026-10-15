@@ -77,7 +77,7 @@ xác minh phiên bản trước khi dùng; tài liệu Markdown theo mẫu của
 |---|---|---|---|
 | File tồn tại + frontmatter tươi | script repo: so `updated` của `THREAT-MODEL.md` với ADR mới nhất | CI (job docs) | lệch > 0 ngày sau ADR kiến trúc → đỏ |
 | Bảng đủ cột | script grep bảng Markdown: cột STRIDE, Mức, Quyết định, Biện pháp, Người ký | CI | hàng thiếu ô → đỏ |
-| Cao có biện pháp | `xs.py blueprint-status BLUEPRINT.md --strict` với các ID được trỏ | Cổng G4 / G7 | còn Cao chưa có ID đạt → NO-GO |
+| Cao có biện pháp | `xt.py blueprint-status BLUEPRINT.md --strict` với các ID được trỏ | Cổng G4 / G7 | còn Cao chưa có ID đạt → NO-GO |
 | Review độc lập | CODEOWNERS + branch protection yêu cầu review | GitHub/GitLab | PR sửa threat model cần ≥ 1 approval |
 | Vẽ/kiểm DFD | OWASP Threat Dragon (Apache-2.0) hoặc pytm (`python3 tm.py --report`) | local / CI | sinh báo cáo từ nguồn trong repo |
 

@@ -27,8 +27,8 @@ updated: 2026-10-14
 ## Cách dùng
 
 ```bash
-python3 .xstored/scripts/xs.py list industries
-python3 .xstored/scripts/xs.py compose --profile web-app --industry fintech --industry healthcare --scale L --out BLUEPRINT.md
+python3 .xtemplates/scripts/xt.py list industries
+python3 .xtemplates/scripts/xt.py compose --profile web-app --industry fintech --industry healthcare --scale L --out BLUEPRINT.md
 ```
 
 - `modules` của mỗi gói kéo thêm module khung (vd `16-compliance-privacy/*`, `09-database/transactions-and-consistency`);

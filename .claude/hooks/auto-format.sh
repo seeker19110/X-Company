@@ -8,7 +8,7 @@ set -uo pipefail
 payload="$(cat)"
 path="$(json_field "$payload" tool_input.file_path)"
 [ -n "$path" ] || exit 0
-for g in "$XS_ROOT/scripts/dev-task.sh" "$XS_ROOT/.xstored/scripts/dev-task.sh"; do
+for g in "$XT_ROOT/scripts/dev-task.sh" "$XT_ROOT/.xtemplates/scripts/dev-task.sh"; do
   if [ -x "$g" ]; then "$g" format-file "$path" >/dev/null 2>&1 || true; break; fi
 done
 exit 0

@@ -57,7 +57,7 @@ Mặc định: **branch coverage ratchet toàn repo + mutation ≥ 70% cho thư 
 - **Loại trừ tràn lan** (`no cover` cho mọi nhánh lỗi). Cách tránh: QA-COV-003 đếm loại trừ.
 - **Mutation toàn repo mỗi PR** → 2 giờ, mọi người tắt. Cách tránh: incremental + scope thư mục (QA-COV-005/010).
 - **Equivalent mutant bị coi là test yếu** → thêm test vô nghĩa. Cách tránh: ghi chú equivalent, loại khỏi điểm.
-- **mutmut 3 không có cờ ngưỡng** — agent "bịa" `--fail-under`. Cách tránh: script đọc `export-cicd-stats` (đã kiểm docs 2026-10-13); ghi lệnh thật vào `xs.yaml`.
+- **mutmut 3 không có cờ ngưỡng** — agent "bịa" `--fail-under`. Cách tránh: script đọc `export-cicd-stats` (đã kiểm docs 2026-10-13); ghi lệnh thật vào `xt.yaml`.
 - **Gộp coverage E2E** che hố unit. Cách tránh: QA-COV-007.
 - **Agent xoá test để xanh.** Cách tránh: QA-COV-013; harness feature list chỉ đổi pass/fail.
 

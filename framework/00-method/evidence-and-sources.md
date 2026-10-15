@@ -42,7 +42,7 @@ updated: 2026-10-13
 | "Tương thích phiên bản X" | Lockfile + CI chạy với X | "X là bản mới nhất" |
 | "Mục blueprint đạt" | Link PR/CI/file chứng minh | Tick không kèm bằng chứng |
 
-Trong autopilot, `xs.py loop record --task T-001 -- <lệnh>` chạy lệnh và **tự ghi** exit code, thời gian, commit,
+Trong autopilot, `xt.py loop record --task T-001 -- <lệnh>` chạy lệnh và **tự ghi** exit code, thời gian, commit,
 đuôi output. Task đã tick mà không có bằng chứng xanh → verdict `verify`, vòng lặp không cho dừng.
 
 ## 3. Mẫu ghi nguồn
