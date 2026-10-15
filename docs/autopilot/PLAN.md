@@ -22,4 +22,4 @@
 ## Task
 
 - [x] `T-601` Xác minh lại 31 bằng chứng blueprint trỏ file đổi ở #41; sửa số dòng lệch, ghi "(xác minh lại 2026-10-15, sau #41)" — Gate: `python3 scripts/xs.py blueprint-status BLUEPRINT.md --strict && python3 scripts/check-links.py`
-- [ ] `T-602` PROGRESS + sổ audit cập nhật sau #41, cổng đầy đủ — Gate: `scripts/dev-task.sh gate`
+- [x] `T-602` PROGRESS + sổ audit cập nhật sau #41, cổng đầy đủ — Gate: `scripts/dev-task.sh gate`

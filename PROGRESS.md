@@ -3,15 +3,14 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-15 · Nhánh: claude/vibrant-davinci-mbt518
 
 ## Đang làm
-- Không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) sửa ở #41 (PLAN T-501…T-503): `audit check --strict` exit 0; AUD-HAR-020 (`progress-check` xét `MERGE_HEAD`) cũng sửa ở #41 — 0 phát hiện mở; blueprint repo khung 0 MUST mở.
+- Không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) + AUD-HAR-020 (`progress-check` xét `MERGE_HEAD` khi merge) sửa ở #41 (đã merge); sau đó 31 bằng chứng blueprint xác minh lại (PLAN T-601…T-602): `audit check --strict` exit 0, 0 phát hiện mở; blueprint repo khung 0 MUST mở.
 
 ## Tiếp theo
-1. Merge #41 khi CI commit cuối xanh (chờ người).
-2. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
-3. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận tên mới + guard/hook mới (#35, #36) + `changelog-check`.
-4. Admin: tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset `main` còn bật — khác `.github/rulesets/main.json`, vô hại khi 0 approval.
-5. Giới hạn đã biết, chưa sửa: guard không thấy lệnh trong `eval`/alias/biến chứa cờ (CHANGELOG); `xs.py` có thể lấy `$HOME` dotfiles (`.git`) làm gốc khi dự án chưa có dấu hiệu khung (README).
-6. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100%, `changelog-check` — hàm mới vượt thì tách, không `noqa`/pragma.
+1. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
+2. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận tên mới + guard/hook mới (#35, #36) + `changelog-check` + `progress-check` xét `MERGE_HEAD` (#41).
+3. Admin: tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset `main` còn bật — khác `.github/rulesets/main.json`, vô hại khi 0 approval.
+4. Giới hạn đã biết, chưa sửa: guard không thấy lệnh trong `eval`/alias/biến chứa cờ (CHANGELOG); `xs.py` có thể lấy `$HOME` dotfiles (`.git`) làm gốc khi dự án chưa có dấu hiệu khung (README).
+5. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100%, `changelog-check` — hàm mới vượt thì tách, không `noqa`/pragma.
 
 ## Quyết định
 - 2026-10-13 Khung v2 = thư viện yêu cầu có ID + máy ghép blueprint + máy kiểm "xong" — ADR-0001.
@@ -37,7 +36,7 @@
 - 2026-10-15 Bằng chứng blueprint trích máy kiểm/test, không trích file trạng thái viết lại mỗi phiên (PROGRESS.md, PLAN) — nếu không `audit plan` cờ cũ sau mọi phiên (AUD-HAR-019).
 
 ## Bàn giao phiên
-- 2026-10-15 · Commit cuối trên `main`: `425c269` (#40); tag `v2.0.0` → `55de4d1`; SHA quét audit `05ec95d` (DOC/HAR `b32e2a6`).
+- 2026-10-15 · Commit cuối trên `main`: `8e64aac` (#41); tag `v2.0.0` → `55de4d1`; SHA quét audit `8e64aac` (trừ DEP/CFG/PERF cũ hơn, không file đổi).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
-- Autopilot: PLAN T-501…T-503 `done` (`xs.py loop status`). Đang chặn: không.
-- Câu hỏi cần người: Tiếp theo 1 (merge #41) và 2 (dự án thật để thử khung).
+- Autopilot: PLAN T-601…T-602 (xác minh lại bằng chứng sau #41). Đang chặn: không. Nhánh `claude/vibrant-davinci-mbt518` trên remote giữ lịch sử trước squash của #41 (cây trùng `main`; hook chặn force-push) — đã merge vào nhánh, không đổi nội dung.
+- Câu hỏi cần người: Tiếp theo 1 (dự án thật để thử khung).

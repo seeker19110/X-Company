@@ -1,24 +1,24 @@
 # AUDIT-STATUS — Khung X-Templates
 
-> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` (§8 delta `b32e2a6`) · SHA quét = `main` `05ec95d` (sau #36–#38); DOC/HAR quét lại ở `b32e2a6` (#39) · `audit check --strict` exit 0 (AUD-HAR-019, AUD-DOC-022 sửa ở đợt 1 delta; AUD-HAR-020 sửa ở #41; 0 phát hiện mở).
+> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` (§8) · SHA quét = `main` `8e64aac` (sau #41) cho ARCH/SEC/CODE/TEST/DOC/XFEAT/HAR · `audit check --strict` exit 0, 0 phát hiện mở.
 
 ## Nhóm
 
 | # | Mã | Nhóm | Trạng thái | SHA | Ngày | Ghi chú |
 |---|---|---|---|---|---|---|
-| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | quét lại sau 3 đợt sửa (#36–#38, mỗi PR có reviewer độc lập): gate xanh 308 test coverage 100%, gitleaks 133 commit sạch, pip-audit sạch, bandit chỉ B602 đã biết, audit plan 0 bằng chứng cũ — không phát hiện mới |
-| 2 | SEC | Bảo mật | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | đo lại 2026-10-15 trên mã `05ec95d` (b32e2a6 chỉ đổi tài liệu): gitleaks 8.28.0 `--all` 128 commit sạch (exit 0); bandit 1.8.6 chỉ B602 `loop record` shell=True xs.py:820 (thiết kế, SECURITY.md) + 7 Low; AUD-SEC-011…014 đã sửa ở #36 |
-| 3 | CODE | Chất lượng mã | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | đo lại 2026-10-15 trên mã `05ec95d`: ruff/format/mypy --strict/shellcheck 0.9.0 xanh (gate); vulture 2.14 chỉ báo nhầm thuộc tính shlex (guard.py:184-186) + `stdin_text` (xs.py:863, chữ ký hook); AUD-CODE-003 đã sửa ở #38 |
-| 4 | TEST | Kiểm thử | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | đo lại 2026-10-15 trên mã `05ec95d`: 308 test, coverage dòng + nhánh 100% (2098 dòng, 906 nhánh), COVERAGE_FILE tạm riêng mỗi lần cổng (AUD-TEST-002 đã sửa ở #38) |
+| 1 | ARCH | Kiến trúc & ranh giới | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41 (`05ec95d`→`8e64aac`: +1 helper `_progress_reachable` 10 dòng trong xs.py, +2 test): vẫn một file stdlib (ADR-0001), không module/phụ thuộc mới — không phát hiện |
+| 2 | SEC | Bảo mật | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41: helper đọc file `MERGE_HEAD` từ `git rev-parse --git-path` (cục bộ, không shell); bandit 1.8.6 vẫn chỉ B602 `loop record` (thiết kế) + 7 Low; gitleaks 8.28.0 `--all` 139 commit sạch — không phát hiện |
+| 3 | CODE | Chất lượng mã | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41: ruff/format/mypy --strict/C901 ≤ 10 xanh (gate); vulture 2.14 vẫn 4 báo nhầm đã biết (guard.py:184-186, xs.py:863) — không phát hiện |
+| 4 | TEST | Kiểm thử | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41: 310 test, coverage dòng + nhánh 100% (2104 dòng, 908 nhánh); 2 test hồi quy MERGE_HEAD đỏ trước/xanh sau (reviewer đo lại với xs.py cũ) — không phát hiện |
 | 5 | PERF | Hiệu năng | rút gọn | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | CLI: đo thời gian cổng (lint 1,3 s · typecheck 1,8 s · test 10,4 s); không phát hiện |
 | 6 | A11Y | A11y & UX | N/A | | | không có UI (`audit plan`: 0 file *.html/*.tsx/*.vue/*.css) |
 | 7 | DEP | Phụ thuộc | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: pip-audit 2.9.0 `--require-hashes --strict` 2 file: không lỗ hổng; coverage 7.16.2 Apache-2.0 có hash — không phát hiện mới |
 | 8 | CI | CI/CD | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | đo lại 2026-10-15 trên mã `05ec95d`: ci-check 7 workflow xanh (permissions, ghim SHA, timeout); ruleset main 4 required check khớp comment ci.yml (AUD-DOC-021 đã sửa ở #38); pip-audit 2.10.1 `--require-hashes --strict` 2 file sạch |
-| 9 | DOC | Tài liệu | đã quét | b32e2a688482a4d741366c696dd53aba3b2b2fa5 | 2026-10-15 | delta #39 (PROGRESS + sổ): gate xanh 308 test coverage 100%; validate/check-links/progress-check/changelog-check xanh; tag v2.0.0 → 55de4d1 đúng; ghi chú 5 nhóm lệch SHA (AUD-DOC-022) |
+| 9 | DOC | Tài liệu | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41 + PLAN T-601: 31 bằng chứng blueprint trích file đổi ở #41 xác minh lại (21 dòng trích dời theo diff, khớp nội dung; 0 khẳng định sai); CHANGELOG Fixed AUD-HAR-020; validate/check-links/changelog-check/progress-check xanh |
 | 10 | DATA | Dữ liệu | N/A | | | không có CSDL/migration (`audit plan`: 0 file SQL/schema) |
 | 11 | CFG | Cấu hình & bí mật | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | biến `XS_*`, che bí mật trong bằng chứng |
-| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | đo lại 2026-10-15 trên mã `05ec95d`: gốc dự án thống nhất — xs.py `project_dir` (xs.py:620-640) xử lý `.xstored/` như dev-task.sh/check-links.py:19 (AUD-XFEAT-001 đã sửa ở #38) |
-| 13 | HAR | Harness & quy trình agent | đã quét | b32e2a688482a4d741366c696dd53aba3b2b2fa5 | 2026-10-15 | delta #39: `LOOP-HARNESS-004` xác minh lại đúng (PROGRESS 4111 B, 4 mục, progress-check exit 0); bằng chứng trỏ PROGRESS.md bị cờ mỗi lần bàn giao (AUD-HAR-019); blueprint-status --strict exit 0; gitleaks 8.28.0 `--all` 128 commit sạch |
+| 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41: helper chỉ dùng trong progress-check; gốc dự án/`_git` không đổi — không phát hiện |
+| 13 | HAR | Harness & quy trình agent | đã quét | 8e64aac30666361fbd01152825475fc1b1db6c60 | 2026-10-15 | delta #41: `progress-check` xét `MERGE_HEAD` khi đang merge (AUD-HAR-020 đã sửa); `audit plan` → 0 bằng chứng cũ sau T-601; blueprint-status --strict exit 0 |
 
 ## Phát hiện
 
