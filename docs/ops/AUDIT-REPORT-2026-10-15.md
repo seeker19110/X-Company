@@ -150,3 +150,7 @@ Phát hiện mới khi merge: **AUD-HAR-020** 🟢 mở — `progress-check` b�
 CI #41 lần đầu (run 38711914500): `quality` đỏ ở bước tiêu đề PR — tiêu đề 88 ký tự > 72 (luật squash-title, chỉ CI kiểm,
 `dev-task.sh gate` không thấy); `protection-guard`, `gitleaks`, `dep-audit`, `codeql` xanh. Đã rút tiêu đề còn 63 ký tự
 (71 byte, qua cả khi runner đếm byte). Bài học cho PR sau: kiểm độ dài tiêu đề trước khi mở PR.
+
+AUD-HAR-020 duyệt ("tiếp tục", 2026-10-15) và sửa trong #41: test hồi quy `test_progress_sha_from_merge_head_during_merge`
+đỏ trước sửa ("SHA … không phải tổ tiên của HEAD"), xanh sau; `progress-check` chấp nhận SHA là tổ tiên `MERGE_HEAD` chỉ
+khi đang merge (hết merge → đỏ lại, cùng test). `audit check --strict` exit 0, 0 phát hiện mở.

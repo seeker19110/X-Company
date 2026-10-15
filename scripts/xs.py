@@ -934,9 +934,14 @@ def progress_base_ref(repo: Path) -> Optional[str]:
     return None
 
 
+def _progress_reachable(repo: Path, sha: str) -> bool:
+    """SHA là tổ tiên của HEAD — hoặc của MERGE_HEAD khi đang merge, vì commit merge sẽ chứa nó (AUD-HAR-020)."""
+    return any(_git(repo, "merge-base", "--is-ancestor", sha, ref).returncode == 0 for ref in ("HEAD", "MERGE_HEAD"))
+
+
 def progress_check(path: Path) -> List[str]:
     """Luật PROGRESS.md (mẫu templates/PROGRESS.md): ≤ 8 KB, đúng 4 mục, SHA bàn giao là tổ tiên HEAD
-    và nằm trên nhánh chính (squash-merge xoá SHA của nhánh PR → nhánh chính đỏ sau merge).
+    (hoặc MERGE_HEAD khi đang merge) và nằm trên nhánh chính (squash-merge xoá SHA của nhánh PR → nhánh chính đỏ sau merge).
 
     Trả danh sách vi phạm; ném OSError khi không đọc được file hoặc không chạy được git.
     """
@@ -969,7 +974,7 @@ def progress_check(path: Path) -> List[str]:
     for sha in shas:
         if _git(repo, "rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}").returncode != 0:
             errors.append(f"SHA `{sha}` không phải commit có trong lịch sử{hint}")
-        elif _git(repo, "merge-base", "--is-ancestor", sha, "HEAD").returncode != 0:
+        elif not _progress_reachable(repo, sha):
             errors.append(f"SHA `{sha}` không phải tổ tiên của HEAD (squash/rebase làm mất?){hint}")
         elif base and _git(repo, "merge-base", "--is-ancestor", sha, base).returncode != 0:
             errors.append(

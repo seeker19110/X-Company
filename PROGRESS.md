@@ -3,10 +3,10 @@
 > Giai đoạn hiện tại: G8 Vận hành & tiến hoá (khung v2 đã phát hành) · Cập nhật: 2026-10-15 · Nhánh: claude/vibrant-davinci-mbt518
 
 ## Đang làm
-- Không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) sửa ở #41 (PLAN T-501…T-503): `audit check --strict` exit 0; còn AUD-HAR-020 🟢 mở (chờ duyệt); blueprint repo khung 0 MUST mở.
+- Không có việc dở. Audit delta 2026-10-15 khép lại (#36–#39) + delta `b32e2a6` (2 🟢: AUD-HAR-019 bằng chứng blueprint trích file đổi mỗi phiên, AUD-DOC-022 ghi chú sổ lệch SHA) sửa ở #41 (PLAN T-501…T-503): `audit check --strict` exit 0; AUD-HAR-020 (`progress-check` xét `MERGE_HEAD`) cũng sửa ở #41 — 0 phát hiện mở; blueprint repo khung 0 MUST mở.
 
 ## Tiếp theo
-1. Chờ duyệt AUD-HAR-020: `progress-check` xét cả `MERGE_HEAD` khi đang merge (sửa `xs.py` + test hồi quy); tạm thời giải xung đột PROGRESS bằng 2 commit.
+1. Merge #41 (CI xanh, chờ người).
 2. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
 3. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận tên mới + guard/hook mới (#35, #36) + `changelog-check`.
 4. Admin: tự kiểm Dependabot security updates (proxy chặn API); ô "extra approval for unattributed changes" của ruleset `main` còn bật — khác `.github/rulesets/main.json`, vô hại khi 0 approval.
@@ -40,4 +40,4 @@
 - 2026-10-15 · Commit cuối trên `main`: `425c269` (#40); tag `v2.0.0` → `55de4d1`; SHA quét audit `05ec95d` (DOC/HAR `b32e2a6`).
 - Lệnh kiểm nhanh: `scripts/dev-task.sh gate` (đọc `xs.yaml`; `pip install --require-hashes -r requirements-dev.txt`, cần shellcheck).
 - Autopilot: PLAN T-501…T-503 `done` (`xs.py loop status`). Đang chặn: không.
-- Câu hỏi cần người: Tiếp theo 1 (duyệt sửa AUD-HAR-020) và 2 (dự án thật để thử khung).
+- Câu hỏi cần người: Tiếp theo 1 (merge #41) và 2 (dự án thật để thử khung).
