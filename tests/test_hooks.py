@@ -332,9 +332,28 @@ class GuardMatrixTest(unittest.TestCase):
                 "CLAUDE_CODE_SIMPLE=1 claude -p x",
                 "export CLAUDE_CODE_SAFE_MODE=1",
                 """echo '{"disableAllHooks": true}' > /tmp/s.json""",
+                "npm exec @anthropic-ai/claude-code -- --bare",
+                "pnpm dlx @anthropic-ai/claude-code --bare",
+                "yarn dlx @anthropic-ai/claude-code --bare",
+                "node node_modules/@anthropic-ai/claude-code/cli.js --bare",
+                "claude config set disableAllHooks true",
+                "env CLAUDE_CODE_SIMPLE=1 claude -p x",
             ],
         )
-        self.check("", ["claude -p 'giải thích'", "claude --version", "npx prettier --check .", "npx --yes"])
+        self.check(
+            "",
+            [
+                "claude -p 'giải thích'",
+                "claude --version",
+                "npx prettier --check .",
+                "npx --yes",
+                "grep -rn disableAllHooks .",
+                "rg CLAUDE_CODE_SAFE_MODE docs",
+                "git commit -m 'fix: chặn disableAllHooks, --bare'",
+                "claude mcp add x -- npx foo --settings y",
+                "npm exec @anthropic-ai/claude-code",
+            ],
+        )
         self.assertIn("--bare", str(self.g.bash_decision("claude --bare", self.root)["reason"]))
 
     def test_guard_rel_path_without_relative_form(self):
