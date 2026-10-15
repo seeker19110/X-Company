@@ -101,3 +101,34 @@ Blueprint biến mất → `loop status` = `done`: tái hiện được, nhưng 
 
 `python3 scripts/xs.py audit check docs/ops/AUDIT-STATUS.md --strict` → exit 0 (Definition of Complete);
 `blueprint-status BLUEPRINT.md --strict` → exit 0; `audit plan` → 0 bằng chứng blueprint cũ.
+
+## 8. Quét lại delta `b32e2a6` (sau #39)
+
+> Chế độ **delta**: `audit plan` chỉ liệt kê DOC, HAR (2 file đổi từ `05ec95d`: `PROGRESS.md`, sổ audit) + 1 bằng chứng
+> blueprint trỏ file đã đổi (`LOOP-HARNESS-004` ← `PROGRESS.md`). Người quét: phiên chính (delta 2 file tài liệu, không
+> giao subagent). Không có 🔴/🟠 nên không cần xác minh đối kháng.
+
+| Nhóm | Lệnh | Exit | Kết quả chính |
+|---|---|---|---|
+| tất cả | `scripts/dev-task.sh gate` (container mới: `pip install --require-hashes -r requirements-dev.txt`, shellcheck 0.9.0) | 0 | 308 test; coverage dòng + nhánh 100% (2098 dòng, 906 nhánh) |
+| SEC | `gitleaks git . --redact --log-opts=--all` (8.28.0, checksum khớp; clone đã `--unshallow`) | 0 | 128 commit, không lộ bí mật |
+| DOC | `xs.py progress-check` · `changelog-check` · `validate` · `check-links.py` (trong gate) | 0 | PROGRESS 4111 B, 4 mục; tag `v2.0.0` → `55de4d1` khớp PROGRESS |
+| HAR | `xs.py blueprint-status BLUEPRINT.md --strict` | 0 | 0 MUST mở |
+| HAR | `xs.py audit check docs/ops/AUDIT-STATUS.md --strict` | 0 | 0 🔴/🟠 mở; 2 🟢 mở |
+
+Phát hiện mới (🟢, đều đo được):
+
+- **AUD-HAR-019** — bằng chứng `LOOP-HARNESS-004` trích `PROGRESS.md`; file này đổi ở mọi commit bàn giao nên `audit plan`
+  cờ "bằng chứng cũ" sau **mọi** phiên (#39 chỉ đổi PROGRESS + sổ mà vẫn cờ). Nội dung bằng chứng xác minh lại vẫn đúng.
+  Sửa: trích máy kiểm (`xs.yaml` lint gọi `progress-check`, test `ProgressCheckTest`) thay vì file trạng thái.
+- **AUD-DOC-022** — #39 nâng cột SHA của SEC/CODE/TEST/CI/XFEAT lên `05ec95d` nhưng giữ ghi chú lần quét `5627657`
+  (TEST "295 test" ↔ đo 308; phát hiện đã sửa còn viết như hiện trạng). Bằng chứng quét lại thật chỉ gom ở dòng ARCH.
+
+Ghi chú: PROGRESS ghi "commit cuối `05ec95d` (#38)" trong khi `main` là `b32e2a6` (#39) — giới hạn tự tham chiếu của
+commit bàn giao (squash), `progress-check` xanh; không tính phát hiện.
+
+### Kế hoạch sửa (chờ duyệt)
+
+| Đợt | PR | Phát hiện | Gate |
+|---|---|---|---|
+| 1 | 1 PR `docs:` | AUD-HAR-019, AUD-DOC-022 | `audit plan --json` → `stale_evidence` rỗng; `audit check --strict` exit 0 |

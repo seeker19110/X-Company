@@ -1,6 +1,6 @@
 # AUDIT-STATUS — Khung X-Templates
 
-> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` · SHA quét = `main` `05ec95d` (sau #36–#38) · `audit check --strict` exit 0.
+> Cập nhật: 2026-10-15 · Báo cáo gần nhất: `docs/ops/AUDIT-REPORT-2026-10-15.md` (§8 delta `b32e2a6`) · SHA quét = `main` `05ec95d` (sau #36–#38); DOC/HAR quét lại ở `b32e2a6` (#39) · `audit check --strict` exit 0 (0 🔴/🟠 mở; 2 🟢 mở chờ duyệt).
 
 ## Nhóm
 
@@ -14,11 +14,11 @@
 | 6 | A11Y | A11y & UX | N/A | | | không có UI (`audit plan`: 0 file *.html/*.tsx/*.vue/*.css) |
 | 7 | DEP | Phụ thuộc | đã quét | 5627657ecd3d81c7c5e35e7b05c75c40366374d9 | 2026-10-15 | delta: pip-audit 2.9.0 `--require-hashes --strict` 2 file: không lỗ hổng; coverage 7.16.2 Apache-2.0 có hash — không phát hiện mới |
 | 8 | CI | CI/CD | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: ci-check 7 workflow xanh; release-tag.yml: write chỉ ở job, input qua env, kiểm tổ tiên/SemVer/CHANGELOG/tag; ruleset main active 4 check; comment ci.yml lệch (AUD-DOC-021) |
-| 9 | DOC | Tài liệu | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: validate/check-links/progress-check xanh; đổi tên nhất quán; CHANGELOG trùng nhóm (AUD-DOC-020); 56 bằng chứng blueprint xác minh lại: 34 đúng, 2 sai (AUD-HAR-014/015), 20 lệch dòng (AUD-HAR-018) |
+| 9 | DOC | Tài liệu | đã quét | b32e2a688482a4d741366c696dd53aba3b2b2fa5 | 2026-10-15 | delta #39 (PROGRESS + sổ): gate xanh 308 test coverage 100%; validate/check-links/progress-check/changelog-check xanh; tag v2.0.0 → 55de4d1 đúng; ghi chú 5 nhóm lệch SHA (AUD-DOC-022) |
 | 10 | DATA | Dữ liệu | N/A | | | không có CSDL/migration (`audit plan`: 0 file SQL/schema) |
 | 11 | CFG | Cấu hình & bí mật | đã quét | 0511c1e8afe2e18a6c8d85161c9ce6cfaa089dcf | 2026-10-14 | biến `XS_*`, che bí mật trong bằng chứng |
 | 12 | XFEAT | Thống nhất chéo tính năng | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: gốc dự án xác định 3 cách khác nhau (AUD-XFEAT-001, suy luận) |
-| 13 | HAR | Harness & quy trình agent | đã quét | 05ec95dda8a55b2d4b6110b7e2ab37566c00fa50 | 2026-10-15 | delta: ask bỏ qua cổng commit (AUD-HAR-013); blueprint mất → loop done (AUD-HAR-016, cố ý); trailer commit tên model (AUD-HAR-017) |
+| 13 | HAR | Harness & quy trình agent | đã quét | b32e2a688482a4d741366c696dd53aba3b2b2fa5 | 2026-10-15 | delta #39: `LOOP-HARNESS-004` xác minh lại đúng (PROGRESS 4111 B, 4 mục, progress-check exit 0); bằng chứng trỏ PROGRESS.md bị cờ mỗi lần bàn giao (AUD-HAR-019); blueprint-status --strict exit 0; gitleaks 8.28.0 `--all` 128 commit sạch |
 
 ## Phát hiện
 
@@ -92,3 +92,5 @@
 | AUD-CODE-003 | 🟢 | đã sửa | 9 dòng `noqa` không lý do và vô hiệu (E402/E731 không thuộc bộ luật bật `E9,F,C901`) | đo được: `git grep -n noqa -- scripts .claude/hooks tests` → 9 dòng ở tests/; ruff.toml `select` |  | #38 — 0 `noqa` |
 | AUD-XFEAT-001 | 🟢 | đã sửa | Gốc dự án xác định 3 cách: xs.py (`CLAUDE_PROJECT_DIR` hoặc cwd), dev-task.sh/check-links.py (biến hoặc vị trí script, xử lý `.xstored`), guard.py (biến hoặc cwd) → `xs.py loop` chạy từ thư mục con có thể tạo `.autopilot/` sai chỗ | suy luận: scripts/xs.py `project_dir`, scripts/dev-task.sh, scripts/check-links.py, .claude/hooks/guard.py; chưa tái hiện |  | #38 — test hồi quy đỏ trước/xanh sau (đã tái hiện: `.autopilot/` tạo ở thư mục con) |
 | AUD-TEST-002 | 🟢 | đã sửa | Cổng `test` dùng `.coverage*` chung ở gốc repo và bắt đầu bằng `coverage erase` → hai cổng song song cùng worktree có thể xoá dữ liệu subprocess của nhau (đỏ giả 99%) | suy luận: 1 lần đỏ 99% đúng các dòng chạy qua subprocess khi audit chạy song song, sau đó 3/3 xanh; `COVERAGE_FILE` tuyệt đối 2/2 xanh |  | #38 — `COVERAGE_FILE` riêng mỗi lần chạy cổng |
+| AUD-HAR-019 | 🟢 | mở | Bằng chứng `LOOP-HARNESS-004` trích `PROGRESS.md` — file đổi ở MỌI commit bàn giao → `audit plan` luôn cờ "bằng chứng cũ" (nhiễu lặp lại, làm quen bỏ qua cờ thật) | đo được: #39 chỉ đổi PROGRESS.md + sổ; `python3 scripts/xs.py audit plan` tại b32e2a6 → "LOOP-HARNESS-004 Bằng chứng ← PROGRESS.md"; BLUEPRINT.md:471; scripts/xs.py:1418-1445 | `python3 scripts/xs.py audit plan --json` → `stale_evidence` rỗng sau một commit chỉ đổi PROGRESS.md | sửa: bằng chứng trích máy kiểm (`xs.yaml` lint + test ProgressCheckTest) thay vì file trạng thái |
+| AUD-DOC-022 | 🟢 | mở | #39 nâng cột SHA của SEC/CODE/TEST/CI/XFEAT lên `05ec95d` nhưng giữ ghi chú của lần quét `5627657`: TEST ghi 295 test (đo 308), SEC ghi gitleaks 124 commit, các phát hiện đã sửa còn mô tả như hiện trạng | đo được: `git diff 05ec95d b32e2a6 -- docs/ops/AUDIT-STATUS.md` → các dòng nhóm chỉ đổi cột SHA (trừ ARCH); gate b32e2a6 "Ran 308 tests" | tay: mỗi dòng nhóm có SHA mới thì ghi chú nêu bằng chứng của lần quét đó | sửa: viết lại ghi chú 5 dòng theo bằng chứng quét lại (ARCH đã gom) |
