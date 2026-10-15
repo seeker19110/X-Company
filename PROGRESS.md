@@ -6,7 +6,7 @@
 - Không có việc dở. #30 (đổi tên X-Templates, ADR-0006, LOOP-HARNESS-018) đã merge; autopilot BLOCKED chờ admin (Tiếp theo 1). Sổ audit 2026-10-14 sạch nợ: AUD-CODE-001 (C901, #28), AUD-CODE-002 + AUD-TEST-001 (#26) đã trả; `audit check --strict` không còn 🟢 chấp nhận.
 
 ## Tiếp theo
-1. Việc của admin (5 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013, SEC-009): import `.github/rulesets/main.json` (4 required check), bật Private Vulnerability Reporting + Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
+1. Việc của admin (4 MUST mở trong BLUEPRINT.md: GATE-007, REPO-006/008/013): sửa ruleset `main` id 25128933 cho khớp file (đang `disabled`, check `dependabot` không tồn tại, thiếu `pull_request`, strict=false), bật Dependabot security updates, tạo tag phát hành (phiên agent bị proxy chặn push tag — 403).
 2. Giữ cổng: C901 ≤ 10, `mypy --strict`, coverage dòng + nhánh 100% — hàm mới vượt thì tách, không `noqa`/pragma.
 3. Cần người chọn: một dự án sản phẩm thật (web/api, quy mô M) để thử khung, đo mục MUST hay bị miễn trừ.
 4. Dự án đã cài khung: chạy lại `install.py` từ X-Templates để nhận chuỗi tên mới.
