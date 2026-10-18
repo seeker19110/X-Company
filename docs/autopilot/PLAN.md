@@ -89,7 +89,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 
 ### Lát 7 — Dashboard & E2E (F-012)
 - [x] `T-023` Dashboard ngoại lệ có owner + next_action, bảng mốc riêng — Gate: `npm run -s test:file -- tests/db/dashboard.test.ts`
-- [ ] `T-024` E2E đầy đủ luồng chính AT01/AT03/AT06/AT09/AT12 + axe (QA-E2E-023) — Gate: `npm run -s e2e`
+- [x] `T-024` E2E đầy đủ luồng chính AT01/AT03/AT06/AT09/AT12 + axe (QA-E2E-023) — Gate: `npm run -s e2e`
 
 ## Phụ thuộc ngoài
 | Việc | Bên ngoài | Ngày cam kết | Kế hoạch B |

@@ -13,3 +13,7 @@ test-results/
 .env.*
 !.env.example
 .data/
+
+# E2E
+e2e/.seed.json
+playwright/.cache/

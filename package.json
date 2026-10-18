@@ -17,7 +17,7 @@
     "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\"",
     "test:file": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1",
     "coverage": "scripts/coverage.sh",
-    "e2e": "playwright test",
+    "e2e": "scripts/with-test-db.sh scripts/e2e.sh",
     "db:migrate": "tsx scripts/migrate.ts",
     "audit:verify": "tsx scripts/verify-audit-chain.ts"
   },
