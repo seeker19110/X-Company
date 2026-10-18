@@ -25,7 +25,7 @@ export default async function ApprovalsPage() {
               {i.summary}
               <br />
               <span className="muted">Gửi lúc {fmtDateTime(i.createdAt.toISOString())}</span>
-              <DecisionButtons type={i.type} id={i.id} />
+              <DecisionButtons type={i.type} id={i.id} subject={`${TYPE[i.type]} của ${i.employeeName}`} />
             </li>
           ))}
         </ul>

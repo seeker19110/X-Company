@@ -14,10 +14,10 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |
-| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `routes.ts`, `scope.ts` | chấm công; `compute.ts` là lõi thuần |
+| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `request-schema.pure.ts`, `routes.ts`, `scope.ts` | chấm công; `compute.ts` là lõi thuần; `request-schema.pure.ts` = schema form dùng chung client+server |
 | `work` | `index.ts`, `tasks.ts`, `progress.ts`, `routes.ts` | dự án/công việc; `progress-compute.ts` là lõi thuần                      |
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
-| `inquiry` | `index.ts`, `routes.ts` | liên hệ, tuyển dụng                                              |
+| `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
 | `files` | `index.ts`, `routes.ts` | kho tệp private                                                  |
 | `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
@@ -33,7 +33,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
 | `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
 | `http`    | `index.ts`               | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
-| `web`     | `safe-html.ts`           | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002) |
+| `web`     | `safe-html.ts`, `theme.ts` | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002); `theme.ts` SINH từ token (`npm run build:tokens`) |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |
 

@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\"",
+    "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\"",
     "test:file": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1",
     "coverage": "scripts/coverage.sh",
     "e2e": "scripts/with-test-db.sh scripts/e2e.sh",
@@ -46,7 +46,9 @@
     "check:supply-wiring": "node scripts/check-supply-wiring.mjs",
     "notices": "node scripts/gen-third-party-notices.mjs",
     "eol:check": "node scripts/eol-check.mjs",
-    "check:supply-chain": "npm run -s check:licenses && npm run -s check:osv-exceptions && node scripts/gen-third-party-notices.mjs --check && npm run -s check:sql-interpolation && npm run -s check:sbom && npm run -s check:supply-wiring && python3 .xtemplates/scripts/xt.py ci-check .github/workflows"
+    "check:supply-chain": "npm run -s check:licenses && npm run -s check:osv-exceptions && node scripts/gen-third-party-notices.mjs --check && npm run -s check:sql-interpolation && npm run -s check:sbom && npm run -s check:supply-wiring && python3 .xtemplates/scripts/xt.py ci-check .github/workflows",
+    "build:tokens": "node scripts/build-tokens.mjs",
+    "check:tokens": "node scripts/check-tokens.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

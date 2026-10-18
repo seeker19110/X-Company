@@ -20,12 +20,15 @@ export async function login(page: Page, key: string) {
 
 export async function logout(page: Page) {
   await page.goto("/app/me");
-  // Hộp xác nhận chỉ xuất hiện khi còn bản chưa gửi — gỡ listener sau đó để không nuốt hộp thoại của bước sau.
-  const accept = (d: { accept: () => Promise<void> }) => void d.accept();
-  page.on("dialog", accept);
   await page.getByRole("button", { name: "Đăng xuất" }).click();
-  await expect(page).toHaveURL(/\/app\/login$/);
-  page.off("dialog", accept);
+  // Hộp xác nhận (<dialog>) chỉ xuất hiện khi còn bản chưa gửi: đồng bộ rồi (nếu cần) xoá và đăng xuất.
+  const dialog = page.getByRole("dialog");
+  await expect(async () => {
+    if (await dialog.isVisible()) {
+      await dialog.getByRole("button", { name: /^(Đồng bộ|Xoá và đăng xuất)$/ }).click();
+    }
+    await expect(page).toHaveURL(/\/app\/login$/, { timeout: 1500 });
+  }).toPass({ timeout: 15_000 });
 }
 
 /** WCAG 2.2 AA (axe): không có vi phạm mức serious/critical. */

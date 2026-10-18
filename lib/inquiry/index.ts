@@ -10,31 +10,13 @@ import { sessionSecret } from "../nen/config.ts";
 import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
+import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
 export const RATE_LIMIT = { max: 5, windowMs: minutesToMs(10) };
 export const MIN_FILL_MS = 3000;
 
-const phoneRe = /^\+?[0-9][0-9 .-]{6,18}[0-9]$/;
-
-export const InquiryInput = z
-  .object({
-    submission_id: z.uuid(),
-    name: z.string().trim().min(1, "Vui lòng nhập họ tên").max(120),
-    email: z.email("Email không hợp lệ").max(254).nullish(),
-    phone: z.string().trim().regex(phoneRe, "Số điện thoại không hợp lệ").nullish(),
-    message: z.string().trim().min(1, "Vui lòng nhập nhu cầu").max(4000),
-    service: z
-      .string()
-      .regex(/^[a-z0-9-]{1,80}$/)
-      .nullish(),
-    consent: z.literal(true, { error: "Cần đồng ý xử lý dữ liệu để gửi" }),
-    website: z.string().max(200).optional().default(""),
-    elapsed_ms: z.number().int().nonnegative().optional(),
-    source: z.string().max(300).nullish(),
-  })
-  .refine((v) => !!v.email || !!v.phone, { message: "Cần email hoặc điện thoại", path: ["email"] });
-export type InquiryInputT = z.infer<typeof InquiryInput>;
+export { InquiryInput, type InquiryInputT };
 
 export const ApplicationInput = z.object({
   submission_id: z.uuid(),

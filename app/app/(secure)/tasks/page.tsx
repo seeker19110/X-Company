@@ -26,7 +26,7 @@ export default async function TasksPage() {
                 {t.due_date && <> · hạn {t.due_date}</>}
                 {t.role === "reviewer" && <> · bạn nghiệm thu</>}
               </span>
-              <TaskActions id={t.id} status={t.status} version={t.version} role={t.role} />
+              <TaskActions id={t.id} title={t.title} status={t.status} version={t.version} role={t.role} />
             </li>
           ))}
         </ul>

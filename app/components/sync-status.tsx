@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { flush, summarize, type QueueSummary } from "@/lib/offline/queue";
+import { reportClientError } from "./client-log";
+import { syncErrorMessage } from "./messages";
 import { openQueue, removeForeignDatabases } from "./offline/idb-store";
 import { sendBatch } from "./offline/sync-client";
 import { useSession } from "./session-context";
@@ -20,7 +22,8 @@ export function SyncStatus() {
         setS(summarize(await store.all()));
         setErr(null);
       } catch (e) {
-        setErr(e instanceof Error ? e.message : "Không đọc được dữ liệu trên thiết bị");
+        reportClientError("đồng bộ/đọc hàng chờ thất bại", e);
+        setErr(syncErrorMessage(e));
       }
     },
     [csrf, userId],

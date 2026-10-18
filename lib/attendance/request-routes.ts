@@ -8,6 +8,7 @@ import { decide, pendingApprovals, type ApprovalType } from "./approvals.ts";
 import { requestLeave } from "./leave.ts";
 import { requestOt } from "./ot.ts";
 import { requestAdjustment } from "./period.ts";
+import { AdjustmentInput, LeaveInput, OtInput } from "./request-schema.pure.ts";
 
 /** POST ghi nghiệp vụ: bắt buộc Idempotency-Key (ARC-INT-001, BE-API-008). */
 const IDEMPOTENT: GuardOptions = { idempotent: true };
@@ -32,18 +33,8 @@ export const postDecision = withActor(async (ctx) => {
   return json({ ok: true });
 }, IDEMPOTENT);
 
-const iso = z.iso.datetime({ offset: true });
-
 export const postLeave = withActor(async (ctx) => {
-  const b = z
-    .object({
-      leave_type_id: z.uuid(),
-      start_at: iso,
-      end_at: iso,
-      minutes: z.number().int().positive(),
-      reason: z.string().max(1000).nullish(),
-    })
-    .parse(await readJson(ctx.req));
+  const b = LeaveInput.parse(await readJson(ctx.req));
   const id = await withTx((tx) =>
     requestLeave(tx, ctx.actor, {
       leaveTypeId: b.leave_type_id,
@@ -57,14 +48,7 @@ export const postLeave = withActor(async (ctx) => {
 }, IDEMPOTENT);
 
 export const postOt = withActor(async (ctx) => {
-  const b = z
-    .object({
-      business_date: z.iso.date(),
-      minutes: z.number().int().positive(),
-      reason: z.string().min(1).max(1000),
-      consent: z.boolean(),
-    })
-    .parse(await readJson(ctx.req));
+  const b = OtInput.parse(await readJson(ctx.req));
   const id = await withTx((tx) =>
     requestOt(tx, ctx.actor, {
       businessDate: b.business_date,
@@ -77,15 +61,7 @@ export const postOt = withActor(async (ctx) => {
 }, IDEMPOTENT);
 
 export const postAdjustment = withActor(async (ctx) => {
-  const b = z
-    .object({
-      action: z.enum(["add_event", "void_event"]),
-      target_event_id: z.uuid().optional(),
-      new_kind: z.enum(["in", "out", "break_start", "break_end"]).optional(),
-      new_at: iso.optional(),
-      reason: z.string().min(1).max(1000),
-    })
-    .parse(await readJson(ctx.req));
+  const b = AdjustmentInput.parse(await readJson(ctx.req));
   if (!ctx.actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
   const id = await withTx((tx) =>
     requestAdjustment(tx, ctx.actor, {

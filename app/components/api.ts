@@ -7,6 +7,8 @@ export interface ApiResult<T> {
   status: number;
   data?: T;
   error?: string;
+  /** Lỗi theo trường từ problem+json (`fields`), khi server trả 400 VALIDATION (FE-FORM-001). */
+  fields?: { path: string; message: string }[];
 }
 
 /** Giá trị ô biểu mẫu → chuỗi, hoặc null khi trống/không phải chuỗi (BASE-DATA-003: rỗng = chưa nhập). */
@@ -56,11 +58,21 @@ export async function api<T = unknown>(
       credentials: "same-origin",
       signal: AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
     });
-    const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } } & T;
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: { message?: string };
+      fields?: { path: string; message: string }[];
+    } & T;
     // Phản hồi chắc chắn (thành công hoặc 4xx ngoài 409/429): thao tác kết thúc, bỏ khoá.
     if (auto && (res.ok || (res.status < 500 && res.status !== 409 && res.status !== 429)))
       pendingKeys.delete(sig);
-    if (!res.ok) return { ok: false, status: res.status, error: json.error?.message ?? `Lỗi ${res.status}` };
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        error: json.error?.message ?? `Lỗi ${res.status}`,
+        ...(Array.isArray(json.fields) ? { fields: json.fields } : {}),
+      };
+    }
     return { ok: true, status: res.status, data: json };
   } catch (err) {
     const error = isTimeoutError(err)

@@ -138,7 +138,10 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
   test("kiểm dữ liệu: thiếu cả email lẫn điện thoại / không đồng ý / email sai → 400 có chi tiết", async () => {
     const none = await post(postInquiry, "/api/public/inquiries", form({ email: null, phone: null }));
     assert.equal(none.status, 400);
-    assert.equal((await none.json()).error.details.issues[0].path, "email");
+    const noneBody = await none.json();
+    assert.equal(noneBody.error.details.issues[0].path, "email");
+    // FE-FORM-001: lỗi theo trường (problem+json `fields`) khớp tên ô để client gắn vào đúng ô.
+    assert.deepEqual(noneBody.fields, [{ path: "email", message: "Cần email hoặc điện thoại" }]);
     assert.equal((await post(postInquiry, "/api/public/inquiries", form({ consent: false }))).status, 400);
     assert.equal(
       (await post(postInquiry, "/api/public/inquiries", form({ email: "khong-phai-email" }))).status,
