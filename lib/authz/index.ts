@@ -56,6 +56,8 @@ export const PERMISSIONS = {
   "attendance.read": { roles: ["team_lead", "hr", "executive"], self: true },
   "attendance.write_own": { roles: [], self: true },
   "attendance.approve": { roles: ["team_lead", "hr"], self: false },
+  "attendance.ot_exception": { roles: ["hr"], self: false },
+  "leave.adjust": { roles: ["hr"], self: false },
   "attendance.qr_display": { roles: ["team_lead", "hr", "sysadmin"], self: false },
   "period.manage": { roles: ["hr"], self: false },
   "period.read_locked": { roles: ["hr", "accountant", "executive"], self: false },

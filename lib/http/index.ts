@@ -132,7 +132,26 @@ export function withActor(handler: Handler<ActorRequestContext>): (req: Request)
       if (!checkCsrf(token, req.headers.get("x-csrf-token")))
         throw new AppError("CSRF", 403, "Thiếu hoặc sai mã CSRF");
     }
-    return handler({ req, requestId, actor, sessionToken: token });
+    try {
+      return await handler({ req, requestId, actor, sessionToken: token });
+    } catch (err) {
+      // 403 từ lớp nghiệp vụ (requireOn) → ghi audit denied ở giao dịch riêng rồi trả lỗi như cũ.
+      if (err instanceof AppError && err.code === "FORBIDDEN" && err.details?.action) {
+        const object = err.details.object as { type?: string; id?: string } | undefined;
+        await withTx((tx) =>
+          appendAudit(tx, {
+            actorUserId: actor.userId,
+            companyId: actor.companyId,
+            action: String(err.details!.action),
+            objectType: object?.type ?? "unknown",
+            objectId: object?.id ?? null,
+            result: "denied",
+            requestId,
+          }),
+        );
+      }
+      throw err;
+    }
   });
 }
 

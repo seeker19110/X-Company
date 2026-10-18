@@ -72,7 +72,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 ### Lát 4 — Chấm công (F-004, F-005, F-006)
 - [x] `T-011` `computeShift` thuần: ca qua đêm, nhiều cặp, chồng lấn, nghỉ, thiếu checkout, segments (S-AT-01, 02) — Gate: `npm run -s test:file -- tests/unit/compute-shift.test.ts`
 - [x] `T-012` Sự kiện công chống trùng + QR ký HMAC + lệch giờ/offline (S-AT-03..06, 09) — Gate: `npm run -s test:file -- tests/http/attendance-events.test.ts`
-- [ ] `T-013` Nghỉ phép sổ biến động + OT hạn mức đồng thời + phê duyệt không tự duyệt (S-AT-08) — Gate: `npm run -s test:file -- tests/db/leave-ot.test.ts`
+- [x] `T-013` Nghỉ phép sổ biến động + OT hạn mức đồng thời + phê duyệt không tự duyệt (S-AT-08) — Gate: `npm run -s test:file -- tests/db/leave-ot.test.ts`
 - [ ] `T-014` Sửa công có duyệt + kỳ công 5 trạng thái + khoá + xuất CSV có phiên bản/checksum + log muộn (S-AT-07) — Gate: `npm run -s test:file -- tests/db/period.test.ts`
 
 ### Lát 5 — Công việc, nghiệm thu, tiến độ, tệp (F-007…F-010)
