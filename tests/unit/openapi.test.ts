@@ -18,7 +18,7 @@ import {
 import { compareOpenApi, main as breakingMain } from "../../scripts/check-api-breaking.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
-type Doc = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+type Doc = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- tài liệu OpenAPI là JSON tuỳ ý, kiểm bằng test
 const clone = (d: unknown): Doc => JSON.parse(JSON.stringify(d)) as Doc;
 const doc = (): Doc => buildOpenApi() as Doc;
 
