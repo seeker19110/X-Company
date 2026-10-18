@@ -19,7 +19,7 @@
 | Proxy | `proxy.ts` (Next 16) | header bảo mật/CSP, chuyển hướng chưa đăng nhập; **không** là nơi kiểm quyền (kiểm ở route) |
 | Nghiệp vụ | `lib/<miền>` TS thuần | `identity`, `org`, `authz`, `audit`, `attendance`, `work`, `cms`, `inquiry`, `files`, `notify` — hàm nhận `tx` + `actor`, không đọc request |
 | DB | PostgreSQL 17 | `migrations/NNNN_*.sql` append-only; role ứng dụng không phải owner/superuser |
-| Worker | `scripts/worker.ts` (Node) | đọc `outbox_event` `FOR UPDATE SKIP LOCKED`, thử lại có giới hạn, hàng lỗi |
+| Worker | `scripts/worker.ts` (Node, `npm run worker`) + `lib/worker/` | **đã có (T-029):** lấy `outbox_event` `FOR UPDATE SKIP LOCKED`, handler theo topic + schema zod, backoff mũ có jitter (tối đa 5 lần), DLQ (`status='dead'`), khử trùng `processed_message`; kênh gửi qua adapter (hiện chỉ ghi log — SMTP/Web Push chưa có; kênh tắt → giữ `pending`). Retention: `npm run retention:run` (D-016) |
 | SW | `public/sw.js` | cache tĩnh, fallback offline; hàng chờ ở IndexedDB do trang quản lý |
 
 Luật lớp (kiểm bằng ESLint `no-restricted-imports`): `app/**` → `lib/**` qua `lib/http` (handler bọc `withActor`);
@@ -33,7 +33,7 @@ Mọi lỗi nghiệp vụ là `AppError(code, http)`; không lộ stack ra clien
 | Nhóm | Bảng |
 |---|---|
 | Tổ chức & danh tính | company, branch, department, worksite, employee, employment_history, app_user, session, role_grant, login_attempt |
-| Kiểm toán & nền | audit_event (chuỗi băm), outbox_event, idempotency_record |
+| Kiểm toán & nền | audit_event (chuỗi băm), outbox_event (+ `processed_message`), idempotency_record |
 | Chấm công | shift_template, shift_assignment, attendance_event, attendance_adjustment, leave_type, leave_ledger, leave_request, ot_policy, ot_request, attendance_period, period_export, qr_key |
 | Công việc | project, project_member, work_package, task, task_history, dependency, milestone, plan_baseline, timesheet_entry |
 | Tệp & trao đổi | file_object, document, document_version, comment, notification |

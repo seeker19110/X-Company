@@ -21,6 +21,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `files` | `index.ts`, `routes.ts` | kho tệp private                                                  |
 | `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
+| `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
 | `dashboard`  | `index.ts`            | tổng hợp cho trang điều hành                                     |
 | `today`      | `index.ts`            | màn hình "hôm nay" của nhân viên                                 |
 | `site`       | `index.ts`            | cấu hình/ngữ cảnh website công khai                              |

@@ -76,6 +76,23 @@ export const SERVER_SPEC = {
   SITE_COMPANY_ID: field(z.uuid().optional()),
   LOG_LEVEL: field(z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info")),
   APP_VERSION: field(z.string().max(64).optional()),
+  // Worker outbox (BE-JOB-003): số lần thử tối đa (mặc định 5), cỡ lô và nhịp thăm dò khi hết việc.
+  WORKER_MAX_ATTEMPTS: field(z.coerce.number().int().min(1).max(20).default(5)),
+  WORKER_BATCH_SIZE: field(z.coerce.number().int().min(1).max(500).default(10)),
+  WORKER_POLL_MS: field(z.coerce.number().int().min(100).max(60_000).default(2_000)),
+  // Retention (D-016, STD-PRIV-005): thời hạn lưu là cấu hình — số chính thức do HR/pháp chế chốt (F02).
+  RETENTION_ENABLED: field(
+    z
+      .enum(["true", "false"], { error: "phải là true|false" })
+      .default("true")
+      .transform((v) => v === "true"),
+  ),
+  RETENTION_INQUIRY_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(730)),
+  RETENTION_APPLICATION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(365)),
+  RETENTION_SESSION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
+  RETENTION_LOGIN_ATTEMPT_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(90)),
+  RETENTION_OUTBOX_DONE_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
+  RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
 } as const;
 
 /**
