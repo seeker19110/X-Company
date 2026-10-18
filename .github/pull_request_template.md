@@ -1,26 +1,19 @@
-<!-- Checklist hiện trên MỌI PR của repo khung. Tích thật, có bằng chứng; mục không áp dụng ghi N/A + lý do. -->
+<!-- Tích thật, có bằng chứng; mục không áp dụng ghi N/A + lý do. -->
 
 ## Mô tả
 
-<!-- Thay đổi gì, TẠI SAO. Link issue/ADR nếu có. Nếu đổi mục checklist: nêu ID bị ảnh hưởng. -->
+<!-- Vấn đề · hành vi mới · task PLAN (T-NNN) · spec/kịch bản (S-…) · quyết định D-NNN/ADR liên quan. -->
 
-## Loại thay đổi
+## Bằng chứng
 
-- [ ] `feat` — module/hồ sơ/ngành/mẫu/công cụ mới
-- [ ] `fix` — sửa nội dung sai, link gãy, lỗi công cụ
-- [ ] `refactor` / `docs` / `test` / `chore` / `ci`
-- [ ] ⚠️ Đổi ID/mức của mục đã có hoặc đổi hành vi `xt.py` (ghi CHANGELOG + lý do)
+- [ ] Gate của task chạy xanh (`python3 .xtemplates/scripts/xt.py loop record …`) — lệnh:
+- [ ] CI job `quality` xanh (gate + coverage)
+- [ ] Mục blueprint đã tick kèm `— Kiểm:` chạy lại được (liệt kê ID) hoặc ghi "không có"
 
-## Cổng (bằng chứng ở CI job `quality`)
+## Rủi ro
 
-- [ ] `python3 scripts/xt.py validate` xanh (frontmatter, ID duy nhất, MUST có `→ Kiểm:`, link)
-- [ ] `python3 -m unittest discover -s tests` xanh
-- [ ] Phiên bản/chuẩn/luật mới thêm có **nguồn + ngày xác minh**; không xác minh được ghi **(chưa xác minh)**
-- [ ] Không trùng nội dung với module khác ("một chủ đề một nhà"); chỗ khác chỉ liên kết
-- [ ] README chỉ mục của mảng đã cập nhật; `CHANGELOG.md` cập nhật nếu đổi mục/ID/công cụ
-- [ ] Không bí mật, không tên model/phiên AI trong nội dung
-- [ ] Phụ thuộc mới (công cụ CI, gói Python): tên · phiên bản ghim · license · lý do · thay thế đã xét — hoặc ghi "không có"
-
-## Ảnh hưởng
-
-<!-- Blueprint của dự án đích đổi thế nào (mục thêm/bớt/đổi mức)? Có cần ADR? -->
+- [ ] Chạm auth / mật mã / dữ liệu người dùng / bí mật / tiền? (có → ngoại lệ cứng, người merge)
+- [ ] Migration mới: append-only, có đường lùi, không phá dữ liệu
+- [ ] Route mới: kiểm quyền ở server + test 401/403
+- [ ] Phụ thuộc mới: tên · phiên bản ghim · license · lý do — hoặc "không có"
+- [ ] Không bí mật, không dữ liệu cá nhân thật trong mã/test/log
