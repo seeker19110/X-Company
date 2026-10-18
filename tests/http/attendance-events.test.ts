@@ -194,7 +194,7 @@ describe("sự kiện chấm công (T-012)", () => {
       qr: issueQr(companyId, worksiteId, 60, new Date(Date.now() - 2 * 3600_000)),
     });
     assert.equal(queued.status, 201);
-    assert.equal((await queued.json()).review_reason, "QR_EXPIRED");
+    assert.deepEqual((await queued.json()).review_reason.split(","), ["QR_EXPIRED", "QR_OFFLINE"]);
   });
 
   test("xoay khoá QR: token ký bằng kid cũ vẫn kiểm được; kid lạ bị từ chối", () => {

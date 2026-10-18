@@ -63,21 +63,26 @@ export async function checkRate(
 ): Promise<void> {
   const key = hashIp(ip);
   const since = new Date(now.getTime() - RATE_LIMIT.windowMs);
-  const { rows } = await pool.query<{ n: number; oldest: Date | null }>(
-    "SELECT count(*)::int AS n, min(at) AS oldest FROM public_rate_event WHERE bucket = $1 AND key_hash = $2 AND at > $3",
-    [bucket, key, since],
-  );
-  await pool.query("INSERT INTO public_rate_event (bucket, key_hash, at) VALUES ($1, $2, $3)", [
-    bucket,
-    key,
-    now,
-  ]);
-  const r = rows[0]!;
-  if (r.n >= RATE_LIMIT.max) {
-    const retryAfter = Math.max(
-      1,
-      Math.ceil(((r.oldest?.getTime() ?? now.getTime()) + RATE_LIMIT.windowMs - now.getTime()) / 1000),
+  // Đếm và ghi dưới cùng một khoá theo (bucket, IP): request song song không vượt giới hạn (review PR #8 #7).
+  const r = await withTx(async (tx) => {
+    await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('rate:' || $1 || '|' || $2, 0))", [
+      bucket,
+      key,
+    ]);
+    const { rows } = await tx.query<{ n: number; oldest: Date | null }>(
+      "SELECT count(*)::int AS n, min(at) AS oldest FROM public_rate_event WHERE bucket = $1 AND key_hash = $2 AND at > $3",
+      [bucket, key, since],
     );
+    await tx.query("INSERT INTO public_rate_event (bucket, key_hash, at) VALUES ($1, $2, $3)", [
+      bucket,
+      key,
+      now,
+    ]);
+    return rows[0]!;
+  }, pool);
+  if (r.n >= RATE_LIMIT.max) {
+    const oldest = r.oldest?.getTime() ?? now.getTime();
+    const retryAfter = Math.max(1, Math.ceil((oldest + RATE_LIMIT.windowMs - now.getTime()) / 1000));
     throw new AppError("RATE_LIMITED", 429, "Bạn gửi quá nhiều lần, vui lòng thử lại sau", { retryAfter });
   }
 }

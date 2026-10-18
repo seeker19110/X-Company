@@ -253,13 +253,18 @@ export function computeShift(def: ShiftDefinition, events: readonly ShiftEvent[]
 
   const byDay = splitByDay(worked, def.tz);
   if (fixedDeduct > 0) {
-    const mid = new Date((start.getTime() + end.getTime()) / 2);
-    let day = localDateOf(mid, def.tz);
-    if ((byDay.get(day) ?? 0) < fixedDeduct) {
-      // Ngày giữa ca không đủ phút (vd chỉ làm nửa sau) → trừ vào ngày có nhiều phút nhất.
-      day = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+    // Trừ dần: ngày chứa điểm giữa ca trước, phần còn lại sang các ngày khác theo số phút giảm dần; không để âm.
+    const mid = localDateOf(new Date((start.getTime() + end.getTime()) / 2), def.tz);
+    const order = [...byDay.keys()].sort((a, b) =>
+      a === mid ? -1 : b === mid ? 1 : byDay.get(b)! - byDay.get(a)!,
+    );
+    let left = fixedDeduct;
+    for (const day of order) {
+      const take = Math.min(left, byDay.get(day)!);
+      byDay.set(day, byDay.get(day)! - take);
+      left -= take;
+      if (left === 0) break;
     }
-    byDay.set(day, byDay.get(day)! - fixedDeduct);
   }
   const segments = [...byDay.entries()]
     .filter(([, m]) => m > 0)

@@ -53,7 +53,13 @@ export function getCookie(req: Request, name: string): string | null {
   if (!header) return null;
   for (const part of header.split(";")) {
     const i = part.indexOf("=");
-    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0 && part.slice(0, i).trim() === name) {
+      try {
+        return decodeURIComponent(part.slice(i + 1).trim());
+      } catch {
+        return null; // mã hoá sai → coi như không có cookie (401), không 500
+      }
+    }
   }
   return null;
 }
@@ -70,11 +76,20 @@ export function sessionCookie(token: string | null, maxAgeSec: number): string {
   return attrs.join("; ");
 }
 
-/** IP client: chỉ tin X-Forwarded-For khi đứng sau proxy đã cấu hình (TRUST_PROXY=1). */
+/**
+ * IP client. Không có proxy tin cậy → "direct" (Next route handler không có địa chỉ socket). Sau N proxy tin cậy
+ * (TRUST_PROXY_HOPS=N; TRUST_PROXY=1 tương đương N=1): lấy phần tử thứ N TỪ PHẢI của X-Forwarded-For — các phần tử
+ * bên trái do client tự đặt được (review PR #8 #6).
+ */
 export function clientIp(req: Request): string {
-  if (process.env.TRUST_PROXY === "1") {
-    const xff = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    if (xff) return xff.slice(0, 64);
+  const hops = Number(process.env.TRUST_PROXY_HOPS ?? (process.env.TRUST_PROXY === "1" ? 1 : 0));
+  if (Number.isInteger(hops) && hops > 0) {
+    const list = (req.headers.get("x-forwarded-for") ?? "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+    const ip = list[list.length - hops];
+    if (ip) return ip.slice(0, 64);
   }
   return "direct";
 }

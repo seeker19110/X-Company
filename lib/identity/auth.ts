@@ -36,26 +36,32 @@ export async function login(
 ): Promise<LoginResult> {
   const email = normalizeEmail(input.email);
   const since = new Date(now.getTime() - WINDOW_MS);
-  const fails = await pool.query<{ n: number; oldest: Date | null }>(
-    `SELECT count(*)::int AS n, min(attempted_at) AS oldest FROM login_attempt
-     WHERE email = $1 AND ip = $2 AND success = false AND attempted_at > $3`,
-    [email, input.ip, since],
-  );
-  const f = fails.rows[0]!;
-  if (f.n >= MAX_FAILURES) {
-    const oldest = f.oldest?.getTime() ?? now.getTime();
-    const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
-    throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
-  }
-  const u = await pool.query<{
-    id: string;
-    company_id: string;
-    password_hash: string | null;
-    disabled_at: Date | null;
-  }>("SELECT id, company_id, password_hash, disabled_at FROM app_user WHERE email = $1", [email]);
-  const user = u.rows[0];
-  const ok = await verifyPassword(user && !user.disabled_at ? user.password_hash : null, input.password);
   return withTx(async (tx) => {
+    // Đếm → kiểm mật khẩu → ghi lượt thử dưới MỘT khoá theo (email, IP): request song song không vượt giới hạn
+    // (review PR #8 #3). Kiểm Argon2 nằm trong khoá — chỉ tuần tự hoá các lần thử cùng email+IP.
+    await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('login:' || $1 || '|' || $2, 0))", [
+      email,
+      input.ip,
+    ]);
+    const fails = await tx.query<{ n: number; oldest: Date | null }>(
+      `SELECT count(*)::int AS n, min(attempted_at) AS oldest FROM login_attempt
+       WHERE email = $1 AND ip = $2 AND success = false AND attempted_at > $3`,
+      [email, input.ip, since],
+    );
+    const f = fails.rows[0]!;
+    if (f.n >= MAX_FAILURES) {
+      const oldest = f.oldest?.getTime() ?? now.getTime();
+      const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
+      throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
+    }
+    const u = await tx.query<{
+      id: string;
+      company_id: string;
+      password_hash: string | null;
+      disabled_at: Date | null;
+    }>("SELECT id, company_id, password_hash, disabled_at FROM app_user WHERE email = $1", [email]);
+    const user = u.rows[0];
+    const ok = await verifyPassword(user && !user.disabled_at ? user.password_hash : null, input.password);
     await tx.query("INSERT INTO login_attempt (email, ip, attempted_at, success) VALUES ($1, $2, $3, $4)", [
       email,
       input.ip,

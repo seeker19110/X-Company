@@ -3,6 +3,8 @@
 import type { ActorContext } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { localDate } from "../nen/time.ts";
+import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 
 export async function leaveBalance(db: Queryable, employeeId: string, leaveTypeId: string): Promise<number> {
@@ -112,6 +114,7 @@ export async function decideLeave(
   await requireOn(tx, actor, "attendance.approve", res, { type: "leave_request", id: requestId });
   requireNotSelf(actor, req.created_by_user_id, req.employee_id);
   if (req.status !== "pending") throw new AppError("INVALID_STATE", 409, "Đơn đã được xử lý");
+  let afterWrite: (() => Promise<number | null>) | null = null;
   if (decision === "reject") {
     if (!note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
   } else {
@@ -123,6 +126,15 @@ export async function decideLeave(
       [req.employee_id, req.id, req.start_at, req.end_at],
     );
     if (overlap.rowCount) throw new AppError("LEAVE_OVERLAP", 409, "Trùng thời gian với đơn nghỉ đã duyệt");
+    // Phút phép tính vào ngày (giờ VN) bắt đầu đơn (D-012) — kỳ chứa ngày đó; đã khoá → chỉ HR, phiên bản mới.
+    const guard = await guardPeriodChange(
+      tx,
+      actor,
+      req.employee_id,
+      localDate(req.start_at),
+      `nghỉ ${requestId}`,
+    );
+    afterWrite = guard.finish;
     if (req.requires_balance) {
       const bal = await leaveBalance(tx, req.employee_id, req.leave_type_id);
       if (bal < req.minutes)
@@ -141,6 +153,7 @@ export async function decideLeave(
     "UPDATE leave_request SET status = $2, decided_by_user_id = $3, decided_at = now(), decision_note = $4 WHERE id = $1",
     [requestId, decision === "approve" ? "approved" : "rejected", actor.userId, note ?? null],
   );
+  await afterWrite?.();
   await auditDecision(tx, actor, `leave.${decision}`, "leave_request", requestId, { reason: note ?? null });
 }
 
@@ -159,8 +172,17 @@ export async function cancelApprovedLeave(
   if (!req) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đơn");
   const res = await employeeResource(tx, actor.companyId, req.employee_id);
   await requireOn(tx, actor, "attendance.approve", res, { type: "leave_request", id: requestId });
+  // Không tự huỷ đơn của mình để hoàn phép (review PR #8, nghi vấn) — người duyệt khác làm.
+  requireNotSelf(actor, req.created_by_user_id, req.employee_id);
   if (req.status !== "approved") throw new AppError("INVALID_STATE", 409, "Chỉ huỷ đơn đã duyệt");
   if (!reason.trim()) throw new AppError("VALIDATION", 422, "Huỷ cần lý do");
+  const guard = await guardPeriodChange(
+    tx,
+    actor,
+    req.employee_id,
+    localDate(req.start_at),
+    `huỷ nghỉ ${requestId}`,
+  );
   const taken = await tx.query<{ minutes: number }>(
     "SELECT minutes FROM leave_ledger WHERE leave_request_id = $1 AND entry_type = 'taken'",
     [requestId],
@@ -184,5 +206,6 @@ export async function cancelApprovedLeave(
     requestId,
     reason,
   ]);
+  await guard.finish();
   await auditDecision(tx, actor, "leave.cancel", "leave_request", requestId, { reason });
 }

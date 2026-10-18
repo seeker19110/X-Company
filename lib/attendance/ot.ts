@@ -4,6 +4,7 @@ import type { ActorContext } from "../authz/index.ts";
 import { can } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 
 export interface OtPolicy {
@@ -193,9 +194,14 @@ export async function decideOt(
         });
     }
   } else if (!note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
+  const guard =
+    decision === "approve"
+      ? await guardPeriodChange(tx, actor, req.employee_id, req.business_date, `OT ${requestId}`)
+      : null;
   await tx.query(
     "UPDATE ot_request SET status = $2, decided_by_user_id = $3, decided_at = now(), decision_note = $4 WHERE id = $1",
     [requestId, decision === "approve" ? "approved" : "rejected", actor.userId, note ?? null],
   );
+  await guard?.finish();
   await auditDecision(tx, actor, `ot.${decision}`, "ot_request", requestId, { reason: note ?? null });
 }

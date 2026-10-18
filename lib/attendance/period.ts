@@ -25,7 +25,7 @@ export interface Line {
   employeeId: string;
   businessDate: string;
   shiftAssignmentId: string | null;
-  status: "ok" | "incomplete" | "absent" | "leave_only";
+  status: "ok" | "incomplete" | "absent" | "leave_only" | "ot_only";
   presentMinutes: number | null;
   otApprovedMinutes: number;
   leaveMinutes: number;
@@ -199,6 +199,7 @@ export async function computeLines(
   }
   for (const [k, m] of lvMap) {
     if (seen.has(k)) continue;
+    seen.add(k);
     const [employeeId2, d] = k.split("|") as [string, string];
     lines.push({
       employeeId: employeeId2,
@@ -208,6 +209,20 @@ export async function computeLines(
       presentMinutes: null,
       otApprovedMinutes: otMap.get(k) ?? 0,
       leaveMinutes: m,
+    });
+  }
+  // OT đã duyệt vào ngày không có ca, không có phép (vd trực CN) — không được mất khỏi bảng công (review PR #8 #1).
+  for (const [k, m] of otMap) {
+    if (seen.has(k)) continue;
+    const [employeeId3, d] = k.split("|") as [string, string];
+    lines.push({
+      employeeId: employeeId3,
+      businessDate: d,
+      shiftAssignmentId: null,
+      status: "ot_only",
+      presentMinutes: null,
+      otApprovedMinutes: m,
+      leaveMinutes: 0,
     });
   }
   return lines.sort((a, b) =>
@@ -476,12 +491,42 @@ export interface AdjustmentInput {
   reason: string;
 }
 
-async function periodOfDate(db: Queryable, companyId: string, date: string) {
+async function periodOfDate(db: Queryable, companyId: string, date: string, lock = false) {
   const { rows } = await db.query<{ id: string; status: PeriodStatus }>(
-    "SELECT id, status FROM attendance_period WHERE company_id = $1 AND $2::date BETWEEN start_date AND end_date",
+    `SELECT id, status FROM attendance_period WHERE company_id = $1 AND $2::date BETWEEN start_date AND end_date
+     ${lock ? "FOR UPDATE" : ""}`,
     [companyId, date],
   );
   return rows[0] ?? null;
+}
+
+/** Ngày nghiệp vụ của một thời điểm: ngày của ca được giao chứa nó (ca qua đêm), không thì ngày lịch giờ VN. */
+export async function businessDateOf(
+  db: Queryable,
+  companyId: string,
+  employeeId: string,
+  t: Date,
+): Promise<string> {
+  const a = await findAssignment(db, companyId, employeeId, t);
+  return a?.business_date ?? localDateOf(t, "Asia/Ho_Chi_Minh");
+}
+
+/**
+ * Thay đổi số liệu công của `employeeId` ở ngày nghiệp vụ `date` (duyệt điều chỉnh/OT/nghỉ, huỷ nghỉ): xác định kỳ
+ * NGAY LÚC DUYỆT dưới khoá kỳ (không dùng cờ lưu lúc đề nghị — review PR #8 #2). Kỳ đã khoá → bắt buộc quyền HR;
+ * trả hàm `finish` để gọi SAU khi ghi thay đổi: phát hành phiên bản số liệu + xuất mới.
+ */
+export async function guardPeriodChange(
+  tx: Queryable,
+  actor: ActorContext,
+  employeeId: string,
+  date: string,
+  reason: string,
+): Promise<{ locked: boolean; finish: () => Promise<number | null> }> {
+  const p = await periodOfDate(tx, actor.companyId, date, true);
+  if (!p || p.status !== "locked") return { locked: false, finish: async () => null };
+  requireHr(actor, p.id);
+  return { locked: true, finish: () => reissueAfterAdjustment(tx, actor, p.id, employeeId, reason) };
 }
 
 /** Đề nghị sửa công (chính chủ hoặc người quản lý) — có trước/sau, lý do; sau khoá đánh dấu post_lock. */
@@ -521,7 +566,11 @@ export async function requestAdjustment(
     after = { kind: a.newKind, at: a.newAt.toISOString() };
     at = a.newAt;
   }
-  const period = await periodOfDate(tx, actor.companyId, localDateOf(at, "Asia/Ho_Chi_Minh"));
+  const period = await periodOfDate(
+    tx,
+    actor.companyId,
+    await businessDateOf(tx, actor.companyId, a.employeeId, at),
+  );
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO attendance_adjustment (company_id, employee_id, action, target_event_id, new_kind, new_at, reason, before, after,
        post_lock, period_id, created_by_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
@@ -573,15 +622,29 @@ export async function decideAdjustment(
   const adj = rows[0];
   if (!adj) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đề nghị sửa công");
   const res = await employeeResource(tx, actor.companyId, adj.employee_id);
-  await requireOn(tx, actor, adj.post_lock ? "period.manage" : "attendance.approve", res, {
-    type: "attendance_adjustment",
-    id,
-  });
+  await requireOn(tx, actor, "attendance.approve", res, { type: "attendance_adjustment", id });
   requireNotSelf(actor, adj.created_by_user_id, adj.employee_id);
   if (adj.status !== "pending") throw new AppError("INVALID_STATE", 409, "Đề nghị đã được xử lý");
   if (decision === "reject" && !note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
   let newExportVersion: number | null = null;
   if (decision === "approve") {
+    let at = adj.new_at;
+    if (adj.action === "void_event") {
+      const t = await tx.query<{ device_time: Date }>(
+        "SELECT device_time FROM attendance_event WHERE id = $1",
+        [adj.target_event_id],
+      );
+      at = t.rows[0]!.device_time;
+    }
+    // Kỳ xác định lúc DUYỆT theo ngày nghiệp vụ; kỳ đã khoá → chỉ HR, phát hành phiên bản mới.
+    const date = await businessDateOf(tx, actor.companyId, adj.employee_id, at!);
+    const guard = await guardPeriodChange(
+      tx,
+      actor,
+      adj.employee_id,
+      date,
+      `điều chỉnh ${id}: ${adj.reason}`,
+    );
     if (adj.action === "add_event") {
       const asg = await findAssignment(tx, actor.companyId, adj.employee_id, adj.new_at!);
       await tx.query(
@@ -597,15 +660,8 @@ export async function decideAdjustment(
       );
       if (u.rowCount === 0) throw new AppError("INVALID_STATE", 409, "Sự kiện đã bị huỷ bởi điều chỉnh khác");
     }
-    if (adj.post_lock && adj.period_id) {
-      newExportVersion = await reissueAfterAdjustment(
-        tx,
-        actor,
-        adj.period_id,
-        adj.employee_id,
-        `điều chỉnh ${id}: ${adj.reason}`,
-      );
-    }
+    if (guard.locked) await tx.query("UPDATE attendance_adjustment SET post_lock = true WHERE id = $1", [id]);
+    newExportVersion = await guard.finish();
   }
   await tx.query(
     "UPDATE attendance_adjustment SET status = $2, decided_by_user_id = $3, decided_at = now(), decision_note = $4 WHERE id = $1",

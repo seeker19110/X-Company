@@ -48,6 +48,8 @@
 - Trạng thái: `open → employee_review → manager_confirmed → hr_closed → locked`. Chỉ đi tới; mở lại kỳ khoá không có — thay đổi sau khoá đi qua adjustment `post_lock=true` cần HR duyệt và tạo **phiên bản xuất mới**.
 - Khoá chỉ khi không còn ngoại lệ trọng yếu (`MISSING_CHECKOUT`, `needs_review`, đơn chờ) hoặc từng ngoại lệ có giải trình.
 - Sự kiện đến muộn thuộc kỳ đã khoá → lưu `needs_review` (`LATE_FOR_LOCKED_PERIOD`), **không** đổi tổng chính thức (AT06).
+- Dòng bảng công: mỗi ca được giao một dòng; ngày có phép mà không ca → `leave_only`; ngày có OT đã duyệt mà không ca, không phép → `ot_only` (không mất OT ngày nghỉ). Phút phép của một đơn tính vào ngày (giờ VN) bắt đầu đơn và kỳ chứa ngày đó (D-012).
+- Mọi thao tác duyệt làm đổi số liệu (điều chỉnh, OT, nghỉ, huỷ nghỉ) xác định kỳ **lúc duyệt** theo ngày nghiệp vụ của ca (ca qua đêm thuộc ngày bắt đầu), dưới khoá kỳ; kỳ đã khoá → chỉ `period.manage` và phát hành phiên bản số liệu + xuất mới. Log đến muộn cũng xét kỳ theo ngày nghiệp vụ.
 - Xuất: CSV UTF-8 có BOM, cột cố định; tệp kèm `period_code`, `version`, `generated_at`, `generated_by`, `row_count`, `checksum` (SHA-256 nội dung). Cấu hình mới không tính lại kỳ đã khoá (tổng lưu theo `policy_version_id` đã dùng).
 
 ## Kịch bản

@@ -165,6 +165,9 @@ export async function recordEvent(
         reasons.push("QR_EXPIRED");
       }
       if (worksiteId && worksiteId !== q.ws) reasons.push("QR_WORKSITE_MISMATCH");
+      // Cờ `queued` do client tự khai: QR quét "ngoại tuyến" lệch giờ lớn có thể là ảnh chụp QR → cần xác minh.
+      if (input.queued && (now.getTime() - input.deviceTime.getTime()) / 1000 > policy.clockSkewMaxSec)
+        reasons.push("QR_OFFLINE");
       worksiteId = q.ws;
       qrNonce = q.n;
     }
@@ -172,15 +175,15 @@ export async function recordEvent(
     const tr = timeReview(input, now, policy);
     if (tr) reasons.push(tr);
 
-    // Log đến muộn thuộc kỳ đã khoá: lưu để HR xem, không đổi số liệu chính thức (AT06, S-AT-07).
+    const assignment = await findAssignment(tx, actor.companyId, actor.employeeId, input.deviceTime);
+
+    // Log đến muộn thuộc kỳ đã khoá — theo NGÀY NGHIỆP VỤ của ca (ca qua đêm), không theo ngày lịch (review PR #8 #4).
+    const businessDate = assignment?.business_date ?? localDateOf(input.deviceTime, "Asia/Ho_Chi_Minh");
     const locked = await tx.query(
-      `SELECT 1 FROM attendance_period WHERE company_id = $1 AND status = 'locked'
-       AND ($2::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN start_date AND end_date`,
-      [actor.companyId, input.deviceTime],
+      `SELECT 1 FROM attendance_period WHERE company_id = $1 AND status = 'locked' AND $2::date BETWEEN start_date AND end_date`,
+      [actor.companyId, businessDate],
     );
     if (locked.rowCount) reasons.push("LATE_FOR_LOCKED_PERIOD");
-
-    const assignment = await findAssignment(tx, actor.companyId, actor.employeeId, input.deviceTime);
     if (assignment?.worksite_id && worksiteId && assignment.worksite_id !== worksiteId)
       reasons.push("WORKSITE_MISMATCH");
 

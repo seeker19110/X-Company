@@ -79,3 +79,10 @@
 - Chọn: I3 chỉ với lần vào từ thiết bị khác trong cửa sổ trùng ⚙2 phút (bấm hai nơi gần như cùng lúc); ngoài cửa sổ → accepted, hợp khoảng chống đếm trùng
 - Lý do (tiêu chí chất lượng cuối): Hợp khoảng ở computeShift đã bảo đảm không cộng trùng thời gian (C1) nên lần vào thứ hai không thể tạo công trùng; đánh dấu mọi lần sẽ đẩy ca đổi địa điểm/kiosk hợp lệ vào hàng xác minh; vẫn giữ cả hai sự kiện để điều tra
 - Đường lùi: Đặt duplicate_window_sec rất lớn trong attendance_policy để quay về hành vi cũ
+
+### D-012 · 2026-10-18T07:19:32+00:00 · Phút nghỉ phép của đơn nhiều ngày / kéo qua hai kỳ tính vào ngày nào (review PR #8 #9)
+
+- Phương án: (1) Chia theo ngày lịch tỷ lệ thời gian chồng · (2) Tính toàn bộ vào ngày (giờ VN) bắt đầu đơn và kỳ chứa ngày đó; ghi rõ ở SPEC; HR chốt ở F02 · (3) Chia theo ca được giao từng ngày
+- Chọn: Tính toàn bộ vào ngày (giờ VN) bắt đầu đơn và kỳ chứa ngày đó; ghi rõ ở SPEC; HR chốt ở F02
+- Lý do (tiêu chí chất lượng cuối): Phút phép là phút làm việc người lao động xin, không phải thời gian lịch — chia tỷ lệ lịch sai với ca đêm/cuối tuần; chia theo ca cần quy tắc HR chưa có (F02). Cách 2 đơn giản, tất định, không mất phút (vào đúng một kỳ); đơn qua kỳ hiếm và HR thấy trên bảng công kỳ bắt đầu
+- Đường lùi: Đổi truy vấn lvMap trong computeLines sang chia theo ca khi HR chốt quy tắc

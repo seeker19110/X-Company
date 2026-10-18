@@ -216,6 +216,9 @@ export async function updateDraft(tx: Queryable, a: CmsActor, revisionId: string
   validateContent(c);
   const rev = await lockRevision(tx, a, revisionId);
   if (rev.status !== "draft") throw new AppError("INVALID_STATE", 409, "Chỉ sửa được bản nháp");
+  // Chỉ tác giả sửa nháp: nếu người khác sửa rồi duyệt, nội dung do chính họ viết sẽ qua được R5 (review PR #8 #8).
+  if (rev.authorUserId !== a.userId)
+    throw new AppError("NOT_AUTHOR", 403, "Chỉ tác giả được sửa bản nháp — tạo bản nháp mới");
   await tx.query(
     `UPDATE cms_revision SET title = $2, summary = $3, body_markdown = $4, seo_title = $5, seo_description = $6,
        canonical_url = $7 WHERE id = $1`,

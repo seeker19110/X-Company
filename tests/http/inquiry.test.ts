@@ -64,7 +64,6 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
     assert.equal(r1.status, 201);
     const { code } = await r1.json();
     assert.match(code, /^YC-\d{8}-\d{4}$/);
-    assert.equal(code.slice(3, 11), localDate(new Date()).replaceAll("-", ""));
     const r2 = await post(postInquiry, "/api/public/inquiries", body);
     assert.equal(r2.status, 200);
     assert.equal((await r2.json()).code, code);
@@ -73,6 +72,8 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
       [body.submission_id],
     );
     assert.equal(rows.length, 1);
+    // Ngày trong mã = ngày giờ VN lúc tạo hồ sơ (so với created_at, không với đồng hồ test — không flaky lúc nửa đêm).
+    assert.equal(code.slice(3, 11), localDate(rows[0].created_at).replaceAll("-", ""));
     assert.equal(rows[0].status, "assigned");
     assert.equal(rows[0].assignee_user_id, sales.userId);
     assert.ok(rows[0].due_at > rows[0].created_at);
