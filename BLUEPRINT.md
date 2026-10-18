@@ -22,7 +22,7 @@ backlog: BLUEPRINT-BACKLOG.md
 | Mức | Số mục |
 |---|---|
 | MUST | 473 |
-| SHOULD | 1333 |
+| SHOULD | 1342 |
 
 ### Cấu hình, biến môi trường và bí mật
 
@@ -231,7 +231,7 @@ Nguồn khung: [`05-architecture/resilience-and-scalability.md`](.xtemplates/fra
 Nguồn khung: [`06-design-ux/accessibility.md`](.xtemplates/framework/06-design-ux/accessibility.md)
 
 - [x] `UX-A11Y-001` **MUST** Mọi trang/màn hình qua quét axe-core với tag `wcag2a`, `wcag2aa`, `wcag21aa`, `wcag22aa` không có vi phạm (`violations.length === 0`). → Kiểm: `@axe-core/playwright` trong mọi smoke test E2E; CI đỏ nếu vi phạm. · Nguồn: WCAG 2.2 AA — Kiểm: `grep -q wcag22aa e2e/helpers.ts && npm run -s e2e -- e2e/pages.spec.ts`
-- [x] `UX-A11Y-002` **MUST** Tương phản chữ ≥ 4.5:1 (chữ lớn ≥ 3:1); thành phần UI và trạng thái (viền input, icon, focus) ≥ 3:1 với nền kề. → Kiểm: `check:contrast` trên token + axe rule `color-contrast` ở cả hai theme. · Nguồn: WCAG 2.2 SC 1.4.3, 1.4.11 — Kiểm: `npm run -s check:tokens && npm run -s e2e` (check:tokens kiểm tương phản cặp token; e2e/pages.spec.ts chạy axe WCAG 2.2 AA gồm color-contrast trên cả 9 màn + trang công khai theo sitemap; dự án chỉ có MỘT theme (sáng) — mở lại nếu thêm theme tối)
+- [x] `UX-A11Y-002` **MUST** Tương phản chữ ≥ 4.5:1 (chữ lớn ≥ 3:1); thành phần UI và trạng thái (viền input, icon, focus) ≥ 3:1 với nền kề. → Kiểm: `xt.py contrast` trên token (`UX-DS-003`) + axe rule `color-contrast` ở cả hai theme. · Nguồn: WCAG 2.2 SC 1.4.3, 1.4.11 — Kiểm: `npm run -s check:tokens && npm run -s e2e` (check:tokens kiểm tương phản cặp token; e2e/pages.spec.ts chạy axe WCAG 2.2 AA gồm color-contrast trên cả 9 màn + trang công khai theo sitemap; dự án chỉ có MỘT theme (sáng) — mở lại nếu thêm theme tối)
 - [x] `UX-A11Y-003` **MUST** Toàn bộ chức năng dùng được bằng bàn phím; không bẫy focus (trừ dialog modal có Esc để thoát). → Kiểm: E2E luồng chính chỉ dùng `keyboard.press('Tab'|'Enter'|'Escape')`; axe rule `focus-order-semantics`. · Nguồn: WCAG 2.2 SC 2.1.1, 2.1.2 — Kiểm: `npm run -s e2e -- e2e/pages.spec.ts --grep 'chỉ bàn phím'`
 - [x] `UX-A11Y-011` **MUST** Mọi ô nhập có nhãn gắn chương trình (`<label for>`, `aria-labelledby`); placeholder không thay nhãn. → Kiểm: axe rule `label`; lint `label-has-associated-control`. · Nguồn: WCAG 2.2 SC 1.3.1, 3.3.2 — Kiểm: `grep -q "jsx-a11y/label-has-associated-control" eslint.config.mjs && npm run -s lint`
 
@@ -265,7 +265,7 @@ Nguồn khung: [`06-design-ux/design-system-and-tokens.md`](.xtemplates/framewor
 
 - [x] `UX-DS-001` **MUST** Token gốc nằm ở đúng một file/thư mục trong repo (DTCG JSON hoặc `theme.css`); mọi đầu ra khác được sinh bằng script. → Kiểm: lệnh `build:tokens` chạy trong CI; diff đầu ra sinh = 0 sau khi chạy lại. · Nguồn: DTCG 2025.10 — Kiểm: `npm run -s check:tokens`
 - [x] `UX-DS-002` **MUST** Component không hard-code mã màu (`#hex`, `rgb()`, tên màu) hay class màu primitive (`bg-blue-500`); chỉ dùng token ngữ nghĩa. → Kiểm: stylelint `color-no-hex` + script `check:hex-hardcode` (grep `#[0-9a-fA-F]{3,8}` trong `src/components`) = 0 kết quả. · Nguồn: WCAG 2.2 SC 1.4.3 (gián tiếp) — Kiểm: `npm run -s check:tokens`
-- [x] `UX-DS-003` **MUST** Mọi cặp nền/chữ và nền/viền-điều-khiển trong bộ token đạt tương phản AA ở **cả hai theme**. → Kiểm: `check:contrast` đọc token, tính tỷ lệ theo công thức WCAG, fail nếu < 4.5:1 (chữ) hoặc < 3:1 (phi văn bản). · Nguồn: WCAG 2.2 SC 1.4.3, 1.4.11 — Kiểm: `npm run -s check:tokens`
+- [x] `UX-DS-003` **MUST** Mọi cặp nền/chữ và nền/viền-điều-khiển trong bộ token đạt tương phản AA ở **cả hai theme**. → Kiểm: `python3 .xtemplates/scripts/xt.py contrast <theme.css> [--pairs contrast-pairs.txt]` exit 0 — đọc custom properties `:root` và `.dark`/`[data-theme=dark]`/`prefers-color-scheme: dark`, tự suy cặp (`--X-foreground`/`--on-X` trên `--X`, `--foreground` trên `--background`, `--ring` ≥ 3:1), cặp khác khai ở `--pairs`; chữ < 4,5:1 hoặc phi văn bản < 3:1 → đỏ (không làm tròn lên), không có cặp nào để kiểm cũng đỏ; đọc cả thân `@theme`/`@theme inline` của Tailwind v4; token gốc là DTCG JSON thì chạy trên CSS đã sinh (`UX-DS-001`). · Nguồn: WCAG 2.2 SC 1.4.3, 1.4.11 — Kiểm: `npm run -s check:tokens`
 - [ ] `UX-DS-006` **MUST** Font chính có subset tiếng Việt (`unicode-range` U+1EA0–1EF9, U+0102–0103, U+0110–0111, U+01A0–01B0…) và fallback stack hiển thị đủ dấu. → Kiểm: E2E render chuỗi "Tiếng Việt có dấu: ắ ầ ẩ ẫ ậ ờ ỡ ợ ừ ữ ự" chụp ảnh so với baseline; không ô vuông/tofu. · Nguồn: MDN `unicode-range` — Thiếu: E2E render chuỗi "ắ ầ ẩ ẫ ậ ờ ỡ ợ ừ ữ ự" so baseline/kiểm trên thiết bị thật (dùng font hệ thống system-ui, không web font nên không cần unicode-range)
 
 ### Chuyển động, hình ảnh, chống 'AI slop', kiểm bằng máy
