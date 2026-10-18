@@ -65,8 +65,8 @@ describe("audit_event (S-ID-08)", () => {
         objectType: "app_user",
         objectId: "u-1",
         reason: "đổi email",
-        before: { email: "a@x.vn", password_hash: "secret" },
-        after: { email: "b@x.vn" },
+        before: { email: "a@example.test", password_hash: "secret" },
+        after: { email: "b@example.test" },
         requestId: "req-1",
       });
       await appendAudit(tx, { actorUserId: U1, companyId: C1, action: "user.read", objectType: "app_user" });

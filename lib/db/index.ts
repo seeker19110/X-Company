@@ -13,23 +13,40 @@ let appPool: pg.Pool | undefined;
 export function getPool(): pg.Pool {
   if (!appPool) {
     const url = process.env.DATABASE_URL?.trim();
-    if (!url) throw new Error("Thiếu DATABASE_URL");
-    appPool = new pg.Pool({ connectionString: url, max: Number(process.env.DB_POOL_MAX ?? 10) });
-    appPool.on("connect", configureConnection);
+    if (url === undefined || url === "") throw new Error("Thiếu DATABASE_URL");
+    appPool = new pg.Pool({
+      connectionString: url,
+      max: Number(process.env.DB_POOL_MAX ?? 10),
+      options: PG_SESSION_OPTIONS,
+      ...POOL_TIMEOUTS,
+    });
   }
   return appPool;
 }
 
-/** Thiết lập phiên cho mọi kết nối mới (pool production và test dùng chung). Lỗi được ghi, không thành unhandled. */
-export function configureConnection(c: pg.PoolClient): void {
-  c.query("SET statement_timeout = '30s'; SET TIME ZONE 'UTC'").catch((err: unknown) => {
-    console.error("[db] thiết lập kết nối lỗi:", err instanceof Error ? err.message : err);
-  });
-}
+/** Tham số phiên cho mọi kết nối (pool production và test dùng chung) — đặt lúc bắt tay, không chạy query riêng. */
+export const PG_SESSION_OPTIONS =
+  "-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000 -c TimeZone=UTC";
+
+/**
+ * Timeout phía client của pool (ARC-RES-001, BE-REL-001, DB-PERF-004): lấy/mở kết nối không treo vô hạn;
+ * `query_timeout` lớn hơn statement_timeout của server (30 s) để server huỷ trước, client chỉ là lưới an toàn khi mạng treo.
+ */
+export const POOL_TIMEOUTS = {
+  connectionTimeoutMillis: 5_000,
+  query_timeout: 35_000,
+} as const;
 
 /** Thay pool (test). */
 export function setPool(pool: pg.Pool | undefined): void {
   appPool = pool;
+}
+
+/** Đóng pool ứng dụng (tắt êm); không có pool thì không làm gì. */
+export async function closePool(): Promise<void> {
+  const p = appPool;
+  appPool = undefined;
+  await p?.end();
 }
 
 /** Chạy `fn` trong một giao dịch; lỗi → ROLLBACK và ném lại. */

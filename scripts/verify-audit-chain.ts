@@ -3,7 +3,7 @@ import pg from "pg";
 import { verifyAuditChain } from "../lib/audit/index.ts";
 
 const url = process.env.DATABASE_URL?.trim();
-if (!url) {
+if (url === undefined || url === "") {
   console.error("Thiếu DATABASE_URL");
   process.exit(2);
 }

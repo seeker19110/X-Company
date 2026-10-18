@@ -1,0 +1,4 @@
+Contact: https://github.com/seeker19110/X-Company/security/advisories/new
+Expires: 2027-04-18T00:00:00.000Z
+Preferred-Languages: vi, en
+Policy: https://github.com/seeker19110/X-Company/blob/main/SECURITY.md

@@ -32,12 +32,21 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check:arch so ADR với nhánh gốc
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
+      # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
+      - name: Typecheck và lint trước build
+        run: |
+          npm run -s typecheck
+          npm run -s lint
+      - name: Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
+        run: npm run -s check:arch
       - name: Cổng chuẩn — đúng lệnh trong xt.yaml (build · typecheck · lint · test)
         run: .xtemplates/scripts/dev-task.sh gate
       - name: Coverage có ngưỡng (sàn Gate M)
@@ -46,6 +55,36 @@ jobs:
         run: |
           python3 .xtemplates/scripts/xt.py ci-check .github/workflows
           python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json > /dev/null
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cài Chromium đúng phiên bản Playwright
+        run: npx --no-install playwright install --with-deps chromium
+      - name: E2E đầy đủ (Postgres thật + bản build production, axe WCAG 2.2 AA)
+        run: npm run -s e2e
 
   protection-guard:
     name: protection-guard

@@ -14,3 +14,8 @@ test-results/
 !.env.example
 .data/
 __pycache__/
+.claude/worktrees/
+
+# E2E
+e2e/.seed.json
+playwright/.cache/

@@ -1,0 +1,45 @@
+name: Báo lỗi
+description: Hành vi sai so với spec hoặc kỳ vọng hợp lý. Lỗ hổng bảo mật KHÔNG báo ở đây (xem SECURITY.md).
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Không dán dữ liệu cá nhân thật, mật khẩu, token hay ảnh chụp có thông tin nhân viên/khách. Che hoặc dùng dữ liệu giả (`@example.test`).
+  - type: textarea
+    id: actual
+    attributes:
+      label: Điều đã xảy ra
+      description: Ngắn, dẫn đầu bằng kết quả sai.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Điều mong đợi (kèm mã spec/kịch bản nếu biết, vd S-AT-03)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện
+      description: Lệnh, đường dẫn, dữ liệu mẫu giả.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Môi trường
+      description: Node, trình duyệt/thiết bị, commit hoặc phiên bản.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Mức nghiêm trọng đề xuất (docs/ops/INCIDENT-RESPONSE.md)
+      options:
+        - SEV4 — nhỏ, có cách tránh
+        - SEV3 — một chức năng hỏng, có cách tránh
+        - SEV2 — chức năng chính hỏng hoặc sai dữ liệu công/việc
+        - SEV1 — lộ dữ liệu, mất dữ liệu, ngừng toàn bộ
+    validations:
+      required: true

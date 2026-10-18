@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Báo lỗ hổng bảo mật (riêng tư, không mở issue công khai)
+    url: https://github.com/seeker19110/X-Company/security/advisories/new
+    about: Dùng GitHub Private Vulnerability Reporting. Xem SECURITY.md.
+  - name: Câu hỏi sử dụng / hỗ trợ
+    url: https://github.com/seeker19110/X-Company/blob/main/SUPPORT.md
+    about: Đọc SUPPORT.md trước khi hỏi.
