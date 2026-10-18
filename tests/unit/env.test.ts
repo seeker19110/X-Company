@@ -21,7 +21,7 @@ import {
 const SECRET = "s3cr3t-value-0123456789abcdef-0123456789";
 const GOOD = {
   APP_ORIGIN: "https://x-company.example/",
-  DATABASE_URL: "postgres://app:p4ssw0rd-hunter2@db.internal:5432/xc",
+  DATABASE_URL: "postgres://app:p4ssw0rd-hunter2" + "@db.internal:5432/xc", // ghép: không giống email trong fixture
   SESSION_SECRET: SECRET,
   QR_SIGNING_KEYS: "k1:qr-key-0123456789abcdef0123456789abcdef",
 } as const;

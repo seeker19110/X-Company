@@ -37,3 +37,5 @@ x-company-postgres,outbox_event,payload,co_ban,"nội dung thông báo chờ g�
 x-company-postgres,period_export,content,co_ban,"tệp CSV bảng công theo phiên bản (tên, mã nhân viên, phút công)",thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận),chưa chốt — pháp chế/kế toán,implemented
 x-company-postgres,app_user,totp_secret,bi_mat,xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org),thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,planned
 x-company-postgres,push_subscription,endpoint,co_ban,"Web Push (VAPID, D-005)",thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,planned
+x-company-postgres,audit_event,source_ip,co_ban,"điều tra sự cố bảo mật, truy vết hành động nhạy cảm",lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận),≥ 12 tháng — pháp chế chốt,implemented
+x-company-postgres,audit_event,user_agent,co_ban,điều tra sự cố bảo mật (thiết bị/trình duyệt),lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận),≥ 12 tháng — pháp chế chốt,implemented

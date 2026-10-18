@@ -24,11 +24,15 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
 
   test("mật khẩu yếu bị từ chối và không ghi gì vào CSDL", async () => {
     await assert.rejects(
-      createFirstAdmin({ email: "a@x.vn", displayName: "A", password: "ngan" }),
+      createFirstAdmin({ email: "a@example.test", displayName: "A", password: "ngan" }),
       isCode("WEAK_PASSWORD"),
     );
     await assert.rejects(
-      createFirstAdmin({ email: "admin@x.vn", displayName: "A", password: "admin@x.vn-2026-xx" }),
+      createFirstAdmin({
+        email: "admin@example.test",
+        displayName: "A",
+        password: "admin@example.test-2026-xx",
+      }),
       isCode("WEAK_PASSWORD"),
     );
     for (const t of ["app_user", "company", "role_grant"])
@@ -41,20 +45,20 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
       isCode("INVALID_EMAIL"),
     );
     await assert.rejects(
-      createFirstAdmin({ email: "a@x.vn", displayName: "   ", password: STRONG }),
+      createFirstAdmin({ email: "a@example.test", displayName: "   ", password: STRONG }),
       isCode("INVALID_NAME"),
     );
   });
 
   test("tạo công ty + tài khoản + grant sysadmin; đăng nhập được; chuỗi audit hợp lệ", async () => {
     const r = await createFirstAdmin({
-      email: "  Admin@Cong-Ty.VN ",
+      email: "  Admin@Example.TEST ",
       displayName: " Quản Trị ",
       password: STRONG,
       companyName: "Công ty Thử",
     });
     const u = (await db.admin.query("SELECT * FROM app_user WHERE id = $1", [r.userId])).rows[0];
-    assert.equal(u.email, "admin@cong-ty.vn");
+    assert.equal(u.email, "admin@example.test");
     assert.equal(u.display_name, "Quản Trị");
     assert.match(u.password_hash, /^\$argon2id\$/);
     assert.equal(await verifyPassword(u.password_hash, STRONG), true);
@@ -67,7 +71,7 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
     );
 
     const res = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: "admin@cong-ty.vn", password: STRONG } }),
+      req("POST", "/api/app/auth/login", { body: { email: "admin@example.test", password: STRONG } }),
     );
     assert.equal(res.status, 200);
     assert.ok(cookieFrom(res).includes("="));
@@ -85,13 +89,13 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
 
   test("đã có admin → từ chối (kể cả chạy song song), không tạo thêm", async () => {
     await assert.rejects(
-      createFirstAdmin({ email: "hai@cong-ty.vn", displayName: "Hai", password: STRONG }),
+      createFirstAdmin({ email: "hai@example.test", displayName: "Hai", password: STRONG }),
       isCode("ADMIN_EXISTS"),
     );
     const before = (await db.admin.query("SELECT count(*)::int AS n FROM app_user")).rows[0].n;
     const results = await Promise.allSettled([
-      createFirstAdmin({ email: "ba@cong-ty.vn", displayName: "Ba", password: STRONG }),
-      createFirstAdmin({ email: "bon@cong-ty.vn", displayName: "Bốn", password: STRONG }),
+      createFirstAdmin({ email: "ba@example.test", displayName: "Ba", password: STRONG }),
+      createFirstAdmin({ email: "bon@example.test", displayName: "Bốn", password: STRONG }),
     ]);
     assert.ok(results.every((x) => x.status === "rejected"));
     assert.equal((await db.admin.query("SELECT count(*)::int AS n FROM app_user")).rows[0].n, before);
@@ -100,8 +104,8 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
   test("admin duy nhất bị thu hồi → được tạo lại; chạy song song chỉ một thành công (CSDL mới)", async () => {
     await db.admin.query("UPDATE role_grant SET revoked_at = now() WHERE role = 'sysadmin'");
     const results = await Promise.allSettled([
-      createFirstAdmin({ email: "moi1@cong-ty.vn", displayName: "Mới 1", password: STRONG }),
-      createFirstAdmin({ email: "moi2@cong-ty.vn", displayName: "Mới 2", password: STRONG }),
+      createFirstAdmin({ email: "moi1@example.test", displayName: "Mới 1", password: STRONG }),
+      createFirstAdmin({ email: "moi2@example.test", displayName: "Mới 2", password: STRONG }),
     ]);
     assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
     const rejected = results.find((x) => x.status === "rejected") as PromiseRejectedResult;
@@ -122,12 +126,12 @@ describe("tạo admin: nhiều công ty / công ty có sẵn", () => {
     const a = await seedCompany("Công ty A");
     await seedCompany("Công ty B");
     await assert.rejects(
-      createFirstAdmin({ email: "x@x.vn", displayName: "X", password: STRONG }),
+      createFirstAdmin({ email: "x@example.test", displayName: "X", password: STRONG }),
       isCode("COMPANY_REQUIRED"),
     );
     await assert.rejects(
       createFirstAdmin({
-        email: "x@x.vn",
+        email: "x@example.test",
         displayName: "X",
         password: STRONG,
         companyId: "00000000-0000-4000-8000-000000000000",
@@ -135,7 +139,7 @@ describe("tạo admin: nhiều công ty / công ty có sẵn", () => {
       isCode("NOT_FOUND"),
     );
     const r = await createFirstAdmin({
-      email: "x@x.vn",
+      email: "x@example.test",
       displayName: "X",
       password: STRONG,
       companyId: a.companyId,
@@ -169,7 +173,7 @@ describe("scripts/create-admin.ts (CLI)", () => {
       timeout: 60_000,
     });
   };
-  const who = { ADMIN_EMAIL: "cli@x.vn", ADMIN_NAME: "Quản trị CLI", COMPANY_NAME: "Công ty CLI" };
+  const who = { ADMIN_EMAIL: "cli@example.test", ADMIN_NAME: "Quản trị CLI", COMPANY_NAME: "Công ty CLI" };
 
   test("thiếu ADMIN_EMAIL/ADMIN_NAME → exit 2", () => {
     assert.equal(run({}, STRONG).status, 2);
@@ -186,21 +190,21 @@ describe("scripts/create-admin.ts (CLI)", () => {
   test("mật khẩu mạnh qua stdin → exit 0 và đăng nhập được; chạy lại → exit 1 (đã có admin)", async () => {
     const ok = run(who, `${STRONG}\n`);
     assert.equal(ok.status, 0, ok.stderr);
-    assert.match(ok.stdout, /cli@x\.vn/);
+    assert.match(ok.stdout, /cli@example\.test/);
     assert.equal(ok.stdout.includes(STRONG) || ok.stderr.includes(STRONG), false);
     const res = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: "cli@x.vn", password: STRONG } }),
+      req("POST", "/api/app/auth/login", { body: { email: "cli@example.test", password: STRONG } }),
     );
     assert.equal(res.status, 200);
 
-    const again = run({ ...who, ADMIN_EMAIL: "khac@x.vn" }, `${STRONG}\n`);
+    const again = run({ ...who, ADMIN_EMAIL: "khac@example.test" }, `${STRONG}\n`);
     assert.equal(again.status, 1);
     assert.match(again.stderr, /ADMIN_EXISTS/);
   });
 
   test("mật khẩu qua biến ADMIN_PASSWORD hoạt động (một lần) và không bị in", async () => {
     await db.admin.query("UPDATE role_grant SET revoked_at = now() WHERE role = 'sysadmin'");
-    const r = run({ ...who, ADMIN_EMAIL: "env@x.vn", ADMIN_PASSWORD: STRONG }, "");
+    const r = run({ ...who, ADMIN_EMAIL: "env@example.test", ADMIN_PASSWORD: STRONG }, "");
     assert.equal(r.status, 0, r.stderr);
     assert.equal(r.stdout.includes(STRONG) || r.stderr.includes(STRONG), false);
   });

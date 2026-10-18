@@ -138,7 +138,9 @@ describe("lỗi HTTP theo RFC 9457 (D-017)", () => {
         )) as unknown as typeof fetch;
     try {
       globalThis.fetch = route(loginHandler);
-      const bad = await api("POST", "/api/app/auth/login", { body: { email: "khong@co.vn", password: "x" } });
+      const bad = await api("POST", "/api/app/auth/login", {
+        body: { email: "khong@example.test", password: "x" },
+      });
       assert.deepEqual([bad.ok, bad.status, bad.error], [false, 401, "Email hoặc mật khẩu không đúng"]);
       const inv = await api("POST", "/api/app/auth/login", { body: { email: 1 } });
       assert.deepEqual([inv.ok, inv.status, inv.error], [false, 400, "Dữ liệu gửi lên không hợp lệ"]);

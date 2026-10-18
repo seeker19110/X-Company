@@ -15,6 +15,26 @@ pii:
     copies: "audit_event.before/after (đã che theo tên khoá); period_export.content (CSV); sao lưu DB"
     recipients: "HR, quản lý theo phạm vi; hệ lương nhận CSV"
     status: implemented
+  - table: audit_event
+    column: source_ip
+    class: thuong
+    subject: nguoi_dung
+    purpose: "điều tra sự cố bảo mật, truy vết hành động nhạy cảm (CMP-AUDIT-002, T-026)"
+    legal_basis: "lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận)"
+    retention: "theo thời hạn nhật ký kiểm toán ≥ 12 tháng — pháp chế chốt"
+    copies: "sao lưu DB"
+    recipients: "quản trị hệ thống, bảo mật"
+    status: implemented
+  - table: audit_event
+    column: user_agent
+    class: thuong
+    subject: nguoi_dung
+    purpose: "điều tra sự cố bảo mật (thiết bị/trình duyệt của phiên)"
+    legal_basis: "lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận)"
+    retention: "theo thời hạn nhật ký kiểm toán ≥ 12 tháng — pháp chế chốt"
+    copies: "sao lưu DB"
+    recipients: "quản trị hệ thống, bảo mật"
+    status: implemented
   - table: employee
     column: work_email
     class: thuong

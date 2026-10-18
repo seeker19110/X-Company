@@ -1,7 +1,7 @@
 // npm run admin:create — tạo quản trị viên đầu tiên (BASE-SEC-005). Không có mật khẩu mặc định: mật khẩu do người
 // vận hành nhập, đọc MỘT lần rồi xoá khỏi bộ nhớ biến môi trường, không bao giờ in ra.
 //
-//   ADMIN_EMAIL=ten@congty.vn ADMIN_NAME="Nguyễn Văn A" [COMPANY_NAME="Tên công ty"] npm run admin:create
+//   ADMIN_EMAIL=ten@example.test ADMIN_NAME="Nguyễn Văn A" [COMPANY_NAME="Tên công ty"] npm run admin:create
 //   Mật khẩu: nhập ở dấu nhắc (ẩn ký tự) khi chạy trên terminal; hoặc đẩy qua stdin: `printf '%s' "$MK" | npm run admin:create`;
 //   hoặc biến ADMIN_PASSWORD (chỉ nên dùng trong pipeline an toàn — lịch sử shell có thể giữ lại).
 // Cần DATABASE_URL (role ứng dụng). Mã thoát: 0 đã tạo · 1 từ chối/lỗi (đã có admin, mật khẩu yếu…) · 2 thiếu tham số.

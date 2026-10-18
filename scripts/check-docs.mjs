@@ -461,8 +461,9 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
         if (w && !/^(UNIQUE|FOREIGN|CHECK|PRIMARY|EXCLUDE|CONSTRAINT)$/i.test(w)) cols.add(`${m[1]}.${w}`);
       }
     }
-    for (const m of s.matchAll(/ALTER TABLE (\w+)\s+ADD COLUMN (?:IF NOT EXISTS )?(\w+)/g))
-      cols.add(`${m[1]}.${m[2]}`);
+    // Một ALTER TABLE có thể thêm nhiều cột: `ADD COLUMN a …, ADD COLUMN b …` — quét cả câu tới dấu `;`.
+    for (const m of s.matchAll(/ALTER TABLE (?:IF EXISTS )?(\w+)([^;]*);/g))
+      for (const c of m[2].matchAll(/\bADD COLUMN (?:IF NOT EXISTS )?(\w+)/g)) cols.add(`${m[1]}.${c[1]}`);
     for (const m of s.matchAll(/ALTER TABLE (\w+)\s+DROP COLUMN (?:IF EXISTS )?(\w+)/g))
       cols.delete(`${m[1]}.${m[2]}`);
   }

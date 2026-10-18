@@ -166,8 +166,8 @@ describe("che dữ liệu nhạy cảm (SEC-SECRET-007, BASE-ERR-007, CMP-PRIV-0
 
   test("PII thường: email/phone/toạ độ bị che theo tên trường; id thường giữ", () => {
     const r = redact({
-      email: "a@b.vn",
-      phone: "0901234567",
+      email: "a@example.test",
+      phone: "0900000000",
       lat: 10.1,
       lng: 106.1,
       latitude: 1,

@@ -5,6 +5,7 @@ const config = [
   {
     ignores: [
       ".xtemplates/**",
+      ".claude/worktrees/**", // worktree tạm của agent — không thuộc mã nguồn
       ".next/**",
       "node_modules/**",
       "coverage/**",

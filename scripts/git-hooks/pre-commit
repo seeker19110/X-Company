@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# xc-managed-hook — cài bởi scripts/install-git-hooks.mjs (FE-BUILD-004, XC-DX-006). Chỉ kiểm tệp staged, < 30 s.
+set -euo pipefail
+mapfile -t files < <(git diff --cached --name-only --diff-filter=ACMR)
+[ "${#files[@]}" -eq 0 ] && exit 0
+npx --no-install prettier --check --ignore-unknown "${files[@]}"
+mapfile -t code < <(printf '%s\n' "${files[@]}" | grep -E '\.(ts|tsx|mjs|js)$' || true)
+[ "${#code[@]}" -eq 0 ] || npx --no-install eslint --max-warnings=0 --no-warn-ignored "${code[@]}"
