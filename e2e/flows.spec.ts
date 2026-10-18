@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectAccessible, login, logout } from "./helpers";
 
 test.describe("website công khai (AT01)", () => {
-  test("trang chủ, dịch vụ hiển thị nội dung đã duyệt; bản nháp 404; tiếp cận được @mobile", async ({
+  test("trang chủ, dịch vụ hiển thị nội dung đã duyệt; bản nháp 404; tiếp cận được @smoke", async ({
     page,
   }) => {
     await page.goto("/");
@@ -13,6 +13,7 @@ test.describe("website công khai (AT01)", () => {
     await expectAccessible(page);
     await page.goto("/dich-vu");
     await expect(page.getByRole("link", { name: "Tư vấn thiết kế" })).toBeVisible();
+    await expectAccessible(page);
     await expect(page.getByText("Bản nháp chưa duyệt")).toHaveCount(0);
     const draft = await page.goto("/dich-vu/dich-vu-nhap");
     expect(draft?.status()).toBe(404);
@@ -21,7 +22,9 @@ test.describe("website công khai (AT01)", () => {
     expect(sitemap).not.toContain("dich-vu-nhap");
   });
 
-  test("gửi liên hệ → nhận mã hồ sơ; header bảo mật có CSP nonce", async ({ page }) => {
+  test("gửi liên hệ → nhận mã hồ sơ; header bảo mật có CSP nonce @smoke", async ({ page }) => {
+    // Đồng hồ giả (FE-TEST-003): tua qua ngưỡng chống điền tự động 3 s thay vì chờ thật.
+    await page.clock.install();
     const res = await page.goto("/lien-he");
     expect(res?.headers()["content-security-policy"]).toMatch(/script-src 'self' 'nonce-/);
     expect(res?.headers()["x-frame-options"]).toBe("DENY");
@@ -29,7 +32,7 @@ test.describe("website công khai (AT01)", () => {
     await page.getByLabel("Email").fill("khach@e2e.test");
     await page.getByLabel("Nhu cầu (bắt buộc)").fill("Cần báo giá hệ thống điện nhẹ");
     await page.getByRole("checkbox").check();
-    await page.waitForTimeout(3100); // > ngưỡng chống điền tự động 3 s
+    await page.clock.fastForward(3100);
     await page.getByRole("button", { name: "Gửi yêu cầu" }).click();
     await expect(page.getByRole("status")).toContainText(/Mã yêu cầu: YC-\d{8}-\d{4}/);
     await expectAccessible(page);
@@ -59,7 +62,7 @@ test.describe("biểu mẫu: lỗi theo từng ô (FE-FORM-001/002)", () => {
 });
 
 test.describe("ứng dụng nội bộ", () => {
-  test("chưa đăng nhập → /app/login; trang đăng nhập tiếp cận được @mobile", async ({ page }) => {
+  test("chưa đăng nhập → /app/login; trang đăng nhập tiếp cận được @smoke", async ({ page }) => {
     await page.goto("/app/today");
     await expect(page).toHaveURL(/\/app\/login$/);
     await expectAccessible(page);
@@ -67,7 +70,7 @@ test.describe("ứng dụng nội bộ", () => {
     expect(manifest.start_url).toBe("/app/today");
   });
 
-  test("AT03/AT05: vào ca trực tuyến được xác nhận; ra ca khi mất mạng lưu trên thiết bị rồi tự đồng bộ", async ({
+  test("AT03/AT05: vào ca trực tuyến được xác nhận; ra ca khi mất mạng lưu trên thiết bị rồi tự đồng bộ @smoke", async ({
     page,
     context,
   }) => {
@@ -83,12 +86,14 @@ test.describe("ứng dụng nội bộ", () => {
     await page.goto("/app/me");
     await page.getByRole("button", { name: "Đồng bộ" }).click();
     await expect(page.getByText(/Chờ gửi:\s*0/)).toBeVisible();
+    await expectAccessible(page);
     await page.goto("/app/attendance");
     await expect(page.getByText("Ra ca").first()).toBeVisible();
+    await expectAccessible(page);
     await logout(page);
   });
 
-  test("AT09: nhân viên làm và gửi nghiệm thu; trưởng nhóm nghiệm thu", async ({ page }) => {
+  test("AT09: nhân viên làm và gửi nghiệm thu; trưởng nhóm nghiệm thu @smoke", async ({ page }) => {
     await login(page, "nv");
     await page.goto("/app/tasks");
     const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
@@ -98,6 +103,7 @@ test.describe("ứng dụng nội bộ", () => {
     // Người làm vẫn thấy việc, ở trạng thái chờ nghiệm thu, không còn nút thao tác.
     await expect(item).toContainText("Chờ nghiệm thu");
     await expect(item.getByRole("button")).toHaveCount(0);
+    await expectAccessible(page);
     await logout(page);
     await login(page, "tl");
     await page.goto("/app/tasks");
@@ -107,16 +113,18 @@ test.describe("ứng dụng nội bộ", () => {
     // UX-STATE-008: hộp thoại nêu tên việc; Esc đóng mà không nghiệm thu; nút ghi đúng động từ.
     const dialog = page.getByRole("dialog", { name: "Nghiệm thu việc?" });
     await expect(dialog).toContainText("Lắp đặt tủ điện tầng 3");
+    await expectAccessible(page);
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(r).toBeVisible();
     await r.getByRole("button", { name: "Nghiệm thu" }).click();
     await dialog.getByRole("button", { name: "Nghiệm thu việc" }).click();
     await expect(page.getByText("Lắp đặt tủ điện tầng 3")).toHaveCount(0);
+    await expectAccessible(page);
     await logout(page);
   });
 
-  test("AT06/AT07: đề nghị sửa công và đơn nghỉ → trưởng nhóm thấy trong hộp duyệt, duyệt và từ chối có lý do", async ({
+  test("AT06/AT07: đề nghị sửa công và đơn nghỉ → trưởng nhóm thấy trong hộp duyệt, duyệt và từ chối có lý do @smoke", async ({
     page,
   }) => {
     await login(page, "nv2");
@@ -129,6 +137,7 @@ test.describe("ứng dụng nội bộ", () => {
     await adj.getByLabel("Lý do (bắt buộc)").fill("Quên bấm ra ca, có tổ trưởng xác nhận");
     await adj.getByRole("button", { name: "Gửi đề nghị" }).click();
     await expect(page.getByRole("status").first()).toContainText("Đã gửi đơn");
+    await expectAccessible(page);
     const leave = page.locator("form").filter({ has: page.getByRole("heading", { name: "Xin nghỉ" }) });
     await leave.getByLabel("Ngày").fill("2026-12-01");
     await leave.getByRole("button", { name: "Gửi đơn nghỉ" }).click();
@@ -156,6 +165,7 @@ test.describe("ứng dụng nội bộ", () => {
     await reason.fill("Trùng lịch kiểm tra công trình");
     await dialog.getByRole("button", { name: "Từ chối đơn" }).click();
     await expect(page.getByText("Không có đơn chờ bạn duyệt.")).toBeVisible();
+    await expectAccessible(page);
     await logout(page);
   });
 
@@ -177,7 +187,7 @@ test.describe("ứng dụng nội bộ", () => {
     expect(sent[0]!.key).toMatch(/^[0-9a-f-]{16,}$/);
   });
 
-  test("AT12: đăng xuất rồi người khác đăng nhập cùng trình duyệt không thấy dữ liệu người trước", async ({
+  test("AT12: đăng xuất rồi người khác đăng nhập cùng trình duyệt không thấy dữ liệu người trước @smoke", async ({
     page,
   }) => {
     await login(page, "nv");
@@ -189,6 +199,7 @@ test.describe("ứng dụng nội bộ", () => {
     await login(page, "nv2");
     await expect(page.getByText("Lê Thị Hai")).toBeVisible();
     await expect(page.getByText("Nguyễn Văn Nhân")).toHaveCount(0);
+    await expectAccessible(page);
     const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
     // Chỉ còn tối đa DB của người đang đăng nhập (DB của người trước đã bị xoá).
     expect(dbs.filter((n) => n?.startsWith("xc-")).length).toBeLessThanOrEqual(1);

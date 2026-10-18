@@ -1,13 +1,27 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+type Users = Record<string, { email: string; userId: string; employeeId: string }>;
+interface SeedFile {
+  companyId: string;
+  password: string;
+  users: Users;
+  mobile: { companyId: string; users: Users };
+}
 export interface Seed {
   companyId: string;
   password: string;
-  users: Record<string, { email: string; userId: string; employeeId: string }>;
+  users: Users;
 }
-export const seed = (): Seed => JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as Seed;
+
+/** Dữ liệu của project đang chạy: mỗi project một công ty (scripts/seed-e2e.ts) → luồng ghi không giành trạng thái. */
+export const seed = (): Seed => {
+  const f = JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as SeedFile;
+  return test.info().project.name.startsWith("mobile")
+    ? { companyId: f.mobile.companyId, password: f.password, users: f.mobile.users }
+    : { companyId: f.companyId, password: f.password, users: f.users };
+};
 
 export async function login(page: Page, key: string) {
   const s = seed();
@@ -31,11 +45,28 @@ export async function logout(page: Page) {
   }).toPass({ timeout: 15_000 });
 }
 
-/** WCAG 2.2 AA (axe): không có vi phạm mức serious/critical. */
+/** WCAG 2.2 AA (axe, UX-A11Y-001/STD-A11Y-002): KHÔNG có vi phạm nào, ở mọi mức độ. */
 export async function expectAccessible(page: Page) {
+  // Sau điều hướng/refresh phía client, <title> có thể vắng thoáng chốc (metadata nạp sau) → chờ ổn định rồi mới quét,
+  // không bỏ qua luật nào của axe (document-title vẫn bị kiểm).
+  await expect(page).toHaveTitle(/\S/);
   const r = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
-  const bad = r.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
+  expect(
+    r.violations.map(
+      (v) => `${v.impact ?? "?"} ${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`,
+    ),
+  ).toEqual([]);
+}
+
+/** UX-RESP-001 (WCAG 1.4.10): không cuộn ngang ở bề rộng hiện tại. */
+export async function expectNoHorizontalScroll(page: Page) {
+  const { scroll, client } = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(scroll, `scrollWidth ${scroll} > clientWidth ${client} tại ${page.url()}`).toBeLessThanOrEqual(
+    client,
+  );
 }

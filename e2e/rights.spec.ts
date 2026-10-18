@@ -66,7 +66,9 @@ async function hrApi(page: Page) {
   return { post, handle, exportOf };
 }
 
-test.describe("quyền chủ thể dữ liệu (STD-PRIV-004)", () => {
+// @desktop: liên hệ công khai thuộc công ty của website (công ty desktop trong seed); HR của công ty mobile không có
+// quyền với chúng. Đây là luồng quản trị qua API, không phải luồng di động của nhân viên.
+test.describe("quyền chủ thể dữ liệu (STD-PRIV-004) @desktop", () => {
   test("rights-access: HR xuất dữ liệu của một liên hệ, dữ liệu đúng của chính người đó", async ({
     page,
     request,
