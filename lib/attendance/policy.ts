@@ -9,6 +9,8 @@ export interface AttendancePolicy {
   qrTtlSec: number;
   qrClockLeewaySec: number;
   duplicateWindowSec: number;
+  /** QR từ hàng chờ cũ hơn ngưỡng này → cần xác minh (cờ queued do client tự khai). */
+  qrOfflineReviewSec: number;
 }
 
 export const DEFAULT_POLICY: AttendancePolicy = {
@@ -19,6 +21,7 @@ export const DEFAULT_POLICY: AttendancePolicy = {
   qrTtlSec: 60,
   qrClockLeewaySec: 10,
   duplicateWindowSec: 120,
+  qrOfflineReviewSec: 1800,
 };
 
 export async function policyAt(db: Queryable, companyId: string, at: Date): Promise<AttendancePolicy> {
@@ -30,6 +33,7 @@ export async function policyAt(db: Queryable, companyId: string, at: Date): Prom
     qr_ttl_sec: number;
     qr_clock_leeway_sec: number;
     duplicate_window_sec: number;
+    qr_offline_review_sec: number;
   }>(
     "SELECT * FROM attendance_policy WHERE company_id = $1 AND valid_from <= $2 ORDER BY valid_from DESC LIMIT 1",
     [companyId, at],
@@ -44,5 +48,6 @@ export async function policyAt(db: Queryable, companyId: string, at: Date): Prom
     qrTtlSec: r.qr_ttl_sec,
     qrClockLeewaySec: r.qr_clock_leeway_sec,
     duplicateWindowSec: r.duplicate_window_sec,
+    qrOfflineReviewSec: r.qr_offline_review_sec,
   };
 }

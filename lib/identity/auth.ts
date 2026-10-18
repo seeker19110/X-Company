@@ -36,9 +36,9 @@ export async function login(
 ): Promise<LoginResult> {
   const email = normalizeEmail(input.email);
   const since = new Date(now.getTime() - WINDOW_MS);
-  return withTx(async (tx) => {
-    // Đếm → kiểm mật khẩu → ghi lượt thử dưới MỘT khoá theo (email, IP): request song song không vượt giới hạn
-    // (review PR #8 #3). Kiểm Argon2 nằm trong khoá — chỉ tuần tự hoá các lần thử cùng email+IP.
+  // Bước 1 (ngắn, dưới khoá theo email+IP): đếm lần sai và GHI TRƯỚC lượt thử này là "sai" rồi commit — request song
+  // song luôn thấy nhau nên không vượt giới hạn (review PR #8 #3) mà không giữ kết nối DB trong lúc băm Argon2.
+  const pre = await withTx(async (tx) => {
     await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('login:' || $1 || '|' || $2, 0))", [
       email,
       input.ip,
@@ -54,20 +54,25 @@ export async function login(
       const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
       throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
     }
+    const attempt = await tx.query<{ id: string }>(
+      "INSERT INTO login_attempt (email, ip, attempted_at, success) VALUES ($1, $2, $3, false) RETURNING id",
+      [email, input.ip, now],
+    );
     const u = await tx.query<{
       id: string;
       company_id: string;
       password_hash: string | null;
       disabled_at: Date | null;
     }>("SELECT id, company_id, password_hash, disabled_at FROM app_user WHERE email = $1", [email]);
-    const user = u.rows[0];
-    const ok = await verifyPassword(user && !user.disabled_at ? user.password_hash : null, input.password);
-    await tx.query("INSERT INTO login_attempt (email, ip, attempted_at, success) VALUES ($1, $2, $3, $4)", [
-      email,
-      input.ip,
-      now,
-      ok,
-    ]);
+    return { attemptId: attempt.rows[0]!.id, user: u.rows[0] };
+  }, pool);
+
+  // Bước 2: băm ngoài giao dịch (không giữ kết nối pool).
+  const user = pre.user;
+  const ok = await verifyPassword(user && !user.disabled_at ? user.password_hash : null, input.password);
+
+  // Bước 3: ghi kết quả.
+  const r = await withTx(async (tx) => {
     if (!ok || !user) {
       await appendAudit(tx, {
         actorUserId: user?.id ?? null,
@@ -80,6 +85,7 @@ export async function login(
       });
       return null;
     }
+    await tx.query("UPDATE login_attempt SET success = true WHERE id = $1", [pre.attemptId]);
     const s = await createSession(tx, user.id, { userAgent: input.userAgent, ip: input.ip }, now);
     await appendAudit(tx, {
       actorUserId: user.id,
@@ -90,11 +96,10 @@ export async function login(
       requestId: input.requestId ?? null,
     });
     return { token: s.token, userId: user.id, companyId: user.company_id };
-  }, pool).then((r) => {
-    // Cùng một thông điệp cho sai email và sai mật khẩu.
-    if (!r) throw new AppError("INVALID_CREDENTIALS", 401, "Email hoặc mật khẩu không đúng");
-    return r;
-  });
+  }, pool);
+  // Cùng một thông điệp cho sai email và sai mật khẩu.
+  if (!r) throw new AppError("INVALID_CREDENTIALS", 401, "Email hoặc mật khẩu không đúng");
+  return r;
 }
 
 /** Đặt mật khẩu mới (kiểm độ mạnh) và huỷ mọi phiên cũ của tài khoản. */

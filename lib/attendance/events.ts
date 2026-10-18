@@ -166,7 +166,7 @@ export async function recordEvent(
       }
       if (worksiteId && worksiteId !== q.ws) reasons.push("QR_WORKSITE_MISMATCH");
       // Cờ `queued` do client tự khai: QR quét "ngoại tuyến" lệch giờ lớn có thể là ảnh chụp QR → cần xác minh.
-      if (input.queued && (now.getTime() - input.deviceTime.getTime()) / 1000 > policy.clockSkewMaxSec)
+      if (input.queued && (now.getTime() - input.deviceTime.getTime()) / 1000 > policy.qrOfflineReviewSec)
         reasons.push("QR_OFFLINE");
       worksiteId = q.ws;
       qrNonce = q.n;
