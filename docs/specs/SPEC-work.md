@@ -1,4 +1,15 @@
+---
+title: SPEC-work
+features: [F-007, F-008, F-009, F-010, F-012]
+status: approved
+approved_by: "autopilot D-006"
+approved_at: 2026-10-18
+updated: 2026-10-18
+---
+
 # SPEC — Dự án, công việc, nghiệm thu, tiến độ, giờ dự án, tệp, dashboard (F-007…F-010, F-012)
+
+Trạng thái: Approved for implementation (D-006)
 
 > Nguồn: kế hoạch §7, §8, §11. Nghiệm thu: AT09, AT10, AT11, AT02 (tệp). Cập nhật 2026-10-18.
 
@@ -43,3 +54,35 @@
 - S-WK-05 (AT02): nhân viên ngoài dự án tải tệp của task → 403; thành viên được chia sẻ → 200.
 - S-WK-06: hai người sửa cùng task với cùng `version` → người thứ hai 409.
 - Ca biên: dự án không có lá trọng số → `accepted_pct = null` (không phải 0); tổng trọng số 0 → null; reviewer = responsible → 409 `SELF_APPROVAL`.
+
+## Tiêu chí chấp nhận
+
+Mỗi tiêu chí `AC-<MIỀN>-NN` ánh xạ 1-1 tới một kịch bản `S-*` ở mục Kịch bản; test mang mã `S-*` trong `tests/` hoặc `e2e/` (script `npm run -s check:docs` đối chiếu AC → S-ID → test, WF-SDD-003). Loại: chuẩn · lỗi (ca lỗi) · biên.
+
+| ID | Loại | Tiêu chí (Given/When/Then) | Kịch bản (S-ID) |
+|---|---|---|---|
+| AC-WK-01 | lỗi | Given task `evidence_required`, When chuyển `awaiting_acceptance` không tệp, Then 422 `EVIDENCE_REQUIRED` | S-WK-01 |
+| AC-WK-02 | lỗi | Given reviewer trả lại kèm lý do, Then `returned` → `in_progress`, lịch sử 2 dòng; mở lại `done` có lý do | S-WK-02 |
+| AC-WK-03 | chuẩn | Given lá trọng số 20/30/50 nghiệm thu 100%/50%/0%, Then `accepted_pct` = 35%; tách task trong lá không vượt trọng số lá | S-WK-03 |
+| AC-WK-04 | biên | Given phân công cho nhân viên có đơn nghỉ đã duyệt trùng `due_date`, Then cảnh báo `ASSIGNEE_ON_LEAVE` (không chặn) | S-WK-04 |
+| AC-WK-05 | lỗi | Given nhân viên ngoài dự án, When tải tệp của task, Then bị từ chối (hiện thực trả 404 theo API-CONTRACT; spec gốc ghi 403); thành viên được chia sẻ Then 200 | S-WK-05 |
+| AC-WK-06 | lỗi | Given hai người sửa cùng task với cùng `version`, Then người thứ hai 409 `VERSION_CONFLICT` | S-WK-06 |
+
+## Ca biên
+
+Nhóm theo PM-SPEC-003 (8 nhóm). "Phủ bởi" nêu test đã có; "chưa có test" là nợ ghi rõ, không phải đã phủ.
+
+| Nhóm | Ca biên | Hành vi mong đợi | Phủ bởi |
+|---|---|---|---|
+| Rỗng/null | dự án không có lá trọng số; tổng trọng số 0 | `accepted_pct` = null (không phải 0) | `tests/unit/progress.test.ts` |
+| Cực đại | tệp vượt 20 MB; tổng giờ dự án một ngày vượt 24 giờ | 413; bị từ chối | `tests/http/files.test.ts`, `tests/db/timesheet.test.ts` |
+| Trùng lặp/idempotency | tách một task thành nhiều task nhỏ trong cùng lá | trọng số lá không đổi, tiến độ không tự tăng | `tests/unit/progress.test.ts` |
+| Song song | hai người sửa cùng `version` | người thứ hai 409 (không "bản cuối thắng") | S-WK-06 |
+| Mất mạng giữa chừng | không áp dụng: ngoại tuyến và gửi lại thuộc SPEC-pwa (hàng chờ + `version` kiểm khi nhận muộn) | — | — |
+| Thời gian/múi giờ | `due_date` theo giờ VN trùng đơn nghỉ | cảnh báo `ASSIGNEE_ON_LEAVE` | `tests/db/assign-warning.test.ts` |
+| Quyền | reviewer = responsible; người ngoài dự án tải tệp; PM xem đối chiếu giờ (R4) | 409 `SELF_APPROVAL`; 404; 403 | `tests/db/tasks.test.ts`, `tests/http/files.test.ts`, `tests/db/timesheet.test.ts` |
+| Tiền/đơn vị | thời lượng là phút số nguyên (`estimate_minutes`, giờ dự án); chi phí/tiền thuộc P1 | không float; tách có mặt / OT duyệt / giờ dự án | `tests/db/timesheet.test.ts` |
+
+## Câu hỏi mở
+
+- Spec chưa có câu hỏi mở nào còn treo — các giá trị ⚙ (ngưỡng 60', 10 điểm %, 3 ngày, 20 MB) là cấu hình, HR/chủ sản phẩm chốt ở F02 (xem D-007).

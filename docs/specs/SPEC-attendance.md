@@ -1,4 +1,15 @@
+---
+title: SPEC-attendance
+features: [F-004, F-005, F-006]
+status: approved
+approved_by: "autopilot D-006"
+approved_at: 2026-10-18
+updated: 2026-10-18
+---
+
 # SPEC — Chấm công, nghỉ phép, OT, sửa công, kỳ công (F-004, F-005, F-006)
+
+Trạng thái: Approved for implementation (D-006)
 
 > Nguồn: kế hoạch §6, §10. Nghiệm thu: AT03, AT04, AT05, AT06, AT07, AT08. Cập nhật 2026-10-18.
 > Quyết định làm rõ (tự duyệt, ghi ở đây và `docs/autopilot/DECISIONS.md`): các giá trị mặc định đánh dấu ⚙ là **cấu
@@ -63,3 +74,40 @@
 - S-AT-08 (AT07): đơn OT 5 giờ ngày thường → 422 `OT_LIMIT_DAY`; người tạo tự duyệt → 409 `SELF_APPROVAL`.
 - S-AT-09: QR hết hạn 75 s → 422 `QR_EXPIRED`; chữ ký sai → 422 `QR_INVALID`.
 - Ca biên: ca không có sự kiện → `ABSENT` (không phải 0 giờ có mặt mà là trạng thái riêng); `device_time` tương lai > 5' → `needs_review`; DST không có ở VN nhưng mã dùng instant UTC nên đúng với múi giờ có DST.
+
+## Tiêu chí chấp nhận
+
+Mỗi tiêu chí `AC-<MIỀN>-NN` ánh xạ 1-1 tới một kịch bản `S-*` ở mục Kịch bản; test mang mã `S-*` trong `tests/` hoặc `e2e/` (script `npm run -s check:docs` đối chiếu AC → S-ID → test, WF-SDD-003). Loại: chuẩn · lỗi (ca lỗi) · biên.
+
+| ID | Loại | Tiêu chí (Given/When/Then) | Kịch bản (S-ID) |
+|---|---|---|---|
+| AC-AT-01 | chuẩn | Given ca 22:00–06:00 `business_date`=D, When vào 21:55, nghỉ ghi 02:00–02:30, ra 06:05, Then `present`=460', segments D 125' và D+1 335' | S-AT-01 |
+| AC-AT-02 | chuẩn | Given hai thiết bị vào/ra 08:00–12:00 và 11:30–17:00, ca `break_minutes`=60 không ghi nghỉ, Then hợp 540' và `present`=480' | S-AT-02 |
+| AC-AT-03 | chuẩn | Given gửi `in` 3 lần cùng khoá, Then 1 bản ghi, 3 phản hồi cùng `event_id` | S-AT-03 |
+| AC-AT-04 | lỗi | Given cùng khoá khác nội dung, Then 409 `IDEMPOTENCY_CONFLICT` và audit `denied` | S-AT-04 |
+| AC-AT-05 | biên | Given sự kiện offline 70 giờ trước Then `accepted`; 80 giờ Then `needs_review` (`OFFLINE_TOO_OLD`) | S-AT-05 |
+| AC-AT-06 | lỗi | Given nhân viên đã bị thu hồi quyền, When đồng bộ hàng chờ, Then bị từ chối, sự kiện không áp dụng | S-AT-06 |
+| AC-AT-07 | lỗi | Given kỳ đã khoá, When sự kiện muộn, Then `needs_review`, xuất phiên bản 1 không đổi checksum | S-AT-07 |
+| AC-AT-08 | lỗi | Given đơn OT 5 giờ ngày thường Then 422 `OT_LIMIT_DAY`; người tạo tự duyệt Then 409 `SELF_APPROVAL` | S-AT-08 |
+| AC-AT-09 | lỗi | Given QR hết hạn 75 s Then 422 `QR_EXPIRED`; chữ ký sai Then 422 `QR_INVALID` | S-AT-09 |
+
+## Ca biên
+
+Nhóm theo PM-SPEC-003 (8 nhóm). "Phủ bởi" nêu test đã có; "chưa có test" là nợ ghi rõ, không phải đã phủ.
+
+| Nhóm | Ca biên | Hành vi mong đợi | Phủ bởi |
+|---|---|---|---|
+| Rỗng/null | ca không có sự kiện; thiếu `out` cuối | `ABSENT` với `present_minutes` null (không phải 0); `MISSING_CHECKOUT`, không tự điền giờ ra | `tests/unit/compute-shift.test.ts` |
+| Cực đại | hàng chờ quá 72 giờ; OT vượt hạn ngày/tháng/năm | `OFFLINE_TOO_OLD`; `OT_LIMIT_<DAY|MONTH|YEAR>`, trả mọi hạn mức vượt | `tests/http/attendance-events.test.ts`, `tests/db/leave-ot.test.ts` |
+| Trùng lặp/idempotency | cùng khoá 3 lần; cùng khoá khác nội dung; `in` từ hai thiết bị trong 2 phút | một bản ghi; 409; `DUPLICATE_OPEN` (D-011) | `tests/http/attendance-events.test.ts` |
+| Song song | gửi đồng thời cùng khoá; đơn nghỉ trùng đồng thời | vẫn một bản ghi; DB chặn `LEAVE_OVERLAP` | `tests/http/attendance-events.test.ts`, `tests/db/leave-ot.test.ts` |
+| Mất mạng giữa chừng | đồng bộ muộn từ hàng chờ; QR hết hạn trong hàng chờ; sự kiện muộn của kỳ khoá | lưu `needs_review`, không đổi tổng chính thức | `tests/http/attendance-events.test.ts`, `tests/db/period.test.ts` |
+| Thời gian/múi giờ | ca qua đêm; lệch giờ thiết bị > 5'; `device_time` tương lai; múi giờ có DST | `CLOCK_SKEW`/`FUTURE_TIME` → `needs_review`; tính theo instant UTC | `tests/unit/compute-shift.test.ts`, `tests/http/attendance-events.test.ts` |
+| Quyền | tự duyệt OT; tài khoản bị vô hiệu/nghỉ việc khi đồng bộ | 409 `SELF_APPROVAL`; 401/403 | S-AT-06, S-AT-08 |
+| Tiền/đơn vị | phút là số nguyên (bỏ giây trước khi tính); giờ OT quy ra phút; không có tiền ở P0 (bảng công xuất cho hệ lương khác) | tổng và các đoạn theo ngày luôn khớp; không float | `tests/unit/compute-shift.test.ts` |
+
+## Câu hỏi mở
+
+- Giá trị quy tắc ca/OT/nghỉ chưa được HR chốt (F02) — Đã quyết: D-007 (cấu hình có ngày hiệu lực, mặc định ⚙; HR chốt trước pilot).
+- I3 (vào lần 2 khi có ca mở) mâu thuẫn S-AT-02 — Đã quyết: D-011 (chỉ cửa sổ trùng ⚙2 phút từ thiết bị khác).
+- Phút nghỉ phép của đơn nhiều ngày / qua hai kỳ — Đã quyết: D-012 (tính vào ngày bắt đầu đơn và kỳ chứa ngày đó).
