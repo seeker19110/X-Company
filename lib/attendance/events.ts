@@ -9,6 +9,7 @@ import { addDays, localDateOf, shiftBounds } from "./compute.ts";
 import { policyAt, type AttendancePolicy } from "./policy.ts";
 import { qrExpired, verifyQrSignature } from "./qr.ts";
 import { minutesToMs, msToSeconds, secondsToMs } from "../nen/units.ts";
+import { t as msg } from "../i18n/index.ts";
 
 export type Kind = "in" | "out" | "break_start" | "break_end";
 export type Source = "qr" | "gps" | "kiosk" | "manual_request";
@@ -170,12 +171,13 @@ export async function recordEvent(
     let qrNonce: string | null = null;
 
     if (input.source === "qr") {
-      if (!input.qr) throw new AppError("QR_REQUIRED", 422, "Thiếu mã QR");
+      if (!input.qr) throw new AppError("QR_REQUIRED", 422, msg("err.attendance.thieuMaQr"));
       const q = verifyQrSignature(input.qr); // sai chữ ký → 422 bất kể trực tuyến hay hàng chờ
-      if (q.cid !== actor.companyId) throw new AppError("QR_INVALID", 422, "Mã QR không thuộc công ty");
+      if (q.cid !== actor.companyId)
+        throw new AppError("QR_INVALID", 422, msg("err.attendance.maQrKhongThuocCongTy"));
       const checkAt = input.queued ? input.deviceTime : now;
       if (qrExpired(q, checkAt, policy.qrClockLeewaySec)) {
-        if (!input.queued) throw new AppError("QR_EXPIRED", 422, "Mã QR đã hết hạn, vui lòng quét mã mới");
+        if (!input.queued) throw new AppError("QR_EXPIRED", 422, msg("err.attendance.maQrDaHetHanVui"));
         reasons.push("QR_EXPIRED");
       }
       if (worksiteId && worksiteId !== q.ws) reasons.push("QR_WORKSITE_MISMATCH");
@@ -296,7 +298,7 @@ export async function recordEvent(
         }),
       pool,
     );
-    throw new AppError("IDEMPOTENCY_CONFLICT", 409, "Khoá gửi đã dùng cho nội dung khác");
+    throw new AppError("IDEMPOTENCY_CONFLICT", 409, msg("err.attendance.khoaGuiDaDungChoNoi"));
   }
   return outcome.result;
 }

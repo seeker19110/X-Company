@@ -4,6 +4,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { AppError } from "../nen/app-error.ts";
 import { env } from "../nen/env.ts";
 import { epochSeconds, msToSeconds } from "../nen/units.ts";
+import { t as tr } from "../i18n/index.ts";
 
 export interface QrPayload {
   v: 1;
@@ -55,18 +56,18 @@ export function issueQr(
 export function verifyQrSignature(token: string): QrPayload {
   const [body, sig, extra] = token.split(".");
   if (!body || !sig || extra !== undefined || token.length > 1000)
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   let payload: QrPayload;
   try {
     payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as QrPayload;
   } catch {
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   }
   const key = typeof payload?.kid === "string" ? keys().get(payload.kid) : undefined;
   const given = Buffer.from(sig, "base64url");
   const expected = key ? sign(key, body) : Buffer.alloc(32);
   if (!key || given.length !== expected.length || !timingSafeEqual(given, expected) || payload.v !== 1)
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   return payload;
 }
 

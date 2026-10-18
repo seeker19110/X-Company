@@ -3,6 +3,7 @@
 // lỗi tạm (mạng, 408, 429, 5xx) thử lại lùi luỹ thừa 1 s → 5 phút có jitter, tôn trọng Retry-After; lỗi 4xx khác → rejected, không thử lại.
 // id của bản ghi chính là Idempotency-Key: gửi lại sau timeout không tạo bản ghi trùng ở server.
 import { daysToMs, minutesToMs, secondsToMs } from "../nen/units.ts";
+import { t } from "../i18n/client-app.ts";
 
 export type QueueState = "pending" | "confirmed" | "needs_review" | "rejected";
 export type QueueKind = "attendance";
@@ -170,7 +171,7 @@ export async function flush(
       for (const item of batch) {
         item.attempts++;
         item.nextAttemptAt = now + nextDelayMs(item.attempts, { retryAfterMs, random });
-        item.lastError = err instanceof Error ? err.message : "Mất kết nối";
+        item.lastError = err instanceof Error ? err.message : t("syncClient.offline");
         await store.put(item);
         report.retried++;
       }
@@ -183,7 +184,7 @@ export async function flush(
       if (!r) {
         item.attempts++;
         item.nextAttemptAt = now + nextDelayMs(item.attempts, { random });
-        item.lastError = "Máy chủ không trả kết quả cho bản ghi này";
+        item.lastError = t("syncClient.noResult");
         report.retried++;
       } else if (r.ok) {
         item.state = r.status === "accepted" ? "confirmed" : "needs_review";

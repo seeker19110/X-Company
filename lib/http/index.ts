@@ -24,6 +24,7 @@ import { guarded, type GuardOptions } from "./idempotency.ts";
 import { kb, msToSeconds } from "../nen/units.ts";
 import { normalizeNfc } from "../nen/text.ts";
 import { observeRequest } from "./metrics.ts";
+import { t } from "../i18n/index.ts";
 
 export type { GuardOptions } from "./idempotency.ts";
 
@@ -34,17 +35,17 @@ export function json(data: unknown, status = 200, headers: Record<string, string
   });
 }
 
-const TITLES: Record<number, string> = {
-  400: "Yêu cầu không hợp lệ",
-  401: "Chưa đăng nhập",
-  403: "Không có quyền",
-  404: "Không tìm thấy",
-  409: "Xung đột dữ liệu",
-  413: "Dữ liệu quá lớn",
-  422: "Không xử lý được yêu cầu",
-  429: "Quá nhiều yêu cầu",
-  500: "Lỗi hệ thống",
-  503: "Dịch vụ tạm thời không khả dụng",
+const TITLES: Record<number, () => string> = {
+  400: () => t("err.http.title400"),
+  401: () => t("err.http.title401"),
+  403: () => t("err.http.title403"),
+  404: () => t("err.http.title404"),
+  409: () => t("err.http.title409"),
+  413: () => t("err.http.title413"),
+  422: () => t("err.http.title422"),
+  429: () => t("err.http.title429"),
+  500: () => t("err.http.title500"),
+  503: () => t("err.http.title503"),
 };
 
 /**
@@ -66,7 +67,7 @@ export function problemResponse(
   const traceId = currentLogContext().trace_id;
   const body = {
     type: `/problems/${code.toLowerCase().replace(/_/g, "-")}`,
-    title: TITLES[status] ?? (status >= 500 ? TITLES[500]! : "Yêu cầu không thành công"),
+    title: (TITLES[status] ?? (status >= 500 ? TITLES[500]! : () => t("err.http.titleDefault")))(),
     status,
     detail,
     instance: `urn:uuid:${requestId}`,
@@ -106,14 +107,14 @@ export function errorResponse(err: unknown, requestId: string): Response {
       requestId,
       detail: { paths: fields.map((f) => f.path) },
     });
-    return problemResponse(400, "VALIDATION", "Dữ liệu gửi lên không hợp lệ", requestId, {
+    return problemResponse(400, "VALIDATION", t("err.http.validation"), requestId, {
       details: { issues: fields },
       fields,
     });
   }
   // Lỗi chưa lường: log ERROR kèm stack + chuỗi cause (BASE-ERR-002/009); phản hồi chung, không lộ chi tiết (BASE-ERR-003).
   runWithLogContext({ request_id: requestId }, () => log.error("lỗi chưa xử lý trong request", { err }));
-  return problemResponse(500, "INTERNAL", "Lỗi hệ thống, vui lòng thử lại", requestId);
+  return problemResponse(500, "INTERNAL", t("err.http.internal"), requestId);
 }
 
 export function getCookie(req: Request, name: string): string | null {
@@ -168,11 +169,11 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export function assertSameOrigin(req: Request): void {
   const origin = req.headers.get("origin");
   if (origin) {
-    if (origin !== appOrigin()) throw new AppError("CSRF", 403, "Yêu cầu không cùng nguồn");
+    if (origin !== appOrigin()) throw new AppError("CSRF", 403, t("err.http.yeuCauKhongCungNguon"));
     return;
   }
   if (req.headers.get("sec-fetch-site") !== "same-origin")
-    throw new AppError("CSRF", 403, "Yêu cầu không cùng nguồn");
+    throw new AppError("CSRF", 403, t("err.http.yeuCauKhongCungNguon"));
 }
 
 export interface RequestContext {
@@ -250,17 +251,14 @@ export function withActor(
       actor = session ? await loadActor(pool, session.userId) : null;
     } catch (err) {
       log.error("backend xác thực/phân quyền lỗi — từ chối request (fail-closed)", { err });
-      throw new AppError(
-        "AUTH_UNAVAILABLE",
-        503,
-        "Hệ thống xác thực tạm thời không khả dụng, vui lòng thử lại",
-      );
+      throw new AppError("AUTH_UNAVAILABLE", 503, t("err.http.heThongXacThucTamThoi"));
     }
-    if (!session || !actor || !token) throw new AppError("UNAUTHENTICATED", 401, "Vui lòng đăng nhập");
+    if (!session || !actor || !token)
+      throw new AppError("UNAUTHENTICATED", 401, t("err.http.vuiLongDangNhap"));
     if (!SAFE_METHODS.has(req.method)) {
       assertSameOrigin(req);
       if (!checkCsrf(token, req.headers.get("x-csrf-token")))
-        throw new AppError("CSRF", 403, "Thiếu hoặc sai mã CSRF");
+        throw new AppError("CSRF", 403, t("err.http.thieuHoacSaiMaCsrf"));
     }
     try {
       return await runWithLogContext({ actor_id: actor.userId }, () => {
@@ -324,17 +322,18 @@ export async function authorize(
     target: { type: object.type, id: object.id ?? null },
     detail: { action },
   });
-  throw new AppError("FORBIDDEN", 403, "Bạn không có quyền thực hiện thao tác này");
+  throw new AppError("FORBIDDEN", 403, t("err.shared.banKhongCoQuyenThucHien"));
 }
 
 export async function readJson(req: Request, maxBytes = kb(64)): Promise<unknown> {
   const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
+  if (len > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
   const text = await req.text();
-  if (Buffer.byteLength(text) > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
+  if (Buffer.byteLength(text) > maxBytes)
+    throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
   try {
     return text !== "" ? normalizeNfc(JSON.parse(text)) : {}; // NFC ở biên: một ký tự Việt = một dạng lưu
   } catch {
-    throw new AppError("BAD_JSON", 400, "JSON không hợp lệ");
+    throw new AppError("BAD_JSON", 400, t("err.http.jsonKhongHopLe"));
   }
 }

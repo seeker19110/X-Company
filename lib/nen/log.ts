@@ -74,6 +74,7 @@ const MAX_ITEMS = 100;
 
 /** Che mẫu nhạy cảm trong một chuỗi và cắt độ dài (chống log phình). */
 export function redactString(s: string): string {
+  // i18n-ignore: dấu cắt trong nhật ký JSON cho vận hành, không tới người dùng
   let out = s.length > MAX_STRING ? `${s.slice(0, MAX_STRING)}…[cắt]` : s;
   for (const [re, rep] of VALUE_PATTERNS) out = out.replace(re, rep);
   return out;
@@ -154,6 +155,7 @@ function sanitize(value: unknown, depth: number, seen: WeakSet<object>): unknown
   if (obj instanceof Error) return exceptionFields(obj);
   if (Buffer.isBuffer(obj)) return `[Buffer ${obj.length}]`;
   if (seen.has(obj)) return "[Circular]";
+  // i18n-ignore: dấu thay thế khi làm phẳng đối tượng quá sâu trong nhật ký, không tới người dùng
   if (depth >= MAX_DEPTH) return "[Quá sâu]";
   seen.add(obj);
   try {

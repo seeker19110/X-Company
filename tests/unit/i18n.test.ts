@@ -246,13 +246,63 @@ describe("check-i18n: scanSource — chuỗi tiếng Việt cứng trong .ts và
     assert.ok(r.violations.every((v: string) => v.includes("khoá t() không phải chuỗi cố định")));
   });
 
-  test("lib: chỉ thu khoá, không áp luật chuỗi cứng", () => {
-    const r = scanSource("lib/x.ts", 'export const m = "Không tìm thấy"; export const k = t("a.b");', {
+  test("lib: áp luật chuỗi cứng — AppError, tóm tắt, mẫu chuỗi đều bị báo", () => {
+    const lib = (src: string) => scanSource("lib/x.ts", src, { jsxRules: false });
+    assert.equal(lib('throw new AppError("NOT_FOUND", 404, "Không tìm thấy");').violations.length, 1);
+    assert.equal(lib("const s = `Quá hạn: ${x}`;").violations.length, 1);
+    assert.equal(lib('const s = "Tên " + "Đặng";').violations.length, 2);
+    assert.deepEqual(lib('throw new AppError("NOT_FOUND", 404, t("a.b"));').violations, []);
+    assert.deepEqual(lib('const code = "NOT_FOUND"; const sql = "SELECT 1";').violations, []);
+    assert.equal(lib('const r = /đ/g; const k = t("a.b");').keys.length, 1);
+  });
+
+  test("lib: miễn log.*/logger.*, new <X>Error (trừ AppError), comment; i18n-ignore cần lý do", () => {
+    const lib = (src: string) => scanSource("lib/x.ts", src, { jsxRules: false }).violations;
+    assert.deepEqual(lib('log.warn("kết nối bị ngắt", { err });'), []);
+    assert.deepEqual(lib("logger.error(`lỗi ${x} chưa bắt`);"), []);
+    assert.deepEqual(lib('logger[level]("sự kiện bảo mật", a);'), []);
+    assert.deepEqual(lib('log.info("a " + "đã " + `giao ${x}`);'), []);
+    assert.deepEqual(lib('throw new Error("Thiếu cấu hình");'), []);
+    assert.deepEqual(lib("throw new RangeError(`số không hợp lệ (${v})`);"), []);
+    assert.deepEqual(lib("// chú thích tiếng Việt\n/* khối: ê */ const a = 1;"), []);
+    assert.equal(lib('throw new AppError("X", 400, "Lỗi");').length, 1);
+    assert.equal(lib('foo("Lỗi", log);').length, 1); // log không phải callee
+    assert.deepEqual(lib('const m = "Dấu ẩn"; // i18n-ignore: dữ liệu ổn định'), []);
+    assert.deepEqual(lib('// i18n-ignore: dữ liệu ổn định\nconst m = "Dấu ẩn";'), []);
+    assert.equal(lib('const m = "Dấu ẩn"; // i18n-ignore:').length, 1); // thiếu lý do
+    assert.equal(lib('// i18n-ignore: lý do\n\nconst m = "Dấu ẩn";').length, 1); // cách một dòng trống
+  });
+
+  test("lib: i18n-ignore-file (≤ 15 dòng đầu, có lý do) tắt luật literal cho cả tệp; khoá t() vẫn thu", () => {
+    const lib = (src: string) => scanSource("lib/x.ts", src, { jsxRules: false });
+    assert.deepEqual(lib('// i18n-ignore-file: đầu ra vận hành\nconst m = "Lỗi"; t("a.b");').violations, []);
+    assert.equal(lib('// i18n-ignore-file: đầu ra vận hành\nconst m = "Lỗi"; t("a.b");').keys.length, 1);
+    assert.equal(lib('// i18n-ignore-file:\nconst m = "Lỗi";').violations.length, 1);
+    assert.equal(lib(`${"\n".repeat(16)}// i18n-ignore-file: muộn\nconst m = "Lỗi";`).violations.length, 1);
+  });
+
+  test("bí danh import { t as tr } từ i18n được thu khoá; hàm cùng tên từ nơi khác thì không", () => {
+    const r = scanSource(
+      "lib/x.ts",
+      'import { t as tr } from "../i18n/index.ts";\nconst a = tr("a.b"); const b = t("c.d");',
+      { jsxRules: false },
+    );
+    assert.deepEqual(
+      r.keys.map((k: { key: string }) => k.key),
+      ["a.b", "c.d"],
+    );
+    const other = scanSource("lib/x.ts", 'import { t as tr } from "./other.ts";\nconst a = tr("a.b");', {
       jsxRules: false,
-      literalRules: false,
     });
-    assert.deepEqual(r.violations, []);
-    assert.equal(r.keys.length, 1);
+    assert.deepEqual(other.keys, []);
+    const dyn = scanSource("lib/x.ts", 'import { t as tr } from "../i18n/client-app.ts";\ntr(k);', {
+      jsxRules: false,
+    });
+    assert.equal(dyn.violations.length, 1);
+  });
+
+  test("cây thật: lib/** và app/** không còn literal tiếng Việt ngoài comment/log/i18n-ignore", () => {
+    assert.deepEqual(checkI18n().errors, []);
   });
 });
 

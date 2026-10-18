@@ -1,6 +1,7 @@
 // Danh mục dữ liệu PHẢI GIỮ theo luật khi chủ thể yêu cầu xoá (CMP-RIGHTS-007): chỉ giữ phần bắt buộc, ghi căn cứ.
 // Đây là CẤU HÌNH để pháp chế/HR chỉnh — số năm giữ và điều luật cụ thể chưa được xác minh (đề xuất, chờ pháp chế).
 import type { SubjectType } from "./consent.ts";
+import { t } from "../i18n/index.ts";
 
 export interface RetainedCategory {
   /** Tên nhóm dữ liệu giữ lại. */
@@ -11,33 +12,35 @@ export interface RetainedCategory {
   reason: string;
 }
 
+/** Tên hai danh mục không-PII luôn được giữ (xoá theo yêu cầu không chạm tới); dùng chung để so khớp. */
+export const CATEGORY_CONSENT_EVIDENCE = t("msg.privacy.retained.consentEvidence.category");
+export const CATEGORY_AUDIT_LOG = t("msg.privacy.retained.auditLog.category");
+
 /** Nhân viên: hồ sơ lao động và bảng công là chứng từ phải lưu (điều luật/số năm: pháp chế xác minh). */
 const EMPLOYEE_RETAINED: readonly RetainedCategory[] = [
   {
-    category: "hồ sơ lao động",
+    category: t("msg.privacy.retained.laborRecords.category"),
     tables: ["employee", "employment_history"],
-    reason:
-      "Nghĩa vụ lưu hồ sơ lao động theo pháp luật lao động; giữ tối thiểu tới hết thời hạn luật định (pháp chế xác minh số năm)",
+    reason: t("msg.privacy.retained.laborRecords.reason"),
   },
   {
-    category: "bảng công và nghỉ phép",
+    category: t("msg.privacy.retained.timesheet.category"),
     tables: ["attendance_event", "period_line", "period_export", "leave_request", "leave_ledger"],
-    reason:
-      "Chứng từ chấm công/tiền lương phải lưu theo pháp luật lao động và kế toán (pháp chế xác minh số năm)",
+    reason: t("msg.privacy.retained.timesheet.reason"),
   },
 ];
 
 /** Liên hệ/ứng viên công khai: không có nghĩa vụ giữ ngoài bằng chứng đồng ý và nhật ký kiểm toán (không PII). */
 const NON_PERSONAL_EVIDENCE: readonly RetainedCategory[] = [
   {
-    category: "bằng chứng đồng ý và rút đồng ý",
+    category: CATEGORY_CONSENT_EVIDENCE,
     tables: ["consent_record"],
-    reason: "Chứng minh việc đã/ngừng được đồng ý (không chứa thông tin định danh); không thể sửa/xoá",
+    reason: t("msg.privacy.retained.consentEvidence.reason"),
   },
   {
-    category: "nhật ký kiểm toán",
+    category: CATEGORY_AUDIT_LOG,
     tables: ["audit_event"],
-    reason: "Nhật ký chỉ thêm, đã che theo tên khoá; không chứa nội dung liên hệ",
+    reason: t("msg.privacy.retained.auditLog.reason"),
   },
 ];
 

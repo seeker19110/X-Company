@@ -8,6 +8,7 @@ import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 export const MAX_FAILURES = 5;
 export const WINDOW_MS = minutesToMs(15);
@@ -62,7 +63,7 @@ export async function login(
         outcome: "denied",
         target: { type: "app_user" },
       });
-      throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
+      throw new AppError("RATE_LIMITED", 429, t("err.identity.dangNhapSaiQuaNhieuLan"), { retryAfter });
     }
     const attempt = await tx.query<{ id: string }>(
       "INSERT INTO login_attempt (email, ip, attempted_at, success) VALUES ($1, $2, $3, false) RETURNING id",
@@ -120,7 +121,7 @@ export async function login(
     target: { type: "app_user", id: user?.id ?? null },
   });
   // Cùng một thông điệp cho sai email và sai mật khẩu.
-  if (!r) throw new AppError("INVALID_CREDENTIALS", 401, "Email hoặc mật khẩu không đúng");
+  if (!r) throw new AppError("INVALID_CREDENTIALS", 401, t("err.identity.emailHoacMatKhauKhongDung"));
   return r;
 }
 
@@ -131,7 +132,7 @@ export async function setPassword(db: Queryable, userId: string, password: strin
     [userId],
   );
   const user = u.rows[0];
-  if (!user) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài khoản");
+  if (!user) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayTaiKhoan"));
   validateNewPassword(password, { email: user.email });
   await db.query("UPDATE app_user SET password_hash = $2, auth_version = auth_version + 1 WHERE id = $1", [
     userId,
@@ -153,7 +154,7 @@ export async function disableUser(db: Queryable, actorUserId: string | null, use
     "UPDATE app_user SET disabled_at = now(), auth_version = auth_version + 1 WHERE id = $1 AND disabled_at IS NULL RETURNING company_id",
     [userId],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài khoản đang hoạt động");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.identity.khongTimThayTaiKhoanDang"));
   await db.query("DELETE FROM session WHERE user_id = $1", [userId]);
   await appendAudit(db, {
     actorUserId,

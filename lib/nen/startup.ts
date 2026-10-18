@@ -1,3 +1,4 @@
+// i18n-ignore-file: dòng khởi động cho người vận hành (stderr), không tới người dùng cuối
 // Kiểm khi khởi động (BASE-CFG-002, FE-BUILD-005): parse toàn bộ env; thiếu/sai → in TÊN biến ra stderr rồi thoát ≠ 0.
 // Gọi từ instrumentation.ts (runtime nodejs). Cũng cài bắt lỗi toàn cục của tiến trình (BASE-ERR-002).
 import { EnvError, env, formatEnvIssues, loadEnv, maskedEnv } from "./env.ts";

@@ -13,6 +13,7 @@ import { getPool, withTx } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
 import { mb } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 export interface RateLimit {
   /** Nhóm đếm (mỗi nhóm route đắt một tên). */
@@ -55,7 +56,7 @@ export function canonicalJson(v: unknown): string {
 /** sha256(method + route + body chuẩn hoá); multipart: băm trường + tên/nội dung tệp (biên giới multipart đổi mỗi lần gửi). */
 export async function requestHash(req: Request): Promise<string> {
   const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > MAX_HASH_BYTES) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
+  if (len > MAX_HASH_BYTES) throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
   const h = createHash("sha256");
   h.update(`${req.method}\n${new URL(req.url).pathname}\n`);
   const copy = req.clone();
@@ -64,7 +65,7 @@ export async function requestHash(req: Request): Promise<string> {
     try {
       form = await copy.formData();
     } catch {
-      throw new AppError("BAD_FORM", 400, "Cần multipart/form-data");
+      throw new AppError("BAD_FORM", 400, t("err.shared.canMultipartFormData"));
     }
     for (const [k, v] of [...form.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
       if (typeof v === "string") h.update(`${k}=${v}\n`);
@@ -109,7 +110,7 @@ export async function enforceRateLimit(userId: string, rl: RateLimit): Promise<v
   const row = r.rows[0]!;
   if (row.n > rl.max) {
     log.warn("vượt giới hạn tần suất", { bucket: rl.bucket, actor_id: userId });
-    throw new AppError("RATE_LIMITED", 429, "Bạn thao tác quá nhanh, vui lòng thử lại sau", {
+    throw new AppError("RATE_LIMITED", 429, t("err.http.banThaoTacQuaNhanhVui"), {
       retryAfter: row.retry,
     });
   }
@@ -140,22 +141,13 @@ async function claim(ctx: GuardCtx, key: string, hash: string): Promise<Claim> {
     const row = r.rows[0];
     if (row && !row.expired) {
       if (row.request_hash !== hash)
-        throw new AppError(
-          "IDEMPOTENCY_KEY_REUSED",
-          422,
-          "Khoá Idempotency-Key này đã dùng cho một yêu cầu khác",
-        );
+        throw new AppError("IDEMPOTENCY_KEY_REUSED", 422, t("err.http.khoaIdempotencyKeyNayDaDung"));
       if (row.state === "done")
         return { kind: "replay", status: row.response_status!, body: row.response_body! };
       if (!row.stale)
-        throw new AppError(
-          "IDEMPOTENCY_IN_PROGRESS",
-          409,
-          "Yêu cầu trùng khoá đang được xử lý, thử lại sau",
-          {
-            retryAfter: 1,
-          },
-        );
+        throw new AppError("IDEMPOTENCY_IN_PROGRESS", 409, t("err.http.yeuCauTrungKhoaDangDuoc"), {
+          retryAfter: 1,
+        });
     }
     await tx.query(
       `INSERT INTO idempotency_record (company_id, user_id, key, request_hash, state)
@@ -191,13 +183,9 @@ export async function guarded(
 
   const key = ctx.req.headers.get("idempotency-key");
   if (key === null || key === "")
-    throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, "Thiếu header Idempotency-Key");
+    throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.http.thieuHeaderIdempotencyKey"));
   if (!KEY_RE.test(key))
-    throw new AppError(
-      "IDEMPOTENCY_KEY_REQUIRED",
-      400,
-      "Idempotency-Key phải gồm 8–255 ký tự in được, không khoảng trắng",
-    );
+    throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.http.idempotencyKeyPhaiGom8255"));
 
   const c = await claim(ctx, key, await requestHash(ctx.req));
   if (c.kind === "replay")

@@ -3,6 +3,7 @@
 // Giá trị ngoài khoảng, không phải số nguyên thập phân (0, âm, "abc", "1e3", "1.5", rỗng) → 400 VALIDATION — KHÔNG kẹp
 // ngầm, để client biết mình xin quá mức. Truy vấn lấy `limit + 1` dòng để biết còn trang sau (`next_offset`).
 import { AppError } from "../nen/app-error.ts";
+import { t } from "../i18n/index.ts";
 
 export const PAGE_DEFAULT_LIMIT = 50;
 export const PAGE_MAX_LIMIT = 200;
@@ -26,10 +27,10 @@ const DIGITS = /^[0-9]{1,9}$/;
 function intParam(raw: string | null, name: string, min: number, max: number, fallback: number): number {
   if (raw === null) return fallback;
   if (!DIGITS.test(raw))
-    throw new AppError("VALIDATION", 400, `${name} phải là số nguyên từ ${min} đến ${max}`);
+    throw new AppError("VALIDATION", 400, t("err.nen.intParamRange", { name, min, max }));
   const n = Number(raw);
   if (n < min || n > max)
-    throw new AppError("VALIDATION", 400, `${name} phải là số nguyên từ ${min} đến ${max}`);
+    throw new AppError("VALIDATION", 400, t("err.nen.intParamRange", { name, min, max }));
   return n;
 }
 

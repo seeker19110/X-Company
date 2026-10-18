@@ -3,6 +3,7 @@
 // (lib/inquiry) ghi đồng ý qua đây; worker hỏi `isProcessingBlocked` trước khi gửi sự kiện của chủ thể.
 import { createHash } from "node:crypto";
 import type { Queryable } from "../db/index.ts";
+import { t } from "../i18n/index.ts";
 
 export type SubjectType = "inquiry" | "job_application" | "employee";
 export const CHANNEL_WEB_FORM = "web_form";
@@ -16,8 +17,8 @@ export const CONSENT_PURPOSES: Record<SubjectType, readonly string[]> = {
 
 /** Văn bản đồng ý hiển thị (tóm tắt) — băm cùng mục đích + phiên bản làm `ui_snapshot_hash`. Đổi chữ → đổi phiên bản. */
 const CONSENT_TEXT: Record<string, string> = {
-  inquiry_contact: "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
-  job_application: "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng",
+  inquiry_contact: t("msg.privacy.consent.inquiryContact"),
+  job_application: t("msg.privacy.consent.jobApplication"),
 };
 
 export function consentSnapshotHash(purposeId: string, policyVersion: string): string {

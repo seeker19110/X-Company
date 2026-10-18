@@ -23,7 +23,9 @@
   },
   "syncClient": {
     "sessionExpired": "Phiên đăng nhập hết hạn — đăng nhập lại để gửi",
-    "serverError": "Máy chủ lỗi {status}"
+    "serverError": "Máy chủ lỗi {status}",
+    "offline": "Mất kết nối",
+    "noResult": "Máy chủ không trả kết quả cho bản ghi này"
   },
   "clock": {
     "confirmed": "Đã được xác nhận",

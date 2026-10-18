@@ -17,6 +17,7 @@ import {
   startRequest,
   type PrivacyActor,
 } from "./index.ts";
+import { t } from "../i18n/index.ts";
 
 const STATUSES = ["received", "in_progress", "done", "rejected"] as const;
 const ACTIONS = ["start", "complete", "reject"] as const;
@@ -36,7 +37,7 @@ export const getRequests = withActor(async (ctx) => {
   const q = new URL(ctx.req.url).searchParams;
   const status = q.get("status");
   if (status !== null && !(STATUSES as readonly string[]).includes(status))
-    throw new AppError("VALIDATION", 400, "status không hợp lệ");
+    throw new AppError("VALIDATION", 400, t("err.privacy.statusKhongHopLe"));
   const page = await listRequestsPage(getPool(), ctx.actor.companyId, {
     status: (status as (typeof STATUSES)[number] | null) ?? undefined,
     overdueOnly: q.get("overdue") === "1",
@@ -59,7 +60,7 @@ function idAndAction(req: Request): { id: string; action: string } {
   const parts = new URL(req.url).pathname.split("/");
   const action = parts.pop() ?? "";
   const id = parts.pop() ?? "";
-  if (!z.uuid().safeParse(id).success) throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+  if (!z.uuid().safeParse(id).success) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
   return { id, action };
 }
 
@@ -69,14 +70,14 @@ export const postRequestAction = withActor(
   async (ctx) => {
     const { id, action } = idAndAction(ctx.req);
     if (!(ACTIONS as readonly string[]).includes(action as Action))
-      throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+      throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
     await guard(ctx);
     const body = ActionBody.parse(await readJson(ctx.req));
     const actor = actorOf(ctx);
     const row = await withTx((tx) => {
       if (action === "start") return startRequest(tx, actor, id);
       if (action === "complete") return completeRequest(tx, actor, id);
-      if (!body.reason) throw new AppError("VALIDATION", 422, "Cần nêu căn cứ từ chối (reason)");
+      if (!body.reason) throw new AppError("VALIDATION", 422, t("err.privacy.canNeuCanCuTuChoi2"));
       return rejectRequest(tx, actor, id, body.reason);
     });
     return json({ request: row });
@@ -86,7 +87,7 @@ export const postRequestAction = withActor(
 
 export const getRequestExport = withActor(async (ctx) => {
   const { id, action } = idAndAction(ctx.req);
-  if (action !== "export") throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+  if (action !== "export") throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
   await guard(ctx);
   return json(await withTx((tx) => exportSubject(tx, actorOf(ctx), id)));
 });

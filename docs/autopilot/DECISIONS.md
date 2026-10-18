@@ -181,3 +181,10 @@
 - Chọn: Task riêng T-041 chuyển dần + mở rộng check:i18n sang lib/ khi xong
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: app/ đã đủ và có hàng rào; lib/ là việc cơ học lớn, tách task giữ PR nhỏ; mục blueprint giữ [ ] tới khi xong (không khai đạt).
 - Đường lùi: Gộp vào T-031
+
+### D-026 · 2026-10-18T13:59:20+00:00 · Phạm vi luật chuỗi cứng ở lib/** (T-041) và cách đặt tên khoá?
+
+- Phương án: (1) Chỉ AppError/chuỗi tới người dùng vào t(); new Error khác, log.*, # HELP, giá trị dữ liệu ổn định (MASK, ANON_NAME), RAISE của trigger miễn bằng i18n-ignore có lý do; khoá sinh tự động tiếng Việt không dấu · (2) Bắt cả new Error và log; đổi mọi khoá sang tiếng Anh
+- Chọn: Chỉ AppError/chuỗi tới người dùng vào t(); new Error khác, log.*, # HELP, giá trị dữ liệu ổn định (MASK, ANON_NAME), RAISE của trigger miễn bằng i18n-ignore có lý do; khoá sinh tự động tiếng Việt không dấu
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: chuỗi tới lập trình viên/vận hành không cần người dịch; MASK nằm trong dữ liệu băm nên không được đổi; migration append-only nên không sửa RAISE. Hàng rào vẫn đỏ với literal mới ở đường hiển thị.
+- Đường lùi: Bỏ các i18n-ignore và chuyển dần

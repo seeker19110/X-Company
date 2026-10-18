@@ -9,6 +9,7 @@ import { json, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import type { ItemResult } from "./queue.ts";
 import { kb } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 const Batch = z.object({
   items: z
@@ -60,7 +61,7 @@ export const postSync = withActor(
             ok: false,
             httpStatus: 400,
             code: "VALIDATION",
-            message: "Dữ liệu bản ghi không hợp lệ",
+            message: t("err.sync.invalidRecord"),
           });
         else
           results.push({
@@ -68,7 +69,7 @@ export const postSync = withActor(
             ok: false,
             httpStatus: 500,
             code: "INTERNAL",
-            message: "Lỗi hệ thống, sẽ thử lại",
+            message: t("err.sync.internalRetry"),
           });
       }
     }

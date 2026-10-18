@@ -19,6 +19,7 @@ export interface Channel {
 /** Kênh tắt tạm thời: không phải lỗi của sự kiện. */
 export class ChannelDisabledError extends Error {
   constructor(readonly channel: string) {
+    // i18n-ignore: thông điệp lỗi nội bộ cho vận hành/nhật ký worker, không tới người dùng
     super(`kênh ${channel} đang tắt`);
     this.name = "ChannelDisabledError";
   }

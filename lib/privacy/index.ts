@@ -11,8 +11,9 @@ import { fetchLimit, MAX_PAGE, toPage, type Page, type PageRequest } from "../ne
 import { BUSINESS_TZ } from "../nen/time.ts";
 import { anonymizeById } from "../worker/retention.ts";
 import { activePurposes, listConsents, withdrawConsent, type SubjectType } from "./consent.ts";
-import { RETAINED_BY_SUBJECT } from "./retained.ts";
+import { CATEGORY_AUDIT_LOG, CATEGORY_CONSENT_EVIDENCE, RETAINED_BY_SUBJECT } from "./retained.ts";
 import { MS_PER_DAY } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 export { type SubjectType } from "./consent.ts";
 
@@ -37,7 +38,7 @@ export const CreateRequestInput = z.object({
   subject_ref: z
     .string()
     .trim()
-    .regex(/^[A-Za-z0-9_-]{1,64}$/, "Dùng mã hồ sơ (vd YC-20261018-0001), không dùng email/SĐT"),
+    .regex(/^[A-Za-z0-9_-]{1,64}$/, t("err.privacy.subjectRefHint")),
   kind: z.enum(KINDS),
   note: z.string().trim().max(1000).nullish(),
 });
@@ -76,7 +77,7 @@ async function resolveSubject(
     `SELECT id FROM ${TABLE_OF[type]} WHERE company_id = $1 AND (code = $2 OR id::text = $2)`,
     [companyId, ref],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy chủ thể theo mã đã nhập");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.privacy.khongTimThayChuTheTheo"));
   return rows[0].id;
 }
 
@@ -86,7 +87,7 @@ async function lockRequest(tx: Queryable, companyId: string, id: string): Promis
     `SELECT ${COLS} FROM data_subject_request WHERE company_id = $1 AND id = $2 FOR UPDATE`,
     [companyId, id],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy yêu cầu");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayYeuCau"));
   return rows[0];
 }
 
@@ -119,7 +120,7 @@ export async function createRequest(
     row = r.rows[0]!;
   } catch (err) {
     if ((err as { code?: string }).code === "23505")
-      throw new AppError("DUPLICATE_REQUEST", 409, "Đã có yêu cầu cùng loại đang xử lý cho chủ thể này");
+      throw new AppError("DUPLICATE_REQUEST", 409, t("err.privacy.daCoYeuCauCungLoai"));
     throw err;
   }
   await audit(tx, actor, "privacy.request.create", row, null, { kind: row.kind, due_at: row.due_at });
@@ -191,7 +192,7 @@ export const listOverdue = (db: Queryable, companyId: string, now: Date = new Da
 export async function startRequest(tx: Queryable, actor: PrivacyActor, id: string): Promise<RequestRow> {
   const cur = await lockRequest(tx, actor.companyId, id);
   if (cur.status !== "received")
-    throw new AppError("INVALID_STATE", 409, `Không bắt đầu được yêu cầu ở trạng thái ${cur.status}`);
+    throw new AppError("INVALID_STATE", 409, t("err.privacy.cannotStartInState", { status: cur.status }));
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
   const { rows } = await tx.query<RequestRow>(
     `UPDATE data_subject_request SET status = 'in_progress', handler = $3 WHERE company_id = $1 AND id = $2
@@ -211,10 +212,10 @@ export async function rejectRequest(
 ): Promise<RequestRow> {
   const why = reason.trim();
   if (why.length < 1 || why.length > 1000)
-    throw new AppError("VALIDATION", 422, "Cần nêu căn cứ từ chối (1–1000 ký tự)");
+    throw new AppError("VALIDATION", 422, t("err.privacy.canNeuCanCuTuChoi"));
   const cur = await lockRequest(tx, actor.companyId, id);
   if (cur.status === "done" || cur.status === "rejected")
-    throw new AppError("INVALID_STATE", 409, `Yêu cầu đã đóng (${cur.status})`);
+    throw new AppError("INVALID_STATE", 409, t("err.privacy.requestClosed", { status: cur.status }));
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
   const { rows } = await tx.query<RequestRow>(
     `UPDATE data_subject_request SET status = 'rejected', closed_at = $3, handler = $4, reject_reason = $5
@@ -234,7 +235,7 @@ export async function completeRequest(
 ): Promise<RequestRow> {
   const cur = await lockRequest(tx, actor.companyId, id);
   if (cur.status !== "received" && cur.status !== "in_progress")
-    throw new AppError("INVALID_STATE", 409, `Yêu cầu đã đóng (${cur.status})`);
+    throw new AppError("INVALID_STATE", 409, t("err.privacy.requestClosed", { status: cur.status }));
   let result: Record<string, unknown>;
   switch (cur.kind) {
     case "access":
@@ -294,12 +295,8 @@ async function executeWithdraw(
 ): Promise<Record<string, unknown>> {
   const purposes = await withdrawConsent(tx, actor.companyId, r.subject_type, r.subject_id, now);
   if (purposes.length === 0)
-    throw new AppError(
-      "NO_ACTIVE_CONSENT",
-      422,
-      "Không có đồng ý đang hiệu lực để rút (xử lý theo căn cứ khác) — hãy từ chối yêu cầu và nêu căn cứ",
-    );
-  await stopSubject(tx, actor, r, "rút đồng ý");
+    throw new AppError("NO_ACTIVE_CONSENT", 422, t("err.privacy.khongCoDongYDangHieu"));
+  await stopSubject(tx, actor, r, t("msg.privacy.stopWithdrawConsent"));
   return { withdrawn_purposes: purposes, processing_stopped: true };
 }
 
@@ -312,7 +309,7 @@ async function executeRestrict(
     `INSERT INTO processing_restriction (company_id, subject_type, subject_id, kind, reason, request_id)
      VALUES ($1, $2, $3, 'restrict', $4, $5)
      ON CONFLICT (subject_type, subject_id, kind) WHERE released_at IS NULL DO NOTHING`,
-    [actor.companyId, r.subject_type, r.subject_id, r.note ?? "yêu cầu hạn chế xử lý của chủ thể", r.id],
+    [actor.companyId, r.subject_type, r.subject_id, r.note ?? t("msg.privacy.stopRestrictRequest"), r.id],
   );
   return { restricted: true, newly_restricted: (ins.rowCount ?? 0) > 0 };
 }
@@ -345,10 +342,12 @@ async function executeDelete(
   }));
   if (r.subject_type === "employee") {
     // Hồ sơ lao động/bảng công phải giữ theo luật: không xoá, đánh dấu hạn chế xử lý + ghi lý do giữ (CMP-RIGHTS-007).
-    const reason = `giữ theo luật: ${retained
-      .filter((c) => c.category !== "bằng chứng đồng ý và rút đồng ý" && c.category !== "nhật ký kiểm toán")
-      .map((c) => c.category)
-      .join("; ")}`;
+    const reason = t("msg.privacy.retainedByLaw", {
+      categories: retained
+        .filter((c) => c.category !== CATEGORY_CONSENT_EVIDENCE && c.category !== CATEGORY_AUDIT_LOG)
+        .map((c) => c.category)
+        .join("; "),
+    });
     await tx.query(
       `INSERT INTO processing_restriction (company_id, subject_type, subject_id, kind, reason, request_id)
        VALUES ($1, 'employee', $2, 'retained_by_law', $3, $4)
@@ -367,7 +366,7 @@ async function executeDelete(
       "UPDATE inquiry_history SET note = NULL WHERE company_id = $1 AND inquiry_id = $2 AND actor_user_id IS NOT NULL",
       [actor.companyId, r.subject_id],
     ); // ghi chú tự do của người xử lý có thể chứa PII; ghi chú hệ thống (actor rỗng) giữ nguyên
-  await stopSubject(tx, actor, r, "xoá theo yêu cầu chủ thể");
+  await stopSubject(tx, actor, r, t("msg.privacy.stopErase"));
   // 2) Kho tệp: xoá blob trong giao dịch (xoá idempotent; giao dịch lỗi → chạy lại vẫn xoá được, hàng dữ liệu còn nguyên).
   const files = await tx.query<{ id: string; storage_key: string }>(
     "SELECT id, storage_key FROM subject_file WHERE company_id = $1 AND subject_type = $2 AND subject_id = $3 FOR UPDATE",
@@ -425,9 +424,8 @@ export async function exportSubject(
   now: Date = new Date(),
 ): Promise<SubjectExport> {
   const req = await lockRequest(tx, actor.companyId, id);
-  if (req.kind !== "access")
-    throw new AppError("INVALID_STATE", 409, "Chỉ yêu cầu truy cập mới xuất dữ liệu");
-  if (req.status === "rejected") throw new AppError("INVALID_STATE", 409, "Yêu cầu đã bị từ chối");
+  if (req.kind !== "access") throw new AppError("INVALID_STATE", 409, t("err.privacy.chiYeuCauTruyCapMoi"));
+  if (req.status === "rejected") throw new AppError("INVALID_STATE", 409, t("err.privacy.yeuCauDaBiTuChoi"));
   const { subject_type: type, subject_id: sid } = req;
   const one = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows[0] ?? null;
   const many = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows;

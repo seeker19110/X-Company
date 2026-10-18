@@ -5,6 +5,7 @@ import { destroyUserSessions } from "../identity/session.ts";
 import { AppError } from "../nen/app-error.ts";
 import type { Actor } from "../org/index.ts";
 import { ROLES, type Role, type ScopeType } from "./index.ts";
+import { t } from "../i18n/index.ts";
 
 const SCOPE_TABLE: Partial<Record<ScopeType, string>> = { branch: "branch", department: "department" };
 
@@ -23,9 +24,9 @@ export async function grantRole(
   companyId: string,
   g: GrantInput,
 ): Promise<string> {
-  if (!ROLES.includes(g.role)) throw new AppError("INVALID_ROLE", 422, "Vai trò không hợp lệ");
+  if (!ROLES.includes(g.role)) throw new AppError("INVALID_ROLE", 422, t("err.authz.vaiTroKhongHopLe"));
   const needsId = g.scopeType !== "company" && g.scopeType !== "self";
-  if (needsId !== !!g.scopeId) throw new AppError("INVALID_SCOPE", 422, "Phạm vi và mã phạm vi không khớp");
+  if (needsId !== !!g.scopeId) throw new AppError("INVALID_SCOPE", 422, t("err.authz.phamViVaMaPhamVi"));
   const table = SCOPE_TABLE[g.scopeType];
   if (table) {
     // sql-interp-allow: `table` lấy từ SCOPE_TABLE (hằng "branch"/"department"), không bao giờ từ đầu vào.
@@ -33,10 +34,10 @@ export async function grantRole(
       companyId,
       g.scopeId,
     ]);
-    if (ok.rowCount === 0) throw new AppError("INVALID_SCOPE", 422, "Phạm vi không thuộc công ty");
+    if (ok.rowCount === 0) throw new AppError("INVALID_SCOPE", 422, t("err.authz.phamViKhongThuocCongTy"));
   }
   const u = await tx.query("SELECT 1 FROM app_user WHERE company_id = $1 AND id = $2", [companyId, g.userId]);
-  if (u.rowCount === 0) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài khoản");
+  if (u.rowCount === 0) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayTaiKhoan"));
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO role_grant (company_id, user_id, role, scope_type, scope_id, valid_from, valid_to, granted_by)
      VALUES ($1, $2, $3, $4, $5, COALESCE($6, now()), $7, $8) RETURNING id`,
@@ -78,7 +79,7 @@ export async function revokeGrant(
     [companyId, grantId],
   );
   const row = rows[0];
-  if (!row) throw new AppError("NOT_FOUND", 404, "Không tìm thấy quyền đang hiệu lực");
+  if (!row) throw new AppError("NOT_FOUND", 404, t("err.authz.khongTimThayQuyenDangHieu"));
   await tx.query("UPDATE app_user SET auth_version = auth_version + 1 WHERE id = $1", [row.user_id]);
   await destroyUserSessions(tx, row.user_id); // thu hồi quyền → mọi phiên cũ của người đó bị huỷ
   await appendAudit(tx, {

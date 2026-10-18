@@ -4,6 +4,7 @@ import { can, isSelfApproval, type Action, type ActorContext, type Resource } fr
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { localDate } from "../nen/time.ts";
+import { t } from "../i18n/index.ts";
 
 export async function employeeResource(
   db: Queryable,
@@ -18,7 +19,7 @@ export async function employeeResource(
      WHERE e.company_id = $1 AND e.id = $2`,
     [companyId, employeeId, date],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy nhân viên");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.attendance.khongTimThayNhanVien"));
   return {
     companyId,
     ownerEmployeeId: employeeId,
@@ -39,7 +40,7 @@ export async function requireOn(
   object: { type: string; id: string },
 ): Promise<void> {
   if (can(actor, action, res)) return;
-  throw new AppError("FORBIDDEN", 403, "Bạn không có quyền thực hiện thao tác này", { action, object });
+  throw new AppError("FORBIDDEN", 403, t("err.shared.banKhongCoQuyenThucHien"), { action, object });
 }
 
 /** R5: người tạo đơn / chủ đơn không tự duyệt. */
@@ -48,7 +49,7 @@ export function requireNotSelf(actor: ActorContext, creatorUserId: string, owner
     isSelfApproval(actor, { userId: creatorUserId }) ||
     isSelfApproval(actor, { employeeId: ownerEmployeeId })
   )
-    throw new AppError("SELF_APPROVAL", 409, "Không thể tự duyệt đơn của mình");
+    throw new AppError("SELF_APPROVAL", 409, t("err.attendance.khongTheTuDuyetDonCua"));
 }
 
 export function auditDecision(

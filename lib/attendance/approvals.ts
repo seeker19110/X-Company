@@ -9,6 +9,7 @@ import { decideLeave } from "./leave.ts";
 import { decideOt } from "./ot.ts";
 import { decideAdjustment } from "./period.ts";
 import { employeeResource } from "./scope.ts";
+import { t } from "../i18n/index.ts";
 
 export type ApprovalType = "leave" | "ot" | "adjustment";
 
@@ -22,17 +23,32 @@ export interface PendingItem {
 }
 
 /** Truy vấn lõi hàng chờ duyệt — xuất ra để test EXPLAIN (DB-PERF-001). */
-export const PENDING_APPROVALS_SQL = `SELECT 'leave' AS type, r.id, r.employee_id, e.full_name, t.name || ' · ' || r.minutes || ' phút' AS summary, r.created_at, r.created_by_user_id
+export const PENDING_APPROVALS_SQL = `SELECT 'leave' AS type, r.id, r.employee_id, e.full_name, t.name AS label, r.minutes AS minutes, false AS awaiting_consent, r.created_at, r.created_by_user_id
        FROM leave_request r JOIN employee e ON e.id = r.employee_id JOIN leave_type t ON t.id = r.leave_type_id
        WHERE r.company_id = $1 AND r.status = 'pending'
      UNION ALL
-     SELECT 'ot', o.id, o.employee_id, e.full_name, 'OT ' || o.business_date || ' · ' || o.minutes || ' phút'
-              || CASE WHEN o.employee_consent_at IS NULL THEN ' (chờ đồng ý)' ELSE '' END, o.created_at, o.created_by_user_id
+     SELECT 'ot', o.id, o.employee_id, e.full_name, o.business_date::text, o.minutes, o.employee_consent_at IS NULL, o.created_at, o.created_by_user_id
        FROM ot_request o JOIN employee e ON e.id = o.employee_id WHERE o.company_id = $1 AND o.status = 'pending'
      UNION ALL
-     SELECT 'adjustment', a.id, a.employee_id, e.full_name, 'Sửa công: ' || a.reason, a.created_at, a.created_by_user_id
+     SELECT 'adjustment', a.id, a.employee_id, e.full_name, a.reason, NULL::int, false, a.created_at, a.created_by_user_id
        FROM attendance_adjustment a JOIN employee e ON e.id = a.employee_id WHERE a.company_id = $1 AND a.status = 'pending'
      ORDER BY created_at, id LIMIT 500`;
+
+/** Tóm tắt hiển thị dựng ở TS (không nhúng chữ vào SQL) từ cột thô: nhãn/ngày/lý do, số phút, cờ chờ đồng ý. */
+function summarize(r: {
+  type: ApprovalType;
+  label: string;
+  minutes: number | null;
+  awaiting_consent: boolean;
+}): string {
+  const minutes = r.minutes ?? 0;
+  if (r.type === "leave") return t("msg.approvals.summaryLeave", { name: r.label, minutes });
+  if (r.type === "ot")
+    return r.awaiting_consent
+      ? t("msg.approvals.summaryOtAwaitingConsent", { date: r.label, minutes })
+      : t("msg.approvals.summaryOt", { date: r.label, minutes });
+  return t("msg.approvals.summaryAdjustment", { reason: r.label });
+}
 
 export async function pendingApprovals(db: Queryable, actor: ActorContext): Promise<PendingItem[]> {
   const { rows } = await db.query<{
@@ -40,7 +56,9 @@ export async function pendingApprovals(db: Queryable, actor: ActorContext): Prom
     id: string;
     employee_id: string;
     full_name: string;
-    summary: string;
+    label: string;
+    minutes: number | null;
+    awaiting_consent: boolean;
     created_at: Date;
     created_by_user_id: string;
   }>(PENDING_APPROVALS_SQL, [actor.companyId]);
@@ -54,7 +72,7 @@ export async function pendingApprovals(db: Queryable, actor: ActorContext): Prom
       id: r.id,
       employeeId: r.employee_id,
       employeeName: r.full_name,
-      summary: r.summary,
+      summary: summarize(r),
       createdAt: r.created_at,
     });
   }
@@ -88,5 +106,5 @@ export async function decide(
     await decideAdjustment(tx, actor, id, decision, note);
     return;
   }
-  throw new AppError("NOT_FOUND", 404, "Loại đơn không hợp lệ");
+  throw new AppError("NOT_FOUND", 404, t("err.attendance.loaiDonKhongHopLe"));
 }

@@ -1,9 +1,12 @@
 // check:i18n (XC-I18N-001): mọi chuỗi người dùng thấy nằm ở messages/vi.json, gọi qua t("khoá").
 //  1. app/**/*.tsx: chữ cái trong văn bản JSX, hoặc chuỗi literal ở aria-label/placeholder/title/alt… → đỏ;
-//  2. app/**/*.{ts,tsx}: chuỗi literal có dấu tiếng Việt (nhãn, thông báo) → đỏ (trừ đối số reportClientError — nhật ký DevTools);
+//  2. app/**/*.{ts,tsx} và lib/**/*.ts: chuỗi literal có dấu tiếng Việt (nhãn, thông báo, tóm tắt) → đỏ. Miễn: comment, đối số
+//     reportClientError (nhật ký DevTools), lời gọi nhật ký log.*/logger.* và `new <X>Error(...)` trừ AppError (thông điệp cho lập trình viên/vận hành —
+//     AppError mới là loại lỗi tới người dùng, nên đối số của nó KHÔNG được miễn);
 //  3. khoá dùng trong mã (t("a.b")) không có trong vi.json, hoặc khoá động t(`a.${x}`) (không kiểm tĩnh được) → đỏ;
 //  4. khoá vi.json thiếu mô tả ở vi.context.json, hoặc ngược lại → đỏ.
-// Bỏ qua tường minh một dòng không phải chuỗi người dùng: comment `i18n-ignore: <lý do>` cùng dòng hoặc dòng ngay trên.
+// Bỏ qua tường minh một dòng không phải chuỗi người dùng: comment `i18n-ignore: <lý do>` cùng dòng hoặc dòng ngay trên;
+// cả tệp là đầu ra cho vận hành: `i18n-ignore-file: <lý do>` trong 15 dòng đầu (chỉ tắt luật literal, khoá t() vẫn kiểm).
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
@@ -25,9 +28,30 @@ const TEXT_ATTRS = new Set([
 ]);
 /** Tệp thông điệp nguồn (xem lib/i18n/client.ts): gộp sâu thành một cây khi kiểm. */
 export const MESSAGE_FILES = ["vi.json", "vi.app.json", "vi.site.json", "vi.server.json"];
-const IGNORE = /i18n-ignore:\s*\S/;
+const IGNORE = /i18n-ignore:[ \t]*\S/;
+/** `i18n-ignore-file: <lý do>` trong 15 dòng đầu: cả tệp là đầu ra cho vận hành (không tới người dùng) — tắt luật literal tiếng Việt. */
+const IGNORE_FILE = /i18n-ignore-file:[ \t]*\S/;
 const T_NAMES = new Set(["t"]);
 const LOG_CALLS = new Set(["reportClientError"]);
+const LOG_OBJECTS = new Set(["log", "logger"]);
+/** Mô-đun i18n mà `import { t as <bí danh> }` được coi là hàm dịch (tệp có biến cục bộ tên `t` phải đặt bí danh). */
+const I18N_MODULE = /(^|\/)i18n\/(index|client|client-app|client-site)(\.ts)?$/;
+
+/** Lời gọi cho lập trình viên/vận hành: reportClientError(...), log.<mức>(...), logger.<mức>(...), logger[mức](...), new <X>Error(...). */
+function isDevFacingCall(n) {
+  if (ts.isNewExpression(n))
+    return (
+      ts.isIdentifier(n.expression) && /Error$/.test(n.expression.text) && n.expression.text !== "AppError"
+    );
+  if (!ts.isCallExpression(n)) return false;
+  const e = n.expression;
+  if (ts.isIdentifier(e)) return LOG_CALLS.has(e.text);
+  return (
+    (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e)) &&
+    ts.isIdentifier(e.expression) &&
+    LOG_OBJECTS.has(e.expression.text)
+  );
+}
 
 /** Mọi khoá lá `a.b.c` của cây thông điệp. */
 export function flattenKeys(tree, prefix = "") {
@@ -73,6 +97,16 @@ export function scanSource(file, src, { jsxRules = file.endsWith(".tsx"), litera
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const lines = src.split("\n");
+  const tNames = new Set(T_NAMES);
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)) continue;
+    if (!I18N_MODULE.test(st.moduleSpecifier.text)) continue;
+    const named = st.importClause?.namedBindings;
+    if (named && ts.isNamedImports(named))
+      for (const el of named.elements)
+        if ((el.propertyName ?? el.name).text === "t") tNames.add(el.name.text);
+  }
+  if (IGNORE_FILE.test(lines.slice(0, 15).join("\n"))) literalRules = false;
   const violations = [];
   const keys = [];
   const lineOf = (pos) => sf.getLineAndCharacterOfPosition(pos).line;
@@ -111,7 +145,7 @@ export function scanSource(file, src, { jsxRules = file.endsWith(".tsx"), litera
       if (lit !== null && hasLetter(lit))
         report(node.getStart(sf), `chuỗi cứng trong JSX: "${lit.slice(0, 40)}"`);
     }
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && T_NAMES.has(node.expression.text)) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && tNames.has(node.expression.text)) {
       const a = node.arguments[0];
       const lit = a && (ts.isStringLiteral(a) || ts.isNoSubstitutionTemplateLiteral(a)) ? a.text : null;
       if (lit !== null) keys.push({ key: lit, line: lineOf(node.getStart(sf)) + 1 });
@@ -122,10 +156,17 @@ export function scanSource(file, src, { jsxRules = file.endsWith(".tsx"), litera
       (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateExpression(node))
     ) {
       const text = literalText(node)?.normalize("NFC") ?? "";
-      const inLogCall =
-        ts.isCallExpression(node.parent) &&
-        ts.isIdentifier(node.parent.expression) &&
-        LOG_CALLS.has(node.parent.expression.text);
+      let up = node.parent; // đi lên qua phép nối chuỗi/mẫu/điều kiện tới lời gọi chứa nó
+      while (
+        up &&
+        (ts.isTemplateSpan(up) ||
+          ts.isTemplateExpression(up) ||
+          ts.isBinaryExpression(up) ||
+          ts.isParenthesizedExpression(up) ||
+          ts.isConditionalExpression(up))
+      )
+        up = up.parent;
+      const inLogCall = !!up && isDevFacingCall(up);
       if (VI.test(text) && !inLogCall)
         report(node.getStart(sf), `chuỗi tiếng Việt cứng: "${text.slice(0, 40)}"`);
     }
@@ -172,7 +213,7 @@ export function check(rootDir = root) {
   }
   for (const f of walk(path.join(rootDir, "lib"), [])) {
     if (rel(f) === "lib/i18n/index.ts") continue;
-    const r = scanSource(rel(f), readFileSync(f, "utf8"), { jsxRules: false, literalRules: false });
+    const r = scanSource(rel(f), readFileSync(f, "utf8"), { jsxRules: false });
     errors.push(...r.violations);
     used.push(...r.keys.map((k) => ({ file: rel(f), ...k })));
   }

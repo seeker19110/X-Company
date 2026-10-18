@@ -2,6 +2,7 @@
 // (BE-FILE-001, BE-FILE-003, OWASP File Upload). Tên gốc chỉ là metadata hiển thị — khoá lưu do server sinh (storage.ts).
 import { AppError } from "../nen/app-error.ts";
 import type { Sniffed } from "./sniff.ts";
+import { t } from "../i18n/index.ts";
 
 /** Đuôi được nhận (chữ thường, không dấu chấm) → đuôi chuẩn của loại dò theo nội dung. */
 export const ALLOWED_EXTENSIONS: Readonly<Record<string, string>> = {
@@ -41,15 +42,12 @@ export function checkedFileName(raw: string, kind: Sniffed): string {
   const ext = parts.length > 1 ? (parts[parts.length - 1] ?? "") : "";
   const canonical = ALLOWED_EXTENSIONS[ext];
   if (canonical === undefined)
-    throw new AppError(
-      "UNSUPPORTED_TYPE",
-      415,
-      "Đuôi tệp không được chấp nhận (pdf, png, jpg, webp, docx, xlsx)",
-    );
+    throw new AppError("UNSUPPORTED_TYPE", 415, t("err.files.duoiTepKhongDuocChapNhan"));
   const inner = parts.slice(1, -1);
   if (inner.some((p) => DANGEROUS.has(p) || p in ALLOWED_EXTENSIONS))
-    throw new AppError("UNSUPPORTED_TYPE", 415, "Tên tệp có đuôi kép không được chấp nhận");
-  if (canonical !== kind.ext) throw new AppError("UNSUPPORTED_TYPE", 415, "Đuôi tệp không khớp nội dung tệp");
+    throw new AppError("UNSUPPORTED_TYPE", 415, t("err.files.tenTepCoDuoiKepKhong"));
+  if (canonical !== kind.ext)
+    throw new AppError("UNSUPPORTED_TYPE", 415, t("err.files.duoiTepKhongKhopNoiDung"));
   if (cleaned.length <= MAX_NAME) return cleaned;
   const suffix = cleaned.slice(cleaned.length - ext.length - 1);
   return cleaned.slice(0, MAX_NAME - suffix.length) + suffix;

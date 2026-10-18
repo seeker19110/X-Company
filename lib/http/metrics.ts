@@ -128,6 +128,7 @@ const esc = (v: string): string => v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 export function renderMetrics(outboxDead: number | null): string {
   const out: string[] = [];
   out.push(
+    // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
     "# HELP http_server_request_duration_seconds Thời gian xử lý request HTTP phía máy chủ (OTel http.server.request.duration).",
     "# TYPE http_server_request_duration_seconds histogram",
   );
@@ -144,9 +145,11 @@ export function renderMetrics(outboxDead: number | null): string {
     );
   }
   out.push(
+    // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
     "# HELP http_server_series_dropped_total Số quan sát bị bỏ vì vượt trần số chuỗi nhãn.",
     "# TYPE http_server_series_dropped_total counter",
     `http_server_series_dropped_total ${dropped}`,
+    // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
     "# HELP outbox_dead_total Số việc outbox ở trạng thái dead (DLQ); vắng mặt khi không đọc được DB.",
     "# TYPE outbox_dead_total gauge",
   );

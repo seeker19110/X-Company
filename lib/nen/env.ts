@@ -1,3 +1,4 @@
+// i18n-ignore-file: chẩn đoán cấu hình môi trường cho người vận hành (stderr lúc khởi động, thông điệp kiểm biến), không tới người dùng cuối
 // Module env DUY NHẤT (BASE-CFG-002/005/008, FE-BUILD-005): mọi biến môi trường của ứng dụng được khai báo và parse ở
 // đây bằng zod; nơi khác KHÔNG đọc `process.env.` (scripts/check-env.ts chặn). Hai lớp: `server` (có thể là bí mật) và
 // `client` (chỉ tiền tố NEXT_PUBLIC_, không bao giờ bí mật). Lỗi chỉ nêu TÊN biến, không in giá trị.

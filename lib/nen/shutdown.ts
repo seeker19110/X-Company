@@ -1,3 +1,4 @@
+// i18n-ignore-file: dòng nhật ký tắt máy cho người vận hành (console), không tới người dùng cuối
 // Tắt êm khi nhận SIGTERM/SIGINT (ARC-RES-009, BE-REL-004): readiness → 503 ngay; sau SHUTDOWN_READY_DELAY_MS (mặc định
 // 2 s, để bộ cân bằng tải kịp thấy 503 và rút thực thể) mới ngừng nhận kết nối; chờ request đang chạy tối đa
 // SHUTDOWN_GRACE_MS (mặc định 20 s); đóng pool DB (≤ 5 s); thoát 0. Tổng ≤ 27 s < grace 30 s của orchestrator.

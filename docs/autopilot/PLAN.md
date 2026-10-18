@@ -108,7 +108,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-038` Hiệu năng & quan sát trong repo: lighthouserc, size-limit, baseline, histogram http.server.request.duration, SLO.md (PRF-WEB-005, FE-PERF-002/004, XC-PERF-003, XC-GREEN-001/002, OPS-OBS-003, OPS-SLO-001) — Gate: `npm run -s test:file -- tests/unit/metrics.test.ts && npm run -s check:perf-budget`
 - [x] `T-039` Tài liệu vận hành/bảo mật/tuân thủ + spec: RUNBOOK, ứng phó sự cố, threat model đủ mẫu, RISKS, SCOPE, data-map + CI, DPIA nháp, spec có trạng thái/AC/ca biên/câu hỏi mở (OPS-IR-*, SEC-TM-*, PM-*, WF-SDD-*, STD-*, CMP-PRIV-001, …) — Gate: `npm run -s check:docs`
 - [x] `T-040` Quyền chủ thể dữ liệu: bảng consent chỉ thêm, yêu cầu truy cập/xoá/rút đồng ý có hạn xử lý, ẩn danh lan tới tệp/outbox (CMP-RIGHTS-001/004/007, CMP-VN-001/007, STD-PRIV-004, CMP-PRIV-005, CMP-INTL-007) — Gate: `npm run -s test:file -- tests/db/data-rights.test.ts`
-- [ ] `T-041` Chuỗi thông điệp ở lib/** (AppError, tóm tắt, worker/email) vào messages/*.json + mở rộng check:i18n sang lib/ (XC-I18N-001; D-025) — Gate: `npm run -s check:i18n && npm run -s test:file -- tests/unit/i18n.test.ts`
+- [x] `T-041` Chuỗi thông điệp ở lib/** (AppError, tóm tắt, worker/email) vào messages/*.json + mở rộng check:i18n sang lib/ (XC-I18N-001; D-025) — Gate: `npm run -s check:i18n && npm run -s test:file -- tests/unit/i18n.test.ts`
 
 ## Phụ thuộc ngoài
 | Việc | Bên ngoài | Ngày cam kết | Kế hoạch B |

@@ -3,6 +3,7 @@
 import { appendAudit } from "../audit/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { t } from "../i18n/index.ts";
 
 export interface Actor {
   userId: string | null;
@@ -33,15 +34,15 @@ function audit(
 export function mapPgError(err: unknown): never {
   const e = err as { code?: string; constraint?: string; message?: string };
   if (e?.code === "23505")
-    throw new AppError("DUPLICATE", 409, "Mã đã tồn tại", { constraint: e.constraint });
-  if (e?.code === "23503")
-    throw new AppError("INVALID_REFERENCE", 422, "Tham chiếu không hợp lệ hoặc khác công ty");
-  if (e?.code === "23P01") throw new AppError("OVERLAP", 409, "Khoảng hiệu lực bị chồng");
+    throw new AppError("DUPLICATE", 409, t("err.org.maDaTonTai"), { constraint: e.constraint });
+  if (e?.code === "23503") throw new AppError("INVALID_REFERENCE", 422, t("err.org.thamChieuKhongHopLeHoac"));
+  if (e?.code === "23P01") throw new AppError("OVERLAP", 409, t("err.org.khoangHieuLucBiChong"));
   if (e?.code === "23514")
     throw new AppError(
       "CONSTRAINT",
       422,
-      e.message?.includes("chu trình") ? e.message : "Dữ liệu vi phạm ràng buộc",
+      // i18n-ignore: so khớp thông điệp RAISE tiếng Việt do trigger trong migration phát ra (migration append-only, không đổi được); chỉ để nhận diện, rồi chuyển nguyên văn
+      e.message?.includes("chu trình") ? e.message : t("err.org.constraintViolation"),
     );
   throw err;
 }
@@ -108,7 +109,7 @@ export async function moveDepartment(
       departmentId,
       parentId,
     ]);
-    if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, "Không tìm thấy phòng ban");
+    if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, t("err.org.khongTimThayPhongBan"));
   } catch (err) {
     if (err instanceof AppError) throw err;
     mapPgError(err);
@@ -224,7 +225,7 @@ export async function assignEmployment(
   const cur = open.rows[0];
   if (cur) {
     if (a.validFrom <= cur.valid_from) {
-      throw new AppError("BACKDATED_ASSIGNMENT", 422, "Ngày hiệu lực phải sau bản ghi công tác hiện tại", {
+      throw new AppError("BACKDATED_ASSIGNMENT", 422, t("err.org.ngayHieuLucPhaiSauBan"), {
         currentFrom: cur.valid_from,
       });
     }

@@ -40,6 +40,7 @@ export interface RetentionReport {
   idempotencyDeleted: number;
 }
 
+// i18n-ignore: giá trị dữ liệu ổn định ghi vào cột tên sau ẩn danh (so khớp/kiểm bằng truy vấn), không đổi theo ngôn ngữ
 export const ANON_NAME = "[đã ẩn danh]";
 /** Miền `.invalid` (RFC 2606) — không bao giờ gửi được; thoả CHECK/NOT NULL của bảng. */
 export const ANON_EMAIL = "da-an-danh@anonymized.invalid";

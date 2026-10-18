@@ -12,6 +12,7 @@ import { enqueue } from "../outbox/index.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
 import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
 import { CHANNEL_WEB_FORM, isProcessingBlocked, recordConsent } from "../privacy/consent.ts";
+import { t } from "../i18n/index.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
 export const RATE_LIMIT = { max: 5, windowMs: minutesToMs(10) };
@@ -29,7 +30,7 @@ export const ApplicationInput = z.object({
   email: z.email().max(254),
   phone: z.string().trim().regex(phoneRe).nullish(),
   cover_letter: z.string().max(8000).nullish(),
-  consent: z.literal(true, { error: "Cần đồng ý xử lý dữ liệu để gửi" }),
+  consent: z.literal(true, { error: t("validation.inquiry.consent") }),
   website: z.string().max(200).optional().default(""),
   elapsed_ms: z.number().int().nonnegative().optional(),
 });
@@ -67,7 +68,7 @@ export async function checkRate(
   if (r.n >= RATE_LIMIT.max) {
     const oldest = r.oldest?.getTime() ?? now.getTime();
     const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + RATE_LIMIT.windowMs - now.getTime())));
-    throw new AppError("RATE_LIMITED", 429, "Bạn gửi quá nhiều lần, vui lòng thử lại sau", { retryAfter });
+    throw new AppError("RATE_LIMITED", 429, t("err.inquiry.banGuiQuaNhieuLanVui"), { retryAfter });
   }
 }
 
@@ -187,7 +188,7 @@ async function insertInquiry(
     });
     await tx.query(
       "INSERT INTO inquiry_history (company_id, inquiry_id, from_status, to_status, note, at) VALUES ($1, $2, NULL, $3, $4, $5)",
-      [companyId, id, status, assignee ? "định tuyến tự động" : "chưa có quy tắc định tuyến", now],
+      [companyId, id, status, assignee ? t("msg.inquiry.autoRouted") : t("msg.inquiry.noRoutingRule"), now],
     );
     await appendAudit(tx, {
       actorUserId: null,
@@ -238,7 +239,7 @@ async function insertApplication(
         "SELECT id FROM cms_page WHERE company_id = $1 AND type = 'job' AND slug = $2 AND archived_at IS NULL",
         [companyId, input.job_slug],
       );
-      if (!j.rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy vị trí tuyển dụng");
+      if (!j.rows[0]) throw new AppError("NOT_FOUND", 404, t("err.inquiry.khongTimThayViTriTuyen"));
       jobPageId = j.rows[0].id;
     }
     const code = await nextCode(tx, companyId, "UV", now);
@@ -308,13 +309,18 @@ export async function updateInquiry(
     [actor.companyId, inquiryId],
   );
   const cur = rows[0];
-  if (!cur) throw new AppError("NOT_FOUND", 404, "Không tìm thấy yêu cầu");
+  if (!cur) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayYeuCau"));
   if (await isProcessingBlocked(tx, "inquiry", inquiryId, "inquiry_contact"))
-    throw new AppError("PROCESSING_RESTRICTED", 409, "Chủ thể đã rút đồng ý hoặc yêu cầu hạn chế xử lý");
+    throw new AppError("PROCESSING_RESTRICTED", 409, t("err.inquiry.chuTheDaRutDongY"));
   if (!INQUIRY_TRANSITIONS[cur.status]!.includes(change.status))
-    throw new AppError("INVALID_STATE", 409, `Không chuyển được từ ${cur.status} sang ${change.status}`);
+    throw new AppError(
+      "INVALID_STATE",
+      409,
+      t("err.inquiry.invalidTransition", { from: cur.status, to: change.status }),
+    );
   const assignee = change.assigneeUserId === undefined ? cur.assignee_user_id : change.assigneeUserId;
-  if (change.status === "assigned" && !assignee) throw new AppError("VALIDATION", 422, "Cần người phụ trách");
+  if (change.status === "assigned" && !assignee)
+    throw new AppError("VALIDATION", 422, t("err.inquiry.canNguoiPhuTrach"));
   try {
     await tx.query("UPDATE inquiry SET status = $2, assignee_user_id = $3 WHERE id = $1", [
       inquiryId,
@@ -323,7 +329,7 @@ export async function updateInquiry(
     ]);
   } catch (err) {
     if ((err as { code?: string }).code === "23503")
-      throw new AppError("INVALID_REFERENCE", 422, "Người phụ trách không hợp lệ");
+      throw new AppError("INVALID_REFERENCE", 422, t("err.inquiry.nguoiPhuTrachKhongHopLe"));
     throw err;
   }
   await tx.query(

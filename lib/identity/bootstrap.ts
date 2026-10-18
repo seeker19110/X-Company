@@ -8,6 +8,7 @@ import { AppError } from "../nen/app-error.ts";
 import { createCompany } from "../org/index.ts";
 import { normalizeEmail } from "./auth.ts";
 import { hashPassword, validateNewPassword } from "./password.ts";
+import { t } from "../i18n/index.ts";
 
 export interface FirstAdminInput {
   email: string;
@@ -28,9 +29,9 @@ export async function createFirstAdmin(
 ): Promise<{ userId: string; companyId: string }> {
   const email = normalizeEmail(input.email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)
-    throw new AppError("INVALID_EMAIL", 422, "Email không hợp lệ");
+    throw new AppError("INVALID_EMAIL", 422, t("err.identity.emailKhongHopLe"));
   const displayName = input.displayName.trim();
-  if (displayName === "") throw new AppError("INVALID_NAME", 422, "Thiếu tên hiển thị");
+  if (displayName === "") throw new AppError("INVALID_NAME", 422, t("err.identity.thieuTenHienThi"));
   validateNewPassword(input.password, { email });
   const hash = await hashPassword(input.password); // băm ngoài giao dịch (không giữ kết nối trong lúc Argon2)
 
@@ -42,7 +43,7 @@ export async function createFirstAdmin(
          AND (valid_to IS NULL OR valid_to > now()) LIMIT 1`,
     );
     if ((existing.rowCount ?? 0) > 0)
-      throw new AppError("ADMIN_EXISTS", 409, "Đã có quản trị viên — từ chối tạo thêm");
+      throw new AppError("ADMIN_EXISTS", 409, t("err.identity.daCoQuanTriVienTu"));
 
     const companies = await tx.query<{ id: string }>(
       "SELECT id FROM company ORDER BY created_at, id LIMIT 2",
@@ -50,9 +51,10 @@ export async function createFirstAdmin(
     let companyId = input.companyId;
     if (companyId) {
       const found = await tx.query("SELECT 1 FROM company WHERE id = $1", [companyId]);
-      if ((found.rowCount ?? 0) === 0) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công ty");
+      if ((found.rowCount ?? 0) === 0)
+        throw new AppError("NOT_FOUND", 404, t("err.identity.khongTimThayCongTy"));
     } else if (companies.rows.length > 1) {
-      throw new AppError("COMPANY_REQUIRED", 422, "Có nhiều công ty — chỉ định companyId");
+      throw new AppError("COMPANY_REQUIRED", 422, t("err.identity.coNhieuCongTyChiDinh"));
     } else {
       companyId =
         companies.rows[0]?.id ??
@@ -60,7 +62,7 @@ export async function createFirstAdmin(
     }
 
     const dup = await tx.query("SELECT 1 FROM app_user WHERE email = $1", [email]);
-    if ((dup.rowCount ?? 0) > 0) throw new AppError("DUPLICATE", 409, "Email đã được dùng");
+    if ((dup.rowCount ?? 0) > 0) throw new AppError("DUPLICATE", 409, t("err.identity.emailDaDuocDung"));
     const { rows } = await tx.query<{ id: string }>(
       "INSERT INTO app_user (email, display_name, password_hash, company_id) VALUES ($1,$2,$3,$4) RETURNING id",
       [email, displayName, hash, companyId],
@@ -73,7 +75,7 @@ export async function createFirstAdmin(
       action: "admin.bootstrap",
       objectType: "app_user",
       objectId: userId,
-      reason: "Tạo quản trị viên đầu tiên bằng lệnh vận hành",
+      reason: t("msg.identity.bootstrapReason"),
     });
     return { userId, companyId };
   }, pool);

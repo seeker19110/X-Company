@@ -4,9 +4,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import type { Queryable } from "../db/index.ts";
 import { currentLogContext } from "../nen/log.ts";
+import { t } from "../i18n/index.ts";
 
 export const GENESIS = "0".repeat(64);
 const SENSITIVE_KEY = /pass|token|secret|hash|totp|otp|cookie|session/i;
+// i18n-ignore: dấu che ổn định ghi vào bản ghi nhật ký (nằm trong dữ liệu được băm, không đổi theo ngôn ngữ)
 export const MASK = "[đã che]";
 
 export interface AuditInput {
@@ -197,7 +199,7 @@ export async function verifyAuditChain(db: Queryable, chainKey?: string): Promis
   for (const r of rows) {
     const expectedPrev = lastHash.get(r.chain_key) ?? GENESIS;
     if (r.prev_hash !== expectedPrev) {
-      return { ok: false, checked, firstBadId: r.id, problem: "đứt chuỗi (prev_hash không khớp)" };
+      return { ok: false, checked, firstBadId: r.id, problem: t("err.audit.chainBroken") };
     }
     const rec: AuditRecord = {
       id: r.id,
@@ -218,7 +220,7 @@ export async function verifyAuditChain(db: Queryable, chainKey?: string): Promis
       prevHash: r.prev_hash,
     };
     if (hashRecord(rec) !== r.hash) {
-      return { ok: false, checked, firstBadId: r.id, problem: "nội dung bị sửa (hash không khớp)" };
+      return { ok: false, checked, firstBadId: r.id, problem: t("err.audit.contentTampered") };
     }
     lastHash.set(r.chain_key, r.hash);
     checked++;

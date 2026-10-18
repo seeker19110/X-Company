@@ -14,6 +14,7 @@ import {
   type ObjectType,
 } from "./index.ts";
 import { kb } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 // BE-REL-006: route đắt (tải tệp: băm/quét/ghi đĩa; bình luận: ghi + audit) giới hạn theo user_id, đếm ở DB.
 // 60 lượt/phút/người cho mỗi nhóm: cao hơn thao tác tay bình thường, thấp hơn mức một script lặp có thể làm.
@@ -28,16 +29,17 @@ const ObjectRef = z.object({
 export const postFile = withActor(
   async (ctx) => {
     const len = Number(ctx.req.headers.get("content-length") ?? "0");
-    if (len > MAX_FILE_BYTES + kb(64)) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
+    if (len > MAX_FILE_BYTES + kb(64))
+      throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.files.tepVuot20Mb"));
     let form: FormData;
     try {
       form = await ctx.req.formData();
     } catch {
-      throw new AppError("BAD_FORM", 400, "Cần multipart/form-data");
+      throw new AppError("BAD_FORM", 400, t("err.shared.canMultipartFormData"));
     }
     const ref = ObjectRef.parse({ object_type: form.get("object_type"), object_id: form.get("object_id") });
     const file = form.get("file");
-    if (!(file instanceof File)) throw new AppError("VALIDATION", 422, "Thiếu tệp");
+    if (!(file instanceof File)) throw new AppError("VALIDATION", 422, t("err.files.thieuTep"));
     const documentId = form.get("document_id");
     const r = await uploadFile(
       getPool(),
@@ -62,7 +64,7 @@ export const postFile = withActor(
 
 export const getFile = withActor(async (ctx) => {
   const id = new URL(ctx.req.url).pathname.split("/").pop() ?? "";
-  if (!z.uuid().safeParse(id).success) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tệp");
+  if (!z.uuid().safeParse(id).success) throw new AppError("NOT_FOUND", 404, t("err.files.khongTimThayTep"));
   const f = await downloadFile(getPool(), ctx.actor, id);
   return new Response(new Uint8Array(f.data), {
     status: 200,

@@ -10,6 +10,7 @@ import { requestLeave } from "./leave.ts";
 import { requestOt } from "./ot.ts";
 import { requestAdjustment } from "./period.ts";
 import { AdjustmentInput, LeaveInput, OtInput } from "./request-schema.pure.ts";
+import { t } from "../i18n/index.ts";
 
 /** POST ghi nghiệp vụ: bắt buộc Idempotency-Key (ARC-INT-001, BE-API-008). */
 const IDEMPOTENT: GuardOptions = { idempotent: true };
@@ -28,7 +29,7 @@ export const postDecision = withActor(async (ctx) => {
     !["leave", "ot", "adjustment"].includes(type) ||
     !z.uuid().safeParse(id).success
   )
-    throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+    throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
   const b = z.object({ note: z.string().max(1000).nullish() }).parse(await readJson(ctx.req));
   await withTx((tx) => decide(tx, ctx.actor, type, id, decision as "approve" | "reject", b.note));
   return json({ ok: true });
@@ -63,7 +64,7 @@ export const postOt = withActor(async (ctx) => {
 
 export const postAdjustment = withActor(async (ctx) => {
   const b = AdjustmentInput.parse(await readJson(ctx.req));
-  if (!ctx.actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
+  if (!ctx.actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const id = await withTx((tx) =>
     requestAdjustment(tx, ctx.actor, {
       employeeId: ctx.actor.employeeId!,

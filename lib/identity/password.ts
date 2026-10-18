@@ -2,6 +2,7 @@
 import { hash, verify, type Algorithm } from "@node-rs/argon2";
 import { AppError } from "../nen/app-error.ts";
 import { COMMON_PASSWORDS } from "./common-passwords.ts";
+import { t } from "../i18n/index.ts";
 
 const ARGON2ID = 2 as Algorithm;
 export const ARGON2_OPTIONS = {
@@ -18,13 +19,19 @@ let dummyHash: Promise<string> | undefined;
 
 export function validateNewPassword(password: string, context: { email?: string } = {}): void {
   if (password.length < MIN_PASSWORD_LENGTH)
-    throw new AppError("WEAK_PASSWORD", 422, `Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);
-  if (password.length > MAX_PASSWORD_LENGTH) throw new AppError("WEAK_PASSWORD", 422, "Mật khẩu quá dài");
+    throw new AppError(
+      "WEAK_PASSWORD",
+      422,
+      t("err.identity.passwordTooShort", { min: MIN_PASSWORD_LENGTH }),
+    );
+  if (password.length > MAX_PASSWORD_LENGTH)
+    throw new AppError("WEAK_PASSWORD", 422, t("err.identity.matKhauQuaDai"));
   const lower = password.toLowerCase();
-  if (COMMON_PASSWORDS.has(lower)) throw new AppError("WEAK_PASSWORD", 422, "Mật khẩu quá phổ biến");
+  if (COMMON_PASSWORDS.has(lower))
+    throw new AppError("WEAK_PASSWORD", 422, t("err.identity.matKhauQuaPhoBien"));
   const local = context.email?.split("@")[0]?.toLowerCase();
   if (local && local.length >= 4 && lower.includes(local))
-    throw new AppError("WEAK_PASSWORD", 422, "Mật khẩu không được chứa tên đăng nhập");
+    throw new AppError("WEAK_PASSWORD", 422, t("err.identity.matKhauKhongDuocChuaTen"));
 }
 
 export function hashPassword(password: string): Promise<string> {

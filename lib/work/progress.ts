@@ -8,6 +8,7 @@ import { AppError } from "../nen/app-error.ts";
 import { projectAccess } from "./tasks.ts";
 
 import { computeProgress, type LeafInput, type Progress } from "./progress-compute.ts";
+import { t as tr } from "../i18n/index.ts";
 export { computeProgress } from "./progress-compute.ts";
 export type { LeafInput, Progress } from "./progress-compute.ts";
 
@@ -21,11 +22,11 @@ export async function proposeBaseline(
 ): Promise<string> {
   const a = await projectAccess(tx, actor, projectId);
   if (!a.canManage)
-    throw new AppError("FORBIDDEN", 403, "Bạn không có quyền đề xuất baseline", {
+    throw new AppError("FORBIDDEN", 403, tr("err.work.banKhongCoQuyenDeXuat"), {
       action: "project.manage",
       object: { type: "project", id: projectId },
     });
-  if (reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do đề xuất baseline");
+  if (reason.trim() === "") throw new AppError("VALIDATION", 422, tr("err.work.canLyDoDeXuatBaseline"));
   const leaves = await tx.query<{ id: string }>(
     `SELECT w.id FROM work_package w WHERE w.project_id = $1
      AND NOT EXISTS (SELECT 1 FROM work_package c WHERE c.parent_id = w.id)`,
@@ -33,12 +34,11 @@ export async function proposeBaseline(
   );
   const leafIds = new Set(leaves.rows.map((r) => r.id));
   for (const [id, w] of Object.entries(weights)) {
-    if (!leafIds.has(id))
-      throw new AppError("NOT_LEAF", 422, "Trọng số chỉ gán cho hạng mục lá của dự án", { id });
-    if (!Number.isFinite(w) || w < 0) throw new AppError("VALIDATION", 422, "Trọng số phải ≥ 0");
+    if (!leafIds.has(id)) throw new AppError("NOT_LEAF", 422, tr("err.work.trongSoChiGanChoHang"), { id });
+    if (!Number.isFinite(w) || w < 0) throw new AppError("VALIDATION", 422, tr("err.work.trongSoPhai0"));
   }
   if (Object.values(weights).reduce((s, w) => s + w, 0) <= 0)
-    throw new AppError("VALIDATION", 422, "Tổng trọng số phải > 0");
+    throw new AppError("VALIDATION", 422, tr("err.work.tongTrongSoPhai0"));
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO plan_baseline (company_id, project_id, version, weights, reason, proposed_by_user_id)
      VALUES ($1, $2, (SELECT COALESCE(max(version), 0) + 1 FROM plan_baseline WHERE project_id = $2), $3, $4, $5) RETURNING id`,
@@ -62,15 +62,15 @@ export async function approveBaseline(tx: Queryable, actor: ActorContext, baseli
     [actor.companyId, baselineId],
   );
   const b = rows[0];
-  if (!b) throw new AppError("NOT_FOUND", 404, "Không tìm thấy baseline");
+  if (!b) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayBaseline"));
   if (!can(actor, "project.approve_baseline", { companyId: actor.companyId, projectId: b.project_id }))
-    throw new AppError("FORBIDDEN", 403, "Bạn không có quyền duyệt baseline", {
+    throw new AppError("FORBIDDEN", 403, tr("err.work.banKhongCoQuyenDuyetBaseline"), {
       action: "project.approve_baseline",
       object: { type: "plan_baseline", id: baselineId },
     });
   if (b.proposed_by_user_id === actor.userId)
-    throw new AppError("SELF_APPROVAL", 409, "Không tự duyệt baseline mình đề xuất");
-  if (b.status !== "proposed") throw new AppError("INVALID_STATE", 409, "Baseline đã được xử lý");
+    throw new AppError("SELF_APPROVAL", 409, tr("err.work.khongTuDuyetBaselineMinhDe"));
+  if (b.status !== "proposed") throw new AppError("INVALID_STATE", 409, tr("err.work.baselineDaDuocXuLy"));
   await tx.query(
     "UPDATE plan_baseline SET status = 'approved', approved_by_user_id = $2, approved_at = now() WHERE id = $1",
     [baselineId, actor.userId],

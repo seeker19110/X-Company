@@ -127,5 +127,291 @@
   "login": {
     "title": "Đăng nhập",
     "heading": "Đăng nhập X-Company"
+  },
+  "err": {
+    "attendance": {
+      "loaiDonKhongHopLe": "Loại đơn không hợp lệ",
+      "thieuMaQr": "Thiếu mã QR",
+      "maQrKhongThuocCongTy": "Mã QR không thuộc công ty",
+      "maQrDaHetHanVui": "Mã QR đã hết hạn, vui lòng quét mã mới",
+      "khoaGuiDaDungChoNoi": "Khoá gửi đã dùng cho nội dung khác",
+      "dieuChinhCanLyDo": "Điều chỉnh cần lý do",
+      "butToanKhongHopLe": "Bút toán không hợp lệ",
+      "thoiGianKetThucPhaiSau": "Thời gian kết thúc phải sau bắt đầu",
+      "khongTimThayDon": "Không tìm thấy đơn",
+      "donDaDuocXuLy": "Đơn đã được xử lý",
+      "trungThoiGianVoiDonNghi": "Trùng thời gian với đơn nghỉ đã duyệt",
+      "soDuPhepKhongDu": "Số dư phép không đủ",
+      "chiHuyDonDaDuyet": "Chỉ huỷ đơn đã duyệt",
+      "huyCanLyDo": "Huỷ cần lý do",
+      "vuotHanMucLamThemGio": "Vượt hạn mức làm thêm giờ",
+      "canLyDoLamThem": "Cần lý do làm thêm",
+      "khongCoDonChoDongY": "Không có đơn chờ đồng ý của bạn",
+      "canSuDongYCuaNguoi": "Cần sự đồng ý của người lao động trước khi duyệt",
+      "vuotHanMucCanQuyenDuyet": "Vượt hạn mức cần quyền duyệt ngoại lệ",
+      "banKhongCoQuyenQuanLy": "Bạn không có quyền quản lý kỳ công",
+      "kyCongTrungMaHoacChong": "Kỳ công trùng mã hoặc chồng ngày",
+      "khongTimThayKyCong": "Không tìm thấy kỳ công",
+      "khoaKyDungThaoTacKhoa": "Khoá kỳ dùng thao tác khoá riêng",
+      "chiKhoaKyDaDuocHr": "Chỉ khoá kỳ đã được HR chốt",
+      "conNgoaiLeChuaXuLy": "Còn ngoại lệ chưa xử lý hoặc chưa giải trình",
+      "banKhongCoQuyenXemBang": "Bạn không có quyền xem bảng công",
+      "kyChuaKhoaChuaCoBan": "Kỳ chưa khoá, chưa có bản xuất",
+      "khongCoPhienBanXuatNay": "Không có phiên bản xuất này",
+      "suaCongCanLyDo": "Sửa công cần lý do",
+      "khongTimThaySuKienCua": "Không tìm thấy sự kiện của nhân viên",
+      "suKienDaBiHuy": "Sự kiện đã bị huỷ",
+      "thieuLoaiVaThoiDiemSu": "Thiếu loại và thời điểm sự kiện mới",
+      "khongTimThayDeNghiSua": "Không tìm thấy đề nghị sửa công",
+      "deNghiDaDuocXuLy": "Đề nghị đã được xử lý",
+      "suKienDaBiHuyBoi": "Sự kiện đã bị huỷ bởi điều chỉnh khác",
+      "maQrKhongHopLe": "Mã QR không hợp lệ",
+      "hoSoNhanVienKhongCon": "Hồ sơ nhân viên không còn hiệu lực",
+      "thieuIdempotencyKeyHopLe": "Thiếu Idempotency-Key hợp lệ",
+      "khongTimThayDiaDiem": "Không tìm thấy địa điểm",
+      "khongTimThayNhanVien": "Không tìm thấy nhân viên",
+      "khongTheTuDuyetDonCua": "Không thể tự duyệt đơn của mình",
+      "periodStepMismatch": "Kỳ đang ở {status}, bước kế tiếp là {next}",
+      "noNextStep": "không có"
+    },
+    "shared": {
+      "taiKhoanKhongGanHoSo": "Tài khoản không gắn hồ sơ nhân viên",
+      "tuChoiCanLyDo": "Từ chối cần lý do",
+      "canNoiDungGiaiTrinh": "Cần nội dung giải trình",
+      "khongTimThay": "Không tìm thấy",
+      "banKhongCoQuyenThucHien": "Bạn không có quyền thực hiện thao tác này",
+      "khongTimThayTaiKhoan": "Không tìm thấy tài khoản",
+      "canMultipartFormData": "Cần multipart/form-data",
+      "khongTimThayYeuCau": "Không tìm thấy yêu cầu"
+    },
+    "authz": {
+      "vaiTroKhongHopLe": "Vai trò không hợp lệ",
+      "phamViVaMaPhamVi": "Phạm vi và mã phạm vi không khớp",
+      "phamViKhongThuocCongTy": "Phạm vi không thuộc công ty",
+      "khongTimThayQuyenDangHieu": "Không tìm thấy quyền đang hiệu lực"
+    },
+    "cms": {
+      "tieuDeKhongDuocTrong": "Tiêu đề không được trống",
+      "canonicalPhaiLaUrlHttpS": "Canonical phải là URL http(s)",
+      "khongTimThayPhienBan": "Không tìm thấy phiên bản",
+      "loaiTrangKhongHopLe": "Loại trang không hợp lệ",
+      "duongDanChiGomChuThuong": "Đường dẫn chỉ gồm chữ thường không dấu, số và gạch nối",
+      "duongDanDaTonTai": "Đường dẫn đã tồn tại",
+      "khongTimThayTrang": "Không tìm thấy trang",
+      "chiSuaDuocBanNhap": "Chỉ sửa được bản nháp",
+      "chiTacGiaDuocSuaBan": "Chỉ tác giả được sửa bản nháp — tạo bản nháp mới",
+      "khongTheTuDuyetBaiCua": "Không thể tự duyệt bài của mình",
+      "canLyDoTraLai": "Cần lý do trả lại",
+      "chiHoanTacVePhienBan": "Chỉ hoàn tác về phiên bản đã từng được duyệt",
+      "nguoiVietNoiDungGocKhong": "Người viết nội dung gốc không tự xuất bản lại được",
+      "duongDanKhongHopLe": "Đường dẫn không hợp lệ",
+      "revisionStatusMismatch": "Phiên bản đang ở trạng thái {status}, cần {expected}"
+    },
+    "files": {
+      "khongTimThayDoiTuong": "Không tìm thấy đối tượng",
+      "loaiDoiTuongKhongHopLe": "Loại đối tượng không hợp lệ",
+      "banKhongCoQuyenDinhKem": "Bạn không có quyền đính kèm vào đối tượng này",
+      "tepRong": "Tệp rỗng",
+      "tepVuot20Mb": "Tệp vượt 20 MB",
+      "chiNhanPdfAnhPngJpeg": "Chỉ nhận PDF, ảnh PNG/JPEG/WebP, DOCX, XLSX",
+      "khongTimThayTaiLieuCua": "Không tìm thấy tài liệu của đối tượng này",
+      "khongTimThayTep": "Không tìm thấy tệp",
+      "tepLuuTruKhongKhopDau": "Tệp lưu trữ không khớp dấu băm",
+      "binhLuanTu1Den4": "Bình luận từ 1 đến 4.000 ký tự",
+      "duoiTepKhongDuocChapNhan": "Đuôi tệp không được chấp nhận (pdf, png, jpg, webp, docx, xlsx)",
+      "tenTepCoDuoiKepKhong": "Tên tệp có đuôi kép không được chấp nhận",
+      "duoiTepKhongKhopNoiDung": "Đuôi tệp không khớp nội dung tệp",
+      "thieuTep": "Thiếu tệp"
+    },
+    "http": {
+      "duLieuQuaLon": "Dữ liệu quá lớn",
+      "banThaoTacQuaNhanhVui": "Bạn thao tác quá nhanh, vui lòng thử lại sau",
+      "khoaIdempotencyKeyNayDaDung": "Khoá Idempotency-Key này đã dùng cho một yêu cầu khác",
+      "yeuCauTrungKhoaDangDuoc": "Yêu cầu trùng khoá đang được xử lý, thử lại sau",
+      "thieuHeaderIdempotencyKey": "Thiếu header Idempotency-Key",
+      "idempotencyKeyPhaiGom8255": "Idempotency-Key phải gồm 8–255 ký tự in được, không khoảng trắng",
+      "yeuCauKhongCungNguon": "Yêu cầu không cùng nguồn",
+      "heThongXacThucTamThoi": "Hệ thống xác thực tạm thời không khả dụng, vui lòng thử lại",
+      "vuiLongDangNhap": "Vui lòng đăng nhập",
+      "thieuHoacSaiMaCsrf": "Thiếu hoặc sai mã CSRF",
+      "jsonKhongHopLe": "JSON không hợp lệ",
+      "title400": "Yêu cầu không hợp lệ",
+      "title401": "Chưa đăng nhập",
+      "title403": "Không có quyền",
+      "title404": "Không tìm thấy",
+      "title409": "Xung đột dữ liệu",
+      "title413": "Dữ liệu quá lớn",
+      "title422": "Không xử lý được yêu cầu",
+      "title429": "Quá nhiều yêu cầu",
+      "title500": "Lỗi hệ thống",
+      "title503": "Dịch vụ tạm thời không khả dụng",
+      "titleDefault": "Yêu cầu không thành công",
+      "validation": "Dữ liệu gửi lên không hợp lệ",
+      "internal": "Lỗi hệ thống, vui lòng thử lại"
+    },
+    "identity": {
+      "dangNhapSaiQuaNhieuLan": "Đăng nhập sai quá nhiều lần, thử lại sau",
+      "emailHoacMatKhauKhongDung": "Email hoặc mật khẩu không đúng",
+      "khongTimThayTaiKhoanDang": "Không tìm thấy tài khoản đang hoạt động",
+      "emailKhongHopLe": "Email không hợp lệ",
+      "thieuTenHienThi": "Thiếu tên hiển thị",
+      "daCoQuanTriVienTu": "Đã có quản trị viên — từ chối tạo thêm",
+      "khongTimThayCongTy": "Không tìm thấy công ty",
+      "coNhieuCongTyChiDinh": "Có nhiều công ty — chỉ định companyId",
+      "emailDaDuocDung": "Email đã được dùng",
+      "matKhauQuaDai": "Mật khẩu quá dài",
+      "matKhauQuaPhoBien": "Mật khẩu quá phổ biến",
+      "matKhauKhongDuocChuaTen": "Mật khẩu không được chứa tên đăng nhập",
+      "passwordTooShort": "Mật khẩu cần ít nhất {min} ký tự"
+    },
+    "inquiry": {
+      "banGuiQuaNhieuLanVui": "Bạn gửi quá nhiều lần, vui lòng thử lại sau",
+      "khongTimThayViTriTuyen": "Không tìm thấy vị trí tuyển dụng",
+      "chuTheDaRutDongY": "Chủ thể đã rút đồng ý hoặc yêu cầu hạn chế xử lý",
+      "canNguoiPhuTrach": "Cần người phụ trách",
+      "nguoiPhuTrachKhongHopLe": "Người phụ trách không hợp lệ",
+      "invalidTransition": "Không chuyển được từ {from} sang {to}"
+    },
+    "org": {
+      "maDaTonTai": "Mã đã tồn tại",
+      "thamChieuKhongHopLeHoac": "Tham chiếu không hợp lệ hoặc khác công ty",
+      "khoangHieuLucBiChong": "Khoảng hiệu lực bị chồng",
+      "khongTimThayPhongBan": "Không tìm thấy phòng ban",
+      "ngayHieuLucPhaiSauBan": "Ngày hiệu lực phải sau bản ghi công tác hiện tại",
+      "constraintViolation": "Dữ liệu vi phạm ràng buộc"
+    },
+    "privacy": {
+      "khongTimThayChuTheTheo": "Không tìm thấy chủ thể theo mã đã nhập",
+      "daCoYeuCauCungLoai": "Đã có yêu cầu cùng loại đang xử lý cho chủ thể này",
+      "canNeuCanCuTuChoi": "Cần nêu căn cứ từ chối (1–1000 ký tự)",
+      "khongCoDongYDangHieu": "Không có đồng ý đang hiệu lực để rút (xử lý theo căn cứ khác) — hãy từ chối yêu cầu và nêu căn cứ",
+      "chiYeuCauTruyCapMoi": "Chỉ yêu cầu truy cập mới xuất dữ liệu",
+      "yeuCauDaBiTuChoi": "Yêu cầu đã bị từ chối",
+      "statusKhongHopLe": "status không hợp lệ",
+      "canNeuCanCuTuChoi2": "Cần nêu căn cứ từ chối (reason)",
+      "subjectRefHint": "Dùng mã hồ sơ (vd YC-20261018-0001), không dùng email/SĐT",
+      "cannotStartInState": "Không bắt đầu được yêu cầu ở trạng thái {status}",
+      "requestClosed": "Yêu cầu đã đóng ({status})"
+    },
+    "work": {
+      "banKhongCoQuyenDeXuat": "Bạn không có quyền đề xuất baseline",
+      "canLyDoDeXuatBaseline": "Cần lý do đề xuất baseline",
+      "trongSoChiGanChoHang": "Trọng số chỉ gán cho hạng mục lá của dự án",
+      "trongSoPhai0": "Trọng số phải ≥ 0",
+      "tongTrongSoPhai0": "Tổng trọng số phải > 0",
+      "khongTimThayBaseline": "Không tìm thấy baseline",
+      "banKhongCoQuyenDuyetBaseline": "Bạn không có quyền duyệt baseline",
+      "khongTuDuyetBaselineMinhDe": "Không tự duyệt baseline mình đề xuất",
+      "baselineDaDuocXuLy": "Baseline đã được xử lý",
+      "khongTimThayDuAn": "Không tìm thấy dự án",
+      "maDuAnDaTonTai": "Mã dự án đã tồn tại",
+      "quanLyDuAnKhongHop": "Quản lý dự án không hợp lệ",
+      "ngayDuAnKhongHopLe": "Ngày dự án không hợp lệ",
+      "nhanVienKhongHopLe": "Nhân viên không hợp lệ",
+      "hangMucChaKhongThuocDu": "Hạng mục cha không thuộc dự án",
+      "nguoiDuocGiaoPhaiLaThanh": "Người được giao phải là thành viên dự án",
+      "hangMucKhongThuocDuAn": "Hạng mục không thuộc dự án",
+      "viecCanNghiemThuPhaiCo": "Việc cần nghiệm thu phải có người nghiệm thu",
+      "canTieuChiHoanThanh": "Cần tiêu chí hoàn thành",
+      "nguoiNghiemThuPhaiKhacNguoi": "Người nghiệm thu phải khác người thực hiện",
+      "khongTimThayCongViec": "Không tìm thấy công việc",
+      "nguoiThucHienKhongTuNghiem": "Người thực hiện không tự nghiệm thu",
+      "congViecDaDuocNguoiKhac": "Công việc đã được người khác cập nhật, vui lòng tải lại",
+      "canLyDo": "Cần lý do",
+      "canBangChungTruocKhiGui": "Cần bằng chứng trước khi gửi nghiệm thu",
+      "khongSuaViecDaHoanTat": "Không sửa việc đã hoàn tất/huỷ — mở lại trước",
+      "doiHanNguoiPhamViCan": "Đổi hạn/người/phạm vi cần lý do",
+      "tienDoBaoCaoTu0": "Tiến độ báo cáo từ 0 đến 100",
+      "thayDoiViPhamRangBuoc": "Thay đổi vi phạm ràng buộc công việc",
+      "lienKetPhaiLaHttpS": "Liên kết phải là http(s)",
+      "bangChungTepPhaiLaTai": "Bằng chứng tệp phải là tài liệu của công việc này",
+      "phuThuocPhaiTrongCungDu": "Phụ thuộc phải trong cùng dự án",
+      "phuThuocTaoVongLap": "Phụ thuộc tạo vòng lặp",
+      "soPhutTu1Den1": "Số phút từ 1 đến 1.440",
+      "chiKhaiGioChoViecMinh": "Chỉ khai giờ cho việc mình thực hiện",
+      "khongKhaiGioChoViecDa": "Không khai giờ cho việc đã huỷ",
+      "tongGioDuAnTrongNgay": "Tổng giờ dự án trong ngày vượt 24 giờ",
+      "khongTimThayDongGio": "Không tìm thấy dòng giờ",
+      "chiQuanLyDuAnDuyet": "Chỉ quản lý dự án duyệt giờ",
+      "khongTuDuyetGioCuaMinh": "Không tự duyệt giờ của mình",
+      "dongGioDaDuocXuLy": "Dòng giờ đã được xử lý",
+      "actionNotAllowedInState": "Không thể \"{action}\" khi công việc đang ở trạng thái {status}"
+    },
+    "audit": {
+      "chainBroken": "đứt chuỗi (prev_hash không khớp)",
+      "contentTampered": "nội dung bị sửa (hash không khớp)"
+    },
+    "nen": {
+      "intParamRange": "{name} phải là số nguyên từ {min} đến {max}"
+    },
+    "sync": {
+      "invalidRecord": "Dữ liệu bản ghi không hợp lệ",
+      "internalRetry": "Lỗi hệ thống, sẽ thử lại"
+    }
+  },
+  "msg": {
+    "attendance": {
+      "leavePeriodRef": "nghỉ {id}",
+      "leaveCancelPeriodRef": "huỷ nghỉ {id}",
+      "leaveTakenLedger": "đơn nghỉ được duyệt",
+      "adjustmentPeriodRef": "điều chỉnh {id}: {reason}"
+    },
+    "approvals": {
+      "summaryLeave": "{name} · {minutes} phút",
+      "summaryOt": "OT {date} · {minutes} phút",
+      "summaryOtAwaitingConsent": "OT {date} · {minutes} phút (chờ đồng ý)",
+      "summaryAdjustment": "Sửa công: {reason}"
+    },
+    "cms": {
+      "imageMissingAlt": "Ảnh {src} thiếu văn bản thay thế"
+    },
+    "dashboard": {
+      "overdue": "Quá hạn: {title}",
+      "overdueNext": "Hoàn thành hoặc xin đổi hạn kèm lý do",
+      "blocked": "Bị chặn > {days} ngày: {title} ({reason})",
+      "blockedNext": "Gỡ trở ngại hoặc điều chỉnh kế hoạch",
+      "milestoneLate": "Mốc đã trễ: {name} ({project})",
+      "milestoneAtRisk": "Mốc nguy cơ trễ: {name} ({project}) — kế hoạch {planned}% / nghiệm thu {accepted}%",
+      "milestoneNext": "Lập phương án bù tiến độ hoặc đề xuất baseline mới",
+      "attendanceReview": "Chấm công cần xác minh: {name} ({reason})",
+      "attendanceNext": "Xác minh với nhân viên; đề nghị sửa công nếu cần",
+      "missingCheckout": "Thiếu giờ ra ngày {date}",
+      "missingCheckoutNext": "Nhân viên gửi đề nghị sửa công; quản lý duyệt"
+    },
+    "identity": {
+      "bootstrapReason": "Tạo quản trị viên đầu tiên bằng lệnh vận hành"
+    },
+    "inquiry": {
+      "autoRouted": "định tuyến tự động",
+      "noRoutingRule": "chưa có quy tắc định tuyến"
+    },
+    "privacy": {
+      "stopWithdrawConsent": "rút đồng ý",
+      "stopRestrictRequest": "yêu cầu hạn chế xử lý của chủ thể",
+      "stopErase": "xoá theo yêu cầu chủ thể",
+      "retainedByLaw": "giữ theo luật: {categories}",
+      "consent": {
+        "inquiryContact": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
+        "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng"
+      },
+      "retained": {
+        "laborRecords": {
+          "category": "hồ sơ lao động",
+          "reason": "Nghĩa vụ lưu hồ sơ lao động theo pháp luật lao động; giữ tối thiểu tới hết thời hạn luật định (pháp chế xác minh số năm)"
+        },
+        "timesheet": {
+          "category": "bảng công và nghỉ phép",
+          "reason": "Chứng từ chấm công/tiền lương phải lưu theo pháp luật lao động và kế toán (pháp chế xác minh số năm)"
+        },
+        "consentEvidence": {
+          "category": "bằng chứng đồng ý và rút đồng ý",
+          "reason": "Chứng minh việc đã/ngừng được đồng ý (không chứa thông tin định danh); không thể sửa/xoá"
+        },
+        "auditLog": {
+          "category": "nhật ký kiểm toán",
+          "reason": "Nhật ký chỉ thêm, đã che theo tên khoá; không chứa nội dung liên hệ"
+        }
+      }
+    }
   }
 }

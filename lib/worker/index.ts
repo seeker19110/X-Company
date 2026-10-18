@@ -114,6 +114,7 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
   const now = o.now();
   const handler = o.registry.find(ev.topic);
   if (!handler) {
+    // i18n-ignore: lý do DLQ cho vận hành (cột last_error của hàng outbox), không tới người dùng
     await markDead(pool, ev, `không có handler cho topic ${ev.topic}`, now);
     return "dead";
   }
@@ -121,6 +122,7 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
   if (!parsed.success) {
     // Chỉ nêu đường dẫn trường + mã lỗi, không in giá trị payload.
     const issues = parsed.error.issues
+      // i18n-ignore: lý do DLQ cho vận hành (đường dẫn trường + mã lỗi), không tới người dùng
       .map((i) => `${i.path.length > 0 ? i.path.join(".") : "(gốc)"}: ${i.code}`)
       .join("; ");
     await markDead(pool, ev, `payload sai schema — ${issues}`, now);

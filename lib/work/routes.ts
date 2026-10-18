@@ -5,6 +5,7 @@ import { json, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { fetchLimit, MAX_PAGE, parsePage, toPage, type Page, type PageRequest } from "../nen/pagination.ts";
 import { transitionTask, type TaskAction } from "./tasks.ts";
+import { t } from "../i18n/index.ts";
 
 export const ACTIONS: readonly TaskAction[] = [
   "start",
@@ -76,7 +77,7 @@ export const postTaskAction = withActor(
     const action = parts.pop() as TaskAction;
     const id = parts.pop() ?? "";
     if (!ACTIONS.includes(action) || !z.uuid().safeParse(id).success)
-      throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+      throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
     const b = Body.parse(await readJson(ctx.req));
     const version = await withTx((tx) =>
       transitionTask(tx, ctx.actor, id, action, { expectedVersion: b.version, reason: b.reason }),

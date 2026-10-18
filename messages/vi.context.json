@@ -31,7 +31,9 @@
   },
   "syncClient": {
     "sessionExpired": "Lý do giữ lại bản ghi chấm công chưa gửi khi phiên đăng nhập hết hạn (hiện kèm trạng thái chấm công).",
-    "serverError": "Lý do giữ lại bản ghi chưa gửi khi máy chủ lỗi; {status} là mã HTTP (số)."
+    "serverError": "Lý do giữ lại bản ghi chưa gửi khi máy chủ lỗi; {status} là mã HTTP (số).",
+    "offline": "Lý do lỗi lưu trong hàng chờ ngoại tuyến khi gửi lô thất bại vì mạng.",
+    "noResult": "Lý do lỗi lưu trong hàng chờ ngoại tuyến khi phản hồi lô không có kết quả cho bản ghi."
   },
   "sync": {
     "heading": "Tiêu đề thẻ trạng thái đồng bộ hàng chờ ngoại tuyến ở màn hình Cá nhân.",
@@ -303,6 +305,292 @@
       "endAfterStart": "Lỗi khi giờ kết thúc không sau giờ bắt đầu.",
       "date": "Lỗi khi ngày của đơn làm thêm không hợp lệ.",
       "otConsent": "Lỗi khi chưa tích đồng ý làm thêm giờ."
+    }
+  },
+  "err": {
+    "attendance": {
+      "loaiDonKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuMaQr": "Thông báo lỗi nghiệp vụ trả client (AppError QR_REQUIRED 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "maQrKhongThuocCongTy": "Thông báo lỗi nghiệp vụ trả client (AppError QR_INVALID 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "maQrDaHetHanVui": "Thông báo lỗi nghiệp vụ trả client (AppError QR_EXPIRED 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khoaGuiDaDungChoNoi": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_CONFLICT 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "dieuChinhCanLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "butToanKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thoiGianKetThucPhaiSau": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayDon": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "donDaDuocXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "trungThoiGianVoiDonNghi": "Thông báo lỗi nghiệp vụ trả client (AppError LEAVE_OVERLAP 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "soDuPhepKhongDu": "Thông báo lỗi nghiệp vụ trả client (AppError INSUFFICIENT_BALANCE 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiHuyDonDaDuyet": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "huyCanLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "vuotHanMucLamThemGio": "Thông báo lỗi nghiệp vụ trả client (AppError v[0]!.code 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canLyDoLamThem": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongCoDonChoDongY": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canSuDongYCuaNguoi": "Thông báo lỗi nghiệp vụ trả client (AppError OT_CONSENT_REQUIRED 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "vuotHanMucCanQuyenDuyet": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banKhongCoQuyenQuanLy": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "kyCongTrungMaHoacChong": "Thông báo lỗi nghiệp vụ trả client (AppError PERIOD_OVERLAP 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayKyCong": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khoaKyDungThaoTacKhoa": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiKhoaKyDaDuocHr": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "conNgoaiLeChuaXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError PERIOD_HAS_EXCEPTIONS 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banKhongCoQuyenXemBang": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "kyChuaKhoaChuaCoBan": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongCoPhienBanXuatNay": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "suaCongCanLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThaySuKienCua": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "suKienDaBiHuy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuLoaiVaThoiDiemSu": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayDeNghiSua": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "deNghiDaDuocXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "suKienDaBiHuyBoi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "maQrKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError QR_INVALID 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "hoSoNhanVienKhongCon": "Thông báo lỗi nghiệp vụ trả client (AppError EMPLOYMENT_ENDED 403); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuIdempotencyKeyHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_KEY_REQUIRED 400); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayDiaDiem": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayNhanVien": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTheTuDuyetDonCua": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "periodStepMismatch": "Lỗi 409 INVALID_STATE khi chuyển kỳ công sai bước; {status} = trạng thái hiện tại (mã), {next} = bước kế tiếp hoặc chữ 'không có'.",
+      "noNextStep": "Điền vào {next} của err.attendance.periodStepMismatch khi kỳ công đã ở bước cuối."
+    },
+    "shared": {
+      "taiKhoanKhongGanHoSo": "Thông báo lỗi nghiệp vụ trả client (AppError NO_EMPLOYEE 403); dùng ở nhiều miền: attendance, work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tuChoiCanLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); dùng ở nhiều miền: attendance, work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canNoiDungGiaiTrinh": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); dùng ở nhiều miền: attendance, work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThay": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); dùng ở nhiều miền: attendance, privacy, work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banKhongCoQuyenThucHien": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); dùng ở nhiều miền: attendance, http, work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayTaiKhoan": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); dùng ở nhiều miền: authz, identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canMultipartFormData": "Thông báo lỗi nghiệp vụ trả client (AppError BAD_FORM 400); dùng ở nhiều miền: files, http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayYeuCau": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); dùng ở nhiều miền: inquiry, privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
+    },
+    "authz": {
+      "vaiTroKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_ROLE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "phamViVaMaPhamVi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "phamViKhongThuocCongTy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayQuyenDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
+    },
+    "cms": {
+      "tieuDeKhongDuocTrong": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canonicalPhaiLaUrlHttpS": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayPhienBan": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "loaiTrangKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "duongDanChiGomChuThuong": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "duongDanDaTonTai": "Thông báo lỗi nghiệp vụ trả client (AppError DUPLICATE 409); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayTrang": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiSuaDuocBanNhap": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiTacGiaDuocSuaBan": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_AUTHOR 403); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTheTuDuyetBaiCua": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canLyDoTraLai": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiHoanTacVePhienBan": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nguoiVietNoiDungGocKhong": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "duongDanKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "revisionStatusMismatch": "Lỗi 409 INVALID_STATE khi chuyển trạng thái bản nội dung; {status} = trạng thái hiện tại (mã), {expected} = trạng thái cần có (mã)."
+    },
+    "files": {
+      "khongTimThayDoiTuong": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "loaiDoiTuongKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banKhongCoQuyenDinhKem": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tepRong": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tepVuot20Mb": "Thông báo lỗi nghiệp vụ trả client (AppError PAYLOAD_TOO_LARGE 413); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiNhanPdfAnhPngJpeg": "Thông báo lỗi nghiệp vụ trả client (AppError UNSUPPORTED_TYPE 415); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayTaiLieuCua": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayTep": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tepLuuTruKhongKhopDau": "Thông báo lỗi nghiệp vụ trả client (AppError FILE_INTEGRITY 500); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "binhLuanTu1Den4": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "duoiTepKhongDuocChapNhan": "Thông báo lỗi nghiệp vụ trả client (AppError UNSUPPORTED_TYPE 415); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tenTepCoDuoiKepKhong": "Thông báo lỗi nghiệp vụ trả client (AppError UNSUPPORTED_TYPE 415); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "duoiTepKhongKhopNoiDung": "Thông báo lỗi nghiệp vụ trả client (AppError UNSUPPORTED_TYPE 415); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuTep": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
+    },
+    "http": {
+      "duLieuQuaLon": "Thông báo lỗi nghiệp vụ trả client (AppError PAYLOAD_TOO_LARGE 413); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banThaoTacQuaNhanhVui": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khoaIdempotencyKeyNayDaDung": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_KEY_REUSED 422); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "yeuCauTrungKhoaDangDuoc": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_IN_PROGRESS 409); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuHeaderIdempotencyKey": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_KEY_REQUIRED 400); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "idempotencyKeyPhaiGom8255": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_KEY_REQUIRED 400); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "yeuCauKhongCungNguon": "Thông báo lỗi nghiệp vụ trả client (AppError CSRF 403); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "heThongXacThucTamThoi": "Thông báo lỗi nghiệp vụ trả client (AppError AUTH_UNAVAILABLE 503); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "vuiLongDangNhap": "Thông báo lỗi nghiệp vụ trả client (AppError UNAUTHENTICATED 401); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuHoacSaiMaCsrf": "Thông báo lỗi nghiệp vụ trả client (AppError CSRF 403); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "jsonKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError BAD_JSON 400); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "title400": "Tiêu đề ngắn của phản hồi lỗi HTTP 400 (problem+json).",
+      "title401": "Tiêu đề ngắn của phản hồi lỗi HTTP 401 (problem+json).",
+      "title403": "Tiêu đề ngắn của phản hồi lỗi HTTP 403 (problem+json).",
+      "title404": "Tiêu đề ngắn của phản hồi lỗi HTTP 404 (problem+json).",
+      "title409": "Tiêu đề ngắn của phản hồi lỗi HTTP 409 (problem+json).",
+      "title413": "Tiêu đề ngắn của phản hồi lỗi HTTP 413 (problem+json).",
+      "title422": "Tiêu đề ngắn của phản hồi lỗi HTTP 422 (problem+json).",
+      "title429": "Tiêu đề ngắn của phản hồi lỗi HTTP 429 (problem+json).",
+      "title500": "Tiêu đề ngắn của phản hồi lỗi HTTP 500 (problem+json).",
+      "title503": "Tiêu đề ngắn của phản hồi lỗi HTTP 503 (problem+json).",
+      "titleDefault": "Tiêu đề phản hồi lỗi HTTP khi không có tiêu đề riêng cho mã trạng thái.",
+      "validation": "Chi tiết phản hồi 400 khi dữ liệu gửi lên không qua kiểm tra schema (danh sách trường lỗi đi kèm).",
+      "internal": "Chi tiết phản hồi 500 cho lỗi chưa lường trước (không lộ nội bộ)."
+    },
+    "identity": {
+      "dangNhapSaiQuaNhieuLan": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "emailHoacMatKhauKhongDung": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_CREDENTIALS 401); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayTaiKhoanDang": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "emailKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_EMAIL 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thieuTenHienThi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_NAME 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "daCoQuanTriVienTu": "Thông báo lỗi nghiệp vụ trả client (AppError ADMIN_EXISTS 409); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayCongTy": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "coNhieuCongTyChiDinh": "Thông báo lỗi nghiệp vụ trả client (AppError COMPANY_REQUIRED 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "emailDaDuocDung": "Thông báo lỗi nghiệp vụ trả client (AppError DUPLICATE 409); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "matKhauQuaDai": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "matKhauQuaPhoBien": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "matKhauKhongDuocChuaTen": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "passwordTooShort": "Lỗi 422 WEAK_PASSWORD; {min} = độ dài tối thiểu."
+    },
+    "inquiry": {
+      "banGuiQuaNhieuLanVui": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayViTriTuyen": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chuTheDaRutDongY": "Thông báo lỗi nghiệp vụ trả client (AppError PROCESSING_RESTRICTED 409); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canNguoiPhuTrach": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nguoiPhuTrachKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "invalidTransition": "Lỗi 409 INVALID_STATE khi đổi trạng thái yêu cầu liên hệ sai luồng; {from}/{to} = mã trạng thái."
+    },
+    "org": {
+      "maDaTonTai": "Thông báo lỗi nghiệp vụ trả client (AppError DUPLICATE 409); miền org. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thamChieuKhongHopLeHoac": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền org. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khoangHieuLucBiChong": "Thông báo lỗi nghiệp vụ trả client (AppError OVERLAP 409); miền org. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayPhongBan": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền org. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "ngayHieuLucPhaiSauBan": "Thông báo lỗi nghiệp vụ trả client (AppError BACKDATED_ASSIGNMENT 422); miền org. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "constraintViolation": "Lỗi 422 CONSTRAINT khi CSDL từ chối dữ liệu vì ràng buộc kiểm tra (không rõ nguyên nhân cụ thể)."
+    },
+    "privacy": {
+      "khongTimThayChuTheTheo": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "daCoYeuCauCungLoai": "Thông báo lỗi nghiệp vụ trả client (AppError DUPLICATE_REQUEST 409); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canNeuCanCuTuChoi": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongCoDongYDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NO_ACTIVE_CONSENT 422); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiYeuCauTruyCapMoi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "yeuCauDaBiTuChoi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "statusKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canNeuCanCuTuChoi2": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "subjectRefHint": "Thông báo kiểm tra đầu vào: ô nhập tham chiếu chủ thể phải là mã hồ sơ, không nhập thông tin liên hệ.",
+      "cannotStartInState": "Lỗi 409 INVALID_STATE khi bắt đầu xử lý yêu cầu quyền dữ liệu không ở trạng thái 'received'; {status} = mã trạng thái.",
+      "requestClosed": "Lỗi 409 INVALID_STATE khi thao tác trên yêu cầu quyền dữ liệu đã hoàn tất/từ chối; {status} = mã trạng thái."
+    },
+    "work": {
+      "banKhongCoQuyenDeXuat": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canLyDoDeXuatBaseline": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "trongSoChiGanChoHang": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_LEAF 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "trongSoPhai0": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tongTrongSoPhai0": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayBaseline": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "banKhongCoQuyenDuyetBaseline": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTuDuyetBaselineMinhDe": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "baselineDaDuocXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayDuAn": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "maDuAnDaTonTai": "Thông báo lỗi nghiệp vụ trả client (AppError DUPLICATE 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "quanLyDuAnKhongHop": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "ngayDuAnKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nhanVienKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "hangMucChaKhongThuocDu": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nguoiDuocGiaoPhaiLaThanh": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_MEMBER 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "hangMucKhongThuocDuAn": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_REFERENCE 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "viecCanNghiemThuPhaiCo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canTieuChiHoanThanh": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nguoiNghiemThuPhaiKhacNguoi": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayCongViec": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "nguoiThucHienKhongTuNghiem": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "congViecDaDuocNguoiKhac": "Thông báo lỗi nghiệp vụ trả client (AppError VERSION_CONFLICT 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "canBangChungTruocKhiGui": "Thông báo lỗi nghiệp vụ trả client (AppError EVIDENCE_REQUIRED 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongSuaViecDaHoanTat": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "doiHanNguoiPhamViCan": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tienDoBaoCaoTu0": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thayDoiViPhamRangBuoc": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "lienKetPhaiLaHttpS": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "bangChungTepPhaiLaTai": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "phuThuocPhaiTrongCungDu": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "phuThuocTaoVongLap": "Thông báo lỗi nghiệp vụ trả client (AppError DEPENDENCY_CYCLE 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "soPhutTu1Den1": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiKhaiGioChoViecMinh": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongKhaiGioChoViecDa": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "tongGioDuAnTrongNgay": "Thông báo lỗi nghiệp vụ trả client (AppError TIMESHEET_DAY_OVERFLOW 422); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTimThayDongGio": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "chiQuanLyDuAnDuyet": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTuDuyetGioCuaMinh": "Thông báo lỗi nghiệp vụ trả client (AppError SELF_APPROVAL 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "dongGioDaDuocXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "actionNotAllowedInState": "Lỗi 409 INVALID_STATE khi thao tác không hợp lệ với trạng thái công việc; {action} = tên thao tác (mã), {status} = mã trạng thái."
+    },
+    "audit": {
+      "chainBroken": "Mô tả sự cố khi kiểm tra chuỗi băm nhật ký: liên kết với bản ghi trước bị đứt (báo cho quản trị).",
+      "contentTampered": "Mô tả sự cố khi kiểm tra chuỗi băm nhật ký: nội dung bản ghi không khớp dấu băm (báo cho quản trị)."
+    },
+    "nen": {
+      "intParamRange": "Lỗi 400 VALIDATION cho tham số truy vấn phân trang; {name} = tên tham số (limit, offset…)."
+    },
+    "sync": {
+      "invalidRecord": "Kết quả lỗi cho MỘT bản ghi trong lô đồng bộ ngoại tuyến (400 VALIDATION): bản ghi không qua kiểm tra schema.",
+      "internalRetry": "Kết quả lỗi cho MỘT bản ghi trong lô đồng bộ ngoại tuyến (500 INTERNAL): ứng dụng sẽ tự gửi lại sau."
+    }
+  },
+  "msg": {
+    "attendance": {
+      "leavePeriodRef": "Lý do ghi vào nhật ký khi duyệt đơn nghỉ đụng kỳ công; {id} = mã đơn nghỉ.",
+      "leaveCancelPeriodRef": "Lý do ghi vào nhật ký khi huỷ đơn nghỉ đã duyệt đụng kỳ công; {id} = mã đơn nghỉ.",
+      "leaveTakenLedger": "Lý do dòng sổ phép (trừ phép) tạo khi duyệt đơn nghỉ.",
+      "adjustmentPeriodRef": "Lý do ghi vào nhật ký khi duyệt đề nghị sửa công; {id} = mã đề nghị, {reason} = lý do do nhân viên nhập."
+    },
+    "approvals": {
+      "summaryLeave": "Tóm tắt một đơn nghỉ trong hộp phê duyệt; {name} = loại nghỉ, {minutes} = số phút.",
+      "summaryOt": "Tóm tắt một đơn làm thêm giờ đã được người lao động đồng ý; {date} = ngày YYYY-MM-DD.",
+      "summaryOtAwaitingConsent": "Tóm tắt đơn làm thêm giờ còn chờ người lao động đồng ý; {date} = ngày YYYY-MM-DD.",
+      "summaryAdjustment": "Tóm tắt đề nghị sửa công trong hộp phê duyệt; {reason} = lý do do nhân viên nhập."
+    },
+    "cms": {
+      "imageMissingAlt": "Cảnh báo khi duyệt nội dung (WCAG 1.1.1): ảnh Markdown không có văn bản thay thế; {src} = địa chỉ ảnh."
+    },
+    "dashboard": {
+      "overdue": "Tiêu đề cảnh báo công việc quá hạn; {title} = tên công việc.",
+      "overdueNext": "Việc tiếp theo cho cảnh báo công việc quá hạn.",
+      "blocked": "Tiêu đề cảnh báo công việc bị chặn lâu; {days} = ngưỡng ngày, {title} = tên việc, {reason} = lý do chặn.",
+      "blockedNext": "Việc tiếp theo cho cảnh báo công việc bị chặn lâu.",
+      "milestoneLate": "Tiêu đề cảnh báo mốc bàn giao đã quá hạn; {name} = tên mốc, {project} = tên dự án.",
+      "milestoneAtRisk": "Tiêu đề cảnh báo mốc có nguy cơ trễ; {planned}/{accepted} = phần trăm tiến độ kế hoạch/đã nghiệm thu.",
+      "milestoneNext": "Việc tiếp theo cho cảnh báo mốc trễ/nguy cơ trễ.",
+      "attendanceReview": "Tiêu đề cảnh báo bản ghi chấm công cần xác minh; {name} = tên nhân viên, {reason} = lý do cần xác minh.",
+      "attendanceNext": "Việc tiếp theo cho cảnh báo chấm công cần xác minh.",
+      "missingCheckout": "Tiêu đề cảnh báo thiếu giờ ra; {date} = ngày YYYY-MM-DD.",
+      "missingCheckoutNext": "Việc tiếp theo cho cảnh báo thiếu giờ ra."
+    },
+    "identity": {
+      "bootstrapReason": "Lý do ghi vào nhật ký kiểm toán khi tạo quản trị viên đầu tiên bằng lệnh vận hành."
+    },
+    "inquiry": {
+      "autoRouted": "Ghi chú lịch sử yêu cầu khi hệ thống tự giao người phụ trách theo quy tắc.",
+      "noRoutingRule": "Ghi chú lịch sử yêu cầu khi chưa có quy tắc giao người phụ trách."
+    },
+    "privacy": {
+      "stopWithdrawConsent": "Lý do ghi vào nhật ký/hạn chế khi dừng xử lý dữ liệu vì chủ thể rút đồng ý.",
+      "stopRestrictRequest": "Lý do mặc định của lệnh hạn chế xử lý khi yêu cầu không có ghi chú.",
+      "stopErase": "Lý do ghi vào nhật ký khi dừng xử lý để xoá dữ liệu theo yêu cầu của chủ thể.",
+      "retainedByLaw": "Lý do hạn chế xử lý khi hồ sơ nhân viên phải giữ theo luật; {categories} = danh mục giữ, ngăn cách bằng dấu chấm phẩy.",
+      "consent": {
+        "inquiryContact": "Văn bản đồng ý hiển thị cho người gửi biểu mẫu liên hệ; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
+        "jobApplication": "Văn bản đồng ý hiển thị cho ứng viên; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách."
+      },
+      "retained": {
+        "laborRecords": {
+          "category": "Tên danh mục dữ liệu nhân viên được giữ lại theo luật khi xử lý yêu cầu xoá.",
+          "reason": "Căn cứ pháp lý hiển thị cho chủ thể vì sao hồ sơ lao động được giữ lại."
+        },
+        "timesheet": {
+          "category": "Tên danh mục bảng công và nghỉ phép được giữ lại theo luật khi xử lý yêu cầu xoá.",
+          "reason": "Căn cứ pháp lý hiển thị cho chủ thể vì sao bảng công và nghỉ phép được giữ lại."
+        },
+        "consentEvidence": {
+          "category": "Tên danh mục bằng chứng đồng ý được giữ lại khi xử lý yêu cầu xoá.",
+          "reason": "Căn cứ hiển thị cho chủ thể vì sao bằng chứng đồng ý được giữ lại."
+        },
+        "auditLog": {
+          "category": "Tên danh mục nhật ký kiểm toán được giữ lại khi xử lý yêu cầu xoá.",
+          "reason": "Căn cứ hiển thị cho chủ thể vì sao nhật ký kiểm toán được giữ lại."
+        }
+      }
     }
   }
 }
