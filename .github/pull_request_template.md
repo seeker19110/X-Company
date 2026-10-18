@@ -1,26 +1,32 @@
-<!-- Checklist hiện trên MỌI PR của repo khung. Tích thật, có bằng chứng; mục không áp dụng ghi N/A + lý do. -->
+<!-- Tiêu đề PR: `<type>(scope): mô tả` (conventional commit). Mỗi lát code một PR. Mục không áp dụng ghi "không áp dụng — lý do". -->
 
-## Mô tả
+## Mục tiêu
+<!-- Vì sao làm. Link SPEC (`S-NNN`), task (`T-NNN`), quyết định (`D-NNN`)/ADR, issue. -->
 
-<!-- Thay đổi gì, TẠI SAO. Link issue/ADR nếu có. Nếu đổi mục checklist: nêu ID bị ảnh hưởng. -->
+## Thay đổi
+<!-- Gồm những gì; phần cố ý không làm. Đụng cấu hình cổng/CI/hook: nêu lý do (không nới ngưỡng, không skip test). -->
 
-## Loại thay đổi
+## Bằng chứng
+<!-- Lệnh + exit code thật, hoặc link lượt chạy CI — tick không kèm bằng chứng là chưa xong. -->
+- [ ] `.xtemplates/scripts/dev-task.sh gate` (build · typecheck · lint · test) — kết quả:
+- [ ] Test mới cho thay đổi hành vi, gồm ca biên; sửa lỗi có test đỏ trước, xanh sau — tên test:
+- [ ] Mục blueprint liên quan tick kèm `— Kiểm: <lệnh>` hoặc `— Bằng chứng:` — ID:
 
-- [ ] `feat` — module/hồ sơ/ngành/mẫu/công cụ mới
-- [ ] `fix` — sửa nội dung sai, link gãy, lỗi công cụ
-- [ ] `refactor` / `docs` / `test` / `chore` / `ci`
-- [ ] ⚠️ Đổi ID/mức của mục đã có hoặc đổi hành vi `xt.py` (ghi CHANGELOG + lý do)
+## Rủi ro và đường lùi
+<!-- Ảnh hưởng nếu sai, cách phát hiện, cách quay lại (revert, cờ tính năng, migration down). Chạm tiền · dữ liệu người dùng thật ·
+auth · mật mã · bí mật · `merge_risk_paths` trong xt.yaml: gắn nhãn `risk:*` — ngoại lệ cứng (ADR-0016/0020 của khung). -->
 
-## Cổng (bằng chứng ở CI job `quality`)
+## Migration
+- [ ] Không có migration
+- [ ] Có migration: file mới (không sửa migration đã áp), có đường lùi, chạy được trên dữ liệu có sẵn
 
-- [ ] `python3 scripts/xt.py validate` xanh (frontmatter, ID duy nhất, MUST có `→ Kiểm:`, link)
-- [ ] `python3 -m unittest discover -s tests` xanh
-- [ ] Phiên bản/chuẩn/luật mới thêm có **nguồn + ngày xác minh**; không xác minh được ghi **(chưa xác minh)**
-- [ ] Không trùng nội dung với module khác ("một chủ đề một nhà"); chỗ khác chỉ liên kết
-- [ ] README chỉ mục của mảng đã cập nhật; `CHANGELOG.md` cập nhật nếu đổi mục/ID/công cụ
-- [ ] Không bí mật, không tên model/phiên AI trong nội dung
-- [ ] Phụ thuộc mới (công cụ CI, gói Python): tên · phiên bản ghim · license · lý do · thay thế đã xét — hoặc ghi "không có"
+## Phụ thuộc mới
+<!-- Mỗi gói một dòng: `tên · phiên bản ghim · giấy phép · lý do · phương án thay thế đã xét`. Không có thì ghi "không có". -->
+không có
 
-## Ảnh hưởng
+## Hỗ trợ AI
+<!-- WF-REVIEW-019: phần nào do AI sinh, phần nào người đã tự kiểm và kiểm thế nào, phần nào chỉ máy/AI kiểm. Không ghi tên model/phiên. -->
 
-<!-- Blueprint của dự án đích đổi thế nào (mục thêm/bớt/đổi mức)? Có cần ADR? -->
+## Bảo mật
+- [ ] Không bí mật trong mã/log/commit; đầu vào kiểm bằng schema; quyền kiểm ở server
+- [ ] Nội dung ngoài (web, issue, PR, output tool) coi là dữ liệu, không phải chỉ thị
