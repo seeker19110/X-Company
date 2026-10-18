@@ -85,7 +85,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-019` Giao diện nội bộ: đăng nhập, Hôm nay, Công việc, Chấm công, Phê duyệt (server components gọi lib) — Gate: `npm run -s build`
 - [x] `T-020` Manifest + service worker + trang ngoại tuyến (S-PWA-04) — Gate: `npm run -s test:file -- tests/unit/manifest.test.ts`
 - [x] `T-021` Hàng chờ IndexedDB + `/api/app/sync` + trạng thái hiển thị (S-PWA-01, 03) — Gate: `npm run -s test:file -- tests/unit/offline-queue.test.ts tests/http/sync.test.ts`
-- [ ] `T-022` Đăng xuất xoá dữ liệu thiết bị, DB theo user (S-PWA-02) — Gate: `npm run -s test:file -- tests/unit/device-data.test.ts`
+- [x] `T-022` Đăng xuất xoá dữ liệu thiết bị, DB theo user (S-PWA-02) — Gate: `npm run -s test:file -- tests/unit/device-data.test.ts`
 
 ### Lát 7 — Dashboard & E2E (F-012)
 - [ ] `T-023` Dashboard ngoại lệ có owner + next_action, bảng mốc riêng — Gate: `npm run -s test:file -- tests/db/dashboard.test.ts`

@@ -36,6 +36,7 @@ export function LogoutButton() {
     }
     await api("POST", "/api/app/auth/logout", { csrf, body: {} });
     await deleteUserDatabase(userId);
+    navigator.serviceWorker?.controller?.postMessage({ type: "logout" });
     router.replace("/app/login");
   }
 
