@@ -20,7 +20,7 @@
 - R8. Vô hiệu hoá tài khoản hoặc thu hồi grant có hiệu lực **ngay ở request kế tiếp** (phiên kiểm lại `disabled_at` và phiên bản quyền trên mỗi request) — AT12.
 
 ## Phiên & xác thực
-- Mật khẩu Argon2id (D-003), tối thiểu 12 ký tự, chặn 1.000 mật khẩu phổ biến nhất (danh sách cục bộ).
+- Mật khẩu Argon2id (D-003), tối thiểu 12 ký tự, chặn mật khẩu phổ biến (danh sách cục bộ 100k NCSC qua SecLists, phần dài ≥ 12 ký tự — D-010).
 - Phiên: id ngẫu nhiên 256 bit lưu băm SHA-256 trong bảng `session`; cookie `__Host-xc_session` HttpOnly, Secure, SameSite=Lax, hết hạn trượt 12 giờ, tuyệt đối 7 ngày. Đăng xuất xoá bản ghi phiên.
 - CSRF: request thay đổi trạng thái phải có header `x-csrf-token` khớp token gắn phiên (double-submit có ký) và `Origin` cùng site.
 - Giới hạn đăng nhập: 5 lần sai / 15 phút / (email, IP) → 429 kèm `Retry-After`.

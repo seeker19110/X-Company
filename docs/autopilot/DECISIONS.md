@@ -65,3 +65,10 @@
 - Chọn: Dùng một nhánh: lát kế tiếp nối vào PR đang mở; khi PR merge thì nhánh nối lại main và lát sau mở PR mới
 - Lý do (tiêu chí chất lượng cuối): Chỉ dẫn phiên cấm push sang nhánh khác khi chưa được phép; không chặn vòng chờ người merge; mô tả PR liệt kê từng lát và Gate
 - Đường lùi: Chủ dự án cho phép nhiều nhánh → tách các lát còn lại thành PR riêng
+
+### D-010 · 2026-10-18T06:41:06+00:00 · Danh sách mật khẩu phổ biến cần chặn
+
+- Phương án: (1) Top 1.000 (10k SecLists) như spec ban đầu · (2) Mục ≥ 12 ký tự trong danh sách 100k NCSC (SecLists, MIT)
+- Chọn: Mục ≥ 12 ký tự trong danh sách 100k NCSC (SecLists, MIT)
+- Lý do (tiêu chí chất lượng cuối): Top 1.000 không có mục nào ≥ 12 ký tự nên vô tác dụng khi độ dài tối thiểu là 12 (đo 2026-10-18); 1.274 mục dài thật sự chặn được mật khẩu phổ biến vượt ngưỡng độ dài
+- Đường lùi: Đổi nguồn trong lib/identity/common-passwords.ts
