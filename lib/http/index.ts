@@ -1,7 +1,8 @@
 // Lớp HTTP dùng chung cho route handler (ARCHITECTURE: dòng một request ghi). Không import next/* — route chỉ
 // `export const POST = handler`. Mọi lỗi → JSON theo API-CONTRACT; không lộ stack.
 import { randomUUID } from "node:crypto";
-import { ZodError } from "zod";
+// $ZodError là lớp gốc chung của zod đầy đủ và zod/mini (schema dùng chung client/server viết bằng mini).
+import { $ZodError } from "zod/v4/core";
 import { appendAudit } from "../audit/index.ts";
 import { can, type Action, type ActorContext, type Resource } from "../authz/index.ts";
 import { loadActor } from "../authz/load.ts";
@@ -96,7 +97,7 @@ export function errorResponse(err: unknown, requestId: string): Response {
       log.error("lỗi nghiệp vụ mức hệ thống", { err, code: err.code, status: err.status });
     return problemResponse(err.status, err.code, err.message, requestId, { details: err.details, headers });
   }
-  if (err instanceof ZodError) {
+  if (err instanceof $ZodError) {
     const fields = err.issues.map((i) => ({ path: i.path.join("."), message: i.message }));
     logSecurityEvent({
       event: "input.validation_failed",

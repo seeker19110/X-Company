@@ -1,8 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
-import type { ZodType } from "zod";
-import { AdjustmentInput, LeaveFormInput, OtFormInput } from "@/lib/attendance/request-schema.pure";
+import type * as RequestSchemas from "@/lib/attendance/request-schema.pure";
 import { api, textOrNull } from "./api";
 import {
   FieldError,
@@ -17,6 +16,12 @@ import { useSession } from "./session-context";
 
 type FormKey = "leave" | "ot" | "adj";
 const vnIso = (d: string, t: string) => `${d}T${t}:00+07:00`;
+
+type SchemaName = "LeaveFormInput" | "OtFormInput" | "AdjustmentInput";
+/** Schema dùng chung với server, nạp động lúc gửi để zod không vào JS tải đầu (FE-PERF-004); nạp lỗi (mất mạng)
+ *  → null: bỏ kiểm phía client, server vẫn kiểm và trả `fields`. */
+const loadSchema = (name: SchemaName): Promise<(typeof RequestSchemas)[SchemaName] | null> =>
+  import("@/lib/attendance/request-schema.pure").then((m) => m[name]).catch(() => null);
 
 /** Tên trường API → tên ô nhập của từng form (lỗi giờ gắn vào ô ngày khi ngày trống, vào ô giờ khi đã có ngày). */
 export function leaveMap(f: FormData): FieldMap {
@@ -54,18 +59,20 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
     e: FormEvent<HTMLFormElement>,
     key: FormKey,
     path: string,
-    schema: ZodType,
+    schema: SchemaName,
     build: (f: FormData) => unknown,
     mapFor: (f: FormData) => FieldMap,
   ) {
     e.preventDefault();
     if (sending.current) return;
+    sending.current = true;
     const form = e.currentTarget;
     const data = new FormData(form);
     const body = build(data);
     const map = mapFor(data);
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
+    const parsed = (await loadSchema(schema))?.safeParse(body);
+    if (parsed && !parsed.success) {
+      sending.current = false;
       const { fields, general } = toFieldErrors(parsed.error.issues, map);
       setFormErrors(key, fields);
       setMsg({ text: general[0] ?? "Vui lòng kiểm tra các ô được đánh dấu.", cls: "err" });
@@ -73,7 +80,6 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
       return;
     }
     setFormErrors(key, {});
-    sending.current = true;
     setBusy(true);
     const r = await api("POST", path, { csrf, body });
     sending.current = false;
@@ -110,7 +116,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             e,
             "leave",
             "/api/app/leave-requests",
-            LeaveFormInput,
+            "LeaveFormInput",
             (f) => ({
               leave_type_id: f.get("type"),
               start_at: vnIso(String(f.get("date")), String(f.get("from"))),
@@ -187,7 +193,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             e,
             "ot",
             "/api/app/ot-requests",
-            OtFormInput,
+            "OtFormInput",
             (f) => ({
               business_date: f.get("date"),
               minutes: Number(f.get("minutes")),
@@ -242,7 +248,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             e,
             "adj",
             "/api/app/adjustments",
-            AdjustmentInput,
+            "AdjustmentInput",
             (f) => ({
               action: "add_event",
               new_kind: f.get("kind"),

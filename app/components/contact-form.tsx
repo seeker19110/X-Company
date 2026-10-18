@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { InquiryInput } from "@/lib/inquiry/schema.pure";
 import { API_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
 import { textOrNull } from "./api";
 import {
@@ -50,9 +49,11 @@ export function ContactForm() {
       elapsed_ms: Date.now() - openedAt.current,
       source: typeof window !== "undefined" ? window.location.pathname + window.location.search : null,
     };
-    // Cùng schema với server (lib/inquiry/schema.pure.ts): sai thì báo theo ô, không gửi.
-    const parsed = InquiryInput.safeParse(payload);
-    if (!parsed.success) {
+    // Cùng schema với server (lib/inquiry/schema.pure.ts): sai thì báo theo ô, không gửi. Nạp động lúc gửi để zod
+    // không vào JS tải đầu của trang công khai (FE-PERF-004); nạp lỗi (mất mạng) → bỏ kiểm phía client, server vẫn kiểm.
+    const schema = await import("@/lib/inquiry/schema.pure").then((m) => m.InquiryInput).catch(() => null);
+    const parsed = schema?.safeParse(payload);
+    if (parsed && !parsed.success) {
       const { fields } = toFieldErrors(parsed.error.issues, toInput);
       setState({ kind: "error", message: "Vui lòng kiểm tra các ô được đánh dấu.", fields });
       focusFirstInvalid(form);

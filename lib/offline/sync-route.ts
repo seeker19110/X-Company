@@ -2,7 +2,8 @@
 // tuyến (kiểm quyền, nhân viên còn hiệu lực, kỳ khoá…) với id bản ghi = Idempotency-Key và cờ queued; lỗi của bản ghi
 // này không làm hỏng bản ghi khác. Chỉ thao tác được phép ngoại tuyến (chấm công) — duyệt/quyền/khoá kỳ không có ở đây.
 import { z } from "zod";
-import { ZodError } from "zod";
+// $ZodError là lớp gốc chung của zod đầy đủ và zod/mini (schema dùng chung client/server viết bằng mini).
+import { $ZodError } from "zod/v4/core";
 import { eventResponseBody, handleEvent } from "../attendance/routes.ts";
 import { json, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
@@ -53,7 +54,7 @@ export const postSync = withActor(
             message: err.message,
             ...(typeof ra === "number" ? { retryAfterSec: ra } : {}),
           });
-        } else if (err instanceof ZodError)
+        } else if (err instanceof $ZodError)
           results.push({
             id: item.id,
             ok: false,
