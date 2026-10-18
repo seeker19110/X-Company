@@ -40,7 +40,7 @@ export interface AuditRecord {
 /** Che trường nhạy cảm (đệ quy) trước khi ghi before/after. */
 export function maskSensitive(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(maskSensitive);
-  if (value && typeof value === "object") {
+  if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       out[k] = SENSITIVE_KEY.test(k) ? MASK : maskSensitive(v);
@@ -150,9 +150,10 @@ export interface VerifyResult {
 
 /** Kiểm lại toàn bộ chuỗi (hoặc một chuỗi): mỗi hàng băm đúng và nối đúng hàng trước. */
 export async function verifyAuditChain(db: Queryable, chainKey?: string): Promise<VerifyResult> {
+  const hasKey = chainKey !== undefined && chainKey !== "";
   const { rows } = await db.query<Row>(
-    `SELECT * FROM audit_event ${chainKey ? "WHERE chain_key = $1" : ""} ORDER BY chain_key, seq`,
-    chainKey ? [chainKey] : [],
+    `SELECT * FROM audit_event ${hasKey ? "WHERE chain_key = $1" : ""} ORDER BY chain_key, seq`,
+    hasKey ? [chainKey] : [],
   );
   const lastHash = new Map<string, string>();
   let checked = 0;

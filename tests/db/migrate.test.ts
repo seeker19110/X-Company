@@ -102,8 +102,9 @@ describe("role ứng dụng (THREAT-MODEL T12)", () => {
       assert.deepEqual([r.rolname, r.rolsuper, r.rolbypassrls], [r.rolname, false, false]);
     const who = await db.app.query("SELECT session_user AS s, current_user AS c");
     assert.equal(who.rows[0].s, "xc_app_test");
-    assert.ok(
+    assert.equal(
       (await db.app.query("SELECT pg_has_role(session_user, 'xc_app_rw', 'MEMBER') AS m")).rows[0].m,
+      true,
       "role đăng nhập là thành viên xc_app_rw",
     );
     await assert.rejects(db.app.query("CREATE TABLE hack (x int)"), /permission denied/);

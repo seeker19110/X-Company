@@ -106,7 +106,7 @@ describe("tổ chức (F-001)", () => {
         radiusM: 200,
       }),
     );
-    assert.ok(w);
+    assert.ok(w.length > 0);
     await assert.rejects(
       withTx((tx) => createWorksite(tx, actor, c1, { code: "CT2", name: "Thiếu lng", lat: 21 })),
       isCode("CONSTRAINT"),

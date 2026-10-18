@@ -13,7 +13,7 @@ let appPool: pg.Pool | undefined;
 export function getPool(): pg.Pool {
   if (!appPool) {
     const url = process.env.DATABASE_URL?.trim();
-    if (!url) throw new Error("Thiếu DATABASE_URL");
+    if (url === undefined || url === "") throw new Error("Thiếu DATABASE_URL");
     appPool = new pg.Pool({
       connectionString: url,
       max: Number(process.env.DB_POOL_MAX ?? 10),
