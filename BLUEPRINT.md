@@ -21,8 +21,8 @@ backlog: BLUEPRINT-BACKLOG.md
 
 | Mức | Số mục |
 |---|---|
-| MUST | 469 |
-| SHOULD | 1323 |
+| MUST | 473 |
+| SHOULD | 1333 |
 
 ### Cấu hình, biến môi trường và bí mật
 
@@ -595,6 +595,15 @@ Nguồn khung: [`11-autonomous-loop/loop-design.md`](.xtemplates/framework/11-au
 - [x] `LOOP-DESIGN-003` **MUST** Task chỉ được tick `[x]` sau khi `xt.py loop record --task T-xxx -- <đúng lệnh Gate>` trả exit 0. → Kiểm: `.autopilot/evidence/T-xxx.json` có `exit_code: 0` và `cmd` bằng chuỗi Gate; `loop status` không trả `verify`. — Kiểm: `grep -q "loop hook-stop" .claude/hooks/stop-guard.sh && grep -q "đã tick nhưng chưa có bằng chứng xanh" .xtemplates/scripts/xt.py && grep -q "nhưng bằng chứng chạy lệnh khác" .xtemplates/scripts/xt.py`
 - [x] `LOOP-DESIGN-004` **MUST** Tín hiệu dừng đọc từ file trạng thái/bằng chứng, không từ chuỗi model in ra (promise string) hay phán quyết của model đánh giá transcript. → Kiểm: `.claude/settings.json` có Stop hook gọi `xt.py loop hook-stop`; không có hook nào grep `<promise>`; `/goal` nếu dùng chỉ là lớp phụ. · Nguồn: stored 23 §2.2 — Kiểm: `grep -q "loop hook-stop" .claude/hooks/stop-guard.sh && python3 -B -c "import json;h=json.load(open('.claude/settings.json'))['hooks']['Stop'];assert any('stop-guard.sh' in x['command'] for e in h for x in e['hooks'])" && ! grep -rq "<promise>" .claude/hooks .claude/settings.json`
 - [x] `LOOP-DESIGN-008` **MUST** Có phát hiện không-tiến-triển ngoài trần vòng: Stop hook không chặn vô hạn khi model không gọi tool. → Kiểm: `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` giữ mặc định 8 (không đặt `0`); `hook-stop` tăng `iterations` mỗi lần chặn. · Nguồn: Claude Code docs env-vars — Kiểm: `! grep -rqE 'STOP_HOOK_BLOCK_CAP *[=:] *"?0' .claude .github xt.yaml AGENTS.md CLAUDE.md && grep -q 'st\["iterations"\] = st.get("iterations", 0) + 1' .xtemplates/scripts/xt.py`
+
+### Vòng tối ưu hiệu năng trong autopilot: đo → profile → một thay đổi → máy quyết giữ/hoàn tác
+
+Nguồn khung: [`11-autonomous-loop/optimization-loop.md`](.xtemplates/framework/11-autonomous-loop/optimization-loop.md)
+
+- [ ] `LOOP-OPT-001` **MUST** Task tối ưu chỉ mở khi có **mục tiêu số kèm điều kiện đo** ([`XC-PERF-001`](.xtemplates/framework/18-cross-cutting/performance-engineering.md)) hoặc ngân sách đang bị vượt; không có số thì không tối ưu. → Kiểm: dòng task trong `PLAN.md` nêu mục tiêu số và Gate chứa `perf compare`. · Nguồn: ý "ngân sách trước, đo sau" của `QA-PERF`.
+- [ ] `LOOP-OPT-002` **MUST** **Bộ đo khoá:** harness đo, bộ test tương đương hành vi, input đo, **script Gate và công cụ chấm (`xt.py perf`)** nằm ngoài quyền sửa của agent trong task tối ưu — Gate chạy bản của commit gốc; Gate chạy `perf guard --locked …` và đỏ khi diff đụng chúng (kể cả xoá). → Kiểm: Gate lấy từ commit gốc (`git show <base>:…`) và chạy `perf guard --base <base> --locked '<glob bộ đo>' --locked '<script Gate>'` exit 0 bằng `xt.py` của commit gốc. · Nguồn: autoresearch (`prepare.py` "không sửa"); METR 2025-06-05 (hàm chấm bị ghi đè/thay stub).
+- [ ] `LOOP-OPT-003` **MUST** **Máy quyết giữ hay hoàn tác:** chỉ giữ thay đổi khi `perf compare` = `improved` trên ≥ 10 mẫu mỗi bên (hoặc `--exact` cho đại lượng tất định), baseline đo lại trên commit gốc cùng lượt và cùng máy, **và** toàn bộ test xanh; còn lại hoàn tác — agent không tự nhận "nhanh hơn". → Kiểm: evidence `loop record` của Gate có exit 0 từ `perf compare`; Gate không đọc baseline từ file agent sửa được. · Nguồn: benchstat (Mann-Whitney U, α = 0,05, ≥ 10 lần); autoresearch (giữ nếu metric tốt hơn).
+- [ ] `LOOP-OPT-004` **MUST** **Một giả thuyết, một thay đổi, một lần đo:** ghi kỳ vọng và falsifier trước khi đo ([`LOOP-DESIGN-021`](.xtemplates/framework/11-autonomous-loop/loop-design.md) áp dụng cho số đo); gộp nhiều thay đổi thì không biết cái nào có tác dụng, cái nào gây hại. → Kiểm: mô tả PR/`PERF-LOG.md` có giả thuyết + falsifier có trước số đo (đối chiếu thứ tự commit).
 
 ### Điều phối: subagent, worktree, song song, không lồng
 

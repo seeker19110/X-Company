@@ -48,3 +48,6 @@ claude_min_version: ""
 install: npm ci
 dev: npm run -s dev
 migrate: npm run -s db:migrate
+# ai_attribution: forbid = guard chặn commit mà message ghi tên model hay URL phiên AI (`Claude-Session:`, `Claude Opus …`)
+# — LOOP-HARNESS-027. Trống/allow = không kiểm (trailer `Co-authored-by: Claude <…>` chung luôn được).
+ai_attribution: ""
