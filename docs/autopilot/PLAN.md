@@ -65,7 +65,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-007` Đăng nhập Argon2id, phiên băm, CSRF, rate limit, thu hồi tức thì (S-ID-05, 07, 09) — Gate: `npm run -s test:file -- tests/http/auth.test.ts`
 
 ### Lát 3 — Website, CMS, liên hệ (F-003)
-- [ ] `T-008` CMS: trang/phiên bản, luồng nháp→duyệt→xuất bản, người duyệt ≠ tác giả, markdown an toàn (S-WEB-02, 03, 06) — Gate: `npm run -s test:file -- tests/db/cms.test.ts`
+- [x] `T-008` CMS: trang/phiên bản, luồng nháp→duyệt→xuất bản, người duyệt ≠ tác giả, markdown an toàn (S-WEB-02, 03, 06) — Gate: `npm run -s test:file -- tests/db/cms.test.ts`
 - [ ] `T-009` Trang công khai đọc bản published + sitemap/robots/redirect (S-WEB-02) — Gate: `npm run -s test:file -- tests/http/public-site.test.ts`
 - [ ] `T-010` Liên hệ & tuyển dụng: một hồ sơ/submission_id, định tuyến, honeypot, rate limit, tách quyền ứng viên (S-WEB-01, 04, 05) — Gate: `npm run -s test:file -- tests/http/inquiry.test.ts`
 
