@@ -79,7 +79,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-015` Dự án/hạng mục/task, máy trạng thái, lịch sử, khoá lạc quan (S-WK-01, 02, 06) — Gate: `npm run -s test:file -- tests/db/tasks.test.ts`
 - [x] `T-016` Tiến độ 3 con số trên lá baseline (S-WK-03, ví dụ 35%) + cảnh báo nghỉ khi phân công (S-WK-04) — Gate: `npm run -s test:file -- tests/unit/progress.test.ts tests/db/assign-warning.test.ts`
 - [x] `T-017` Tệp private qua route kiểm quyền + bình luận (S-WK-05) — Gate: `npm run -s test:file -- tests/http/files.test.ts`
-- [ ] `T-018` Giờ dự án + đối chiếu với công (AT08) — Gate: `npm run -s test:file -- tests/db/timesheet.test.ts`
+- [x] `T-018` Giờ dự án + đối chiếu với công (AT08) — Gate: `npm run -s test:file -- tests/db/timesheet.test.ts`
 
 ### Lát 6 — Giao diện nội bộ & PWA (F-011)
 - [ ] `T-019` Giao diện nội bộ: đăng nhập, Hôm nay, Công việc, Chấm công, Phê duyệt (server components gọi lib) — Gate: `npm run -s build`
