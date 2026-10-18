@@ -15,6 +15,26 @@ pii:
     copies: "audit_event.before/after (đã che theo tên khoá); period_export.content (CSV); sao lưu DB"
     recipients: "HR, quản lý theo phạm vi; hệ lương nhận CSV"
     status: implemented
+  - table: audit_event
+    column: source_ip
+    class: thuong
+    subject: nguoi_dung
+    purpose: "điều tra sự cố bảo mật, truy vết hành động nhạy cảm (CMP-AUDIT-002, T-026)"
+    legal_basis: "lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận)"
+    retention: "theo thời hạn nhật ký kiểm toán ≥ 12 tháng — pháp chế chốt"
+    copies: "sao lưu DB"
+    recipients: "quản trị hệ thống, bảo mật"
+    status: implemented
+  - table: audit_event
+    column: user_agent
+    class: thuong
+    subject: nguoi_dung
+    purpose: "điều tra sự cố bảo mật (thiết bị/trình duyệt của phiên)"
+    legal_basis: "lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận)"
+    retention: "theo thời hạn nhật ký kiểm toán ≥ 12 tháng — pháp chế chốt"
+    copies: "sao lưu DB"
+    recipients: "quản trị hệ thống, bảo mật"
+    status: implemented
   - table: employee
     column: work_email
     class: thuong
@@ -385,6 +405,46 @@ pii:
     copies: "chưa có"
     recipients: "dịch vụ Web Push"
     status: planned
+  - table: data_subject_request
+    column: note
+    class: thuong
+    subject: khach_lien_he
+    purpose: "ghi chú của người tiếp nhận yêu cầu quyền chủ thể (văn bản tự do, có thể chứa dữ liệu cá nhân; không nhập email/SĐT)"
+    legal_basis: "nghĩa vụ pháp lý đáp ứng quyền chủ thể (Luật 91/2025/QH15; pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế (đề xuất: bằng chứng xử lý giữ theo thời hạn khiếu nại)"
+    copies: "sao lưu DB; audit_event chỉ ghi mã yêu cầu, không ghi ghi chú"
+    recipients: "HR (quyền privacy.manage)"
+    status: implemented
+  - table: data_subject_request
+    column: subject_ref
+    class: thuong
+    subject: khach_lien_he
+    purpose: "mã nghiệp vụ của chủ thể (YC-/UV-/mã nhân viên) để tra yêu cầu; không nhận email/SĐT"
+    legal_basis: "nghĩa vụ pháp lý đáp ứng quyền chủ thể (Luật 91/2025/QH15; pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế (đề xuất: bằng chứng xử lý giữ theo thời hạn khiếu nại)"
+    copies: "sao lưu DB"
+    recipients: "HR (quyền privacy.manage)"
+    status: implemented
+  - table: consent_record
+    column: subject_id
+    class: thuong
+    subject: khach_lien_he
+    purpose: "mã nội bộ của chủ thể gắn với bằng chứng đồng ý/rút đồng ý (chỉ thêm, không chứa tên/email/SĐT)"
+    legal_basis: "nghĩa vụ chứng minh sự đồng ý (Luật 91/2025/QH15 Đ.9; pháp chế xác nhận)"
+    retention: "giữ bằng chứng sau khi xoá dữ liệu cá nhân — thời hạn pháp chế chốt"
+    copies: "sao lưu DB"
+    recipients: "HR, quản trị theo quyền"
+    status: implemented
+  - table: subject_file
+    column: storage_key
+    class: thuong
+    subject: ung_vien
+    purpose: "khoá tệp (blob) của chủ thể ở kho tệp private (vd CV); xoá cùng yêu cầu xoá"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "như hồ sơ chủ thể (ứng viên 12 tháng, mặc định D-016); xoá khi có yêu cầu xoá"
+    copies: "kho tệp FILE_STORAGE_DIR; sao lưu kho tệp (chưa có quy trình xoá khỏi bản sao lưu)"
+    recipients: "chỉ HR"
+    status: implemented
 reviewed_non_pii:
   - table: company
     column: tax_code

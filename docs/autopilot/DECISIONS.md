@@ -123,3 +123,76 @@
 - Chọn: application/problem+json với type/title/status/detail/instance + giữ trường mở rộng code, message, fields, request_id
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 2: RFC 9457 cho phép trường mở rộng — client PWA ngoại tuyến cũ vẫn đọc code/message.
 - Đường lùi: Trả lại content-type application/json
+
+### D-018 · 2026-10-18T12:10:17+00:00 · Ngoại lệ giấy phép cho gói ngoài danh sách allow (T-037, CMP-LIC-002)?
+
+- Phương án: (1) Ngoại lệ có hạn 2027-10-18 cho @img/sharp-* (LGPL, liên kết động), axe-core + @axe-core/playwright (MPL-2.0, chỉ dev), caniuse-lite (CC-BY-4.0, dữ liệu build, ghi công ở THIRD_PARTY_NOTICES) · (2) Gỡ các gói này (bỏ tối ưu ảnh của next, bỏ kiểm a11y tự động)
+- Chọn: Ngoại lệ có hạn 2027-10-18 cho @img/sharp-* (LGPL, liên kết động), axe-core + @axe-core/playwright (MPL-2.0, chỉ dev), caniuse-lite (CC-BY-4.0, dữ liệu build, ghi công ở THIRD_PARTY_NOTICES)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: không gói nào vào mã nguồn dự án hoặc bị sửa; LGPL liên kết động và MPL theo tệp không ràng buộc mã dự án; bỏ axe làm yếu kiểm a11y. Hạn 1 năm buộc xem lại.
+- Đường lùi: Xoá mục exceptions trong license-policy.yaml → check:licenses đỏ tới khi gỡ gói
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Pháp chế xác nhận ngoại lệ LGPL/MPL/CC-BY trước phát hành
+
+### D-019 · 2026-10-18T12:10:17+00:00 · Mô hình lưu đồng ý (consent) cho CMP-RIGHTS/CMP-VN (T-040)?
+
+- Phương án: (1) Bảng consent_record chỉ thêm (event-sourcing): cấp/rút là dòng mới, trạng thái = dòng mới nhất; trigger chặn UPDATE/DELETE · (2) Một cột consent boolean cập nhật tại chỗ
+- Chọn: Bảng consent_record chỉ thêm (event-sourcing): cấp/rút là dòng mới, trạng thái = dòng mới nhất; trigger chặn UPDATE/DELETE
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: NĐ 13/2023 đòi chứng minh được đồng ý và thời điểm rút; cập nhật tại chỗ mất bằng chứng. Ẩn danh xoá PII nhưng giữ dòng bằng chứng.
+- Đường lùi: Migration mới thêm cột tổng hợp; consent_record giữ làm lịch sử
+
+### D-020 · 2026-10-18T12:10:17+00:00 · Ngữ nghĩa yêu cầu chủ thể dữ liệu (T-040): xuất, xoá với nhân viên, rút đồng ý khi không còn đồng ý, hạn xử lý?
+
+- Phương án: (1) Xuất dữ liệu bằng GET (đọc, không ghi); xoá với nhân viên = hạn chế xử lý + giữ dữ liệu luật bắt buộc (lib/privacy/retained.ts); rút khi không có đồng ý hiệu lực → 422 NO_ACTIVE_CONSENT; hạn DSAR_DAYS=30 cấu hình được · (2) Xoá cứng mọi dữ liệu nhân viên; rút đồng ý luôn 200; hạn cố định trong mã
+- Chọn: Xuất dữ liệu bằng GET (đọc, không ghi); xoá với nhân viên = hạn chế xử lý + giữ dữ liệu luật bắt buộc (lib/privacy/retained.ts); rút khi không có đồng ý hiệu lực → 422 NO_ACTIVE_CONSENT; hạn DSAR_DAYS=30 cấu hình được
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: dữ liệu chấm công/lương phải giữ theo luật lao động/kế toán nên xoá cứng sai luật; 422 báo rõ thay vì giả thành công; hạn là cấu hình để pháp chế chốt (giống D-016).
+- Đường lùi: Đổi DSAR_DAYS; danh mục retained.ts sửa theo pháp chế
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HR/pháp chế xác nhận danh mục dữ liệu phải giữ (điều luật, số năm) và hạn DSAR
+
+### D-021 · 2026-10-18T12:10:17+00:00 · Thu hồi quyền/vai trò có huỷ phiên đang mở của người đó không (T-030)?
+
+- Phương án: (1) Có: revoke role_grant huỷ mọi phiên của người dùng trong cùng giao dịch · (2) Không: quyền mới áp dụng khi phiên hết hạn
+- Chọn: Có: revoke role_grant huỷ mọi phiên của người dùng trong cùng giao dịch
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: quyền kiểm ở server mỗi request nhưng phiên cũ có thể mang ngữ cảnh/CSRF cũ; huỷ phiên là cách hiểu chặt hơn với auth, chi phí là đăng nhập lại.
+- Đường lùi: Bỏ lời gọi destroyUserSessions trong lib/authz/grants.ts
+
+### D-022 · 2026-10-18T12:10:17+00:00 · Gộp T-032 (kiểm form client bằng schema chung) với ngân sách JS T-038 làm check:perf-budget đỏ (+32 KB zod). Xử lý thế nào?
+
+- Phương án: (1) Schema dùng chung viết bằng zod/mini và client nạp động lúc gửi; server bắt $ZodError (lớp gốc chung) · (2) Nâng ngân sách JS · (3) Bỏ kiểm phía client
+- Chọn: Schema dùng chung viết bằng zod/mini và client nạp động lúc gửi; server bắt $ZodError (lớp gốc chung)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: giữ một nguồn schema và kiểm theo ô (FE-FORM-001/002) mà không nới cổng; 9 trang trong ngân sách, tổng 222.5 KB ≤ 230.
+- Đường lùi: Revert commit perf(forms) — schema về zod đầy đủ, import tĩnh
+
+### D-023 · 2026-10-18T12:58:51+00:00 · Phân trang API danh sách (XC-PERF-006): kiểu và xử lý limit vượt trần?
+
+- Phương án: (1) Offset có trần (limit mặc định 50, tối đa 200, offset tối đa 10.000); vượt trần → 400 VALIDATION · (2) Keyset cursor theo từng danh sách; vượt trần kẹp về 200
+- Chọn: Offset có trần (limit mặc định 50, tối đa 200, offset tối đa 10.000); vượt trần → 400 VALIDATION
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: dữ liệu cỡ M mỗi công ty, một cơ chế chung cho 6 API, test được; 400 báo rõ client xin quá thay vì che lỗi (tiêu chí 1). Chưa client nào dùng cursor.
+- Đường lùi: Đổi lib/nen/pagination.ts sang kẹp hoặc thêm keyset cho danh sách lớn
+
+### D-024 · 2026-10-18T12:58:51+00:00 · Tệp chuỗi i18n: một vi.json hay chia theo nơi dùng (JSON không tree-shake, vượt ngân sách JS 235,5/230 KB)?
+
+- Phương án: (1) Chia vi.json (lõi) + vi.app.json + vi.site.json + vi.server.json, mỗi phần một bộ dịch client; sai tệp → tsc báo · (2) Một vi.json và nâng trần ngân sách JS
+- Chọn: Chia vi.json (lõi) + vi.app.json + vi.site.json + vi.server.json, mỗi phần một bộ dịch client; sai tệp → tsc báo
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: giữ cổng hiệu năng không nới (225,8 KB); khoá vẫn có kiểu, check:i18n giữ đồng bộ với vi.context.json.
+- Đường lùi: Gộp lại một tệp khi có loader cắt theo khoá
+
+### D-025 · 2026-10-18T12:58:51+00:00 · Chuỗi thông điệp lỗi/nghiệp vụ ở lib/** (~400) chưa vào tệp tài nguyên (XC-I18N-001)?
+
+- Phương án: (1) Task riêng T-041 chuyển dần + mở rộng check:i18n sang lib/ khi xong · (2) Mở rộng check:i18n sang lib/ ngay kèm baseline
+- Chọn: Task riêng T-041 chuyển dần + mở rộng check:i18n sang lib/ khi xong
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: app/ đã đủ và có hàng rào; lib/ là việc cơ học lớn, tách task giữ PR nhỏ; mục blueprint giữ [ ] tới khi xong (không khai đạt).
+- Đường lùi: Gộp vào T-031
+
+### D-026 · 2026-10-18T13:59:20+00:00 · Phạm vi luật chuỗi cứng ở lib/** (T-041) và cách đặt tên khoá?
+
+- Phương án: (1) Chỉ AppError/chuỗi tới người dùng vào t(); new Error khác, log.*, # HELP, giá trị dữ liệu ổn định (MASK, ANON_NAME), RAISE của trigger miễn bằng i18n-ignore có lý do; khoá sinh tự động tiếng Việt không dấu · (2) Bắt cả new Error và log; đổi mọi khoá sang tiếng Anh
+- Chọn: Chỉ AppError/chuỗi tới người dùng vào t(); new Error khác, log.*, # HELP, giá trị dữ liệu ổn định (MASK, ANON_NAME), RAISE của trigger miễn bằng i18n-ignore có lý do; khoá sinh tự động tiếng Việt không dấu
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: chuỗi tới lập trình viên/vận hành không cần người dịch; MASK nằm trong dữ liệu băm nên không được đổi; migration append-only nên không sửa RAISE. Hàng rào vẫn đỏ với literal mới ở đường hiển thị.
+- Đường lùi: Bỏ các i18n-ignore và chuyển dần
+
+### D-027 · 2026-10-18T14:28:27+00:00 · ARC-ADR-001 và XC-OSS-005 (review ≥1) cho dự án một maintainer + bot?
+
+- Phương án: (1) ARC-ADR-001: chấp nhận ADR-0001 + ADR-0002 làm bằng chứng; XC-OSS-005: giữ required_approving_review_count=0, ghi rủi ro, bù bằng required checks + review bởi model khác (pr reviewed) + chủ dự án merge PR ngoại lệ cứng · (2) Viết ADR-0004 phương án thay thế; đặt review=1 kèm bypass admin
+- Chọn: ARC-ADR-001: chấp nhận ADR-0001 + ADR-0002 làm bằng chứng; XC-OSS-005: giữ required_approving_review_count=0, ghi rủi ro, bù bằng required checks + review bởi model khác (pr reviewed) + chủ dự án merge PR ngoại lệ cứng
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: review=1 không bypass khoá merge (chủ duy nhất, bot không duyệt được); bypass admin chưa kiểm chứng với auto-merge — rủi ro kẹt. Giữ ADR-0001 bất biến.
+- Đường lùi: Đặt review=1 + bypass admin ở ruleset khi có ≥2 maintainer
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi có thêm maintainer: đặt required_approving_review_count=1

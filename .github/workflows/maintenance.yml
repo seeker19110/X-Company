@@ -1,0 +1,76 @@
+name: Maintenance
+
+# Việc định kỳ hằng tuần: EOL runtime/CSDL (OPS-MAINT-003, BASE-DEP-003), link ngoài (BASE-DOC-006, WF-DOC-002),
+# gitleaks toàn lịch sử (SEC-SECRET-001, WF-GIT-010).
+on:
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eol-check:
+    name: eol-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Đối chiếu endoflife.date (đỏ khi đã EOL hoặc còn < 90 ngày)
+        run: node scripts/eol-check.mjs --strict
+
+  link-check:
+    name: link-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: .lycheecache
+          key: lychee-${{ github.run_id }}
+          restore-keys: lychee-
+      - name: Link ngoài trong tài liệu (cache, retry; chỉ cảnh báo)
+        id: lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --config lychee.toml './**/*.md'
+          fail: false
+      - name: Mở/cập nhật issue khi có link chết
+        if: steps.lychee.outputs.exit_code != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          title="Link ngoài hỏng trong tài liệu (lychee hằng tuần)"
+          n=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then gh issue comment "$n" --body-file lychee/out.md
+          else gh issue create --title "$title" --body-file lychee/out.md; fi
+
+  gitleaks-history:
+    name: gitleaks-history
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      # sha256 của gitleaks_8.30.1_linux_x64.tar.gz theo gitleaks_8.30.1_checksums.txt của bản phát hành.
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Tải gitleaks, kiểm checksum
+        run: |
+          set -eu
+          curl -sSfL -o "$RUNNER_TEMP/gl.tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gl.tgz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/gl" && tar -xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP/gl"
+      - name: Quét toàn bộ lịch sử (đỏ khi có phát hiện)
+        run: '"$RUNNER_TEMP/gl/gitleaks" git --log-opts=--all --redact --exit-code 1 --config .gitleaks.toml .'

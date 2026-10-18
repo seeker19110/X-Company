@@ -6,6 +6,8 @@ import { AppError } from "../nen/app-error.ts";
 import { recordEvent } from "./events.ts";
 import { policyAt } from "./policy.ts";
 import { issueQr } from "./qr.ts";
+import { kb, secondsToMs } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 const EventBody = z.object({
   kind: z.enum(["in", "out", "break_start", "break_end"]),
@@ -28,13 +30,13 @@ const EventBody = z.object({
 /** Nhân viên còn làm việc (chưa nghỉ việc) — thu hồi tư cách nhân viên chặn chấm công kể cả bản gửi muộn (AT05). */
 async function activeEmployee(ctx: ActorRequestContext): Promise<string> {
   const employeeId = ctx.actor.employeeId;
-  if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
+  if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const { rows } = await getPool().query<{ ended: boolean }>(
     "SELECT terminated_on IS NOT NULL AND terminated_on <= (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS ended FROM employee WHERE id = $1",
     [employeeId],
   );
   if (!rows[0] || rows[0].ended)
-    throw new AppError("EMPLOYMENT_ENDED", 403, "Hồ sơ nhân viên không còn hiệu lực");
+    throw new AppError("EMPLOYMENT_ENDED", 403, t("err.attendance.hoSoNhanVienKhongCon"));
   return employeeId;
 }
 
@@ -50,7 +52,7 @@ export async function handleEvent(
     ownerEmployeeId: employeeId,
   });
   if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 100)
-    throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, "Thiếu Idempotency-Key hợp lệ");
+    throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.attendance.thieuIdempotencyKeyHopLe"));
   const b = EventBody.parse(body);
   return recordEvent(
     getPool(),
@@ -87,19 +89,19 @@ export function eventResponseBody(r: Awaited<ReturnType<typeof recordEvent>>) {
 }
 
 export const postEvent = withActor(async (ctx) => {
-  const r = await handleEvent(ctx, await readJson(ctx.req, 8 * 1024), ctx.req.headers.get("idempotency-key"));
+  const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
   return json(eventResponseBody(r), r.replayed ? 200 : 201);
 });
 
 export const getQr = withActor(async (ctx) => {
   const worksiteId = new URL(ctx.req.url).pathname.split("/").pop() ?? "";
   if (!z.uuid().safeParse(worksiteId).success)
-    throw new AppError("NOT_FOUND", 404, "Không tìm thấy địa điểm");
+    throw new AppError("NOT_FOUND", 404, t("err.attendance.khongTimThayDiaDiem"));
   const { rows } = await getPool().query<{ branch_id: string | null }>(
     "SELECT branch_id FROM worksite WHERE company_id = $1 AND id = $2 AND active",
     [ctx.actor.companyId, worksiteId],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy địa điểm");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.attendance.khongTimThayDiaDiem"));
   await authorize(
     ctx,
     "attendance.qr_display",
@@ -112,6 +114,6 @@ export const getQr = withActor(async (ctx) => {
   return json({
     token,
     ttl_sec: policy.qrTtlSec,
-    expires_at: new Date(now.getTime() + policy.qrTtlSec * 1000).toISOString(),
+    expires_at: new Date(now.getTime() + secondsToMs(policy.qrTtlSec)).toISOString(),
   });
 });

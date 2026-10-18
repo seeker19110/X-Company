@@ -5,13 +5,19 @@
   "bypass_actors": [],
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
       "exclude": []
     }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -22,7 +28,9 @@
         "require_last_push_approval": false,
         "required_review_thread_resolution": true,
         "require_extra_approval_for_unattributed_changes": false,
-        "allowed_merge_methods": ["squash"]
+        "allowed_merge_methods": [
+          "squash"
+        ]
       }
     },
     {
@@ -31,11 +39,36 @@
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "quality" },
-          { "context": "protection-guard" },
-          { "context": "gitleaks" },
-          { "context": "dep-audit" },
-          { "context": "merge-gate" }
+          {
+            "context": "quality"
+          },
+          {
+            "context": "protection-guard"
+          },
+          {
+            "context": "gitleaks"
+          },
+          {
+            "context": "dep-audit"
+          },
+          {
+            "context": "merge-gate"
+          },
+          {
+            "context": "e2e"
+          },
+          {
+            "context": "pr-policy"
+          },
+          {
+            "context": "readme-smoke"
+          },
+          {
+            "context": "supply-chain"
+          },
+          {
+            "context": "lighthouse"
+          }
         ]
       }
     }

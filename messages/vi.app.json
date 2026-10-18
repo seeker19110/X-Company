@@ -1,0 +1,143 @@
+{
+  "nav": {
+    "label": "Điều hướng ứng dụng",
+    "today": "Hôm nay",
+    "tasks": "Công việc",
+    "attendance": "Chấm công",
+    "approvals": "Duyệt",
+    "me": "Cá nhân"
+  },
+  "sync": {
+    "heading": "Đồng bộ",
+    "button": "Đồng bộ",
+    "checking": "Đang kiểm tra…",
+    "pending": "Chờ gửi:",
+    "needsReview": "Chờ xác minh:",
+    "rejected": "Bị từ chối:",
+    "error": {
+      "quota": "Bộ nhớ thiết bị đã đầy nên chưa lưu được dữ liệu. Hãy giải phóng dung lượng rồi bấm Đồng bộ.",
+      "blocked": "Trình duyệt đang chặn lưu dữ liệu trên thiết bị (chế độ riêng tư hoặc bị tắt). Hãy mở lại ứng dụng ở cửa sổ thường.",
+      "version": "Dữ liệu trên thiết bị thuộc phiên bản khác. Hãy tải lại trang rồi bấm Đồng bộ.",
+      "unknown": "Không đọc được dữ liệu trên thiết bị. Hãy thử Đồng bộ lại; nếu vẫn lỗi, tải lại trang."
+    }
+  },
+  "syncClient": {
+    "sessionExpired": "Phiên đăng nhập hết hạn — đăng nhập lại để gửi",
+    "serverError": "Máy chủ lỗi {status}",
+    "offline": "Mất kết nối",
+    "noResult": "Máy chủ không trả kết quả cho bản ghi này"
+  },
+  "clock": {
+    "confirmed": "Đã được xác nhận",
+    "needs_review": "Đã gửi — chờ xác minh",
+    "pending": "Đã lưu trên thiết bị — sẽ gửi khi có mạng",
+    "rejected": "Bị từ chối",
+    "result": "{kind}: {state}",
+    "resultWithReason": "{kind}: {state} ({reason})"
+  },
+  "logout": {
+    "button": "Đăng xuất",
+    "pendingObject": "{count} thao tác chưa gửi",
+    "syncTitle": "Đồng bộ trước khi đăng xuất?",
+    "syncConsequence": "Nên gửi chúng lên máy chủ trước khi rời đi.",
+    "syncConfirm": "Đồng bộ",
+    "syncCancel": "Không đồng bộ",
+    "discardTitle": "Xoá thao tác chưa gửi và đăng xuất?",
+    "discardConsequence": "Sẽ bị xoá khỏi thiết bị, không thể khôi phục.",
+    "discardConfirm": "Xoá và đăng xuất",
+    "discardCancel": "Giữ lại",
+    "cancelled": "Đã huỷ đăng xuất — dữ liệu chưa gửi vẫn còn trên thiết bị."
+  },
+  "requests": {
+    "sent": "Đã gửi đơn, chờ duyệt.",
+    "date": "Ngày",
+    "reason": "Lý do",
+    "leave": {
+      "heading": "Xin nghỉ",
+      "type": "Loại nghỉ",
+      "from": "Từ",
+      "to": "Đến",
+      "minutes": "Số phút làm việc nghỉ",
+      "submit": "Gửi đơn nghỉ"
+    },
+    "ot": {
+      "heading": "Làm thêm giờ",
+      "minutes": "Số phút",
+      "consent": "Tôi đồng ý làm thêm giờ theo đề nghị này",
+      "submit": "Gửi đơn OT"
+    },
+    "adjustment": {
+      "heading": "Đề nghị sửa công (quên chấm)",
+      "kind": "Loại",
+      "time": "Giờ",
+      "reason": "Lý do (bắt buộc)",
+      "submit": "Gửi đề nghị"
+    }
+  },
+  "attendance": {
+    "kind": {
+      "in": "Vào ca",
+      "out": "Ra ca",
+      "break_start": "Bắt đầu nghỉ",
+      "break_end": "Hết nghỉ"
+    },
+    "eventStatus": {
+      "accepted": "Đã xác nhận",
+      "needs_review": "Chờ xác minh",
+      "rejected": "Bị từ chối"
+    }
+  },
+  "tasks": {
+    "status": {
+      "todo": "Chưa làm",
+      "in_progress": "Đang làm",
+      "blocked": "Bị chặn",
+      "awaiting_acceptance": "Chờ nghiệm thu",
+      "done": "Hoàn tất",
+      "cancelled": "Đã huỷ"
+    },
+    "action": {
+      "start": "Bắt đầu",
+      "submit": "Gửi nghiệm thu",
+      "block": "Báo bị chặn",
+      "unblock": "Tiếp tục",
+      "accept": "Nghiệm thu",
+      "return": "Trả lại"
+    },
+    "reasonLabel": "Lý do",
+    "confirm": {
+      "blockTitle": "Báo việc bị chặn?",
+      "blockConsequence": "Người nghiệm thu và quản lý sẽ thấy việc đang bị chặn.",
+      "blockButton": "Báo bị chặn",
+      "returnTitle": "Trả lại việc?",
+      "returnConsequence": "Việc quay về cho người làm, kèm lý do bạn nhập.",
+      "returnButton": "Trả lại việc",
+      "acceptTitle": "Nghiệm thu việc?",
+      "acceptConsequence": "Việc được ghi nhận hoàn thành và rời khỏi danh sách đang mở.",
+      "acceptButton": "Nghiệm thu việc"
+    }
+  },
+  "approvals": {
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "rejectTitle": "Từ chối đơn?",
+    "rejectConsequence": "Người gửi sẽ nhận được lý do từ chối.",
+    "rejectReason": "Lý do từ chối",
+    "rejectConfirm": "Từ chối đơn",
+    "rejectCancel": "Không từ chối"
+  },
+  "validation": {
+    "request": {
+      "datetime": "Vui lòng chọn ngày và giờ hợp lệ",
+      "reasonRequired": "Vui lòng nhập lý do",
+      "reasonMax": "Lý do tối đa 1000 ký tự",
+      "minutesNumber": "Số phút phải là số",
+      "minutesInt": "Số phút phải là số nguyên",
+      "minutesPositive": "Số phút phải lớn hơn 0",
+      "leaveType": "Vui lòng chọn loại nghỉ",
+      "endAfterStart": "Giờ kết thúc phải sau giờ bắt đầu",
+      "date": "Vui lòng chọn ngày hợp lệ",
+      "otConsent": "Cần đồng ý làm thêm giờ để gửi đơn"
+    }
+  }
+}

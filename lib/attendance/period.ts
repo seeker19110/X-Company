@@ -8,6 +8,7 @@ import { AppError } from "../nen/app-error.ts";
 import { addDays, computeShift, localDateOf, type ShiftEvent } from "./compute.ts";
 import { findAssignment } from "./events.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
+import { t as tr } from "../i18n/index.ts";
 
 export const PERIOD_FLOW = ["open", "employee_review", "manager_confirmed", "hr_closed", "locked"] as const;
 export type PeriodStatus = (typeof PERIOD_FLOW)[number];
@@ -34,7 +35,7 @@ export interface Line {
 /** Đồng bộ (không async): gọi không cần await nên không thể vô tình bỏ qua kiểm quyền. */
 function requireHr(actor: ActorContext, id: string): void {
   if (!can(actor, "period.manage", { companyId: actor.companyId }))
-    throw new AppError("FORBIDDEN", 403, "Bạn không có quyền quản lý kỳ công", {
+    throw new AppError("FORBIDDEN", 403, tr("err.attendance.banKhongCoQuyenQuanLy"), {
       action: "period.manage",
       object: { type: "attendance_period", id },
     });
@@ -61,7 +62,7 @@ export async function createPeriod(
   } catch (err) {
     const code = (err as { code?: string }).code;
     if (code === "23505" || code === "23P01")
-      throw new AppError("PERIOD_OVERLAP", 409, "Kỳ công trùng mã hoặc chồng ngày");
+      throw new AppError("PERIOD_OVERLAP", 409, tr("err.attendance.kyCongTrungMaHoacChong"));
     throw err;
   }
 }
@@ -74,12 +75,13 @@ async function loadPeriod(db: Queryable, companyId: string, periodId: string, lo
     end_date: string;
     status: PeriodStatus;
     current_version: number;
-  }>(`SELECT * FROM attendance_period WHERE company_id = $1 AND id = $2 ${lock ? "FOR UPDATE" : ""}`, [
-    companyId,
-    periodId,
-  ]);
+  }>(
+    // sql-interp-allow: `lock` là boolean nội bộ, chỉ chọn giữa "FOR UPDATE" và rỗng.
+    `SELECT * FROM attendance_period WHERE company_id = $1 AND id = $2 ${lock ? "FOR UPDATE" : ""}`,
+    [companyId, periodId],
+  );
   const r = rows[0];
-  if (!r) throw new AppError("NOT_FOUND", 404, "Không tìm thấy kỳ công");
+  if (!r) throw new AppError("NOT_FOUND", 404, tr("err.attendance.khongTimThayKyCong"));
   return {
     id: r.id,
     code: r.code,
@@ -126,6 +128,7 @@ export async function computeLines(
     late_grace_minutes: number;
     tz: string;
   }>(
+    // sql-interp-allow: `empFilter` là hằng "AND a.employee_id = $4" hoặc rỗng; employeeId đi qua tham số $4.
     `SELECT a.id, a.employee_id, a.business_date, to_char(s.start_time, 'HH24:MI') AS start_time,
             to_char(s.end_time, 'HH24:MI') AS end_time, s.break_minutes, s.early_grace_minutes, s.late_grace_minutes, s.tz
      FROM shift_assignment a JOIN shift_template s ON s.id = a.shift_template_id
@@ -142,6 +145,7 @@ export async function computeLines(
     device_time: Date;
     device: string | null;
   }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT id, employee_id, kind, device_time, device FROM attendance_event
      WHERE company_id = $1 AND status = 'accepted' AND voided_by_adjustment_id IS NULL
        AND device_time >= $2::date AND device_time < $3::date ${employeeId ? "AND employee_id = $4" : ""}`,
@@ -157,6 +161,7 @@ export async function computeLines(
     });
   }
   const ot = await db.query<{ employee_id: string; business_date: string; m: string }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT employee_id, business_date, sum(minutes) AS m FROM ot_request
      WHERE company_id = $1 AND status = 'approved' AND business_date BETWEEN $2::date AND $3::date
      ${employeeId ? "AND employee_id = $4" : ""} GROUP BY 1, 2`,
@@ -164,6 +169,7 @@ export async function computeLines(
   );
   // Phút nghỉ phép tính vào ngày (giờ VN) bắt đầu của đơn đã duyệt.
   const lv = await db.query<{ employee_id: string; d: string; m: string }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT employee_id, (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date::text AS d, sum(minutes) AS m FROM leave_request
      WHERE company_id = $1 AND status = 'approved'
        AND (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date
@@ -302,7 +308,7 @@ export async function explainException(
 ) {
   requireHr(actor, periodId);
   await loadPeriod(tx, actor.companyId, periodId);
-  if (note.trim() === "") throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
+  if (note.trim() === "") throw new AppError("VALIDATION", 422, tr("err.shared.canNoiDungGiaiTrinh"));
   await tx.query(
     `INSERT INTO period_exception_note (period_id, ref, note, created_by_user_id) VALUES ($1, $2, $3, $4)
      ON CONFLICT (period_id, ref) DO UPDATE SET note = EXCLUDED.note, created_by_user_id = EXCLUDED.created_by_user_id`,
@@ -321,9 +327,16 @@ export async function advancePeriod(tx: Queryable, actor: ActorContext, periodId
   requireHr(actor, periodId);
   const p = await loadPeriod(tx, actor.companyId, periodId, true);
   const next = PERIOD_FLOW[PERIOD_FLOW.indexOf(p.status) + 1];
-  if (to === "locked") throw new AppError("INVALID_STATE", 409, "Khoá kỳ dùng thao tác khoá riêng");
+  if (to === "locked") throw new AppError("INVALID_STATE", 409, tr("err.attendance.khoaKyDungThaoTacKhoa"));
   if (to !== next)
-    throw new AppError("INVALID_STATE", 409, `Kỳ đang ở ${p.status}, bước kế tiếp là ${next ?? "không có"}`);
+    throw new AppError(
+      "INVALID_STATE",
+      409,
+      tr("err.attendance.periodStepMismatch", {
+        status: p.status,
+        next: next ?? tr("err.attendance.noNextStep"),
+      }),
+    );
   await tx.query("UPDATE attendance_period SET status = $2 WHERE id = $1", [periodId, to]);
   await auditDecision(tx, actor, "period.advance", "attendance_period", periodId, {
     before: { status: p.status },
@@ -338,10 +351,11 @@ export async function lockPeriod(
 ): Promise<{ version: number; checksum: string }> {
   requireHr(actor, periodId);
   const p = await loadPeriod(tx, actor.companyId, periodId, true);
-  if (p.status !== "hr_closed") throw new AppError("INVALID_STATE", 409, "Chỉ khoá kỳ đã được HR chốt");
+  if (p.status !== "hr_closed")
+    throw new AppError("INVALID_STATE", 409, tr("err.attendance.chiKhoaKyDaDuocHr"));
   const open = (await periodExceptions(tx, actor.companyId, p)).filter((e) => !e.note);
   if (open.length > 0)
-    throw new AppError("PERIOD_HAS_EXCEPTIONS", 409, "Còn ngoại lệ chưa xử lý hoặc chưa giải trình", {
+    throw new AppError("PERIOD_HAS_EXCEPTIONS", 409, tr("err.attendance.conNgoaiLeChuaXuLy"), {
       exceptions: open.map((e) => ({ ref: e.ref, kind: e.kind, employeeId: e.employeeId })),
     });
   const lines = await computeLines(tx, actor.companyId, p.startDate, p.endDate);
@@ -454,12 +468,13 @@ export async function getExport(
 ): Promise<ExportFile> {
   const res = { companyId: actor.companyId };
   if (!can(actor, "period.manage", res) && !can(actor, "period.read_locked", res))
-    throw new AppError("FORBIDDEN", 403, "Bạn không có quyền xem bảng công", {
+    throw new AppError("FORBIDDEN", 403, tr("err.attendance.banKhongCoQuyenXemBang"), {
       action: "period.read_locked",
       object: { type: "attendance_period", id: periodId },
     });
   const p = await loadPeriod(db, actor.companyId, periodId);
-  if (p.status !== "locked") throw new AppError("INVALID_STATE", 409, "Kỳ chưa khoá, chưa có bản xuất");
+  if (p.status !== "locked")
+    throw new AppError("INVALID_STATE", 409, tr("err.attendance.kyChuaKhoaChuaCoBan"));
   const { rows } = await db.query<{
     version: number;
     generated_at: Date;
@@ -472,7 +487,7 @@ export async function getExport(
     version ?? p.currentVersion,
   ]);
   const r = rows[0];
-  if (!r) throw new AppError("NOT_FOUND", 404, "Không có phiên bản xuất này");
+  if (!r) throw new AppError("NOT_FOUND", 404, tr("err.attendance.khongCoPhienBanXuatNay"));
   return {
     periodCode: p.code,
     version: r.version,
@@ -497,6 +512,7 @@ export interface AdjustmentInput {
 
 async function periodOfDate(db: Queryable, companyId: string, date: string, lock = false) {
   const { rows } = await db.query<{ id: string; status: PeriodStatus }>(
+    // sql-interp-allow: `lock` là boolean nội bộ, chỉ chọn giữa "FOR UPDATE" và rỗng.
     `SELECT id, status FROM attendance_period WHERE company_id = $1 AND $2::date BETWEEN start_date AND end_date
      ${lock ? "FOR UPDATE" : ""}`,
     [companyId, date],
@@ -545,7 +561,7 @@ export async function requestAdjustment(
     type: "employee",
     id: a.employeeId,
   });
-  if (a.reason.trim() === "") throw new AppError("VALIDATION", 422, "Sửa công cần lý do");
+  if (a.reason.trim() === "") throw new AppError("VALIDATION", 422, tr("err.attendance.suaCongCanLyDo"));
   let before: unknown = null;
   let after: unknown;
   let at: Date;
@@ -560,14 +576,15 @@ export async function requestAdjustment(
       [actor.companyId, a.targetEventId, a.employeeId],
     );
     const t = rows[0];
-    if (!t) throw new AppError("NOT_FOUND", 404, "Không tìm thấy sự kiện của nhân viên");
-    if (t.voided_by_adjustment_id) throw new AppError("INVALID_STATE", 409, "Sự kiện đã bị huỷ");
+    if (!t) throw new AppError("NOT_FOUND", 404, tr("err.attendance.khongTimThaySuKienCua"));
+    if (t.voided_by_adjustment_id)
+      throw new AppError("INVALID_STATE", 409, tr("err.attendance.suKienDaBiHuy"));
     before = { kind: t.kind, at: t.device_time.toISOString(), status: t.status };
     after = { voided: true };
     at = t.device_time;
   } else {
     if (a.newKind === undefined || a.newAt === undefined)
-      throw new AppError("VALIDATION", 422, "Thiếu loại và thời điểm sự kiện mới");
+      throw new AppError("VALIDATION", 422, tr("err.attendance.thieuLoaiVaThoiDiemSu"));
     after = { kind: a.newKind, at: a.newAt.toISOString() };
     at = a.newAt;
   }
@@ -625,12 +642,14 @@ export async function decideAdjustment(
     id,
   ]);
   const adj = rows[0];
-  if (!adj) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đề nghị sửa công");
+  if (!adj) throw new AppError("NOT_FOUND", 404, tr("err.attendance.khongTimThayDeNghiSua"));
   const res = await employeeResource(tx, actor.companyId, adj.employee_id);
   await requireOn(tx, actor, "attendance.approve", res, { type: "attendance_adjustment", id });
   requireNotSelf(actor, adj.created_by_user_id, adj.employee_id);
-  if (adj.status !== "pending") throw new AppError("INVALID_STATE", 409, "Đề nghị đã được xử lý");
-  if (decision === "reject" && !note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
+  if (adj.status !== "pending")
+    throw new AppError("INVALID_STATE", 409, tr("err.attendance.deNghiDaDuocXuLy"));
+  if (decision === "reject" && !note?.trim())
+    throw new AppError("VALIDATION", 422, tr("err.shared.tuChoiCanLyDo"));
   let newExportVersion: number | null = null;
   if (decision === "approve") {
     let at = adj.new_at;
@@ -648,7 +667,7 @@ export async function decideAdjustment(
       actor,
       adj.employee_id,
       date,
-      `điều chỉnh ${id}: ${adj.reason}`,
+      tr("msg.attendance.adjustmentPeriodRef", { id, reason: adj.reason }),
     );
     if (adj.action === "add_event") {
       const asg = await findAssignment(tx, actor.companyId, adj.employee_id, adj.new_at!);
@@ -663,7 +682,7 @@ export async function decideAdjustment(
         "UPDATE attendance_event SET voided_by_adjustment_id = $2 WHERE id = $1 AND voided_by_adjustment_id IS NULL",
         [adj.target_event_id, id],
       );
-      if (u.rowCount === 0) throw new AppError("INVALID_STATE", 409, "Sự kiện đã bị huỷ bởi điều chỉnh khác");
+      if (u.rowCount === 0) throw new AppError("INVALID_STATE", 409, tr("err.attendance.suKienDaBiHuyBoi"));
     }
     if (guard.locked) await tx.query("UPDATE attendance_adjustment SET post_lock = true WHERE id = $1", [id]);
     newExportVersion = await guard.finish();

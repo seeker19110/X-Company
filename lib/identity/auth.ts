@@ -3,14 +3,18 @@ import { appendAudit } from "../audit/index.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { comparisonKey } from "../nen/text.ts";
+import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
+import { minutesToMs, msToSeconds } from "../nen/units.ts";
+import { t } from "../i18n/index.ts";
 
 export const MAX_FAILURES = 5;
-export const WINDOW_MS = 15 * 60_000;
+export const WINDOW_MS = minutesToMs(15);
 
 export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
+  return comparisonKey(email); // NFC + trim + lower: một địa chỉ = một khoá, dù gõ tổ hợp hay dựng sẵn
 }
 
 export interface LoginResult {
@@ -35,6 +39,7 @@ export async function login(
   now: Date = new Date(),
 ): Promise<LoginResult> {
   const email = normalizeEmail(input.email);
+  const meta = { sourceIp: input.ip, userAgent: input.userAgent, requestId: input.requestId };
   const since = new Date(now.getTime() - WINDOW_MS);
   // Bước 1 (ngắn, dưới khoá theo email+IP): đếm lần sai và GHI TRƯỚC lượt thử này là "sai" rồi commit — request song
   // song luôn thấy nhau nên không vượt giới hạn (review PR #8 #3) mà không giữ kết nối DB trong lúc băm Argon2.
@@ -51,8 +56,14 @@ export async function login(
     const f = fails.rows[0]!;
     if (f.n >= MAX_FAILURES) {
       const oldest = f.oldest?.getTime() ?? now.getTime();
-      const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
-      throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
+      const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + WINDOW_MS - now.getTime())));
+      logSecurityEvent({
+        ...meta,
+        event: "auth.rate_limited",
+        outcome: "denied",
+        target: { type: "app_user" },
+      });
+      throw new AppError("RATE_LIMITED", 429, t("err.identity.dangNhapSaiQuaNhieuLan"), { retryAfter });
     }
     const attempt = await tx.query<{ id: string }>(
       "INSERT INTO login_attempt (email, ip, attempted_at, success) VALUES ($1, $2, $3, false) RETURNING id",
@@ -82,6 +93,8 @@ export async function login(
         objectId: user?.id ?? null,
         result: "denied",
         requestId: input.requestId ?? null,
+        sourceIp: input.ip,
+        userAgent: input.userAgent,
       });
       return null;
     }
@@ -94,11 +107,21 @@ export async function login(
       objectType: "session",
       objectId: s.id,
       requestId: input.requestId ?? null,
+      sourceIp: input.ip,
+      userAgent: input.userAgent,
     });
     return { token: s.token, userId: user.id, companyId: user.company_id };
   }, pool);
+  // Sự kiện bảo mật: không ghi email (chỉ id khi biết tài khoản).
+  logSecurityEvent({
+    ...meta,
+    event: "auth.login",
+    outcome: r ? "success" : "denied",
+    actorId: r ? r.userId : null,
+    target: { type: "app_user", id: user?.id ?? null },
+  });
   // Cùng một thông điệp cho sai email và sai mật khẩu.
-  if (!r) throw new AppError("INVALID_CREDENTIALS", 401, "Email hoặc mật khẩu không đúng");
+  if (!r) throw new AppError("INVALID_CREDENTIALS", 401, t("err.identity.emailHoacMatKhauKhongDung"));
   return r;
 }
 
@@ -109,7 +132,7 @@ export async function setPassword(db: Queryable, userId: string, password: strin
     [userId],
   );
   const user = u.rows[0];
-  if (!user) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài khoản");
+  if (!user) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayTaiKhoan"));
   validateNewPassword(password, { email: user.email });
   await db.query("UPDATE app_user SET password_hash = $2, auth_version = auth_version + 1 WHERE id = $1", [
     userId,
@@ -131,7 +154,7 @@ export async function disableUser(db: Queryable, actorUserId: string | null, use
     "UPDATE app_user SET disabled_at = now(), auth_version = auth_version + 1 WHERE id = $1 AND disabled_at IS NULL RETURNING company_id",
     [userId],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài khoản đang hoạt động");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.identity.khongTimThayTaiKhoanDang"));
   await db.query("DELETE FROM session WHERE user_id = $1", [userId]);
   await appendAudit(db, {
     actorUserId,

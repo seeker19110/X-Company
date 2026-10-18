@@ -10,17 +10,19 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 
 | Miền         | Công khai             | Ghi chú                                                          |
 | ------------ | --------------------- | ---------------------------------------------------------------- |
-| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts` | tài khoản, phiên, đăng nhập                                      |
+| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts` | tài khoản, phiên, đăng nhập                                      |
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |
-| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `routes.ts`, `scope.ts` | chấm công; `compute.ts` là lõi thuần |
+| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `request-schema.pure.ts`, `routes.ts`, `scope.ts` | chấm công; `compute.ts` là lõi thuần; `request-schema.pure.ts` = schema form dùng chung client+server |
 | `work` | `index.ts`, `tasks.ts`, `progress.ts`, `routes.ts` | dự án/công việc; `progress-compute.ts` là lõi thuần                      |
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
-| `inquiry` | `index.ts`, `routes.ts` | liên hệ, tuyển dụng                                              |
-| `files` | `index.ts`, `routes.ts` | kho tệp private                                                  |
+| `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
+| `privacy` | `index.ts`, `consent.ts`, `routes.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`) |
+| `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
+| `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
 | `dashboard`  | `index.ts`            | tổng hợp cho trang điều hành                                     |
 | `today`      | `index.ts`            | màn hình "hôm nay" của nhân viên                                 |
 | `site`       | `index.ts`            | cấu hình/ngữ cảnh website công khai                              |
@@ -30,9 +32,11 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | Miền      | Công khai                | Ghi chú                                                  |
 | --------- | ------------------------ | -------------------------------------------------------- |
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
-| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
-| `http`    | `index.ts`               | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
+| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts`, `pagination.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
+| `http`    | `index.ts`, `metrics-route.ts` | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
+| `web`     | `safe-html.ts`, `theme.ts` | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002); `theme.ts` SINH từ token (`npm run build:tokens`) |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
+| `i18n`    | `index.ts`, `client.ts`, `client-app.ts`, `client-site.ts`, `format.ts` | `t(khoá, tham số)` trên `messages/vi.json` (+ `vi.context.json`), định dạng Intl (số/tiền VND/ngày giờ múi VN/danh sách/tương đối) — thuần, dùng ở client + server + `*.pure.ts` |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |
 
 ## Mô-đun thuần (ARC-MOD-003)

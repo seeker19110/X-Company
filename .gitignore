@@ -19,3 +19,21 @@ __pycache__/
 # E2E
 e2e/.seed.json
 playwright/.cache/
+
+# Khoá/chứng chỉ cục bộ (BASE-CFG-003) — không bao giờ commit
+*.pem
+*.key
+
+# IDE/OS, bản dump và trạng thái hạ tầng (WF-GIT-010, OPS-IAC-003) — không bao giờ commit
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.dump
+*.sql.gz
+*.tfstate
+*.tfstate.*
+.terraform/
+.lycheecache
+sbom.cdx.json
+.lighthouseci/

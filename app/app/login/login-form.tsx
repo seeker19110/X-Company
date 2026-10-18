@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
 import { api } from "@/app/components/api";
+import { t } from "@/lib/i18n/client";
 
 export function LoginForm() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export function LoginForm() {
     });
     setBusy(false);
     if (r.ok) router.replace("/app/today");
-    else setError(r.error ?? "Đăng nhập không thành công");
+    else setError(r.error ?? t("login.failed"));
   }
 
   return (
@@ -31,15 +32,15 @@ export function LoginForm() {
         </p>
       )}
       <label className="field" htmlFor={ids.email}>
-        Email
+        {t("login.email")}
         <input id={ids.email} name="email" type="email" autoComplete="username" required />
       </label>
       <label className="field" htmlFor={ids.pw}>
-        Mật khẩu
+        {t("login.password")}
         <input id={ids.pw} name="password" type="password" autoComplete="current-password" required />
       </label>
       <button className="btn btn-primary btn-big" type="submit" disabled={busy}>
-        {busy ? "Đang đăng nhập…" : "Đăng nhập"}
+        {busy ? t("login.submitting") : t("login.submit")}
       </button>
     </form>
   );

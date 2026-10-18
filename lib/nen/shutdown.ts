@@ -1,3 +1,4 @@
+// i18n-ignore-file: dòng nhật ký tắt máy cho người vận hành (console), không tới người dùng cuối
 // Tắt êm khi nhận SIGTERM/SIGINT (ARC-RES-009, BE-REL-004): readiness → 503 ngay; sau SHUTDOWN_READY_DELAY_MS (mặc định
 // 2 s, để bộ cân bằng tải kịp thấy 503 và rút thực thể) mới ngừng nhận kết nối; chờ request đang chạy tối đa
 // SHUTDOWN_GRACE_MS (mặc định 20 s); đóng pool DB (≤ 5 s); thoát 0. Tổng ≤ 27 s < grace 30 s của orchestrator.
@@ -5,6 +6,8 @@
 // Lib không import `next/*`: instrumentation.ts chỉ gọi `registerShutdown()`.
 import http, { type Server, type ServerResponse } from "node:http";
 import { closePool } from "../db/index.ts";
+import { env } from "./env.ts";
+import { log as logger } from "./log.ts";
 
 export interface ShutdownDeps {
   graceMs: number;
@@ -15,15 +18,8 @@ export interface ShutdownDeps {
   log: (msg: string) => void;
 }
 
-function envMs(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (raw === undefined || raw.trim() === "") return fallback;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
-}
-
-export const defaultGraceMs = (): number => envMs("SHUTDOWN_GRACE_MS", 20_000);
-export const defaultReadyDelayMs = (): number => envMs("SHUTDOWN_READY_DELAY_MS", 2_000);
+export const defaultGraceMs = (): number => env("SHUTDOWN_GRACE_MS");
+export const defaultReadyDelayMs = (): number => env("SHUTDOWN_READY_DELAY_MS");
 
 export class ShutdownController {
   private inflight = 0;
@@ -129,7 +125,7 @@ const processDeps = (): ShutdownDeps => ({
   readyDelayMs: defaultReadyDelayMs(),
   closePool,
   exit: (code) => process.exit(code),
-  log: (msg) => console.error(msg),
+  log: (msg) => logger.warn(msg),
 });
 
 let current: ShutdownController | undefined;

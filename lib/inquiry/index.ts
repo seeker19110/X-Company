@@ -9,31 +9,16 @@ import { AppError } from "../nen/app-error.ts";
 import { sessionSecret } from "../nen/config.ts";
 import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
+import { minutesToMs, msToSeconds } from "../nen/units.ts";
+import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
+import { CHANNEL_WEB_FORM, isProcessingBlocked, recordConsent } from "../privacy/consent.ts";
+import { t } from "../i18n/index.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
-export const RATE_LIMIT = { max: 5, windowMs: 10 * 60_000 };
+export const RATE_LIMIT = { max: 5, windowMs: minutesToMs(10) };
 export const MIN_FILL_MS = 3000;
 
-const phoneRe = /^\+?[0-9][0-9 .-]{6,18}[0-9]$/;
-
-export const InquiryInput = z
-  .object({
-    submission_id: z.uuid(),
-    name: z.string().trim().min(1, "Vui lòng nhập họ tên").max(120),
-    email: z.email("Email không hợp lệ").max(254).nullish(),
-    phone: z.string().trim().regex(phoneRe, "Số điện thoại không hợp lệ").nullish(),
-    message: z.string().trim().min(1, "Vui lòng nhập nhu cầu").max(4000),
-    service: z
-      .string()
-      .regex(/^[a-z0-9-]{1,80}$/)
-      .nullish(),
-    consent: z.literal(true, { error: "Cần đồng ý xử lý dữ liệu để gửi" }),
-    website: z.string().max(200).optional().default(""),
-    elapsed_ms: z.number().int().nonnegative().optional(),
-    source: z.string().max(300).nullish(),
-  })
-  .refine((v) => !!v.email || !!v.phone, { message: "Cần email hoặc điện thoại", path: ["email"] });
-export type InquiryInputT = z.infer<typeof InquiryInput>;
+export { InquiryInput, type InquiryInputT };
 
 export const ApplicationInput = z.object({
   submission_id: z.uuid(),
@@ -45,7 +30,7 @@ export const ApplicationInput = z.object({
   email: z.email().max(254),
   phone: z.string().trim().regex(phoneRe).nullish(),
   cover_letter: z.string().max(8000).nullish(),
-  consent: z.literal(true, { error: "Cần đồng ý xử lý dữ liệu để gửi" }),
+  consent: z.literal(true, { error: t("validation.inquiry.consent") }),
   website: z.string().max(200).optional().default(""),
   elapsed_ms: z.number().int().nonnegative().optional(),
 });
@@ -82,8 +67,8 @@ export async function checkRate(
   }, pool);
   if (r.n >= RATE_LIMIT.max) {
     const oldest = r.oldest?.getTime() ?? now.getTime();
-    const retryAfter = Math.max(1, Math.ceil((oldest + RATE_LIMIT.windowMs - now.getTime()) / 1000));
-    throw new AppError("RATE_LIMITED", 429, "Bạn gửi quá nhiều lần, vui lòng thử lại sau", { retryAfter });
+    const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + RATE_LIMIT.windowMs - now.getTime())));
+    throw new AppError("RATE_LIMITED", 429, t("err.inquiry.banGuiQuaNhieuLanVui"), { retryAfter });
   }
 }
 
@@ -118,6 +103,7 @@ async function existingCode(
   submissionId: string,
 ): Promise<SubmitResult | null> {
   const { rows } = await db.query<{ code: string }>(
+    // sql-interp-allow: `table` có kiểu hợp nhất "inquiry" | "job_application" (hằng của người gọi).
     `SELECT code FROM ${table} WHERE company_id = $1 AND submission_id = $2`,
     [companyId, submissionId],
   );
@@ -190,9 +176,19 @@ async function insertInquiry(
     );
     if (!rows[0]) throw new DuplicateSubmission();
     const id = rows[0].id;
+    // Đồng ý theo mục đích (CMP-VN-001): bằng chứng ghi cùng giao dịch với hồ sơ — không có đồng ý thì không có hồ sơ.
+    await recordConsent(tx, {
+      companyId,
+      subjectType: "inquiry",
+      subjectId: id,
+      purposeId: "inquiry_contact",
+      policyVersion: CONSENT_NOTICE_VERSION,
+      channel: CHANNEL_WEB_FORM,
+      at: now,
+    });
     await tx.query(
       "INSERT INTO inquiry_history (company_id, inquiry_id, from_status, to_status, note, at) VALUES ($1, $2, NULL, $3, $4, $5)",
-      [companyId, id, status, assignee ? "định tuyến tự động" : "chưa có quy tắc định tuyến", now],
+      [companyId, id, status, assignee ? t("msg.inquiry.autoRouted") : t("msg.inquiry.noRoutingRule"), now],
     );
     await appendAudit(tx, {
       actorUserId: null,
@@ -243,7 +239,7 @@ async function insertApplication(
         "SELECT id FROM cms_page WHERE company_id = $1 AND type = 'job' AND slug = $2 AND archived_at IS NULL",
         [companyId, input.job_slug],
       );
-      if (!j.rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy vị trí tuyển dụng");
+      if (!j.rows[0]) throw new AppError("NOT_FOUND", 404, t("err.inquiry.khongTimThayViTriTuyen"));
       jobPageId = j.rows[0].id;
     }
     const code = await nextCode(tx, companyId, "UV", now);
@@ -268,6 +264,15 @@ async function insertApplication(
       ],
     );
     if (!rows[0]) throw new DuplicateSubmission();
+    await recordConsent(tx, {
+      companyId,
+      subjectType: "job_application",
+      subjectId: rows[0].id,
+      purposeId: "job_application",
+      policyVersion: CONSENT_NOTICE_VERSION,
+      channel: CHANNEL_WEB_FORM,
+      at: now,
+    });
     await appendAudit(tx, {
       actorUserId: null,
       companyId,
@@ -288,6 +293,8 @@ export const INQUIRY_TRANSITIONS: Record<string, readonly string[]> = {
   in_progress: ["qualified", "closed", "assigned"],
   qualified: ["closed"],
   closed: [],
+  // Rút đồng ý/xoá (T-040): dừng xử lý, không chuyển tiếp được.
+  processing_stopped: [],
 };
 
 /** Đổi trạng thái / người phụ trách — lịch sử + audit. */
@@ -302,11 +309,18 @@ export async function updateInquiry(
     [actor.companyId, inquiryId],
   );
   const cur = rows[0];
-  if (!cur) throw new AppError("NOT_FOUND", 404, "Không tìm thấy yêu cầu");
+  if (!cur) throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThayYeuCau"));
+  if (await isProcessingBlocked(tx, "inquiry", inquiryId, "inquiry_contact"))
+    throw new AppError("PROCESSING_RESTRICTED", 409, t("err.inquiry.chuTheDaRutDongY"));
   if (!INQUIRY_TRANSITIONS[cur.status]!.includes(change.status))
-    throw new AppError("INVALID_STATE", 409, `Không chuyển được từ ${cur.status} sang ${change.status}`);
+    throw new AppError(
+      "INVALID_STATE",
+      409,
+      t("err.inquiry.invalidTransition", { from: cur.status, to: change.status }),
+    );
   const assignee = change.assigneeUserId === undefined ? cur.assignee_user_id : change.assigneeUserId;
-  if (change.status === "assigned" && !assignee) throw new AppError("VALIDATION", 422, "Cần người phụ trách");
+  if (change.status === "assigned" && !assignee)
+    throw new AppError("VALIDATION", 422, t("err.inquiry.canNguoiPhuTrach"));
   try {
     await tx.query("UPDATE inquiry SET status = $2, assignee_user_id = $3 WHERE id = $1", [
       inquiryId,
@@ -315,7 +329,7 @@ export async function updateInquiry(
     ]);
   } catch (err) {
     if ((err as { code?: string }).code === "23503")
-      throw new AppError("INVALID_REFERENCE", 422, "Người phụ trách không hợp lệ");
+      throw new AppError("INVALID_REFERENCE", 422, t("err.inquiry.nguoiPhuTrachKhongHopLe"));
     throw err;
   }
   await tx.query(

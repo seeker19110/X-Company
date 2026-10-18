@@ -8,7 +8,8 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // QA-E2E-005: CI thử lại ≤ 2 lần và ghi trace ở lần thử lại đầu (artifact tải lên ở job e2e); máy dev không thử lại.
+  retries: process.env.CI ? 2 : 0,
   timeout: 60_000,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
@@ -16,15 +17,16 @@ export default defineConfig({
     baseURL: "http://localhost:3100",
     locale: "vi-VN",
     timezoneId: "Asia/Ho_Chi_Minh",
-    trace: "retain-on-failure",
+    trace: "on-first-retry",
     launchOptions: { executablePath },
   },
   projects: [
     { name: "desktop-chrome", use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } } },
-    // Mobile: chỉ luồng chỉ đọc gắn @mobile (dữ liệu seed dùng chung, tránh hai dự án giành trạng thái).
+    // Mobile chạy cả luồng chính (UX-RESP-008, FE-TEST-002) trên công ty seed riêng (e2e/helpers.ts seed());
+    // chỉ bỏ luồng quản trị @desktop.
     {
       name: "mobile-chrome",
-      grep: /@mobile/,
+      grepInvert: /@desktop/,
       use: { ...devices["Pixel 7"], launchOptions: { executablePath } },
     },
   ],

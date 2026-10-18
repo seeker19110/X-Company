@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { requireSession } from "@/app/server/session";
 import { getPool } from "@/lib/db";
-import { EVENT_STATUS, fmtDateTime, KIND_LABEL } from "@/app/components/labels";
+import { EVENT_STATUS, KIND_LABEL } from "@/app/components/labels";
+import { formatDateTime } from "@/lib/i18n/format";
+import { t } from "@/lib/i18n";
 import { RequestForms } from "@/app/components/request-forms";
 
-export const metadata: Metadata = { title: "Chấm công" };
+export const metadata: Metadata = { title: t("attendance.title") };
 
 export default async function AttendancePage() {
   const { actor } = await requireSession();
@@ -33,16 +35,16 @@ export default async function AttendancePage() {
   ).rows;
   return (
     <>
-      <h1>Chấm công</h1>
+      <h1>{t("attendance.title")}</h1>
       <section className="card" aria-labelledby="lich-su">
-        <h2 id="lich-su">14 ngày gần đây</h2>
+        <h2 id="lich-su">{t("attendance.historyHeading")}</h2>
         {events.length === 0 ? (
-          <p className="muted">Chưa có lần chấm nào.</p>
+          <p className="muted">{t("attendance.historyEmpty")}</p>
         ) : (
           <ul className="list">
             {events.map((e) => (
               <li key={e.id}>
-                {KIND_LABEL[e.kind] ?? e.kind} · {fmtDateTime(e.device_time.toISOString())} ·{" "}
+                {KIND_LABEL[e.kind] ?? e.kind} · {formatDateTime(e.device_time)} ·{" "}
                 <span className={`badge ${EVENT_STATUS[e.status]?.cls ?? ""}`}>
                   {EVENT_STATUS[e.status]?.label ?? e.status}
                 </span>

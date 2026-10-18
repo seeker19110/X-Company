@@ -4,7 +4,7 @@ import { loginHandler, logoutHandler, meHandler } from "../../lib/identity/route
 import { disableUser, login, setPassword } from "../../lib/identity/auth.ts";
 import { resolveSession, IDLE_MS } from "../../lib/identity/session.ts";
 import { validateNewPassword, verifyPassword } from "../../lib/identity/password.ts";
-import { revokeGrant } from "../../lib/authz/grants.ts";
+import { grantRole, revokeGrant } from "../../lib/authz/grants.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
@@ -155,15 +155,71 @@ describe("xác thực (T-007)", () => {
     const { cookie } = await doLogin(u.email);
     const gid = (await db.admin.query("SELECT id FROM role_grant WHERE user_id = $1", [u.userId])).rows[0].id;
     await withTx((tx) => revokeGrant(tx, { userId: null }, org.companyId, gid, "nghỉ việc"));
-    const me = await (await meHandler(req("GET", "/api/app/me", { cookie }))).json();
+    // Đổi đặc quyền → phiên cũ bị huỷ (BE-AUTH-004); phiên mới không còn vai trò.
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie }))).status, 401);
+    const fresh = await doLogin(u.email);
+    const me = await (await meHandler(req("GET", "/api/app/me", { cookie: fresh.cookie }))).json();
     assert.deepEqual(me.roles, []);
     await withTx((tx) => disableUser(tx, null, u.userId, "nghỉ việc"));
-    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie }))).status, 401);
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: fresh.cookie }))).status, 401);
     assert.equal((await doLogin(u.email)).res.status, 401, "tài khoản vô hiệu không đăng nhập được");
     await assert.rejects(
       withTx((tx) => disableUser(tx, null, u.userId, "lần 2")),
       isCode("NOT_FOUND"),
     );
+  });
+
+  test("BE-AUTH-004: APP_ORIGIN https → cookie __Host- + Secure + HttpOnly + Path=/ + không Domain", async () => {
+    const u = await seedUser(org.companyId);
+    const prev = process.env.APP_ORIGIN;
+    process.env.APP_ORIGIN = "https://xc.test";
+    try {
+      const res = await loginHandler(
+        req("POST", "/api/app/auth/login", {
+          body: { email: u.email, password: PASSWORD },
+          origin: "https://xc.test",
+        }),
+      );
+      assert.equal(res.status, 200);
+      const sc = res.headers.get("set-cookie") ?? "";
+      assert.match(sc, /^__Host-xc_session=[A-Za-z0-9_-]{43};/);
+      assert.match(sc, /; Secure(;|$)/);
+      assert.match(sc, /; HttpOnly(;|$)/);
+      assert.match(sc, /; Path=\/(;|$)/);
+      assert.match(sc, /SameSite=Lax/);
+      assert.ok(!/domain=/i.test(sc), "cookie __Host- không được có Domain");
+    } finally {
+      process.env.APP_ORIGIN = prev;
+    }
+  });
+
+  test("BE-AUTH-004: ID phiên đổi giữa các lần đăng nhập; cấp quyền mới huỷ phiên cũ, đăng nhập lại có phiên mới", async () => {
+    const u = await seedUser(org.companyId);
+    const a = await doLogin(u.email);
+    const b = await doLogin(u.email);
+    assert.notEqual(a.cookie, b.cookie);
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: b.cookie }))).status, 200);
+    await withTx((tx) =>
+      grantRole(tx, { userId: null }, org.companyId, { userId: u.userId, role: "hr", scopeType: "company" }),
+    );
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: a.cookie }))).status, 401);
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: b.cookie }))).status, 401);
+    const c = await doLogin(u.email);
+    assert.notEqual(c.cookie, a.cookie);
+    assert.notEqual(c.cookie, b.cookie);
+    const me = await (await meHandler(req("GET", "/api/app/me", { cookie: c.cookie }))).json();
+    assert.deepEqual(me.roles, [{ role: "hr", scope_type: "company", scope_id: null }]);
+    // Phiên của người khác không bị ảnh hưởng.
+    const other = await seedUser(org.companyId);
+    const o = await doLogin(other.email);
+    await withTx((tx) =>
+      grantRole(tx, { userId: null }, org.companyId, {
+        userId: u.userId,
+        role: "employee",
+        scopeType: "self",
+      }),
+    );
+    assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: o.cookie }))).status, 200);
   });
 
   test("không cookie / cookie rác → 401; phiên quá hạn trượt → null", async () => {

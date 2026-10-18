@@ -92,7 +92,8 @@ describe("timeout tường minh cho phụ thuộc", () => {
         const p = path.join(dir, e.name);
         if (e.isDirectory()) walk(p);
         else if (e.name.endsWith(".ts")) {
-          const src = readFileSync(p, "utf8");
+          // `isIP` của node:net chỉ kiểm chuỗi, không mở kết nối — không tính là client mạng.
+          const src = readFileSync(p, "utf8").replace(/import \{ isIP \} from "node:net";/g, "");
           // lib/nen/shutdown.ts chỉ móc vào http.Server của chính tiến trình (không gọi ra ngoài).
           if (
             /\bfetch\(|node:https?["']|undici|node:net["']|nodemailer/.test(src) &&
@@ -549,7 +550,7 @@ describe("EXPLAIN các truy vấn lõi: không Seq Scan trên bảng lớn", () 
       name: "tasks-mine",
       from: "lib/work/routes.ts MY_TASKS_SQL — danh sách việc của tôi",
       sql: MY_TASKS_SQL,
-      params: () => [companyId, empId],
+      params: () => [companyId, empId, 201, 0], // LIMIT $3 (= trần 200 + 1) OFFSET $4
     },
     {
       name: "attendance-events-today",

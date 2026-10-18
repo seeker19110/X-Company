@@ -6,6 +6,7 @@ import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
+import { t } from "../i18n/index.ts";
 
 export interface OtPolicy {
   id: string | null;
@@ -96,7 +97,7 @@ export async function checkOtLimits(
 }
 
 function limitError(v: LimitCheck[]): AppError {
-  return new AppError(v[0]!.code, 422, "Vượt hạn mức làm thêm giờ", { violations: v });
+  return new AppError(v[0]!.code, 422, t("err.attendance.vuotHanMucLamThemGio"), { violations: v });
 }
 
 export async function requestOt(
@@ -112,14 +113,14 @@ export async function requestOt(
   },
 ): Promise<string> {
   const employeeId = r.employeeId ?? actor.employeeId;
-  if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
+  if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const self = employeeId === actor.employeeId;
   const res = await employeeResource(tx, actor.companyId, employeeId, r.businessDate);
   await requireOn(tx, actor, self ? "leave.request" : "attendance.approve", res, {
     type: "employee",
     id: employeeId,
   });
-  if (r.reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do làm thêm");
+  if (r.reason.trim() === "") throw new AppError("VALIDATION", 422, t("err.attendance.canLyDoLamThem"));
   const policy = await otPolicyAt(tx, actor.companyId, r.businessDate);
   const v = await checkOtLimits(tx, employeeId, r.businessDate, r.minutes, policy);
   if (v.length > 0 && !r.exceptionBasis?.trim()) throw limitError(v);
@@ -153,7 +154,7 @@ export async function giveOtConsent(tx: Queryable, actor: ActorContext, requestI
      WHERE company_id = $1 AND id = $2 AND employee_id = $3 AND status = 'pending' AND employee_consent_at IS NULL`,
     [actor.companyId, requestId, actor.employeeId],
   );
-  if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, "Không có đơn chờ đồng ý của bạn");
+  if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, t("err.attendance.khongCoDonChoDongY"));
   await auditDecision(tx, actor, "ot.consent", "ot_request", requestId);
 }
 
@@ -174,26 +175,26 @@ export async function decideOt(
     exception_basis: string | null;
   }>("SELECT * FROM ot_request WHERE company_id = $1 AND id = $2 FOR UPDATE", [actor.companyId, requestId]);
   const req = rows[0];
-  if (!req) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đơn");
+  if (!req) throw new AppError("NOT_FOUND", 404, t("err.attendance.khongTimThayDon"));
   const res = await employeeResource(tx, actor.companyId, req.employee_id, req.business_date);
   await requireOn(tx, actor, "attendance.approve", res, { type: "ot_request", id: requestId });
   requireNotSelf(actor, req.created_by_user_id, req.employee_id);
-  if (req.status !== "pending") throw new AppError("INVALID_STATE", 409, "Đơn đã được xử lý");
+  if (req.status !== "pending") throw new AppError("INVALID_STATE", 409, t("err.attendance.donDaDuocXuLy"));
   if (decision === "approve") {
     if (!req.employee_consent_at)
-      throw new AppError("OT_CONSENT_REQUIRED", 422, "Cần sự đồng ý của người lao động trước khi duyệt");
+      throw new AppError("OT_CONSENT_REQUIRED", 422, t("err.attendance.canSuDongYCuaNguoi"));
     await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('ot:' || $1, 0))", [req.employee_id]);
     const policy = await otPolicyAt(tx, actor.companyId, req.business_date);
     const v = await checkOtLimits(tx, req.employee_id, req.business_date, req.minutes, policy, requestId);
     if (v.length > 0) {
       if (!req.exception_basis?.trim()) throw limitError(v);
       if (!can(actor, "attendance.ot_exception", res))
-        throw new AppError("FORBIDDEN", 403, "Vượt hạn mức cần quyền duyệt ngoại lệ", {
+        throw new AppError("FORBIDDEN", 403, t("err.attendance.vuotHanMucCanQuyenDuyet"), {
           action: "attendance.ot_exception",
           object: { type: "ot_request", id: requestId },
         });
     }
-  } else if (!note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
+  } else if (!note?.trim()) throw new AppError("VALIDATION", 422, t("err.shared.tuChoiCanLyDo"));
   const guard =
     decision === "approve"
       ? await guardPeriodChange(tx, actor, req.employee_id, req.business_date, `OT ${requestId}`)

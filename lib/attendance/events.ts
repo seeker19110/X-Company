@@ -8,6 +8,8 @@ import { AppError } from "../nen/app-error.ts";
 import { addDays, localDateOf, shiftBounds } from "./compute.ts";
 import { policyAt, type AttendancePolicy } from "./policy.ts";
 import { qrExpired, verifyQrSignature } from "./qr.ts";
+import { minutesToMs, msToSeconds, secondsToMs } from "../nen/units.ts";
+import { t as msg } from "../i18n/index.ts";
 
 export type Kind = "in" | "out" | "break_start" | "break_end";
 export type Source = "qr" | "gps" | "kiosk" | "manual_request";
@@ -94,8 +96,8 @@ export async function findAssignment(
       breakMinutes: 0,
       tz: a.tz,
     });
-    const lo = b.start.getTime() - a.early_grace_minutes * 60_000;
-    const hi = b.end.getTime() + a.late_grace_minutes * 60_000;
+    const lo = b.start.getTime() - minutesToMs(a.early_grace_minutes);
+    const hi = b.end.getTime() + minutesToMs(a.late_grace_minutes);
     if (t.getTime() >= lo && t.getTime() <= hi) return a;
   }
   return null;
@@ -103,7 +105,7 @@ export async function findAssignment(
 
 /** Lý do cần xác minh theo thời gian thiết bị (C6) — null nếu ổn. */
 export function timeReview(i: EventInput, now: Date, p: AttendancePolicy): string | null {
-  const diffSec = (i.deviceTime.getTime() - now.getTime()) / 1000;
+  const diffSec = msToSeconds(i.deviceTime.getTime() - now.getTime());
   if (diffSec > p.futureToleranceSec) return "FUTURE_TIME";
   if (i.queued) return -diffSec > p.offlineMaxAgeSec ? "OFFLINE_TOO_OLD" : null;
   return Math.abs(diffSec) > p.clockSkewMaxSec ? "CLOCK_SKEW" : null;
@@ -169,17 +171,18 @@ export async function recordEvent(
     let qrNonce: string | null = null;
 
     if (input.source === "qr") {
-      if (!input.qr) throw new AppError("QR_REQUIRED", 422, "Thiếu mã QR");
+      if (!input.qr) throw new AppError("QR_REQUIRED", 422, msg("err.attendance.thieuMaQr"));
       const q = verifyQrSignature(input.qr); // sai chữ ký → 422 bất kể trực tuyến hay hàng chờ
-      if (q.cid !== actor.companyId) throw new AppError("QR_INVALID", 422, "Mã QR không thuộc công ty");
+      if (q.cid !== actor.companyId)
+        throw new AppError("QR_INVALID", 422, msg("err.attendance.maQrKhongThuocCongTy"));
       const checkAt = input.queued ? input.deviceTime : now;
       if (qrExpired(q, checkAt, policy.qrClockLeewaySec)) {
-        if (!input.queued) throw new AppError("QR_EXPIRED", 422, "Mã QR đã hết hạn, vui lòng quét mã mới");
+        if (!input.queued) throw new AppError("QR_EXPIRED", 422, msg("err.attendance.maQrDaHetHanVui"));
         reasons.push("QR_EXPIRED");
       }
       if (worksiteId && worksiteId !== q.ws) reasons.push("QR_WORKSITE_MISMATCH");
       // Cờ `queued` do client tự khai: QR quét "ngoại tuyến" lệch giờ lớn có thể là ảnh chụp QR → cần xác minh.
-      if (input.queued && (now.getTime() - input.deviceTime.getTime()) / 1000 > policy.qrOfflineReviewSec)
+      if (input.queued && msToSeconds(now.getTime() - input.deviceTime.getTime()) > policy.qrOfflineReviewSec)
         reasons.push("QR_OFFLINE");
       worksiteId = q.ws;
       qrNonce = q.n;
@@ -211,8 +214,8 @@ export async function recordEvent(
              AND o.device_time <= $4)`,
         [
           actor.employeeId,
-          new Date(input.deviceTime.getTime() - policy.duplicateWindowSec * 1000),
-          new Date(input.deviceTime.getTime() + policy.duplicateWindowSec * 1000),
+          new Date(input.deviceTime.getTime() - secondsToMs(policy.duplicateWindowSec)),
+          new Date(input.deviceTime.getTime() + secondsToMs(policy.duplicateWindowSec)),
           input.deviceTime,
         ],
       );
@@ -295,7 +298,7 @@ export async function recordEvent(
         }),
       pool,
     );
-    throw new AppError("IDEMPOTENCY_CONFLICT", 409, "Khoá gửi đã dùng cho nội dung khác");
+    throw new AppError("IDEMPOTENCY_CONFLICT", 409, msg("err.attendance.khoaGuiDaDungChoNoi"));
   }
   return outcome.result;
 }

@@ -5,13 +5,14 @@ import { SessionProvider } from "@/app/components/session-context";
 import { AppNav } from "@/app/components/app-nav";
 import { ServiceWorkerRegister } from "@/app/components/sw-register";
 import { can } from "@/lib/authz";
+import { t } from "@/lib/i18n";
 import "../app.css";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: { default: "X-Company nội bộ", template: "%s · X-Company" },
+  title: { default: t("brand.internalTitle"), template: t("brand.titleTemplate") },
   robots: { index: false },
-  appleWebApp: { capable: true, title: "X-Company", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: t("brand.name"), statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
@@ -24,7 +25,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
     <SessionProvider csrf={s.csrf} userId={s.actor.userId}>
       <div className="app-shell">
         <header className="app-top">
-          <strong>X-Company</strong>
+          <strong>{t("brand.name")}</strong>
           <span className="muted">{s.displayName}</span>
         </header>
         <main className="app-main" id="noi-dung">

@@ -2,6 +2,9 @@
 // Khoá ký: QR_SIGNING_KEYS = "kid1:secret1,kid2:secret2" (kid đầu tiên dùng để ký; các kid khác chỉ để kiểm).
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { AppError } from "../nen/app-error.ts";
+import { env } from "../nen/env.ts";
+import { epochSeconds, msToSeconds } from "../nen/units.ts";
+import { t as tr } from "../i18n/index.ts";
 
 export interface QrPayload {
   v: 1;
@@ -14,7 +17,7 @@ export interface QrPayload {
 }
 
 function keys(): Map<string, Buffer> {
-  const raw = process.env.QR_SIGNING_KEYS ?? "";
+  const raw = env("QR_SIGNING_KEYS");
   const m = new Map<string, Buffer>();
   for (const part of raw.split(",")) {
     const i = part.indexOf(":");
@@ -41,7 +44,7 @@ export function issueQr(
     kid,
     cid: companyId,
     ws: worksiteId,
-    iat: Math.floor(now.getTime() / 1000),
+    iat: epochSeconds(now),
     ttl: ttlSec,
     n: randomBytes(8).toString("base64url"),
   };
@@ -53,22 +56,22 @@ export function issueQr(
 export function verifyQrSignature(token: string): QrPayload {
   const [body, sig, extra] = token.split(".");
   if (!body || !sig || extra !== undefined || token.length > 1000)
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   let payload: QrPayload;
   try {
     payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as QrPayload;
   } catch {
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   }
   const key = typeof payload?.kid === "string" ? keys().get(payload.kid) : undefined;
   const given = Buffer.from(sig, "base64url");
   const expected = key ? sign(key, body) : Buffer.alloc(32);
   if (!key || given.length !== expected.length || !timingSafeEqual(given, expected) || payload.v !== 1)
-    throw new AppError("QR_INVALID", 422, "Mã QR không hợp lệ");
+    throw new AppError("QR_INVALID", 422, tr("err.attendance.maQrKhongHopLe"));
   return payload;
 }
 
 export function qrExpired(p: QrPayload, at: Date, leewaySec: number): boolean {
-  const t = at.getTime() / 1000;
+  const t = msToSeconds(at.getTime());
   return t > p.iat + p.ttl + leewaySec || t < p.iat - leewaySec;
 }

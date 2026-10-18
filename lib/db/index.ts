@@ -1,5 +1,7 @@
 // Truy cập PostgreSQL bằng SQL thuần (ADR-0001). Placeholder `$1…` của pg — không tự chuyển `?` (bẫy XBOSS #4).
 import pg from "pg";
+import { env } from "../nen/env.ts";
+import { log } from "../nen/log.ts";
 
 export type Queryable = Pick<pg.PoolClient, "query">;
 export type Tx = pg.PoolClient;
@@ -11,15 +13,14 @@ let appPool: pg.Pool | undefined;
 
 /** Pool của ứng dụng — DATABASE_URL là role ứng dụng (không owner, không BYPASSRLS). */
 export function getPool(): pg.Pool {
-  if (!appPool) {
-    const url = process.env.DATABASE_URL?.trim();
-    if (url === undefined || url === "") throw new Error("Thiếu DATABASE_URL");
+  if (appPool === undefined) {
     appPool = new pg.Pool({
-      connectionString: url,
-      max: Number(process.env.DB_POOL_MAX ?? 10),
+      connectionString: env("DATABASE_URL"),
+      max: env("DB_POOL_MAX"),
       options: PG_SESSION_OPTIONS,
       ...POOL_TIMEOUTS,
     });
+    guardIdleErrors(appPool, "app");
   }
   return appPool;
 }
@@ -42,6 +43,16 @@ export function setPool(pool: pg.Pool | undefined): void {
   appPool = pool;
 }
 
+/**
+ * Kết nối NHÀN RỖI trong pool bị máy chủ ngắt (DB khởi động lại/failover, admin kill, timeout phía server) làm pool phát
+ * sự kiện `error`; không có listener → uncaughtException → tiến trình chết. Ghi log và để pool tự bỏ kết nối hỏng —
+ * request kế tiếp mở kết nối mới (ARC-RES, tài liệu node-postgres "pool.on('error')").
+ */
+export function guardIdleErrors(pool: pg.Pool, name: string): pg.Pool {
+  pool.on("error", (err) => log.warn("kết nối nhàn rỗi của pool bị ngắt", { pool: name, err }));
+  return pool;
+}
+
 /** Đóng pool ứng dụng (tắt êm); không có pool thì không làm gì. */
 export async function closePool(): Promise<void> {
   const p = appPool;
@@ -58,7 +69,8 @@ export async function withTx<T>(fn: (tx: Tx) => Promise<T>, pool: pg.Pool = getP
     await client.query("COMMIT");
     return result;
   } catch (err) {
-    await client.query("ROLLBACK").catch(() => {});
+    // Lỗi gốc `err` được ném lại; lỗi ROLLBACK chỉ ghi log (kết nối hỏng sẽ bị pool loại khi release).
+    await client.query("ROLLBACK").catch((e: unknown) => log.warn("rollback giao dịch thất bại", { err: e }));
     throw err;
   } finally {
     client.release();

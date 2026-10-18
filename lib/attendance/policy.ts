@@ -1,5 +1,6 @@
 // Chính sách chấm công có hiệu lực tại thời điểm (D-007). Không có bản ghi → mặc định ⚙ của SPEC.
 import type { Queryable } from "../db/index.ts";
+import { hoursToSeconds } from "../nen/units.ts";
 
 export interface AttendancePolicy {
   id: string | null;
@@ -16,7 +17,7 @@ export interface AttendancePolicy {
 export const DEFAULT_POLICY: AttendancePolicy = {
   id: null,
   clockSkewMaxSec: 300,
-  offlineMaxAgeSec: 72 * 3600,
+  offlineMaxAgeSec: hoursToSeconds(72),
   futureToleranceSec: 300,
   qrTtlSec: 60,
   qrClockLeewaySec: 10,

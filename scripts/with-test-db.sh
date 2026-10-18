@@ -6,7 +6,10 @@
 #   image postgres của CI, để lỗi xác thực lộ ra ở máy dev chứ không chỉ ở CI), chạy lệnh, rồi dừng + xoá.
 #   Chạy bằng root thì initdb/pg_ctl chạy dưới user `postgres` (initdb từ chối root).
 # - Không tìm thấy Postgres → exit 1: test DB không bao giờ tự skip (bẫy XBOSS TRAPS #2).
+# - Test tất định (FE-TEST-003): múi giờ và ngôn ngữ tiến trình cố định (TZ=UTC, LANG=C.UTF-8) cho unit/DB/E2E;
+#   trình duyệt E2E cố định locale vi-VN + Asia/Ho_Chi_Minh ở playwright.config.ts.
 set -euo pipefail
+export TZ=UTC LANG=C.UTF-8
 
 if [ -n "${DATABASE_URL:-}" ]; then
   exec "$@"

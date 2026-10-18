@@ -5,6 +5,7 @@ import { appendAudit } from "../audit/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { lintMarkdown, type ContentWarning } from "./markdown.ts";
+import { t } from "../i18n/index.ts";
 
 export const PAGE_TYPES = [
   "home",
@@ -91,9 +92,10 @@ function audit(
 }
 
 function validateContent(c: Content): void {
-  if ((c.title?.trim() ?? "") === "") throw new AppError("VALIDATION", 422, "Tiêu đề không được trống");
+  if ((c.title?.trim() ?? "") === "")
+    throw new AppError("VALIDATION", 422, t("err.cms.tieuDeKhongDuocTrong"));
   if (c.canonicalUrl && !/^https?:\/\//.test(c.canonicalUrl))
-    throw new AppError("VALIDATION", 422, "Canonical phải là URL http(s)");
+    throw new AppError("VALIDATION", 422, t("err.cms.canonicalPhaiLaUrlHttpS"));
 }
 
 interface RevRow {
@@ -135,7 +137,7 @@ async function lockRevision(tx: Queryable, a: CmsActor, revisionId: string): Pro
     "SELECT * FROM cms_revision WHERE company_id = $1 AND id = $2 FOR UPDATE",
     [a.companyId, revisionId],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy phiên bản");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, t("err.cms.khongTimThayPhienBan"));
   return toRevision(rows[0]);
 }
 
@@ -178,9 +180,10 @@ export async function createPage(
   page: { type: PageType; slug: string; locale?: Locale },
   c: Content,
 ): Promise<Revision> {
-  if (!PAGE_TYPES.includes(page.type)) throw new AppError("VALIDATION", 422, "Loại trang không hợp lệ");
+  if (!PAGE_TYPES.includes(page.type))
+    throw new AppError("VALIDATION", 422, t("err.cms.loaiTrangKhongHopLe"));
   if (page.slug !== "" && !SLUG_RE.test(page.slug))
-    throw new AppError("VALIDATION", 422, "Đường dẫn chỉ gồm chữ thường không dấu, số và gạch nối");
+    throw new AppError("VALIDATION", 422, t("err.cms.duongDanChiGomChuThuong"));
   validateContent(c);
   let pageId: string;
   try {
@@ -191,7 +194,7 @@ export async function createPage(
     pageId = rows[0]!.id;
   } catch (err) {
     if ((err as { code?: string }).code === "23505")
-      throw new AppError("DUPLICATE", 409, "Đường dẫn đã tồn tại");
+      throw new AppError("DUPLICATE", 409, t("err.cms.duongDanDaTonTai"));
     throw err;
   }
   const rev = await insertRevision(tx, a, pageId, c, "draft");
@@ -206,7 +209,7 @@ export async function createDraft(tx: Queryable, a: CmsActor, pageId: string, c:
     a.companyId,
     pageId,
   ]);
-  if (p.rowCount === 0) throw new AppError("NOT_FOUND", 404, "Không tìm thấy trang");
+  if (p.rowCount === 0) throw new AppError("NOT_FOUND", 404, t("err.cms.khongTimThayTrang"));
   const rev = await insertRevision(tx, a, pageId, c, "draft");
   await audit(tx, a, "cms.draft", rev.id);
   return rev;
@@ -215,10 +218,9 @@ export async function createDraft(tx: Queryable, a: CmsActor, pageId: string, c:
 export async function updateDraft(tx: Queryable, a: CmsActor, revisionId: string, c: Content): Promise<void> {
   validateContent(c);
   const rev = await lockRevision(tx, a, revisionId);
-  if (rev.status !== "draft") throw new AppError("INVALID_STATE", 409, "Chỉ sửa được bản nháp");
+  if (rev.status !== "draft") throw new AppError("INVALID_STATE", 409, t("err.cms.chiSuaDuocBanNhap"));
   // Chỉ tác giả sửa nháp: nếu người khác sửa rồi duyệt, nội dung do chính họ viết sẽ qua được R5 (review PR #8 #8).
-  if (rev.authorUserId !== a.userId)
-    throw new AppError("NOT_AUTHOR", 403, "Chỉ tác giả được sửa bản nháp — tạo bản nháp mới");
+  if (rev.authorUserId !== a.userId) throw new AppError("NOT_AUTHOR", 403, t("err.cms.chiTacGiaDuocSuaBan"));
   await tx.query(
     `UPDATE cms_revision SET title = $2, summary = $3, body_markdown = $4, seo_title = $5, seo_description = $6,
        canonical_url = $7 WHERE id = $1`,
@@ -245,7 +247,11 @@ async function transition(
 ): Promise<Revision> {
   const rev = await lockRevision(tx, a, revisionId);
   if (rev.status !== from)
-    throw new AppError("INVALID_STATE", 409, `Phiên bản đang ở trạng thái ${rev.status}, cần ${from}`);
+    throw new AppError(
+      "INVALID_STATE",
+      409,
+      t("err.cms.revisionStatusMismatch", { status: rev.status, expected: from }),
+    );
   await tx.query(
     `UPDATE cms_revision SET status = $2, reviewer_user_id = COALESCE($3, reviewer_user_id), publish_at = COALESCE($4, publish_at)
      WHERE id = $1`,
@@ -263,7 +269,7 @@ export async function submitForReview(tx: Queryable, a: CmsActor, revisionId: st
 export async function approve(tx: Queryable, a: CmsActor, revisionId: string): Promise<ContentWarning[]> {
   const rev = await lockRevision(tx, a, revisionId);
   if (rev.authorUserId === a.userId)
-    throw new AppError("SELF_APPROVAL", 409, "Không thể tự duyệt bài của mình");
+    throw new AppError("SELF_APPROVAL", 409, t("err.cms.khongTheTuDuyetBaiCua"));
   await transition(tx, a, revisionId, "in_review", "approved", { reviewerUserId: a.userId });
   await audit(tx, a, "cms.approve", revisionId);
   return lintMarkdown(rev.bodyMarkdown);
@@ -275,7 +281,7 @@ export async function returnToDraft(
   revisionId: string,
   reason: string,
 ): Promise<void> {
-  if (reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do trả lại");
+  if (reason.trim() === "") throw new AppError("VALIDATION", 422, t("err.cms.canLyDoTraLai"));
   await transition(tx, a, revisionId, "in_review", "draft");
   await audit(tx, a, "cms.return", revisionId, { reason });
 }
@@ -310,13 +316,12 @@ export async function restoreVersion(
     [a.companyId, pageId, version],
   );
   const src = rows[0];
-  if (!src) throw new AppError("NOT_FOUND", 404, "Không tìm thấy phiên bản");
-  if (!src.reviewer_user_id)
-    throw new AppError("INVALID_STATE", 409, "Chỉ hoàn tác về phiên bản đã từng được duyệt");
+  if (!src) throw new AppError("NOT_FOUND", 404, t("err.cms.khongTimThayPhienBan"));
+  if (!src.reviewer_user_id) throw new AppError("INVALID_STATE", 409, t("err.cms.chiHoanTacVePhienBan"));
   const old = toRevision(src);
   // Tác giả bản mới = tác giả nội dung gốc; người hoàn tác là người duyệt → R5 vẫn giữ.
   if (old.authorUserId === a.userId)
-    throw new AppError("SELF_APPROVAL", 409, "Người viết nội dung gốc không tự xuất bản lại được");
+    throw new AppError("SELF_APPROVAL", 409, t("err.cms.nguoiVietNoiDungGocKhong"));
   const rev = await insertRevision(tx, { ...a, userId: old.authorUserId }, pageId, old, "approved", {
     reviewerUserId: a.userId,
     restoredFrom: version,
@@ -328,19 +333,19 @@ export async function restoreVersion(
 
 /** Đổi slug: slug cũ chuyển hướng 301 sang slug mới. */
 export async function changeSlug(tx: Queryable, a: CmsActor, pageId: string, newSlug: string): Promise<void> {
-  if (!SLUG_RE.test(newSlug)) throw new AppError("VALIDATION", 422, "Đường dẫn không hợp lệ");
+  if (!SLUG_RE.test(newSlug)) throw new AppError("VALIDATION", 422, t("err.cms.duongDanKhongHopLe"));
   const { rows } = await tx.query<{ type: PageType; slug: string; locale: Locale }>(
     "SELECT type, slug, locale FROM cms_page WHERE company_id = $1 AND id = $2 FOR UPDATE",
     [a.companyId, pageId],
   );
   const p = rows[0];
-  if (!p) throw new AppError("NOT_FOUND", 404, "Không tìm thấy trang");
+  if (!p) throw new AppError("NOT_FOUND", 404, t("err.cms.khongTimThayTrang"));
   if (p.slug === newSlug) return;
   try {
     await tx.query("UPDATE cms_page SET slug = $2 WHERE id = $1", [pageId, newSlug]);
   } catch (err) {
     if ((err as { code?: string }).code === "23505")
-      throw new AppError("DUPLICATE", 409, "Đường dẫn đã tồn tại");
+      throw new AppError("DUPLICATE", 409, t("err.cms.duongDanDaTonTai"));
     throw err;
   }
   const from = pathFor(p.type, p.slug);
@@ -377,7 +382,7 @@ export async function archivePage(tx: Queryable, a: CmsActor, pageId: string, re
     a.companyId,
     pageId,
   ]);
-  if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, "Không tìm thấy trang");
+  if (r.rowCount === 0) throw new AppError("NOT_FOUND", 404, t("err.cms.khongTimThayTrang"));
   await appendAudit(tx, {
     actorUserId: a.userId,
     companyId: a.companyId,
@@ -411,6 +416,7 @@ export async function getPublished(
   opts: { locale?: Locale; now?: Date } = {},
 ): Promise<PublishedPage | null> {
   const { rows } = await db.query<VisibleRow>(
+    // sql-interp-allow: VISIBLE_SQL là hằng module; type/slug đi qua tham số $4/$5.
     `${VISIBLE_SQL} AND p.type = $4 AND p.slug = $5 ORDER BY p.id, r.publish_at DESC, r.version DESC`,
     [companyId, opts.locale ?? "vi", opts.now ?? new Date(), type, slug],
   );
@@ -426,9 +432,11 @@ export async function listPublished(
   let where = "";
   if (opts.type !== undefined) {
     params.push(opts.type);
+    // sql-interp-allow: chỉ chèn SỐ THỨ TỰ tham số (params.length), giá trị type đi qua tham số.
     where = ` AND p.type = $${params.length}`;
   }
   const { rows } = await db.query<VisibleRow>(
+    // sql-interp-allow: VISIBLE_SQL là hằng module; `where` do nhánh trên dựng từ hằng + số thứ tự tham số.
     `SELECT * FROM (${VISIBLE_SQL}${where} ORDER BY p.id, r.publish_at DESC, r.version DESC) v ORDER BY v.publish_at DESC`,
     params,
   );

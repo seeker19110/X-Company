@@ -8,6 +8,8 @@ import { employeeResource } from "../attendance/scope.ts";
 import { addDays } from "../attendance/compute.ts";
 import { projectProgress } from "../work/progress.ts";
 import { projectAccess } from "../work/tasks.ts";
+import { MS_PER_DAY } from "../nen/units.ts";
+import { t as tr } from "../i18n/index.ts";
 
 export const MILESTONE_RISK_POINTS = 10; // ⚙ chênh kế hoạch − nghiệm thu (điểm %)
 export const MILESTONE_HORIZON_DAYS = 7; // ⚙
@@ -79,9 +81,9 @@ export async function dashboard(
         code: "TASK_OVERDUE",
         objectType: "task",
         objectId: t.id,
-        title: `Quá hạn: ${t.title}`,
+        title: tr("msg.dashboard.overdue", { title: t.title }),
         ownerEmployeeId: t.responsible_employee_id,
-        nextAction: "Hoàn thành hoặc xin đổi hạn kèm lý do",
+        nextAction: tr("msg.dashboard.overdueNext"),
         since: t.due_date,
       });
     const blocked = await db.query<{
@@ -101,9 +103,9 @@ export async function dashboard(
         code: "TASK_BLOCKED_LONG",
         objectType: "task",
         objectId: t.id,
-        title: `Bị chặn > ${BLOCKED_DAYS} ngày: ${t.title} (${t.blocked_reason})`,
+        title: tr("msg.dashboard.blocked", { days: BLOCKED_DAYS, title: t.title, reason: t.blocked_reason }),
         ownerEmployeeId: managerOf.get(t.project_id) ?? null,
-        nextAction: "Gỡ trở ngại hoặc điều chỉnh kế hoạch",
+        nextAction: tr("msg.dashboard.blockedNext"),
         since: t.blocked_at.toISOString(),
       });
   }
@@ -122,7 +124,7 @@ export async function dashboard(
     for (const m of ms.rows) {
       const p = projects.find((x) => x.id === m.project_id)!;
       const slip = m.baseline_due_date
-        ? Math.round((Date.parse(m.due_date) - Date.parse(m.baseline_due_date)) / 86_400_000)
+        ? Math.round((Date.parse(m.due_date) - Date.parse(m.baseline_due_date)) / MS_PER_DAY)
         : null;
       milestones.push({
         id: m.id,
@@ -146,10 +148,15 @@ export async function dashboard(
           objectId: m.id,
           title:
             m.due_date < today
-              ? `Mốc đã trễ: ${m.name} (${p.name})`
-              : `Mốc nguy cơ trễ: ${m.name} (${p.name}) — kế hoạch ${pr.plannedPct}% / nghiệm thu ${pr.acceptedPct}%`,
+              ? tr("msg.dashboard.milestoneLate", { name: m.name, project: p.name })
+              : tr("msg.dashboard.milestoneAtRisk", {
+                  name: m.name,
+                  project: p.name,
+                  planned: pr.plannedPct ?? 0, // nhánh này chỉ chạy khi gap != null (cả hai khác null)
+                  accepted: pr.acceptedPct ?? 0,
+                }),
           ownerEmployeeId: p.manager,
-          nextAction: "Lập phương án bù tiến độ hoặc đề xuất baseline mới",
+          nextAction: tr("msg.dashboard.milestoneNext"),
           since: m.due_date,
         });
     }
@@ -184,9 +191,9 @@ export async function dashboard(
         code: "ATTENDANCE_NEEDS_REVIEW",
         objectType: "attendance_event",
         objectId: r.id,
-        title: `Chấm công cần xác minh: ${r.full_name} (${r.review_reason})`,
+        title: tr("msg.dashboard.attendanceReview", { name: r.full_name, reason: r.review_reason }),
         ownerEmployeeId: actor.employeeId,
-        nextAction: "Xác minh với nhân viên; đề nghị sửa công nếu cần",
+        nextAction: tr("msg.dashboard.attendanceNext"),
         since: r.device_time.toISOString(),
       });
   const lines = await computeLines(db, actor.companyId, addDays(today, -7), addDays(today, -1));
@@ -196,9 +203,9 @@ export async function dashboard(
         code: "MISSING_CHECKOUT",
         objectType: "employee",
         objectId: l.employeeId,
-        title: `Thiếu giờ ra ngày ${l.businessDate}`,
+        title: tr("msg.dashboard.missingCheckout", { date: l.businessDate }),
         ownerEmployeeId: l.employeeId,
-        nextAction: "Nhân viên gửi đề nghị sửa công; quản lý duyệt",
+        nextAction: tr("msg.dashboard.missingCheckoutNext"),
         since: l.businessDate,
       });
 

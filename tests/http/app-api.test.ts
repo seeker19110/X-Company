@@ -203,17 +203,28 @@ describe("API nội bộ: công việc, đơn từ, phê duyệt (T-019)", () =>
   });
 
   test("dữ liệu sai → 400", async () => {
-    assert.equal(
-      (
-        await post(postOt, emp, "/api/app/ot-requests", {
-          business_date: "03/11",
-          minutes: 60,
-          reason: "x",
-          consent: true,
-        })
-      ).status,
-      400,
+    // Bỏ qua client (như curl): server vẫn validate lại và trả lỗi theo trường (FE-FORM-001).
+    const bad = await post(postOt, emp, "/api/app/ot-requests", {
+      business_date: "03/11",
+      minutes: 60,
+      reason: "x",
+      consent: true,
+    });
+    assert.equal(bad.status, 400);
+    const badBody = await bad.json();
+    assert.deepEqual(
+      badBody.fields.map((f: { path: string }) => f.path),
+      ["business_date"],
     );
+    assert.equal(badBody.fields[0].message, "Vui lòng chọn ngày hợp lệ");
+    const noReason = await post(postOt, emp, "/api/app/ot-requests", {
+      business_date: "2026-11-03",
+      minutes: 60,
+      reason: "   ",
+      consent: true,
+    });
+    assert.equal(noReason.status, 400);
+    assert.equal((await noReason.json()).fields[0].path, "reason");
     assert.equal(
       (await post(postAdjustment, emp, "/api/app/adjustments", { action: "xoa", reason: "x" })).status,
       400,

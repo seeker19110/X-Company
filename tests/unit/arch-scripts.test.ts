@@ -8,6 +8,8 @@ import { violations, isAccepted } from "../../scripts/check-adr-immutable.ts";
 import { check as checkDomains, importsOf, parseDomains } from "../../scripts/check-domains.ts";
 import { check as checkRoutes, parseRoutes, urlOf } from "../../scripts/check-routes.ts";
 import { checkSource } from "../../scripts/check-tests.ts";
+// @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
+import { columnViolations } from "../../scripts/check-units.mjs";
 
 function fixture(files: Record<string, string>): string {
   const dir = mkdtempSync(path.join(tmpdir(), "xc-arch-"));
@@ -118,4 +120,29 @@ test("check-adr: chỉ dòng Trạng thái/liên kết được đổi", () => {
   assert.deepEqual(violations(""), []);
   assert.equal(isAccepted("# ADR\n\n- Trạng thái: Chấp nhận · Ngày: 1"), true);
   assert.equal(isAccepted("# ADR\n\n- Trạng thái: Đề xuất"), false);
+});
+
+test("check:units cột số (XC-UNITS-009): thiếu hậu tố đơn vị → đỏ; đơn vị/không đơn vị đã rà → qua", () => {
+  const ok = [
+    "CREATE TABLE t (",
+    "  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,",
+    "  qr_ttl_sec integer NOT NULL,",
+    "  minutes integer NOT NULL,",
+    "  size_bytes integer,",
+    "  geo_lat double precision, -- độ",
+    "  version integer NOT NULL,",
+    "  row_count integer NOT NULL,",
+    "  CHECK (minutes > 0),",
+    "  PRIMARY KEY (id)",
+    ");",
+  ].join("\n");
+  assert.deepEqual(columnViolations("m.sql", ok), []);
+  const bad = columnViolations(
+    "m.sql",
+    "CREATE TABLE t (\n  timeout integer NOT NULL,\n  weight numeric(6,2)\n);\nALTER TABLE t ADD COLUMN IF NOT EXISTS grace integer;",
+  );
+  assert.equal(bad.length, 3);
+  assert.match(bad[0] ?? "", /m\.sql:2: cột số "timeout"/);
+  assert.match(bad[2] ?? "", /m\.sql:5: .*"grace"/);
+  assert.deepEqual(columnViolations("m.sql", ""), []);
 });

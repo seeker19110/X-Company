@@ -1,0 +1,22 @@
+name: PR policy
+
+# Kiểm mô tả PR, tiêu đề (= subject commit sau squash), fix kèm test, lockfile, migration — scripts/pr-policy.mjs.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-policy:
+    name: pr-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Mô tả PR, tiêu đề Conventional Commits, fix kèm test, lockfile, migration
+        run: node scripts/pr-policy.mjs

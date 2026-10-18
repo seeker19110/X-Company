@@ -1,4 +1,5 @@
 // Dò loại tệp theo NỘI DUNG (magic bytes), không tin đuôi tên hay Content-Type của client (THREAT-MODEL, §12).
+import { kb } from "../nen/units.ts";
 export interface Sniffed {
   mime: string;
   ext: string;
@@ -14,7 +15,7 @@ export function sniff(b: Buffer): Sniffed | null {
     return { mime: "image/webp", ext: "webp" };
   if (starts(b, [0x50, 0x4b, 0x03, 0x04])) {
     // OOXML: zip có [Content_Types].xml; phân biệt docx/xlsx theo thư mục word/ hoặc xl/ trong vùng đầu tệp.
-    const head = b.subarray(0, Math.min(b.length, 64 * 1024)).toString("latin1");
+    const head = b.subarray(0, Math.min(b.length, kb(64))).toString("latin1");
     if (!head.includes("[Content_Types].xml")) return null;
     if (head.includes("word/"))
       return { mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ext: "docx" };

@@ -1,5 +1,7 @@
-// Dữ liệu E2E (KHÔNG dùng cho production): một công ty, người dùng theo vai trò, nội dung website đã/chưa duyệt,
-// ca hôm nay, dự án + việc. Ghi thông tin đăng nhập ra e2e/.seed.json (gitignore).
+// Dữ liệu E2E (KHÔNG dùng cho production): mỗi project Playwright một công ty riêng (desktop = công ty của website,
+// mobile = bản sao dữ liệu nghiệp vụ) để luồng chính chạy trên cả hai mà không giành trạng thái (UX-RESP-008, FE-TEST-002).
+// Mỗi công ty: người dùng theo vai trò, ca hôm nay, dự án + việc; nội dung website chỉ ở công ty desktop.
+// Ghi thông tin đăng nhập ra e2e/.seed.json (gitignore).
 import { writeFileSync } from "node:fs";
 import pg from "pg";
 import { setPool, withTx } from "../lib/db/index.ts";
@@ -23,12 +25,14 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 })
 setPool(pool);
 const sys = { userId: null };
 
-const out = await withTx(async (tx) => {
-  const companyId = await createCompany(tx, sys, { name: "X-Company (E2E)" });
+type Users = Record<string, { email: string; userId: string; employeeId: string }>;
+
+async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: string, withSite: boolean) {
+  const companyId = await createCompany(tx, sys, { name: companyName });
   const branchId = await createBranch(tx, sys, companyId, { code: "HN", name: "Hà Nội" });
   const deptId = await createDepartment(tx, sys, companyId, { code: "KT", name: "Kỹ thuật", branchId });
   const hash = await hashPassword(PASSWORD);
-  const users: Record<string, { email: string; userId: string; employeeId: string }> = {};
+  const users: Users = {};
   const mk = async (
     key: string,
     name: string,
@@ -36,7 +40,7 @@ const out = await withTx(async (tx) => {
   ) => {
     const employeeId = await createEmployee(tx, sys, companyId, { code: key.toUpperCase(), fullName: name });
     await assignEmployment(tx, sys, companyId, employeeId, { departmentId: deptId, validFrom: "2026-01-01" });
-    const email = `${key}@e2e.test`;
+    const email = `${key}${emailSuffix}@e2e.test`;
     const { rows } = await tx.query<{ id: string }>(
       "INSERT INTO app_user (email, display_name, password_hash, company_id, employee_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
       [email, name, hash, companyId, employeeId],
@@ -56,40 +60,43 @@ const out = await withTx(async (tx) => {
   await mk("ed", "Phạm Biên Tập", [{ role: "editor", scopeType: "company" }]);
   await mk("ed2", "Hoàng Duyệt Bài", [{ role: "editor", scopeType: "company" }]);
   await mk("sales", "Đỗ Kinh Doanh", [{ role: "sales", scopeType: "company" }]);
+  await mk("hr", "Ngô Nhân Sự", [{ role: "hr", scopeType: "company" }]);
   await mk("exec", "Vũ Giám Đốc", [{ role: "executive", scopeType: "company" }]);
-  const ed = { userId: users.ed!.userId, companyId };
-  const ed2 = { userId: users.ed2!.userId, companyId };
-  const pub = async (
-    type: Parameters<typeof createPage>[2]["type"],
-    slug: string,
-    title: string,
-    body: string,
-  ) => {
-    const r = await createPage(
+  if (withSite) {
+    const ed = { userId: users.ed!.userId, companyId };
+    const ed2 = { userId: users.ed2!.userId, companyId };
+    const pub = async (
+      type: Parameters<typeof createPage>[2]["type"],
+      slug: string,
+      title: string,
+      body: string,
+    ) => {
+      const r = await createPage(
+        tx,
+        ed,
+        { type, slug },
+        { title, bodyMarkdown: body, summary: `Tóm tắt: ${title}` },
+      );
+      await submitForReview(tx, ed, r.id);
+      await approve(tx, ed2, r.id);
+      await publish(tx, ed2, r.id);
+    };
+    await pub(
+      "home",
+      "",
+      "Giải pháp cơ điện cho công trình của bạn",
+      "Chúng tôi **thiết kế, thi công và bảo trì** hệ thống cơ điện.",
+    );
+    await pub("about", "", "Giới thiệu X-Company", "Thành lập năm 2010.");
+    await pub("service", "tu-van-thiet-ke", "Tư vấn thiết kế", "Khảo sát, thiết kế, dự toán.");
+    await pub("page", "chinh-sach-du-lieu", "Chính sách dữ liệu cá nhân", "Mục đích, căn cứ, thời hạn lưu.");
+    await createPage(
       tx,
       ed,
-      { type, slug },
-      { title, bodyMarkdown: body, summary: `Tóm tắt: ${title}` },
+      { type: "service", slug: "dich-vu-nhap" },
+      { title: "Bản nháp chưa duyệt", bodyMarkdown: "bí mật" },
     );
-    await submitForReview(tx, ed, r.id);
-    await approve(tx, ed2, r.id);
-    await publish(tx, ed2, r.id);
-  };
-  await pub(
-    "home",
-    "",
-    "Giải pháp cơ điện cho công trình của bạn",
-    "Chúng tôi **thiết kế, thi công và bảo trì** hệ thống cơ điện.",
-  );
-  await pub("about", "", "Giới thiệu X-Company", "Thành lập năm 2010.");
-  await pub("service", "tu-van-thiet-ke", "Tư vấn thiết kế", "Khảo sát, thiết kế, dự toán.");
-  await pub("page", "chinh-sach-du-lieu", "Chính sách dữ liệu cá nhân", "Mục đích, căn cứ, thời hạn lưu.");
-  await createPage(
-    tx,
-    ed,
-    { type: "service", slug: "dich-vu-nhap" },
-    { title: "Bản nháp chưa duyệt", bodyMarkdown: "bí mật" },
-  );
+  }
   await tx.query(
     "INSERT INTO inquiry_route (company_id, service_slug, assignee_user_id) VALUES ($1, NULL, $2)",
     [companyId, users.sales!.userId],
@@ -123,7 +130,13 @@ const out = await withTx(async (tx) => {
     reviewerEmployeeId: users.tl!.employeeId,
     acceptanceCriteria: "Biên bản đo cách điện",
   });
-  return { companyId, password: PASSWORD, users };
+  return { companyId, users };
+}
+
+const out = await withTx(async (tx) => {
+  const desktop = await seedCompany(tx, "X-Company (E2E)", "", true);
+  const mobile = await seedCompany(tx, "X-Company (E2E mobile)", ".m", false);
+  return { companyId: desktop.companyId, password: PASSWORD, users: desktop.users, mobile };
 });
 writeFileSync("e2e/.seed.json", JSON.stringify(out, null, 2));
 await pool.end();

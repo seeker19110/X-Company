@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { t } from "@/lib/i18n/client-app";
 
 /** Điều hướng chính (SPEC-pwa): Hôm nay, Công việc, Chấm công, Cá nhân (+ Phê duyệt cho người duyệt). */
 export function AppNav({ approver }: { approver: boolean }) {
   const path = usePathname();
   const items = [
-    { href: "/app/today", label: "Hôm nay" },
-    { href: "/app/tasks", label: "Công việc" },
-    { href: "/app/attendance", label: "Chấm công" },
-    ...(approver ? [{ href: "/app/approvals", label: "Duyệt" }] : []),
-    { href: "/app/me", label: "Cá nhân" },
+    { href: "/app/today", label: t("nav.today") },
+    { href: "/app/tasks", label: t("nav.tasks") },
+    { href: "/app/attendance", label: t("nav.attendance") },
+    ...(approver ? [{ href: "/app/approvals", label: t("nav.approvals") }] : []),
+    { href: "/app/me", label: t("nav.me") },
   ];
   return (
-    <nav className="app-nav" aria-label="Điều hướng ứng dụng">
+    <nav className="app-nav" aria-label={t("nav.label")}>
       <ul>
         {items.map((i) => (
           <li key={i.href}>

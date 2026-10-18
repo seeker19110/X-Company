@@ -1,6 +1,7 @@
 // Tính công một ca nghiệp vụ (SPEC-attendance C1–C5) — hàm THUẦN, không đọc DB/đồng hồ.
 // Quyết định làm rõ (ghi ở SPEC): thời điểm cắt về phút nguyên (bỏ giây) để tổng và các đoạn theo ngày khớp tuyệt đối;
 // nghỉ cố định (không ghi sự kiện nghỉ) tính vào ngày lịch chứa điểm giữa ca.
+import { epochSeconds, secondsToMs } from "../nen/units.ts";
 
 export type EventKind = "in" | "out" | "break_start" | "break_end";
 
@@ -67,7 +68,7 @@ export function tzOffsetMinutes(t: Date, tz: string): number {
     get("minute"),
     get("second"),
   );
-  return Math.round((asUtc - Math.floor(t.getTime() / 1000) * 1000) / MIN);
+  return Math.round((asUtc - secondsToMs(epochSeconds(t))) / MIN);
 }
 
 /** Instant UTC của giờ địa phương `date` `time` ở múi giờ `tz` (giờ không tồn tại do DST → dời tới sau). */

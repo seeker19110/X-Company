@@ -5,12 +5,13 @@ import { can, type ActorContext } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { enqueue } from "../outbox/index.ts";
+import { t as tr } from "../i18n/index.ts";
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "awaiting_acceptance" | "done" | "cancelled";
 export type TaskAction = "start" | "submit" | "block" | "unblock" | "accept" | "return" | "reopen" | "cancel";
 
 const forbidden = (action: string, type: string, id: string) =>
-  new AppError("FORBIDDEN", 403, "Bạn không có quyền thực hiện thao tác này", {
+  new AppError("FORBIDDEN", 403, tr("err.shared.banKhongCoQuyenThucHien"), {
     action,
     object: { type, id },
   });
@@ -36,7 +37,7 @@ export async function projectAccess(
     [actor.companyId, projectId, actor.employeeId],
   );
   const p = rows[0];
-  if (!p) throw new AppError("NOT_FOUND", 404, "Không tìm thấy dự án");
+  if (!p) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayDuAn"));
   const res = { companyId: actor.companyId, projectId };
   const isManager = !!actor.employeeId && p.manager_employee_id === actor.employeeId;
   const canManage = isManager || can(actor, "project.manage", res);
@@ -58,7 +59,7 @@ export async function requireProjectRead(
 ): Promise<ProjectAccess> {
   const a = await projectAccess(db, actor, projectId);
   // Không lộ dự án tồn tại hay không với người ngoài (API-CONTRACT: 404 khi không có quyền đọc).
-  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy dự án");
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayDuAn"));
   return a;
 }
 
@@ -104,9 +105,9 @@ export async function createProject(
     id = rows[0]!.id;
   } catch (err) {
     const code = (err as { code?: string }).code;
-    if (code === "23505") throw new AppError("DUPLICATE", 409, "Mã dự án đã tồn tại");
-    if (code === "23503") throw new AppError("INVALID_REFERENCE", 422, "Quản lý dự án không hợp lệ");
-    if (code === "23514") throw new AppError("VALIDATION", 422, "Ngày dự án không hợp lệ");
+    if (code === "23505") throw new AppError("DUPLICATE", 409, tr("err.work.maDuAnDaTonTai"));
+    if (code === "23503") throw new AppError("INVALID_REFERENCE", 422, tr("err.work.quanLyDuAnKhongHop"));
+    if (code === "23514") throw new AppError("VALIDATION", 422, tr("err.work.ngayDuAnKhongHopLe"));
     throw err;
   }
   await tx.query("INSERT INTO project_member (company_id, project_id, employee_id) VALUES ($1, $2, $3)", [
@@ -133,7 +134,7 @@ export async function addMember(
     );
   } catch (err) {
     if ((err as { code?: string }).code === "23503")
-      throw new AppError("INVALID_REFERENCE", 422, "Nhân viên không hợp lệ");
+      throw new AppError("INVALID_REFERENCE", 422, tr("err.work.nhanVienKhongHopLe"));
     throw err;
   }
   await audit(tx, actor, "project.add_member", "project", projectId, { after: { employeeId } });
@@ -153,7 +154,7 @@ export async function createWorkPackage(
       projectId,
     ]);
     if ((p.rowCount ?? 0) === 0)
-      throw new AppError("INVALID_REFERENCE", 422, "Hạng mục cha không thuộc dự án");
+      throw new AppError("INVALID_REFERENCE", 422, tr("err.work.hangMucChaKhongThuocDu"));
   }
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO work_package (company_id, project_id, parent_id, code, name) VALUES ($1, $2, $3, $4, $5) RETURNING id",
@@ -171,7 +172,7 @@ async function requireMembers(tx: Queryable, projectId: string, ids: (string | n
       id,
     ]);
     if ((m.rowCount ?? 0) === 0)
-      throw new AppError("NOT_MEMBER", 422, "Người được giao phải là thành viên dự án", { employeeId: id });
+      throw new AppError("NOT_MEMBER", 422, tr("err.work.nguoiDuocGiaoPhaiLaThanh"), { employeeId: id });
   }
 }
 
@@ -204,15 +205,16 @@ export async function createTask(tx: Queryable, actor: ActorContext, t: TaskInpu
       t.workPackageId,
       t.projectId,
     ]);
-    if ((w.rowCount ?? 0) === 0) throw new AppError("INVALID_REFERENCE", 422, "Hạng mục không thuộc dự án");
+    if ((w.rowCount ?? 0) === 0)
+      throw new AppError("INVALID_REFERENCE", 422, tr("err.work.hangMucKhongThuocDuAn"));
   }
   const requires = t.requiresAcceptance ?? true;
   if (requires && !t.reviewerEmployeeId)
-    throw new AppError("VALIDATION", 422, "Việc cần nghiệm thu phải có người nghiệm thu");
+    throw new AppError("VALIDATION", 422, tr("err.work.viecCanNghiemThuPhaiCo"));
   if (requires && !t.acceptanceCriteria?.trim())
-    throw new AppError("VALIDATION", 422, "Cần tiêu chí hoàn thành");
+    throw new AppError("VALIDATION", 422, tr("err.work.canTieuChiHoanThanh"));
   if (t.reviewerEmployeeId && t.reviewerEmployeeId === t.responsibleEmployeeId)
-    throw new AppError("SELF_APPROVAL", 409, "Người nghiệm thu phải khác người thực hiện");
+    throw new AppError("SELF_APPROVAL", 409, tr("err.work.nguoiNghiemThuPhaiKhacNguoi"));
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO task (company_id, project_id, work_package_id, title, description, responsible_employee_id,
        reviewer_employee_id, due_date, priority, estimate_minutes, requires_acceptance, acceptance_criteria,
@@ -321,7 +323,7 @@ async function loadTask(tx: Queryable, actor: ActorContext, taskId: string): Pro
     "SELECT * FROM task WHERE company_id = $1 AND id = $2 FOR UPDATE",
     [actor.companyId, taskId],
   );
-  if (!rows[0]) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
+  if (!rows[0]) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayCongViec"));
   return rows[0];
 }
 
@@ -351,7 +353,7 @@ export async function transitionTask(
   const t = await loadTask(tx, actor, taskId);
   const a = await projectAccess(tx, actor, t.project_id);
   // Không đọc được dự án → 404, không lộ việc tồn tại (API-CONTRACT).
-  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayCongViec"));
   const me = actor.employeeId;
   const isResponsible = !!me && me === t.responsible_employee_id;
   const isReviewer = !!me && me === t.reviewer_employee_id;
@@ -368,11 +370,11 @@ export async function transitionTask(
   if (!allowed[action]) {
     // Người thực hiện tự nghiệm thu → lỗi riêng (R5), không chỉ 403.
     if ((action === "accept" || action === "return") && isResponsible)
-      throw new AppError("SELF_APPROVAL", 409, "Người thực hiện không tự nghiệm thu");
+      throw new AppError("SELF_APPROVAL", 409, tr("err.work.nguoiThucHienKhongTuNghiem"));
     throw forbidden(`task.${action}`, "task", taskId);
   }
   if (t.version !== opts.expectedVersion)
-    throw new AppError("VERSION_CONFLICT", 409, "Công việc đã được người khác cập nhật, vui lòng tải lại", {
+    throw new AppError("VERSION_CONFLICT", 409, tr("err.work.congViecDaDuocNguoiKhac"), {
       currentVersion: t.version,
     });
   const rule = TRANSITIONS[action];
@@ -380,17 +382,17 @@ export async function transitionTask(
     throw new AppError(
       "INVALID_STATE",
       409,
-      `Không thể "${action}" khi công việc đang ở trạng thái ${t.status}`,
+      tr("err.work.actionNotAllowedInState", { action, status: t.status }),
     );
   const trimmed = opts.reason?.trim();
   const reason = trimmed === undefined || trimmed === "" ? null : trimmed;
-  if (rule.needsReason && !reason) throw new AppError("VALIDATION", 422, "Cần lý do");
+  if (rule.needsReason && !reason) throw new AppError("VALIDATION", 422, tr("err.work.canLyDo"));
   let to = rule.to;
   if (action === "submit") {
     if (t.evidence_required) {
       const ev = await tx.query("SELECT 1 FROM task_evidence WHERE task_id = $1 LIMIT 1", [taskId]);
       if ((ev.rowCount ?? 0) === 0)
-        throw new AppError("EVIDENCE_REQUIRED", 422, "Cần bằng chứng trước khi gửi nghiệm thu");
+        throw new AppError("EVIDENCE_REQUIRED", 422, tr("err.work.canBangChungTruocKhiGui"));
     }
     // Hoàn thành giản lược (W2): việc không cần nghiệm thu → hoàn tất ngay, vẫn ghi lịch sử.
     if (!t.requires_acceptance) to = "done";
@@ -403,8 +405,7 @@ export async function transitionTask(
      WHERE id = $1 AND version = $2 RETURNING version`,
     [taskId, opts.expectedVersion, to, reason],
   );
-  if (!u.rows[0])
-    throw new AppError("VERSION_CONFLICT", 409, "Công việc đã được người khác cập nhật, vui lòng tải lại");
+  if (!u.rows[0]) throw new AppError("VERSION_CONFLICT", 409, tr("err.work.congViecDaDuocNguoiKhac"));
   await history(tx, actor, taskId, action, t.status, to, null, reason);
   await notify(
     tx,
@@ -441,22 +442,22 @@ export async function updateTask(
   const t = await loadTask(tx, actor, taskId);
   const a = await projectAccess(tx, actor, t.project_id);
   // Không đọc được dự án → 404, không lộ việc tồn tại (API-CONTRACT).
-  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayCongViec"));
   const isResponsible = !!actor.employeeId && actor.employeeId === t.responsible_employee_id;
   const keys = Object.keys(changes) as (keyof TaskChanges)[];
   const onlyProgress = keys.length > 0 && keys.every((k) => k === "reportedPct");
   if (!(a.canManage || (onlyProgress && isResponsible))) throw forbidden("task.update", "task", taskId);
   if (t.version !== expectedVersion)
-    throw new AppError("VERSION_CONFLICT", 409, "Công việc đã được người khác cập nhật, vui lòng tải lại", {
+    throw new AppError("VERSION_CONFLICT", 409, tr("err.work.congViecDaDuocNguoiKhac"), {
       currentVersion: t.version,
     });
   if (["done", "cancelled"].includes(t.status) && !onlyProgress)
-    throw new AppError("INVALID_STATE", 409, "Không sửa việc đã hoàn tất/huỷ — mở lại trước");
+    throw new AppError("INVALID_STATE", 409, tr("err.work.khongSuaViecDaHoanTat"));
   const significant = keys.some((k) =>
     ["dueDate", "responsibleEmployeeId", "reviewerEmployeeId", "acceptanceCriteria", "title"].includes(k),
   );
   if (significant && !reason?.trim())
-    throw new AppError("VALIDATION", 422, "Đổi hạn/người/phạm vi cần lý do");
+    throw new AppError("VALIDATION", 422, tr("err.work.doiHanNguoiPhamViCan"));
   const next = {
     title: changes.title ?? t.title,
     due_date: changes.dueDate === undefined ? t.due_date : changes.dueDate,
@@ -467,9 +468,9 @@ export async function updateTask(
   };
   await requireMembers(tx, t.project_id, [next.responsible, next.reviewer]);
   if (next.reviewer && next.reviewer === next.responsible)
-    throw new AppError("SELF_APPROVAL", 409, "Người nghiệm thu phải khác người thực hiện");
+    throw new AppError("SELF_APPROVAL", 409, tr("err.work.nguoiNghiemThuPhaiKhacNguoi"));
   if (changes.reportedPct !== undefined && (changes.reportedPct < 0 || changes.reportedPct > 100))
-    throw new AppError("VALIDATION", 422, "Tiến độ báo cáo từ 0 đến 100");
+    throw new AppError("VALIDATION", 422, tr("err.work.tienDoBaoCaoTu0"));
   const before: Record<string, unknown> = {};
   const after: Record<string, unknown> = {};
   const map: [keyof TaskChanges, unknown, unknown][] = [
@@ -506,11 +507,10 @@ export async function updateTask(
     );
   } catch (err) {
     if ((err as { code?: string }).code === "23514")
-      throw new AppError("VALIDATION", 422, "Thay đổi vi phạm ràng buộc công việc");
+      throw new AppError("VALIDATION", 422, tr("err.work.thayDoiViPhamRangBuoc"));
     throw err;
   }
-  if (!u.rows[0])
-    throw new AppError("VERSION_CONFLICT", 409, "Công việc đã được người khác cập nhật, vui lòng tải lại");
+  if (!u.rows[0]) throw new AppError("VERSION_CONFLICT", 409, tr("err.work.congViecDaDuocNguoiKhac"));
   await history(tx, actor, taskId, "update", t.status, t.status, { before, after }, reason ?? null);
   await notify(
     tx,
@@ -530,7 +530,7 @@ export async function addEvidence(
 ): Promise<string> {
   const t = await loadTask(tx, actor, taskId);
   if (!(await projectAccess(tx, actor, t.project_id)).canRead)
-    throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
+    throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayCongViec"));
   const collab = await tx.query("SELECT 1 FROM task_collaborator WHERE task_id = $1 AND employee_id = $2", [
     taskId,
     actor.employeeId,
@@ -539,15 +539,14 @@ export async function addEvidence(
     (!!actor.employeeId && actor.employeeId === t.responsible_employee_id) || (collab.rowCount ?? 0) > 0;
   if (!ok) throw forbidden("task.evidence", "task", taskId);
   if (e.kind === "link" && !/^https?:\/\//.test(e.ref))
-    throw new AppError("VALIDATION", 422, "Liên kết phải là http(s)");
+    throw new AppError("VALIDATION", 422, tr("err.work.lienKetPhaiLaHttpS"));
   if (e.kind === "file") {
     // Bằng chứng tệp phải là tài liệu đã tải lên CHÍNH công việc này (không trỏ tệp của đối tượng khác).
     const d = await tx.query(
       "SELECT 1 FROM document WHERE company_id = $1 AND id::text = $2 AND object_type = 'task' AND object_id = $3",
       [actor.companyId, e.ref, taskId],
     );
-    if ((d.rowCount ?? 0) === 0)
-      throw new AppError("VALIDATION", 422, "Bằng chứng tệp phải là tài liệu của công việc này");
+    if ((d.rowCount ?? 0) === 0) throw new AppError("VALIDATION", 422, tr("err.work.bangChungTepPhaiLaTai"));
   }
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO task_evidence (company_id, task_id, kind, ref, added_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
@@ -566,10 +565,12 @@ export async function addDependency(
 ) {
   const p = await loadTask(tx, actor, predecessorId);
   const s = await loadTask(tx, actor, successorId);
-  if (p.project_id !== s.project_id) throw new AppError("VALIDATION", 422, "Phụ thuộc phải trong cùng dự án");
+  if (p.project_id !== s.project_id)
+    throw new AppError("VALIDATION", 422, tr("err.work.phuThuocPhaiTrongCungDu"));
   const a = await projectAccess(tx, actor, p.project_id);
   if (!a.canManage) throw forbidden("project.manage", "project", p.project_id);
-  if (predecessorId === successorId) throw new AppError("DEPENDENCY_CYCLE", 422, "Phụ thuộc tạo vòng lặp");
+  if (predecessorId === successorId)
+    throw new AppError("DEPENDENCY_CYCLE", 422, tr("err.work.phuThuocTaoVongLap"));
   const cyc = await tx.query(
     `WITH RECURSIVE down(id) AS (
        SELECT successor_id FROM task_dependency WHERE predecessor_id = $1
@@ -577,7 +578,7 @@ export async function addDependency(
      ) SELECT 1 FROM down WHERE id = $2`,
     [successorId, predecessorId],
   );
-  if ((cyc.rowCount ?? 0) > 0) throw new AppError("DEPENDENCY_CYCLE", 422, "Phụ thuộc tạo vòng lặp");
+  if ((cyc.rowCount ?? 0) > 0) throw new AppError("DEPENDENCY_CYCLE", 422, tr("err.work.phuThuocTaoVongLap"));
   await tx.query(
     "INSERT INTO task_dependency (company_id, predecessor_id, successor_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
     [actor.companyId, predecessorId, successorId],

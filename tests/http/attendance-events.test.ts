@@ -32,6 +32,7 @@ function send(s: Session, body: Record<string, unknown>, key: string | null = ra
       cookie: s.cookie,
       csrf: s.csrf,
       body,
+      idempotencyKey: key,
       headers: key ? { "idempotency-key": key } : {},
     }),
   );

@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: xc_test
@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0 # check:arch so ADR với nhánh gốc
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
@@ -49,8 +49,26 @@ jobs:
         run: npm run -s check:arch
       - name: Cổng chuẩn — đúng lệnh trong xt.yaml (build · typecheck · lint · test)
         run: .xtemplates/scripts/dev-task.sh gate
-      - name: Coverage có ngưỡng (sàn Gate M)
-        run: npm run -s coverage
+      - name: Coverage theo baseline (.c8rc.json chỉ tăng — QA-COV-002)
+        run: |
+          npm run -s check:coverage-baseline
+          npm run -s coverage
+      - name: Lưu báo cáo coverage (QA-COV-001)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-lcov
+          path: coverage/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Migration append-only, không thao tác phá vỡ (DB-MIG-008, OPS-DEPLOY-003)
+        run: npm run -s check:migrations
+      - name: Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
+        run: |
+          npm run -s check:docs
+          npm run -s check:repo-docs
+      - name: PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
+        run: python3 .xtemplates/scripts/xt.py progress-check
       - name: Khung — PLAN/blueprint/CI hợp lệ
         run: |
           python3 .xtemplates/scripts/xt.py ci-check .github/workflows
@@ -62,7 +80,7 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        image: postgres:17
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: xc_test
@@ -77,7 +95,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
@@ -85,6 +103,32 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
       - name: E2E đầy đủ (Postgres thật + bản build production, axe WCAG 2.2 AA)
         run: npm run -s e2e
+      - name: Lưu báo cáo + trace Playwright khi đỏ (QA-E2E-005)
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  readme-smoke:
+    name: readme-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # BASE-DOC-005, XC-DX-001: chạy đúng các lệnh "Bắt đầu nhanh" của README trên clone sạch (Postgres có sẵn của runner).
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: PostgreSQL của runner vào PATH (initdb/pg_ctl cho scripts/with-test-db.sh)
+        run: echo "$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)" >> "$GITHUB_PATH"
+      - name: Lệnh trong README (trích tự động, chạy nguyên văn)
+        run: node scripts/readme-smoke.mjs
 
   protection-guard:
     name: protection-guard
@@ -130,3 +174,75 @@ jobs:
             fi
           done
           echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."
+
+  supply-chain:
+    name: supply-chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # CMP-LIC-001/002/003, BASE-DEP-005, SEC-SUPPLY-006: license, ngoại lệ OSV còn hạn, SBOM, THIRD_PARTY_NOTICES, nối dây workflow.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cổng chuỗi cung ứng (license, hạn ngoại lệ OSV, notices, workflow, ci-check)
+        run: npm run -s check:supply-chain
+      - name: Sinh lại THIRD_PARTY_NOTICES.md và so với bản commit (CMP-LIC-001)
+        run: |
+          node scripts/gen-third-party-notices.mjs
+          git diff --exit-code THIRD_PARTY_NOTICES.md
+      - name: SBOM CycloneDX (production) và kiểm license ≥ 99% (CMP-LIC-003)
+        run: node scripts/check-sbom.mjs --out sbom.cdx.json
+      - name: Lưu SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90
+
+  lighthouse:
+    name: lighthouse
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # FE-PERF-002, FE-PERF-004, XC-PERF-003, PRF-WEB-005: ngân sách bundle + Lighthouse mobile (3 lần, median) trên `next start` với DB seed như e2e.
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Build production
+        run: npm run -s build
+      - name: Ngân sách bundle/request so baseline (đỏ khi vượt — FE-PERF-004, XC-GREEN-002)
+        run: PERF_NO_BUILD=1 npm run -s check:perf-budget
+      - name: Rule cảnh báo Prometheus — kiểm cấu trúc (OPS-SLO-001, BE-JOB-004)
+        run: npm run -s check:alerts
+      - name: Cài Chromium đúng phiên bản Playwright
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Lighthouse CI (@lhci/cli 0.15.1; assert trong lighthouserc.json)
+        run: LH_SKIP_BUILD=1 npm run -s lighthouse
+      - name: Lưu báo cáo Lighthouse
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14
+          if-no-files-found: ignore

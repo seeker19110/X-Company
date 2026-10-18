@@ -7,6 +7,7 @@ import { AppError } from "../nen/app-error.ts";
 import { computeLines } from "../attendance/period.ts";
 import { employeeResource, requireOn } from "../attendance/scope.ts";
 import { projectAccess } from "./tasks.ts";
+import { t as tr } from "../i18n/index.ts";
 
 /** Ngưỡng chênh lệch cần giải trình (phút) ⚙ — SPEC-work. */
 export const DIFF_THRESHOLD_MINUTES = 60;
@@ -16,9 +17,9 @@ export async function logTime(
   actor: ActorContext,
   e: { taskId: string; businessDate: string; minutes: number; note?: string | null },
 ): Promise<string> {
-  if (!actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
+  if (!actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, tr("err.shared.taiKhoanKhongGanHoSo"));
   if (!Number.isInteger(e.minutes) || e.minutes < 1 || e.minutes > 1440)
-    throw new AppError("VALIDATION", 422, "Số phút từ 1 đến 1.440");
+    throw new AppError("VALIDATION", 422, tr("err.work.soPhutTu1Den1"));
   const { rows } = await tx.query<{ project_id: string; involved: boolean; status: string }>(
     `SELECT t.project_id, t.status,
             (t.responsible_employee_id = $3 OR EXISTS (SELECT 1 FROM task_collaborator c WHERE c.task_id = t.id AND c.employee_id = $3)) AS involved
@@ -26,13 +27,14 @@ export async function logTime(
     [actor.companyId, e.taskId, actor.employeeId],
   );
   const t = rows[0];
-  if (!t) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
+  if (!t) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayCongViec"));
   if (!t.involved)
-    throw new AppError("FORBIDDEN", 403, "Chỉ khai giờ cho việc mình thực hiện", {
+    throw new AppError("FORBIDDEN", 403, tr("err.work.chiKhaiGioChoViecMinh"), {
       action: "timesheet.log",
       object: { type: "task", id: e.taskId },
     });
-  if (t.status === "cancelled") throw new AppError("INVALID_STATE", 409, "Không khai giờ cho việc đã huỷ");
+  if (t.status === "cancelled")
+    throw new AppError("INVALID_STATE", 409, tr("err.work.khongKhaiGioChoViecDa"));
   // Khoá theo nhân viên + ngày: tổng giờ dự án trong ngày không vượt 24 giờ (không cộng trùng khoảng giữa hai dự án).
   await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('ts:' || $1 || $2, 0))", [
     actor.employeeId,
@@ -43,7 +45,7 @@ export async function logTime(
     [actor.employeeId, e.businessDate],
   );
   if (Number(sum.rows[0]?.m ?? 0) + e.minutes > 1440)
-    throw new AppError("TIMESHEET_DAY_OVERFLOW", 422, "Tổng giờ dự án trong ngày vượt 24 giờ");
+    throw new AppError("TIMESHEET_DAY_OVERFLOW", 422, tr("err.work.tongGioDuAnTrongNgay"));
   const ins = await tx.query<{ id: string }>(
     `INSERT INTO timesheet_entry (company_id, employee_id, project_id, task_id, business_date, minutes, note, created_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
@@ -86,17 +88,18 @@ export async function decideTimesheet(
     [actor.companyId, id],
   );
   const e = rows[0];
-  if (!e) throw new AppError("NOT_FOUND", 404, "Không tìm thấy dòng giờ");
+  if (!e) throw new AppError("NOT_FOUND", 404, tr("err.work.khongTimThayDongGio"));
   const a = await projectAccess(tx, actor, e.project_id);
   if (!a.canManage)
-    throw new AppError("FORBIDDEN", 403, "Chỉ quản lý dự án duyệt giờ", {
+    throw new AppError("FORBIDDEN", 403, tr("err.work.chiQuanLyDuAnDuyet"), {
       action: "timesheet.approve",
       object: { type: "timesheet_entry", id },
     });
   if (e.created_by_user_id === actor.userId || e.employee_id === actor.employeeId)
-    throw new AppError("SELF_APPROVAL", 409, "Không tự duyệt giờ của mình");
-  if (e.status !== "submitted") throw new AppError("INVALID_STATE", 409, "Dòng giờ đã được xử lý");
-  if (decision === "reject" && !note?.trim()) throw new AppError("VALIDATION", 422, "Từ chối cần lý do");
+    throw new AppError("SELF_APPROVAL", 409, tr("err.work.khongTuDuyetGioCuaMinh"));
+  if (e.status !== "submitted") throw new AppError("INVALID_STATE", 409, tr("err.work.dongGioDaDuocXuLy"));
+  if (decision === "reject" && !note?.trim())
+    throw new AppError("VALIDATION", 422, tr("err.shared.tuChoiCanLyDo"));
   await tx.query(
     "UPDATE timesheet_entry SET status = $2, decided_by_user_id = $3, decided_at = now(), decision_note = $4 WHERE id = $1",
     [id, decision === "approve" ? "approved" : "rejected", actor.userId, note ?? null],
@@ -200,7 +203,7 @@ export async function explainDay(
   const res = await employeeResource(tx, actor.companyId, employeeId);
   // Chính chủ hoặc người quản lý công (attendance.read đi kèm vai trò quản lý) giải trình.
   await requireOn(tx, actor, "attendance.read", res, { type: "employee", id: employeeId });
-  if (note.trim() === "") throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
+  if (note.trim() === "") throw new AppError("VALIDATION", 422, tr("err.shared.canNoiDungGiaiTrinh"));
   await tx.query(
     `INSERT INTO reconciliation_note (company_id, employee_id, business_date, note, created_by_user_id) VALUES ($1,$2,$3,$4,$5)
      ON CONFLICT (employee_id, business_date) DO UPDATE SET note = EXCLUDED.note, created_by_user_id = EXCLUDED.created_by_user_id`,

@@ -2,15 +2,21 @@
 // POST /api/app/leave-requests, POST /api/app/ot-requests, POST /api/app/adjustments.
 import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
-import { json, readJson, withActor } from "../http/index.ts";
+import { json, readJson, withActor, type GuardOptions } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
-import { decide, pendingApprovals, type ApprovalType } from "./approvals.ts";
+import { parsePage } from "../nen/pagination.ts";
+import { decide, pendingApprovalsPage, type ApprovalType } from "./approvals.ts";
 import { requestLeave } from "./leave.ts";
 import { requestOt } from "./ot.ts";
 import { requestAdjustment } from "./period.ts";
+import { AdjustmentInput, LeaveInput, OtInput } from "./request-schema.pure.ts";
+import { t } from "../i18n/index.ts";
+
+/** POST ghi nghiệp vụ: bắt buộc Idempotency-Key (ARC-INT-001, BE-API-008). */
+const IDEMPOTENT: GuardOptions = { idempotent: true };
 
 export const getApprovals = withActor(async (ctx) =>
-  json({ items: await pendingApprovals(getPool(), ctx.actor) }),
+  json(await pendingApprovalsPage(getPool(), ctx.actor, parsePage(new URL(ctx.req.url).searchParams))),
 );
 
 export const postDecision = withActor(async (ctx) => {
@@ -23,24 +29,14 @@ export const postDecision = withActor(async (ctx) => {
     !["leave", "ot", "adjustment"].includes(type) ||
     !z.uuid().safeParse(id).success
   )
-    throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+    throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
   const b = z.object({ note: z.string().max(1000).nullish() }).parse(await readJson(ctx.req));
   await withTx((tx) => decide(tx, ctx.actor, type, id, decision as "approve" | "reject", b.note));
   return json({ ok: true });
-});
-
-const iso = z.iso.datetime({ offset: true });
+}, IDEMPOTENT);
 
 export const postLeave = withActor(async (ctx) => {
-  const b = z
-    .object({
-      leave_type_id: z.uuid(),
-      start_at: iso,
-      end_at: iso,
-      minutes: z.number().int().positive(),
-      reason: z.string().max(1000).nullish(),
-    })
-    .parse(await readJson(ctx.req));
+  const b = LeaveInput.parse(await readJson(ctx.req));
   const id = await withTx((tx) =>
     requestLeave(tx, ctx.actor, {
       leaveTypeId: b.leave_type_id,
@@ -51,17 +47,10 @@ export const postLeave = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);
 
 export const postOt = withActor(async (ctx) => {
-  const b = z
-    .object({
-      business_date: z.iso.date(),
-      minutes: z.number().int().positive(),
-      reason: z.string().min(1).max(1000),
-      consent: z.boolean(),
-    })
-    .parse(await readJson(ctx.req));
+  const b = OtInput.parse(await readJson(ctx.req));
   const id = await withTx((tx) =>
     requestOt(tx, ctx.actor, {
       businessDate: b.business_date,
@@ -71,19 +60,11 @@ export const postOt = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);
 
 export const postAdjustment = withActor(async (ctx) => {
-  const b = z
-    .object({
-      action: z.enum(["add_event", "void_event"]),
-      target_event_id: z.uuid().optional(),
-      new_kind: z.enum(["in", "out", "break_start", "break_end"]).optional(),
-      new_at: iso.optional(),
-      reason: z.string().min(1).max(1000),
-    })
-    .parse(await readJson(ctx.req));
-  if (!ctx.actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, "Tài khoản không gắn hồ sơ nhân viên");
+  const b = AdjustmentInput.parse(await readJson(ctx.req));
+  if (!ctx.actor.employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const id = await withTx((tx) =>
     requestAdjustment(tx, ctx.actor, {
       employeeId: ctx.actor.employeeId!,
@@ -95,4 +76,4 @@ export const postAdjustment = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);

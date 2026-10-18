@@ -1,2 +1,5 @@
+* text=auto
 *.sql text eol=lf
 *.sh text eol=lf
+# .env.example chỉ ghi thêm khoá mẫu (không giá trị) — gộp hai phía khi nhiều nhánh cùng thêm khoá.
+.env.example merge=union

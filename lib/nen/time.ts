@@ -1,4 +1,5 @@
 // Ngày nghiệp vụ theo múi giờ (mặc định Asia/Ho_Chi_Minh) — instant lưu UTC, ngày tính theo giờ địa phương.
+import { MS_PER_DAY } from "./units.ts";
 export const BUSINESS_TZ = "Asia/Ho_Chi_Minh";
 
 /** YYYY-MM-DD của instant `d` theo múi giờ `tz`. */
@@ -22,7 +23,7 @@ export function addBusinessDays(d: Date, n: number, tz: string = BUSINESS_TZ): D
   let t = new Date(d.getTime());
   let left = n;
   while (left > 0) {
-    t = new Date(t.getTime() + 86_400_000);
+    t = new Date(t.getTime() + MS_PER_DAY);
     const w = localWeekday(t, tz);
     if (w !== 0 && w !== 6) left--;
   }

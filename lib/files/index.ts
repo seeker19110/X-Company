@@ -6,11 +6,16 @@ import { appendAudit } from "../audit/index.ts";
 import type { ActorContext } from "../authz/index.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { log } from "../nen/log.ts";
+import { fetchLimit, MAX_PAGE, toPage, type PageRequest } from "../nen/pagination.ts";
 import { projectAccess } from "../work/tasks.ts";
+import { checkedFileName } from "./names.ts";
 import { sniff } from "./sniff.ts";
 import { getStorage } from "./storage.ts";
+import { mb } from "../nen/units.ts";
+import { t as tr } from "../i18n/index.ts";
 
-export const MAX_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_FILE_BYTES = mb(20);
 export type ObjectType = "task" | "project";
 export const OBJECT_TYPES: readonly ObjectType[] = ["task", "project"];
 
@@ -28,7 +33,7 @@ export async function objectAccess(
 ): Promise<ObjectAccess> {
   if (type === "project") {
     const a = await projectAccess(db, actor, id).catch(() => null);
-    if (!a?.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đối tượng");
+    if (!a?.canRead) throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayDoiTuong"));
     return { canRead: true, canWrite: a.canManage || a.isMember };
   }
   const { rows } = await db.query<{
@@ -43,9 +48,9 @@ export async function objectAccess(
     [actor.companyId, id, actor.employeeId],
   );
   const t = rows[0];
-  if (!t) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đối tượng");
+  if (!t) throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayDoiTuong"));
   const a = await projectAccess(db, actor, t.project_id);
-  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đối tượng");
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayDoiTuong"));
   const me = actor.employeeId;
   const involved = !!me && (me === t.responsible_employee_id || me === t.reviewer_employee_id || t.collab);
   return { canRead: true, canWrite: a.canManage || involved };
@@ -76,20 +81,20 @@ export async function uploadFile(
   requestId?: string,
 ): Promise<UploadResult> {
   if (!OBJECT_TYPES.includes(u.objectType))
-    throw new AppError("VALIDATION", 422, "Loại đối tượng không hợp lệ");
+    throw new AppError("VALIDATION", 422, tr("err.files.loaiDoiTuongKhongHopLe"));
   const access = await objectAccess(pool, actor, u.objectType, u.objectId);
   if (!access.canWrite)
-    throw new AppError("FORBIDDEN", 403, "Bạn không có quyền đính kèm vào đối tượng này", {
+    throw new AppError("FORBIDDEN", 403, tr("err.files.banKhongCoQuyenDinhKem"), {
       action: "file.upload",
       object: { type: u.objectType, id: u.objectId },
     });
-  if (u.data.length === 0) throw new AppError("VALIDATION", 422, "Tệp rỗng");
-  if (u.data.length > MAX_FILE_BYTES) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
+  if (u.data.length === 0) throw new AppError("VALIDATION", 422, tr("err.files.tepRong"));
+  if (u.data.length > MAX_FILE_BYTES)
+    throw new AppError("PAYLOAD_TOO_LARGE", 413, tr("err.files.tepVuot20Mb"));
   const kind = sniff(u.data);
-  if (!kind) throw new AppError("UNSUPPORTED_TYPE", 415, "Chỉ nhận PDF, ảnh PNG/JPEG/WebP, DOCX, XLSX");
+  if (!kind) throw new AppError("UNSUPPORTED_TYPE", 415, tr("err.files.chiNhanPdfAnhPngJpeg"));
   const sha256 = createHash("sha256").update(u.data).digest("hex");
-  const cleaned = u.originalName.replace(/[\\/\0\r\n"]/g, "_").slice(0, 200);
-  const name = cleaned === "" ? `tep.${kind.ext}` : cleaned;
+  const name = checkedFileName(u.originalName, kind);
   // Ghi kho trước, DB sau: không bao giờ có bản ghi trỏ tệp không tồn tại. Giao dịch lỗi → xoá bù blob vừa ghi (BASE-DATA-009).
   const storageKey = await getStorage().put(u.data);
   try {
@@ -107,11 +112,7 @@ async function discardOrphanBlob(pool: pg.Pool, storageKey: string): Promise<voi
     const { rowCount } = await pool.query("SELECT 1 FROM file_object WHERE storage_key = $1", [storageKey]);
     if (rowCount === 0) await getStorage().remove(storageKey);
   } catch (err) {
-    console.error(
-      "[files] không xoá bù được blob mồ côi:",
-      storageKey,
-      err instanceof Error ? err.message : err,
-    );
+    log.error("không xoá bù được blob mồ côi", { storage_key: storageKey, err });
   }
 }
 
@@ -137,7 +138,7 @@ async function recordUpload(
         [actor.companyId, documentId, u.objectType, u.objectId],
       );
       if ((d.rowCount ?? 0) === 0)
-        throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài liệu của đối tượng này");
+        throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayTaiLieuCua"));
     } else {
       const d = await tx.query<{ id: string }>(
         "INSERT INTO document (company_id, object_type, object_id, title) VALUES ($1, $2, $3, $4) RETURNING id",
@@ -187,11 +188,11 @@ export async function downloadFile(db: Queryable, actor: ActorContext, fileId: s
     [actor.companyId, fileId],
   );
   const f = rows[0];
-  if (!f) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tệp");
+  if (!f) throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayTep"));
   await objectAccess(db, actor, f.object_type, f.object_id); // 404 nếu không còn quyền đọc
   const data = await getStorage().get(f.storage_key);
   if (createHash("sha256").update(data).digest("hex") !== f.sha256)
-    throw new AppError("FILE_INTEGRITY", 500, "Tệp lưu trữ không khớp dấu băm");
+    throw new AppError("FILE_INTEGRITY", 500, tr("err.files.tepLuuTruKhongKhopDau"));
   return { mime: f.mime, name: f.original_name, sha256: f.sha256, data };
 }
 
@@ -215,10 +216,10 @@ export async function addComment(
 ): Promise<string> {
   const a = await objectAccess(tx, actor, type, id);
   // Bình luận: ai đọc được đối tượng thì bình luận được (trao đổi theo đối tượng — §4 P0).
-  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đối tượng");
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, tr("err.files.khongTimThayDoiTuong"));
   const text = body.trim();
   if (text === "" || text.length > 4000)
-    throw new AppError("VALIDATION", 422, "Bình luận từ 1 đến 4.000 ký tự");
+    throw new AppError("VALIDATION", 422, tr("err.files.binhLuanTu1Den4"));
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO comment (company_id, object_type, object_id, author_user_id, body) VALUES ($1, $2, $3, $4, $5) RETURNING id",
     [actor.companyId, type, id, actor.userId, text],
@@ -233,7 +234,13 @@ export async function addComment(
   return rows[0]!.id;
 }
 
-export async function listComments(db: Queryable, actor: ActorContext, type: ObjectType, id: string) {
+export async function listComments(
+  db: Queryable,
+  actor: ActorContext,
+  type: ObjectType,
+  id: string,
+  page: PageRequest = MAX_PAGE,
+) {
   await objectAccess(db, actor, type, id);
   const { rows } = await db.query<{
     id: string;
@@ -243,8 +250,9 @@ export async function listComments(db: Queryable, actor: ActorContext, type: Obj
     created_at: Date;
   }>(
     `SELECT c.id, c.author_user_id, u.display_name, c.body, c.created_at FROM comment c JOIN app_user u ON u.id = c.author_user_id
-     WHERE c.company_id = $1 AND c.object_type = $2 AND c.object_id = $3 ORDER BY c.created_at, c.id`,
-    [actor.companyId, type, id],
+     WHERE c.company_id = $1 AND c.object_type = $2 AND c.object_id = $3 ORDER BY c.created_at, c.id
+     LIMIT $4 OFFSET $5`,
+    [actor.companyId, type, id, fetchLimit(page), page.offset],
   );
-  return rows;
+  return toPage(rows, page);
 }

@@ -4,15 +4,16 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { resolvePath, sectionPages } from "@/app/components/site-data";
 import { pathFor, type PageType } from "@/lib/cms";
 import { ContactForm } from "@/app/components/contact-form";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 const SECTIONS: Record<string, { type: PageType; title: string }> = {
-  "dich-vu": { type: "service", title: "Dịch vụ" },
-  "du-an": { type: "project", title: "Dự án tiêu biểu" },
-  "nang-luc": { type: "capability", title: "Năng lực và chứng nhận" },
-  "tin-tuc": { type: "news", title: "Tin tức" },
-  "tuyen-dung": { type: "job", title: "Tuyển dụng" },
+  "dich-vu": { type: "service", title: t("site.section.services") },
+  "du-an": { type: "project", title: t("site.section.projects") },
+  "nang-luc": { type: "capability", title: t("site.section.capability") },
+  "tin-tuc": { type: "news", title: t("site.section.news") },
+  "tuyen-dung": { type: "job", title: t("site.section.jobs") },
 };
 
 type Props = { params: Promise<{ slug: string[] }> };
@@ -23,7 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (section) return { title: section.title, alternates: { canonical: `/${slug[0]}` } };
   if (slug.length === 1 && slug[0] === "lien-he") {
     const r = await resolvePath(slug);
-    return { title: r.kind === "page" ? r.page.title : "Liên hệ", alternates: { canonical: "/lien-he" } };
+    return {
+      title: r.kind === "page" ? r.page.title : t("contact.title"),
+      alternates: { canonical: "/lien-he" },
+    };
   }
   const r = await resolvePath(slug);
   if (r.kind !== "page") return {};
@@ -44,7 +48,7 @@ export default async function CmsPage({ params }: Props) {
       <>
         <h1>{section.title}</h1>
         {items.length === 0 ? (
-          <p className="muted">Nội dung đang được cập nhật.</p>
+          <p className="muted">{t("site.section.empty")}</p>
         ) : (
           <ul className="card-list">
             {items.map((p) => (
@@ -70,11 +74,11 @@ export default async function CmsPage({ params }: Props) {
         <article className="prose">
           <h1>{r.page.title}</h1>
           {r.page.summary && <p className="muted">{r.page.summary}</p>}
-          {/* eslint-disable-next-line react/no-danger -- HTML do markdown-it (html:false) sinh từ bản đã duyệt, không nhận HTML thô */}
+          {/* eslint-disable-next-line react/no-danger -- html chỉ do lib/web/safe-html.ts (markdown-it html:false + safeUrl) sinh từ bản đã duyệt qua lib/site */}
           <div dangerouslySetInnerHTML={{ __html: r.html }} />
         </article>
       ) : (
-        <h1>Liên hệ</h1>
+        <h1>{t("contact.title")}</h1>
       )}
       {isContact && <ContactForm />}
     </>
