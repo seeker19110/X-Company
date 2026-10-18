@@ -16,7 +16,7 @@
 
 ## Quy tắc tính (hàm thuần `computeShift`)
 - C1. Ghép cặp vào/ra theo thứ tự `device_time` sau khi sắp xếp (sự kiện đến sai thứ tự vẫn đúng). Nhiều cặp vào/ra trong một ca → cộng các khoảng **không chồng lấn**; khoảng chồng giữa hai thiết bị chỉ tính một lần.
-- C2. `present_minutes` = tổng khoảng có mặt (hợp các khoảng vào→ra) cắt vào cửa sổ `[start − early_grace⚙(60'), end + late_grace⚙(240')]`, trừ nghỉ: có sự kiện nghỉ (`break_start→break_end`) thì trừ đúng các khoảng nghỉ đã ghi (phần nằm trong khoảng có mặt); không có thì trừ `break_minutes` của mẫu ca khi có mặt > `break_minutes`. Phút làm tròn xuống theo phút nguyên; không làm tròn khác ⚙.
+- C2. `present_minutes` = tổng khoảng có mặt (hợp các khoảng vào→ra) cắt vào cửa sổ `[start − early_grace⚙(60'), end + late_grace⚙(240')]`, trừ nghỉ: có sự kiện nghỉ (`break_start→break_end`) thì trừ đúng các khoảng nghỉ đã ghi (phần nằm trong khoảng có mặt); không có thì trừ `break_minutes` của mẫu ca khi có mặt > `break_minutes`. Thời điểm sự kiện cắt về phút nguyên (bỏ giây) trước khi tính, nên tổng và các đoạn theo ngày luôn khớp; không làm tròn khác ⚙. Nghỉ cố định tính vào ngày lịch chứa điểm giữa ca (ngày đó không đủ phút → ngày có nhiều phút nhất). Ghép cặp vào/ra theo từng thiết bị rồi hợp khoảng.
 - C3. Thiếu `out` cuối → ngoại lệ `MISSING_CHECKOUT`; **không tự điền giờ ra**. Nếu cấu hình cho ước tính, giá trị mang nhãn `estimated=true` và không vào tổng chính thức tới khi được duyệt (§6).
 - C4. Phân đoạn theo ngày lịch (cho báo cáo) giữ liên kết với cùng ca: trả `segments[{calendar_date, minutes}]`.
 - C5. Đi sớm/về muộn **không tạo OT**; OT chỉ từ đơn OT được duyệt (§6). Kết quả có 4 số tách: `present_minutes`, `ot_requested_minutes`, `ot_approved_minutes`, `project_minutes` (từ T05).
