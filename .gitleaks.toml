@@ -1,0 +1,11 @@
+# Cấu hình gitleaks: giữ toàn bộ luật mặc định, chỉ bỏ qua MỘT tệp dữ liệu công khai.
+# Lý do: lib/identity/common-passwords.ts là danh sách mật khẩu phổ biến công khai
+# (SecLists NCSC 100k, MIT) dùng để TỪ CHỐI mật khẩu yếu (D-010) — chuỗi trong đó
+# không phải bí mật của hệ thống; luật generic-api-key/linkedin-client-secret báo nhầm.
+# Mọi thay đổi tệp này cần review như cấu hình cổng (không mở rộng allowlist sang tệp khác).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Danh sách mật khẩu phổ biến công khai (SecLists NCSC, MIT) — dữ liệu, không phải bí mật"
+paths = ['''^lib/identity/common-passwords\.ts$''']
