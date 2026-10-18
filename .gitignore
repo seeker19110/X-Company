@@ -1,2 +1,15 @@
 # X-Templates: trạng thái autopilot cục bộ
 .autopilot/
+
+# Node / Next
+node_modules/
+.next/
+next-env.d.ts
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.data/

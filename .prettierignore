@@ -1,0 +1,14 @@
+.xtemplates/
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+BLUEPRINT.md
+BLUEPRINT-BACKLOG.md
+docs/input/
+.claude/
+.github/rulesets/
+*.md
+.github/workflows/merge-gate.yml
