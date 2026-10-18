@@ -30,7 +30,7 @@ export default async function TasksPage() {
               </span>
               <TaskActions
                 id={task.id}
-                title={task.title}
+                taskTitle={task.title}
                 status={task.status}
                 version={task.version}
                 role={task.role}

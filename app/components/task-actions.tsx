@@ -46,13 +46,13 @@ function actionsFor(status: string, role: "responsible" | "reviewer"): Action[] 
 
 export function TaskActions({
   id,
-  title,
+  taskTitle,
   status,
   version,
   role,
 }: {
   id: string;
-  title: string;
+  taskTitle: string;
   status: string;
   version: number;
   role: "responsible" | "reviewer";
@@ -70,7 +70,7 @@ export function TaskActions({
     if (ask1) {
       const r = await ask({
         ...ask1,
-        object: title,
+        object: taskTitle,
         ...(NEEDS_REASON.includes(a) ? { reasonLabel: t("tasks.reasonLabel") } : {}),
       });
       if (!r.confirmed) return;
