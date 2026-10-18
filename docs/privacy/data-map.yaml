@@ -1,0 +1,417 @@
+# Sổ dữ liệu cá nhân (data map) — CMP-PRIV-001, STD-PRIV-002.
+# Nguồn sự thật cho script `npm run -s check:docs`: mọi cột có tên gợi PII trong migrations/*.sql phải có mặt ở `pii` hoặc `reviewed_non_pii`.
+# Cơ sở pháp lý và thời hạn lưu là ĐỀ XUẤT (D-016 cho phần mặc định) — pháp chế/HR xác nhận. status: planned = cột chưa có migration.
+# class: thuong | nhay_cam | bi_mat. Đồng bộ với docs/compliance/data-inventory.csv (script kiểm hai chiều).
+version: 1
+updated: 2026-10-18
+pii:
+  - table: employee
+    column: full_name
+    class: thuong
+    subject: nhan_vien
+    purpose: "định danh nhân viên trong chấm công, công việc, bảng công"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "audit_event.before/after (đã che theo tên khoá); period_export.content (CSV); sao lưu DB"
+    recipients: "HR, quản lý theo phạm vi; hệ lương nhận CSV"
+    status: implemented
+  - table: employee
+    column: work_email
+    class: thuong
+    subject: nhan_vien
+    purpose: "liên hệ công việc, thông báo"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB; audit_event.before/after"
+    recipients: "HR, quản lý theo phạm vi"
+    status: implemented
+  - table: employee
+    column: phone
+    class: thuong
+    subject: nhan_vien
+    purpose: "liên hệ công việc"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR, quản lý theo phạm vi"
+    status: implemented
+  - table: employee
+    column: hired_on
+    class: thuong
+    subject: nhan_vien
+    purpose: "hồ sơ nhân sự, tính phép"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR"
+    status: implemented
+  - table: employee
+    column: terminated_on
+    class: thuong
+    subject: nhan_vien
+    purpose: "hồ sơ nhân sự, thu hồi quyền"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR"
+    status: implemented
+  - table: employment_history
+    column: title
+    class: thuong
+    subject: nhan_vien
+    purpose: "lịch sử chức danh theo khoảng hiệu lực"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR, quản lý theo phạm vi"
+    status: implemented
+  - table: employment_history
+    column: manager_employee_id
+    class: thuong
+    subject: nhan_vien
+    purpose: "quan hệ quản lý trực tiếp theo khoảng hiệu lực"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR, quản lý theo phạm vi"
+    status: implemented
+  - table: app_user
+    column: email
+    class: thuong
+    subject: nguoi_dung
+    purpose: "đăng nhập, thông báo"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
+    copies: "sao lưu DB; login_attempt.email"
+    recipients: "chính chủ, quản trị"
+    status: implemented
+  - table: app_user
+    column: display_name
+    class: thuong
+    subject: nguoi_dung
+    purpose: "hiển thị trong giao diện"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
+    copies: "sao lưu DB"
+    recipients: "người dùng cùng phạm vi"
+    status: implemented
+  - table: app_user
+    column: password_hash
+    class: bi_mat
+    subject: nguoi_dung
+    purpose: "xác thực (Argon2id, chuỗi PHC)"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
+    copies: "sao lưu DB"
+    recipients: "không ai (chỉ so khớp ở máy chủ)"
+    status: implemented
+  - table: session
+    column: token_hash
+    class: bi_mat
+    subject: nguoi_dung
+    purpose: "phiên đăng nhập (lưu băm SHA-256)"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày"
+    copies: "sao lưu DB"
+    recipients: "không ai"
+    status: implemented
+  - table: session
+    column: ip
+    class: thuong
+    subject: nguoi_dung
+    purpose: "an ninh phiên, điều tra"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: session
+    column: user_agent
+    class: thuong
+    subject: nguoi_dung
+    purpose: "an ninh phiên, điều tra"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: login_attempt
+    column: email
+    class: thuong
+    subject: nguoi_dung
+    purpose: "giới hạn đăng nhập sai (5 lần/15 phút)"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: login_attempt
+    column: ip
+    class: thuong
+    subject: nguoi_dung
+    purpose: "giới hạn đăng nhập sai"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: inquiry
+    column: name
+    class: thuong
+    subject: khach_lien_he
+    purpose: "xử lý yêu cầu từ website"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "outbox_event.payload; sao lưu DB"
+    recipients: "người phụ trách yêu cầu (kinh doanh)"
+    status: implemented
+  - table: inquiry
+    column: email
+    class: thuong
+    subject: khach_lien_he
+    purpose: "liên hệ lại khách"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "outbox_event.payload; sao lưu DB"
+    recipients: "người phụ trách yêu cầu"
+    status: implemented
+  - table: inquiry
+    column: phone
+    class: thuong
+    subject: khach_lien_he
+    purpose: "liên hệ lại khách"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "người phụ trách yêu cầu"
+    status: implemented
+  - table: inquiry
+    column: message
+    class: thuong
+    subject: khach_lien_he
+    purpose: "nội dung nhu cầu (văn bản tự do, có thể chứa dữ liệu cá nhân)"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "người phụ trách yêu cầu"
+    status: implemented
+  - table: inquiry
+    column: ip_hash
+    class: thuong
+    subject: khach_lien_he
+    purpose: "chống spam (IP đã băm)"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: job_application
+    column: name
+    class: thuong
+    subject: ung_vien
+    purpose: "tuyển dụng"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "chỉ HR (và grant tuyển dụng)"
+    status: implemented
+  - table: job_application
+    column: email
+    class: thuong
+    subject: ung_vien
+    purpose: "tuyển dụng"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "chỉ HR"
+    status: implemented
+  - table: job_application
+    column: phone
+    class: thuong
+    subject: ung_vien
+    purpose: "tuyển dụng"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "chỉ HR"
+    status: implemented
+  - table: job_application
+    column: cover_letter
+    class: thuong
+    subject: ung_vien
+    purpose: "tuyển dụng (văn bản tự do)"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "chỉ HR"
+    status: implemented
+  - table: job_application
+    column: ip_hash
+    class: thuong
+    subject: ung_vien
+    purpose: "chống spam (IP đã băm)"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    copies: "sao lưu DB"
+    recipients: "quản trị"
+    status: implemented
+  - table: attendance_event
+    column: geo_lat
+    class: nhay_cam
+    subject: nhan_vien
+    purpose: "đối chiếu vị trí chấm công (GPS tắt mặc định tới khi có DPIA)"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế; chưa thu thật"
+    copies: "sao lưu DB; period_export.content nếu xuất"
+    recipients: "HR theo quyền"
+    status: implemented
+  - table: attendance_event
+    column: geo_lng
+    class: nhay_cam
+    subject: nhan_vien
+    purpose: "đối chiếu vị trí chấm công"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế; chưa thu thật"
+    copies: "sao lưu DB"
+    recipients: "HR theo quyền"
+    status: implemented
+  - table: attendance_event
+    column: geo_accuracy_m
+    class: nhay_cam
+    subject: nhan_vien
+    purpose: "độ chính xác vị trí"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế; chưa thu thật"
+    copies: "sao lưu DB"
+    recipients: "HR theo quyền"
+    status: implemented
+  - table: attendance_event
+    column: geo_captured_at
+    class: nhay_cam
+    subject: nhan_vien
+    purpose: "thời điểm lấy vị trí"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế; chưa thu thật"
+    copies: "sao lưu DB"
+    recipients: "HR theo quyền"
+    status: implemented
+  - table: attendance_event
+    column: device
+    class: thuong
+    subject: nhan_vien
+    purpose: "nhận diện thiết bị gửi sự kiện, chống chấm hộ"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "HR theo quyền"
+    status: implemented
+  - table: leave_request
+    column: reason
+    class: nhay_cam
+    subject: nhan_vien
+    purpose: "lý do nghỉ (văn bản tự do, có thể lộ thông tin sức khoẻ)"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "người duyệt theo phạm vi"
+    status: implemented
+  - table: file_object
+    column: original_name
+    class: thuong
+    subject: nhan_vien
+    purpose: "tên tệp do người dùng đặt (có thể chứa tên người)"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    copies: "sao lưu DB"
+    recipients: "người có quyền đọc đối tượng chứa tệp"
+    status: implemented
+  - table: audit_event
+    column: before
+    class: thuong
+    subject: nguoi_dung
+    purpose: "truy vết (đã che trường theo tên khoá nhạy cảm; email/SĐT chưa che)"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế (audit chỉ thêm)"
+    copies: "sao lưu DB"
+    recipients: "quản trị, người có quyền xem audit"
+    status: implemented
+  - table: audit_event
+    column: after
+    class: thuong
+    subject: nguoi_dung
+    purpose: "truy vết (như trên)"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế (audit chỉ thêm)"
+    copies: "sao lưu DB"
+    recipients: "quản trị, người có quyền xem audit"
+    status: implemented
+  - table: outbox_event
+    column: payload
+    class: thuong
+    subject: khach_lien_he
+    purpose: "nội dung thông báo chờ gửi (có thể chứa mã hồ sơ, tên, email)"
+    legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
+    retention: "đã gửi: 30 ngày (mặc định D-016)"
+    copies: "sao lưu DB"
+    recipients: "worker -> SMTP/Push (khi có)"
+    status: implemented
+  - table: period_export
+    column: content
+    class: thuong
+    subject: nhan_vien
+    purpose: "tệp CSV bảng công theo phiên bản (tên, mã nhân viên, phút công)"
+    legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    retention: "chưa chốt — pháp chế/kế toán"
+    copies: "hệ lương/kế toán nhận tệp; sao lưu DB"
+    recipients: "HR, kế toán"
+    status: implemented
+  - table: app_user
+    column: totp_secret
+    class: bi_mat
+    subject: nguoi_dung
+    purpose: "xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org)"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
+    copies: "chưa có"
+    recipients: "không ai"
+    status: planned
+  - table: push_subscription
+    column: endpoint
+    class: thuong
+    subject: nguoi_dung
+    purpose: "Web Push (VAPID, D-005)"
+    legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
+    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
+    copies: "chưa có"
+    recipients: "dịch vụ Web Push"
+    status: planned
+reviewed_non_pii:
+  - table: company
+    column: tax_code
+    reason: "mã số thuế của pháp nhân, không phải cá nhân"
+  - table: worksite
+    column: address
+    reason: "địa chỉ địa điểm làm việc của công ty, không phải nơi ở cá nhân (nếu địa điểm là nhà riêng thì phải chuyển sang PII)"
+  - table: worksite
+    column: lat
+    reason: "toạ độ địa điểm làm việc, không phải vị trí cá nhân"
+  - table: worksite
+    column: lng
+    reason: "toạ độ địa điểm làm việc, không phải vị trí cá nhân"
+linked_tables:
+  - table: shift_assignment
+    note: "ca làm của nhân viên (employee_id)"
+  - table: attendance_event
+    note: "giờ vào/ra theo nhân viên"
+  - table: leave_ledger
+    note: "sổ phép theo nhân viên"
+  - table: ot_request
+    note: "đề nghị làm thêm giờ theo nhân viên"
+  - table: period_line
+    note: "dòng bảng công theo nhân viên"
+  - table: timesheet_entry
+    note: "giờ dự án theo nhân viên"
+  - table: task_history
+    note: "lịch sử việc có actor/người liên quan"
+  - table: comment
+    note: "bình luận (văn bản tự do) theo tác giả"

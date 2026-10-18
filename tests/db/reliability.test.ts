@@ -391,7 +391,7 @@ describe("trùng khoá idempotency xử lý bằng ON CONFLICT", () => {
     const input = InquiryInput.parse({
       submission_id: randomUUID(),
       name: "Khách Đồng Thời",
-      email: "dongthoi@example.vn",
+      email: "dongthoi@example.test",
       message: "Cần tư vấn",
       consent: true,
       elapsed_ms: 15000,
@@ -427,7 +427,7 @@ describe("trùng khoá idempotency xử lý bằng ON CONFLICT", () => {
     const input = ApplicationInput.parse({
       submission_id: randomUUID(),
       name: "Ứng Viên Đồng Thời",
-      email: "uv@example.vn",
+      email: "uv@example.test",
       consent: true,
       elapsed_ms: 20000,
     });

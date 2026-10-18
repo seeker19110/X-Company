@@ -44,3 +44,7 @@ audit: npm audit --omit=dev --audit-level=moderate
 # claude_min_version: phiên bản Claude Code tối thiểu (vd 2.1.200) — `xt.py doctor` cảnh báo khi thấp hơn (LOOP-HARNESS-026).
 # Tổ chức ép thật bằng managed settings `requiredMinimumVersion`. Trống = không kiểm.
 claude_min_version: ""
+# Lệnh khai báo cho người/agent (XC-DX-002): cài theo lockfile, chạy dev, áp migration (cần MIGRATE_DATABASE_URL — role owner riêng).
+install: npm ci
+dev: npm run -s dev
+migrate: npm run -s db:migrate

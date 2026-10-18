@@ -46,10 +46,10 @@ describe("xác thực (T-007)", () => {
     assert.throws(() => validateNewPassword("Q1W2E3R4T5Y6"), isCode("WEAK_PASSWORD"));
     assert.throws(() => validateNewPassword("x".repeat(300)), isCode("WEAK_PASSWORD"));
     assert.throws(
-      () => validateNewPassword("nguyenvana-2026!", { email: "nguyenvana@x.vn" }),
+      () => validateNewPassword("nguyenvana-2026!", { email: "nguyenvana@example.test" }),
       isCode("WEAK_PASSWORD"),
     );
-    validateNewPassword("Cau-mat-khau-rat-dai-2026", { email: "nguyenvana@x.vn" });
+    validateNewPassword("Cau-mat-khau-rat-dai-2026", { email: "nguyenvana@example.test" });
   });
 
   test("đăng nhập đúng → cookie HttpOnly + CSRF; /me trả vai trò; email không phân biệt hoa thường", async () => {

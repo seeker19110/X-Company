@@ -36,7 +36,7 @@ describe("loadActor + grant/revoke trên DB", () => {
       dOther = await createDepartment(tx, sys, c2, { code: "D1", name: "D1", branchId: b2 });
       emp = await createEmployee(tx, sys, c1, { code: "TL1", fullName: "Trưởng nhóm" });
       const { rows } = await tx.query(
-        "INSERT INTO app_user (email, display_name, company_id, employee_id) VALUES ('tl@a.vn', 'TL', $1, $2) RETURNING id",
+        "INSERT INTO app_user (email, display_name, company_id, employee_id) VALUES ('tl@example.test', 'TL', $1, $2) RETURNING id",
         [c1, emp],
       );
       user = rows[0].id;

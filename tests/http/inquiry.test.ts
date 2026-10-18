@@ -19,7 +19,7 @@ function form(overrides: Record<string, unknown> = {}) {
   return {
     submission_id: randomUUID(),
     name: "Nguyễn Văn Khách",
-    email: "khach@example.vn",
+    email: "khach@example.test",
     phone: null,
     message: "Cần tư vấn hệ thống điện",
     consent: true,
@@ -170,7 +170,7 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
       submission_id: randomUUID(),
       job_slug: "ky-su-dien",
       name: "Ứng viên A",
-      email: "uv@x.vn",
+      email: "uv@example.test",
       consent: true,
     };
     const res = await post(postApplication as typeof postInquiry, "/api/public/applications", app);

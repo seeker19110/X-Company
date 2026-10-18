@@ -1,0 +1,39 @@
+name: Đề xuất tính năng / việc cần làm
+description: Việc mới theo spec (F-NNN). Chỉ gắn nhãn `ready` khi checklist DoR bên dưới đủ.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nhãn `ready` chỉ được người duyệt gán khi mọi ô Definition of Ready đã tick (WF-TEAM-003). Chưa Ready thì hỏi, không code.
+  - type: input
+    id: feature
+    attributes:
+      label: Tính năng/spec liên quan (F-NNN, docs/specs/SPEC-*.md)
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề và người dùng
+      description: Ai gặp vấn đề gì, hiện làm thế nào.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Tiêu chí chấp nhận (Given/When/Then, mã AC-<MIỀN>-NN)
+    validations:
+      required: true
+  - type: checkboxes
+    id: dor
+    attributes:
+      label: Definition of Ready
+      options:
+        - label: Tiêu chí chấp nhận đo được, có ca lỗi và ca biên
+        - label: Không còn câu hỏi mở quan trọng (hoặc đã có quyết định D-NNN)
+        - label: Phụ thuộc đã xác định (task/dịch vụ/người)
+        - label: Thiết kế/luồng đủ rõ (wireframe nếu có giao diện)
+        - label: Phạm vi gói trong một PR
+        - label: Ảnh hưởng dữ liệu cá nhân đã rà (docs/privacy/data-map.yaml)

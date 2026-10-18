@@ -1,4 +1,4 @@
-import { readiness } from "@/lib/nen/health";
+import { readyzHandler } from "@/lib/nen/health";
 
 export const dynamic = "force-dynamic";
-export const GET = () => readiness();
+export const GET = readyzHandler;

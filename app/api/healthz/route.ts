@@ -1,4 +1,4 @@
-import { liveness } from "@/lib/nen/health";
+import { healthzHandler } from "@/lib/nen/health";
 
 export const dynamic = "force-dynamic";
-export const GET = () => liveness();
+export const GET = healthzHandler;

@@ -49,3 +49,7 @@ export async function readiness(
   }
   return (await dbReachable(pool, timeoutMs)) ? body("ok") : body("db_unavailable", 503);
 }
+
+/** Handler route không tham số — route chỉ gán tên hàm (cùng mẫu publicRoute/withActor). */
+export const healthzHandler = (): Response => liveness();
+export const readyzHandler = (): Promise<Response> => readiness();
