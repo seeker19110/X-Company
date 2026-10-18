@@ -63,3 +63,23 @@ Autopilot bắt đầu bằng `python3 .xtemplates/scripts/xt.py doctor --fix` (
 - Đặt tên / kiến trúc / thư viện chính và lý do: `docs/adr/0001-stack.md`; quyết định tự duyệt ở `docs/autopilot/DECISIONS.md`. Route chỉ gọi `lib/` qua `withActor`; `lib/` không import `next/*`; quyền kiểm bằng `can()` ở server; mọi ghi nghiệp vụ kèm `audit.append` trong cùng giao dịch.
 - Môi trường & secrets: biến môi trường theo `.env.example` (không commit giá trị); test dùng Postgres thật qua `scripts/with-test-db.sh` (tự dựng cụm tạm bằng `initdb` khi không có `DATABASE_URL`) — test DB không bao giờ skip.
 - Giao tiếp: tiếng Việt có dấu, ngắn, dẫn đầu bằng kết quả; báo cáo cuối việc: đã làm · bằng chứng · quyết định tự duyệt (D-NNN) · còn treo · đề xuất.
+
+## 10. Lệnh
+Trích **nguyên văn** từ `xt.yaml` (nguồn duy nhất; script `npm run -s check:repo-docs` so khớp). Không suy diễn lệnh từ văn xuôi.
+```text
+install: npm ci
+dev: npm run -s dev
+lint: npm run -s lint && npm run -s format:check
+typecheck: npm run -s typecheck
+test: npm run -s test
+build: npm run -s build
+format: npm run -s format
+format_check: npm run -s format:check
+coverage: npm run -s coverage
+e2e: npm run -s e2e
+audit: npm audit --omit=dev --audit-level=moderate
+migrate: npm run -s db:migrate
+```
+Cổng trước commit: `.xtemplates/scripts/dev-task.sh gate`. Kiểm tài liệu: `npm run -s check:repo-docs` · `npm run -s check:docs`.
+
+Hướng dẫn này không thay cho hook/permission — máy kiểm mới là hàng rào.

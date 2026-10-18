@@ -1,0 +1,41 @@
+# CODEOWNERS — vùng nhạy cảm luôn có chủ dự án review (WF-REVIEW-007, BASE-GATE-009, XC-DOCAI-005).
+# Dòng sau thắng dòng trước. Quy tắc: thêm đường dẫn mới chứa PII/auth/mật mã/cổng → thêm dòng ở đây trong cùng PR.
+
+# Mặc định
+*                       @seeker19110
+
+# Auth, quyền, mật mã, bí mật
+/lib/identity/          @seeker19110
+/lib/authz/             @seeker19110
+/lib/auth/              @seeker19110
+/lib/crypto/            @seeker19110
+/lib/files/             @seeker19110
+
+# Dữ liệu và migration (PII nằm ở đây)
+/migrations/            @seeker19110
+/lib/db/                @seeker19110
+/lib/audit/             @seeker19110
+/lib/org/               @seeker19110
+/lib/attendance/        @seeker19110
+/lib/inquiry/           @seeker19110
+/docs/privacy/          @seeker19110
+/docs/compliance/       @seeker19110
+/docs/DPIA.md           @seeker19110
+
+# Cổng chất lượng, CI, hook, chỉ dẫn cho agent
+/.github/               @seeker19110
+/.claude/               @seeker19110
+/AGENTS.md              @seeker19110
+/CLAUDE.md              @seeker19110
+/xt.yaml                @seeker19110
+/eslint.config.*        @seeker19110
+/tsconfig*.json         @seeker19110
+/package.json           @seeker19110
+/package-lock.json      @seeker19110
+
+# Bảo mật và vận hành
+/SECURITY.md            @seeker19110
+/docs/THREAT-MODEL.md   @seeker19110
+/docs/ops/              @seeker19110
+/docs/security/         @seeker19110
+/public/.well-known/    @seeker19110

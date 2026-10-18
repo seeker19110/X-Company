@@ -41,3 +41,7 @@ merge_hard_exceptions: human
 e2e: npm run -s e2e
 e2e_affected: ""
 audit: npm audit --omit=dev --audit-level=moderate
+# Lệnh khai báo cho người/agent (XC-DX-002): cài theo lockfile, chạy dev, áp migration (cần MIGRATE_DATABASE_URL — role owner riêng).
+install: npm ci
+dev: npm run -s dev
+migrate: npm run -s db:migrate
