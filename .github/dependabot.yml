@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Nâng SHA của action đã ghim (uses: owner/repo@<sha> # vX.Y.Z); gom nhóm để không phình WIP.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]
+  # Công cụ cổng (ruff, mypy) khoá kèm hash ở requirements-dev.txt — gom một PR mỗi tuần.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    groups:
+      dev-tools:
+        patterns: ["*"]
