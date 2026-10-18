@@ -22,3 +22,7 @@ updates:
         dependency-type: production
       dev:
         dependency-type: development
+    ignore:
+      # typescript 7 vỡ peer của typescript-eslint 8 (npm ci đỏ trên main sau #6) — gỡ khi typescript-eslint hỗ trợ TS 7.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
