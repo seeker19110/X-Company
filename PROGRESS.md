@@ -3,7 +3,7 @@
 > Giai đoạn hiện tại: G7 cứng hoá xong phần trong repo (autopilot, lát 8) · Cập nhật: 2026-10-18 · Nhánh: claude/focused-cannon-3iu4lk
 
 ## Đang làm
-- PR #11 (lát 8 + T-031…T-043) chờ chủ dự án merge — ngoại lệ cứng (auth/audit/dữ liệu người dùng). CI xanh trên head đã kiểm.
+- PR #11 đã merge (c533be5). Việc sau đó (T-043 OpenAPI, GO-NO-GO, sửa lệnh kiểm) chờ PR mới. CI xanh trên head đã kiểm.
 - Không còn task PLAN chưa tick. 106 mục blueprint đã `loop defer` chờ người/hạ tầng; `GO-NO-GO.md` = NO-GO production.
 
 ## Tiếp theo
@@ -18,7 +18,7 @@
 - 6 lệnh `— Kiểm:` lỗi thời/tự khớp cần người cho phép chỉnh (BASE-SEC-002, ARC-STYLE-003, UX-CONTENT-005, BASE-CFG-006, WF-CI-004, SEC-SUPPLY-009)
 
 ## Bàn giao phiên
-- Commit cuối trên nhánh chính: `db83524` (main sau #13) · nhánh làm việc trên PR #11
+- Commit cuối trên nhánh chính: `c533be5` (main sau #11 squash-merge) · việc sau #11 (OpenAPI, GO-NO-GO, sửa lệnh kiểm) ở nhánh làm việc, chờ PR mới
 - Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` (592 test xanh) · `npm run -s e2e` 31/31 · `check:arch` xanh
 - Đang chặn: không · Việc dở chưa commit: không
 - Câu hỏi cần người: merge PR #11; sửa lỗi phân trang `merge-check` ở xt.py trong repo này hay ở repo khung (FB-001)
