@@ -2585,9 +2585,13 @@ def _doctor_harness_parts(base: Path) -> List[Finding]:
     claude = base / ".claude"
     missing = [f"skills/{s}/SKILL.md" for s in DOCTOR_SKILLS if not (claude / "skills" / s / "SKILL.md").is_file()]
     missing += [f"agents/{a}.md" for a in DOCTOR_AGENTS if not (claude / "agents" / f"{a}.md").is_file()]
-    pending = sorted(
-        p.relative_to(base).as_posix() for p in (*base.glob("*.xtemplates-new"), *claude.rglob("*.xtemplates-new"))
+    # `.github/`: bản mới của mẫu `install.py --with-github` (ruleset, mẫu PR, Dependabot, merge-gate) — review #115
+    roots = (
+        *base.glob("*.xtemplates-new"),
+        *claude.rglob("*.xtemplates-new"),
+        *(base / ".github").rglob("*.xtemplates-new"),
     )
+    pending = sorted(p.relative_to(base).as_posix() for p in roots)
     fence = [p for p in pending if p.startswith(".claude/hooks/") or p.startswith(".claude/settings")]
     rest = [p for p in pending if p not in fence]
     out = []
