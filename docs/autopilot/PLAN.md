@@ -60,7 +60,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 
 ### Lát 2 — Danh tính, tổ chức, quyền, audit (F-001, F-002)
 - [x] `T-004` audit_event chỉ thêm + chuỗi băm + `verify-audit-chain` (S-ID-08) — Gate: `npm run -s test:file -- tests/db/audit.test.ts`
-- [ ] `T-005` Tổ chức: company/branch/department (cây, chặn chu trình)/worksite/employee/employment_history hiệu lực theo khoảng — Gate: `npm run -s test:file -- tests/db/org.test.ts`
+- [x] `T-005` Tổ chức: company/branch/department (cây, chặn chu trình)/worksite/employee/employment_history hiệu lực theo khoảng — Gate: `npm run -s test:file -- tests/db/org.test.ts`
 - [ ] `T-006` `can()` thuần + role_grant + phạm vi cây phòng ban, R1–R7 (S-ID-01..04, 06) — Gate: `npm run -s test:file -- tests/unit/authz.test.ts tests/db/authz-scope.test.ts`
 - [ ] `T-007` Đăng nhập Argon2id, phiên băm, CSRF, rate limit, thu hồi tức thì (S-ID-05, 07, 09) — Gate: `npm run -s test:file -- tests/http/auth.test.ts`
 
