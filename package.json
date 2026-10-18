@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\"",
+    "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\"",
     "test:file": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1",
     "coverage": "scripts/coverage.sh",
     "e2e": "scripts/with-test-db.sh scripts/e2e.sh",
@@ -37,7 +37,9 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:coverage-baseline": "node scripts/check-coverage-baseline.mjs",
     "check:ci-policy": "node scripts/check-ci-policy.mjs",
-    "check:deps": "npm ls --depth=0 > /dev/null"
+    "check:deps": "npm ls --depth=0 > /dev/null",
+    "build:tokens": "node scripts/build-tokens.mjs",
+    "check:tokens": "node scripts/check-tokens.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

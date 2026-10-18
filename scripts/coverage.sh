@@ -7,4 +7,4 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 rm -rf coverage
 scripts/with-test-db.sh npx --no-install c8 --config .c8rc.json --temp-directory "$TMP" \
-  node --import tsx --test --test-concurrency=1 "tests/**/*.test.ts"
+  node --import tsx --test --test-concurrency=1 "tests/**/*.test.ts" "tests/**/*.test.tsx"

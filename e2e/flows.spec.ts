@@ -36,6 +36,28 @@ test.describe("website công khai (AT01)", () => {
   });
 });
 
+test.describe("biểu mẫu: lỗi theo từng ô (FE-FORM-001/002)", () => {
+  test("liên hệ: gửi rỗng → không gọi server; ô lỗi có aria-invalid + aria-describedby trỏ tới thông điệp", async ({
+    page,
+  }) => {
+    let posted = 0;
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/api/public/inquiries")) posted += 1;
+    });
+    await page.goto("/lien-he");
+    await page.getByRole("button", { name: "Gửi yêu cầu" }).click();
+    for (const label of ["Họ tên (bắt buộc)", "Nhu cầu (bắt buộc)"]) {
+      const field = page.getByLabel(label);
+      await expect(field).toHaveAttribute("aria-invalid", "true");
+      const id = await field.getAttribute("aria-describedby");
+      await expect(page.locator(`[id="${id}"]`)).not.toBeEmpty();
+    }
+    await expect(page.locator(".form-error")).toContainText("Vui lòng kiểm tra");
+    expect(posted).toBe(0);
+    await expectAccessible(page);
+  });
+});
+
 test.describe("ứng dụng nội bộ", () => {
   test("chưa đăng nhập → /app/login; trang đăng nhập tiếp cận được @mobile", async ({ page }) => {
     await page.goto("/app/today");
@@ -82,6 +104,14 @@ test.describe("ứng dụng nội bộ", () => {
     const r = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
     await expect(r).toContainText("bạn nghiệm thu");
     await r.getByRole("button", { name: "Nghiệm thu" }).click();
+    // UX-STATE-008: hộp thoại nêu tên việc; Esc đóng mà không nghiệm thu; nút ghi đúng động từ.
+    const dialog = page.getByRole("dialog", { name: "Nghiệm thu việc?" });
+    await expect(dialog).toContainText("Lắp đặt tủ điện tầng 3");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(r).toBeVisible();
+    await r.getByRole("button", { name: "Nghiệm thu" }).click();
+    await dialog.getByRole("button", { name: "Nghiệm thu việc" }).click();
     await expect(page.getByText("Lắp đặt tủ điện tầng 3")).toHaveCount(0);
     await logout(page);
   });
@@ -110,12 +140,21 @@ test.describe("ứng dụng nội bộ", () => {
     const adjItem = page.getByRole("listitem").filter({ hasText: "Sửa công" });
     await adjItem.getByRole("button", { name: "Duyệt" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Sửa công" })).toHaveCount(0);
-    page.once("dialog", (d) => void d.accept("Trùng lịch kiểm tra công trình"));
-    await page
-      .getByRole("listitem")
-      .filter({ hasText: "Nghỉ phép" })
-      .getByRole("button", { name: "Từ chối" })
-      .click();
+    const leaveItem = page.getByRole("listitem").filter({ hasText: "Nghỉ phép" });
+    await leaveItem.getByRole("button", { name: "Từ chối" }).click();
+    // UX-STATE-008 + FE-FORM-002: hộp thoại nêu đối tượng; Esc = huỷ (đơn còn nguyên); lý do bắt buộc.
+    const dialog = page.getByRole("dialog", { name: "Từ chối đơn?" });
+    await expect(dialog).toContainText("Nghỉ phép của Lê Thị Hai");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(leaveItem).toBeVisible();
+    await leaveItem.getByRole("button", { name: "Từ chối" }).click();
+    await dialog.getByRole("button", { name: "Từ chối đơn" }).click();
+    const reason = dialog.getByLabel("Lý do từ chối");
+    await expect(reason).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.getByText("Vui lòng nhập lý do.")).toBeVisible();
+    await reason.fill("Trùng lịch kiểm tra công trình");
+    await dialog.getByRole("button", { name: "Từ chối đơn" }).click();
     await expect(page.getByText("Không có đơn chờ bạn duyệt.")).toBeVisible();
     await logout(page);
   });
@@ -153,6 +192,43 @@ test.describe("ứng dụng nội bộ", () => {
     const dbs = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
     // Chỉ còn tối đa DB của người đang đăng nhập (DB của người trước đã bị xoá).
     expect(dbs.filter((n) => n?.startsWith("xc-")).length).toBeLessThanOrEqual(1);
+    await logout(page);
+  });
+});
+
+test.describe("lỗi máy chủ (UX-STATE-005)", () => {
+  // Service worker xử lý fetch nên page.route không thấy request; chặn để mock được phản hồi 500.
+  test.use({ serviceWorkers: "block" });
+
+  test("UX-STATE-005: API trả 500 → thông báo không lộ chi tiết; gửi lại (cùng Idempotency-Key) thành công", async ({
+    page,
+  }) => {
+    await login(page, "nv2");
+    await page.goto("/app/attendance");
+    const keys: (string | undefined)[] = [];
+    let calls = 0;
+    await page.route("**/api/app/ot-requests", async (route) => {
+      keys.push(route.request().headers()["idempotency-key"]);
+      calls += 1;
+      if (calls === 1) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/problem+json",
+          body: JSON.stringify({ error: { message: "Lỗi hệ thống, vui lòng thử lại" } }),
+        });
+      } else await route.continue();
+    });
+    const ot = page.locator("form").filter({ has: page.getByRole("heading", { name: "Làm thêm giờ" }) });
+    await ot.getByLabel("Ngày").fill("2026-12-07");
+    await ot.getByLabel("Lý do").fill("Hoàn thiện hạng mục gấp");
+    await ot.getByRole("checkbox").check();
+    await ot.getByRole("button", { name: "Gửi đơn OT" }).click();
+    const status = page.getByRole("status").first();
+    await expect(status).toContainText("Lỗi hệ thống");
+    await expect(status).not.toContainText(/(Error:|at .*\.js|SELECT|Exception|TypeError)/);
+    await ot.getByRole("button", { name: "Gửi đơn OT" }).click();
+    await expect(status).toContainText("Đã gửi đơn");
+    expect(keys[1]).toBe(keys[0]);
     await logout(page);
   });
 });

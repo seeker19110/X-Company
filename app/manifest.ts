@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BACKGROUND_COLOR, THEME_COLOR } from "@/lib/web/theme";
 
 /** Manifest PWA (SPEC-pwa): cài đặt ứng dụng nội bộ; phạm vi /app/, mở thẳng màn hình Hôm nay. */
 export default function manifest(): MetadataRoute.Manifest {
@@ -12,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/app/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#ffffff",
-    theme_color: "#0f3d5e",
+    background_color: BACKGROUND_COLOR,
+    theme_color: THEME_COLOR,
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

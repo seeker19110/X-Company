@@ -7,6 +7,8 @@
   --border: #d5dde3;
   --danger: #a4161a;
   --ok: #1b6e3c;
+  --warn: #8a5300;
+  --focus: #0a58ca; /* viền focus: ≥ 3:1 với --bg (WCAG 1.4.11) */
   font-family:
     system-ui,
     -apple-system,
@@ -27,6 +29,14 @@ a {
   color: var(--brand);
 }
 :focus-visible {
-  outline: 3px solid #f2a900;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+.field-error {
+  display: block;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+[aria-invalid="true"] {
+  border-color: var(--danger);
 }
