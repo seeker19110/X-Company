@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import pg from "pg";
 import { listMigrations, runMigrations } from "../../lib/db/migrate.ts";
-import { PG_SESSION_OPTIONS, POOL_TIMEOUTS, setPool } from "../../lib/db/index.ts";
+import { guardIdleErrors, PG_SESSION_OPTIONS, POOL_TIMEOUTS, setPool } from "../../lib/db/index.ts";
 
 export const APP_LOGIN = "xc_app_test";
 // Mật khẩu của role test trên cụm test (không phải bí mật: cụm tạm/CI service, không có dữ liệu thật).
@@ -93,14 +93,17 @@ export async function freshDb(): Promise<TestDb> {
   const tpl = await ensureTemplate();
   const name = `xc_t_${randomBytes(6).toString("hex")}`;
   await adminQuery(`CREATE DATABASE ${name} TEMPLATE ${tpl}`);
-  const admin = new pg.Pool({ connectionString: urlFor(name), max: 4 });
+  const admin = guardIdleErrors(new pg.Pool({ connectionString: urlFor(name), max: 4 }), "test-admin");
   // Giống production: đăng nhập bằng role ứng dụng (thừa kế xc_app_rw), không SET ROLE.
-  const app = new pg.Pool({
-    connectionString: urlFor(name, { user: APP_LOGIN, password: APP_LOGIN_PW }),
-    max: 6,
-    options: PG_SESSION_OPTIONS,
-    ...POOL_TIMEOUTS,
-  });
+  const app = guardIdleErrors(
+    new pg.Pool({
+      connectionString: urlFor(name, { user: APP_LOGIN, password: APP_LOGIN_PW }),
+      max: 6,
+      options: PG_SESSION_OPTIONS,
+      ...POOL_TIMEOUTS,
+    }),
+    "test-app",
+  );
   setPool(app);
   return {
     name,
@@ -119,7 +122,7 @@ export async function freshDb(): Promise<TestDb> {
 export async function emptyDb(): Promise<{ name: string; pool: pg.Pool; close(): Promise<void> }> {
   const name = `xc_e_${randomBytes(6).toString("hex")}`;
   await adminQuery(`CREATE DATABASE ${name}`);
-  const pool = new pg.Pool({ connectionString: urlFor(name), max: 2 });
+  const pool = guardIdleErrors(new pg.Pool({ connectionString: urlFor(name), max: 2 }), "test-empty");
   return {
     name,
     pool,

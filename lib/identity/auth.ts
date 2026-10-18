@@ -6,9 +6,10 @@ import { AppError } from "../nen/app-error.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
+import { minutesToMs, msToSeconds } from "../nen/units.ts";
 
 export const MAX_FAILURES = 5;
-export const WINDOW_MS = 15 * 60_000;
+export const WINDOW_MS = minutesToMs(15);
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -53,7 +54,7 @@ export async function login(
     const f = fails.rows[0]!;
     if (f.n >= MAX_FAILURES) {
       const oldest = f.oldest?.getTime() ?? now.getTime();
-      const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
+      const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + WINDOW_MS - now.getTime())));
       logSecurityEvent({
         ...meta,
         event: "auth.rate_limited",

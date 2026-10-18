@@ -3,6 +3,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { AppError } from "../nen/app-error.ts";
 import { env } from "../nen/env.ts";
+import { epochSeconds, msToSeconds } from "../nen/units.ts";
 
 export interface QrPayload {
   v: 1;
@@ -42,7 +43,7 @@ export function issueQr(
     kid,
     cid: companyId,
     ws: worksiteId,
-    iat: Math.floor(now.getTime() / 1000),
+    iat: epochSeconds(now),
     ttl: ttlSec,
     n: randomBytes(8).toString("base64url"),
   };
@@ -70,6 +71,6 @@ export function verifyQrSignature(token: string): QrPayload {
 }
 
 export function qrExpired(p: QrPayload, at: Date, leewaySec: number): boolean {
-  const t = at.getTime() / 1000;
+  const t = msToSeconds(at.getTime());
   return t > p.iat + p.ttl + leewaySec || t < p.iat - leewaySec;
 }

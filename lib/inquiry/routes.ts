@@ -4,11 +4,12 @@ import { getPool } from "../db/index.ts";
 import { authorize, clientIp, json, publicRoute, readJson, withActor } from "../http/index.ts";
 import { siteCompanyId } from "../site/index.ts";
 import { ApplicationInput, checkRate, InquiryInput, submitApplication, submitInquiry } from "./index.ts";
+import { kb } from "../nen/units.ts";
 
 export const postInquiry = publicRoute(async ({ req, requestId }) => {
   const ip = clientIp(req);
   await checkRate(getPool(), "inquiry", ip);
-  const input = InquiryInput.parse(await readJson(req, 16 * 1024));
+  const input = InquiryInput.parse(await readJson(req, kb(16)));
   const r = await submitInquiry(getPool(), siteCompanyId(), input, { ip, requestId });
   return json({ code: r.code }, r.created ? 201 : 200);
 });
@@ -16,7 +17,7 @@ export const postInquiry = publicRoute(async ({ req, requestId }) => {
 export const postApplication = publicRoute(async ({ req, requestId }) => {
   const ip = clientIp(req);
   await checkRate(getPool(), "application", ip);
-  const input = ApplicationInput.parse(await readJson(req, 24 * 1024));
+  const input = ApplicationInput.parse(await readJson(req, kb(24)));
   const r = await submitApplication(getPool(), siteCompanyId(), input, { ip, requestId });
   return json({ code: r.code }, r.created ? 201 : 200);
 });

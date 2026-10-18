@@ -7,6 +7,7 @@ import { eventResponseBody, handleEvent } from "../attendance/routes.ts";
 import { json, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import type { ItemResult } from "./queue.ts";
+import { kb } from "../nen/units.ts";
 
 const Batch = z.object({
   items: z
@@ -28,7 +29,7 @@ const SYNC_LIMIT = { bucket: "sync.post", max: 60, windowSec: 60 };
 
 export const postSync = withActor(
   async (ctx) => {
-    const b = Batch.parse(await readJson(ctx.req, 256 * 1024));
+    const b = Batch.parse(await readJson(ctx.req, kb(256)));
     const results: ItemResult[] = [];
     for (const item of b.items) {
       try {

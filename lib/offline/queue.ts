@@ -2,6 +2,7 @@
 // Trạng thái hiển thị: pending "Đã lưu trên thiết bị" → (gửi 2xx) confirmed "Đã xác nhận" | needs_review "Chờ xác minh";
 // lỗi tạm (mạng, 408, 429, 5xx) thử lại lùi luỹ thừa 1 s → 5 phút có jitter, tôn trọng Retry-After; lỗi 4xx khác → rejected, không thử lại.
 // id của bản ghi chính là Idempotency-Key: gửi lại sau timeout không tạo bản ghi trùng ở server.
+import { daysToMs, minutesToMs, secondsToMs } from "../nen/units.ts";
 
 export type QueueState = "pending" | "confirmed" | "needs_review" | "rejected";
 export type QueueKind = "attendance";
@@ -47,7 +48,7 @@ export type ItemResult =
 /** Gửi một lô; ném lỗi khi hỏng cả request (mất mạng) — mọi bản ghi giữ pending để thử lại. */
 export type SendBatch = (items: QueueItem[]) => Promise<ItemResult[]>;
 
-export const MAX_BACKOFF_MS = 5 * 60_000;
+export const MAX_BACKOFF_MS = minutesToMs(5);
 export const BATCH_SIZE = 50;
 
 /** Trần tôn trọng `Retry-After`: máy chủ đòi chờ lâu hơn thì vẫn thử lại sau 1 giờ (không treo bản ghi vô hạn). */
@@ -76,7 +77,7 @@ export function parseRetryAfter(
 ): number | undefined {
   const v = value?.trim();
   if (!v) return undefined;
-  if (/^\d+$/.test(v)) return Math.min(Number(v) * 1000, MAX_RETRY_AFTER_MS);
+  if (/^\d+$/.test(v)) return Math.min(secondsToMs(Number(v)), MAX_RETRY_AFTER_MS);
   if (!/[A-Za-z]{3}/.test(v)) return undefined; // chuỗi số lạ (vd "-5") V8 vẫn đọc thành ngày — không tin
   const at = Date.parse(v);
   return Number.isNaN(at) ? undefined : Math.min(Math.max(0, at - now), MAX_RETRY_AFTER_MS);
@@ -193,7 +194,7 @@ export async function flush(
         else report.needsReview++;
       } else if (isRetryable(r.httpStatus)) {
         item.attempts++;
-        const retryAfterMs = r.retryAfterSec === undefined ? undefined : r.retryAfterSec * 1000;
+        const retryAfterMs = r.retryAfterSec === undefined ? undefined : secondsToMs(r.retryAfterSec);
         item.nextAttemptAt = now + nextDelayMs(item.attempts, { retryAfterMs, random });
         item.lastError = r.message;
         report.retried++;
@@ -233,7 +234,7 @@ export function summarize(items: QueueItem[]): QueueSummary {
 export async function prune(
   store: QueueStore,
   now: number = Date.now(),
-  keepMs = 7 * 86_400_000,
+  keepMs = daysToMs(7),
 ): Promise<number> {
   let n = 0;
   for (const i of await store.all()) {

@@ -11,8 +11,9 @@ import { projectAccess } from "../work/tasks.ts";
 import { checkedFileName } from "./names.ts";
 import { sniff } from "./sniff.ts";
 import { getStorage } from "./storage.ts";
+import { mb } from "../nen/units.ts";
 
-export const MAX_FILE_BYTES = 20 * 1024 * 1024;
+export const MAX_FILE_BYTES = mb(20);
 export type ObjectType = "task" | "project";
 export const OBJECT_TYPES: readonly ObjectType[] = ["task", "project"];
 

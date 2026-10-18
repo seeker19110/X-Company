@@ -1,7 +1,8 @@
 // Backoff mũ có jitter và trần (BE-JOB-003, ARC-RES-002) — hàm thuần, `rand` tiêm vào để test.
+import { minutesToMs } from "../nen/units.ts";
 export const DEFAULT_MAX_ATTEMPTS = 5;
 export const BACKOFF_BASE_MS = 10_000;
-export const BACKOFF_CAP_MS = 15 * 60_000;
+export const BACKOFF_CAP_MS = minutesToMs(15);
 
 /**
  * Thời gian chờ (ms) trước lần thử kế tiếp sau lần thử thứ `attempt` (1 = lần đầu vừa lỗi).

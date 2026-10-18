@@ -31,7 +31,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | Miền      | Công khai                | Ghi chú                                                  |
 | --------- | ------------------------ | -------------------------------------------------------- |
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
-| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
+| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
 | `http`    | `index.ts`               | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
 | `web`     | `safe-html.ts`           | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002) |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |

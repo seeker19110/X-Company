@@ -20,6 +20,8 @@ import {
 } from "../nen/log.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { guarded, type GuardOptions } from "./idempotency.ts";
+import { kb } from "../nen/units.ts";
+import { normalizeNfc } from "../nen/text.ts";
 
 export type { GuardOptions } from "./idempotency.ts";
 
@@ -311,13 +313,13 @@ export async function authorize(
   throw new AppError("FORBIDDEN", 403, "Bạn không có quyền thực hiện thao tác này");
 }
 
-export async function readJson(req: Request, maxBytes = 64 * 1024): Promise<unknown> {
+export async function readJson(req: Request, maxBytes = kb(64)): Promise<unknown> {
   const len = Number(req.headers.get("content-length") ?? "0");
   if (len > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
   const text = await req.text();
   if (Buffer.byteLength(text) > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
   try {
-    return text !== "" ? JSON.parse(text) : {};
+    return text !== "" ? normalizeNfc(JSON.parse(text)) : {}; // NFC ở biên: một ký tự Việt = một dạng lưu
   } catch {
     throw new AppError("BAD_JSON", 400, "JSON không hợp lệ");
   }

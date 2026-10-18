@@ -12,6 +12,7 @@ import {
   uploadFile,
   type ObjectType,
 } from "./index.ts";
+import { kb } from "../nen/units.ts";
 
 // BE-REL-006: route đắt (tải tệp: băm/quét/ghi đĩa; bình luận: ghi + audit) giới hạn theo user_id, đếm ở DB.
 // 60 lượt/phút/người cho mỗi nhóm: cao hơn thao tác tay bình thường, thấp hơn mức một script lặp có thể làm.
@@ -26,7 +27,7 @@ const ObjectRef = z.object({
 export const postFile = withActor(
   async (ctx) => {
     const len = Number(ctx.req.headers.get("content-length") ?? "0");
-    if (len > MAX_FILE_BYTES + 64 * 1024) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
+    if (len > MAX_FILE_BYTES + kb(64)) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
     let form: FormData;
     try {
       form = await ctx.req.formData();
@@ -87,7 +88,7 @@ export const getComments = withActor(async (ctx) => {
 
 export const postComment = withActor(
   async (ctx) => {
-    const b = ObjectRef.extend({ body: z.string().max(4000) }).parse(await readJson(ctx.req, 16 * 1024));
+    const b = ObjectRef.extend({ body: z.string().max(4000) }).parse(await readJson(ctx.req, kb(16)));
     const id = await withTx((tx) => addComment(tx, ctx.actor, b.object_type, b.object_id, b.body));
     return json({ id }, 201);
   },

@@ -1,5 +1,6 @@
 // Gọi API nội bộ từ client: gắn CSRF, Idempotency-Key khi cần; lỗi trả thông điệp tiếng Việt từ server.
 import { API_FETCH_TIMEOUT_MS, isTimeoutError } from "@/lib/nen/timeouts";
+import { minutesToMs } from "@/lib/nen/units";
 
 export interface ApiResult<T> {
   ok: boolean;
@@ -15,7 +16,7 @@ export function textOrNull(v: FormDataEntryValue | null): string | null {
 
 /** Khoá đang dùng cho một thao tác chưa có kết quả chắc chắn: gửi lại cùng route + cùng nội dung → cùng khoá. */
 const pendingKeys = new Map<string, { key: string; at: number }>();
-const PENDING_KEY_TTL_MS = 10 * 60_000;
+const PENDING_KEY_TTL_MS = minutesToMs(10);
 
 export function newIdempotencyKey(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();

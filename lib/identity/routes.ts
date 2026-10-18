@@ -14,12 +14,13 @@ import { appendAudit } from "../audit/index.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { login } from "./auth.ts";
 import { ABSOLUTE_MS, csrfTokenFor, destroySession } from "./session.ts";
+import { kb, msToSeconds } from "../nen/units.ts";
 
 const LoginBody = z.object({ email: z.string().max(254), password: z.string().min(1).max(256) });
 
 export const loginHandler = publicRoute(async ({ req, requestId }) => {
   assertSameOrigin(req); // chống login CSRF
-  const body = LoginBody.parse(await readJson(req, 8 * 1024));
+  const body = LoginBody.parse(await readJson(req, kb(8)));
   const r = await login(getPool(), {
     email: body.email,
     password: body.password,
@@ -28,7 +29,7 @@ export const loginHandler = publicRoute(async ({ req, requestId }) => {
     requestId,
   });
   return json({ user_id: r.userId, csrf_token: csrfTokenFor(r.token) }, 200, {
-    "set-cookie": sessionCookie(r.token, ABSOLUTE_MS / 1000),
+    "set-cookie": sessionCookie(r.token, msToSeconds(ABSOLUTE_MS)),
   });
 });
 

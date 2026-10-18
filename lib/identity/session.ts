@@ -3,9 +3,10 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Queryable } from "../db/index.ts";
 import { isSecureOrigin, sessionSecret } from "../nen/config.ts";
+import { daysToMs, hoursToMs, msToSeconds } from "../nen/units.ts";
 
-export const IDLE_MS = 12 * 3600_000;
-export const ABSOLUTE_MS = 7 * 24 * 3600_000;
+export const IDLE_MS = hoursToMs(12);
+export const ABSOLUTE_MS = daysToMs(7);
 
 export function cookieName(): string {
   return isSecureOrigin() ? "__Host-xc_session" : "xc_session";
@@ -49,7 +50,7 @@ export async function resolveSession(
      WHERE s.token_hash = $1 AND u.id = s.user_id AND u.disabled_at IS NULL
        AND s.idle_expires_at > $2 AND s.absolute_expires_at > $2
      RETURNING s.id, s.user_id`,
-    [sha256(token), now, IDLE_MS / 1000],
+    [sha256(token), now, msToSeconds(IDLE_MS)],
   );
   const r = rows[0];
   return r ? { sessionId: r.id, userId: r.user_id } : null;

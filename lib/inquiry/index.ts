@@ -9,9 +9,10 @@ import { AppError } from "../nen/app-error.ts";
 import { sessionSecret } from "../nen/config.ts";
 import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
+import { minutesToMs, msToSeconds } from "../nen/units.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
-export const RATE_LIMIT = { max: 5, windowMs: 10 * 60_000 };
+export const RATE_LIMIT = { max: 5, windowMs: minutesToMs(10) };
 export const MIN_FILL_MS = 3000;
 
 const phoneRe = /^\+?[0-9][0-9 .-]{6,18}[0-9]$/;
@@ -82,7 +83,7 @@ export async function checkRate(
   }, pool);
   if (r.n >= RATE_LIMIT.max) {
     const oldest = r.oldest?.getTime() ?? now.getTime();
-    const retryAfter = Math.max(1, Math.ceil((oldest + RATE_LIMIT.windowMs - now.getTime()) / 1000));
+    const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + RATE_LIMIT.windowMs - now.getTime())));
     throw new AppError("RATE_LIMITED", 429, "Bạn gửi quá nhiều lần, vui lòng thử lại sau", { retryAfter });
   }
 }

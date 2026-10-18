@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { getPool, withTx } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
+import { mb } from "../nen/units.ts";
 
 export interface RateLimit {
   /** Nhóm đếm (mỗi nhóm route đắt một tên). */
@@ -30,7 +31,7 @@ export interface GuardOptions {
 /** `processing` quá lâu coi như tiến trình đã chết, cho chạy lại (> statement_timeout 30 s × 2 + dư). */
 const PROCESSING_STALE_SEC = 120;
 /** Chặn đọc body khổng lồ khi băm; khớp trần tải lên (20 MB + biên). */
-const MAX_HASH_BYTES = 21 * 1024 * 1024;
+const MAX_HASH_BYTES = mb(21);
 const KEY_RE = /^[\x21-\x7e]{8,255}$/;
 
 export interface GuardCtx {

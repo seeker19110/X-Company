@@ -8,6 +8,7 @@ import { log, redactString } from "../nen/log.ts";
 import { DEFAULT_MAX_ATTEMPTS, nextAttemptDelay } from "./backoff.pure.ts";
 import { ChannelDisabledError, PermanentJobError } from "./channels.ts";
 import { defaultRegistry, type JobEvent, type Registry } from "./handlers.ts";
+import { msToSeconds } from "../nen/units.ts";
 
 export { DEFAULT_MAX_ATTEMPTS, nextAttemptDelay } from "./backoff.pure.ts";
 export { ChannelDisabledError, PermanentJobError, logChannel } from "./channels.ts";
@@ -71,11 +72,11 @@ export async function claimEvents(
           FOR UPDATE SKIP LOCKED)
        UPDATE outbox_event e
           SET status = 'processing', attempts = e.attempts + 1,
-              locked_until = $2::timestamptz + make_interval(secs => $3::double precision / 1000)
+              locked_until = $2::timestamptz + make_interval(secs => $3::double precision)
          FROM picked
         WHERE e.id = picked.id
        RETURNING e.id, e.company_id, e.topic, e.payload, e.attempts`,
-      [limit, now, leaseMs],
+      [limit, now, msToSeconds(leaseMs)],
     );
     await c.query("COMMIT");
     return r.rows
@@ -147,9 +148,9 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
       // Kênh tắt: không tính là lần lỗi; giữ pending, thử lại sau.
       await pool.query(
         `UPDATE outbox_event SET status = 'pending', attempts = GREATEST(attempts - 1, 0), locked_until = NULL,
-                last_error = $3, next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision / 1000)
+                last_error = $3, next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
           WHERE id = $1 AND status = 'processing'`,
-        [ev.id, now, errorText(err), o.channelOffDelayMs],
+        [ev.id, now, errorText(err), msToSeconds(o.channelOffDelayMs)],
       );
       return "deferred";
     }
@@ -160,9 +161,9 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
     const delay = nextAttemptDelay(ev.attempts, o.rand());
     await pool.query(
       `UPDATE outbox_event SET status = 'pending', locked_until = NULL, last_error = $3,
-              next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision / 1000)
+              next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
         WHERE id = $1 AND status = 'processing'`,
-      [ev.id, now, errorText(err), delay],
+      [ev.id, now, errorText(err), msToSeconds(delay)],
     );
     return "retried";
   } finally {
@@ -225,7 +226,10 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 /** Đưa việc `dead` về pending (redrive, RUNBOOK). `ids` rỗng/không truyền = tất cả. Trả số hàng. */
 export async function redriveDead(pool: pg.Pool, ids?: number[]): Promise<number> {
   const r = await pool.query(
-    `UPDATE outbox_event SET status = 'pending', attempts = 0, dead_at = NULL, next_attempt_at = now()
+    // Cắt về mili giây: worker so `next_attempt_at <= $now` với giờ JS (độ phân giải ms) — giữ micro giây của now()
+    // làm việc vừa redrive bị bỏ qua nếu worker chạy trong cùng mili giây.
+    `UPDATE outbox_event SET status = 'pending', attempts = 0, dead_at = NULL,
+            next_attempt_at = date_trunc('milliseconds', now())
       WHERE status = 'dead' AND ($1::bigint[] IS NULL OR id = ANY($1::bigint[]))`,
     [ids && ids.length > 0 ? ids : null],
   );

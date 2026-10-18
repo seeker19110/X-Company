@@ -6,6 +6,7 @@ import { appendAudit } from "../audit/index.ts";
 import { getPool, type Tx } from "../db/index.ts";
 import { env } from "../nen/env.ts";
 import { log } from "../nen/log.ts";
+import { MS_PER_DAY } from "../nen/units.ts";
 
 export interface RetentionConfig {
   enabled: boolean;
@@ -44,7 +45,7 @@ export const ANON_NAME = "[đã ẩn danh]";
 export const ANON_EMAIL = "da-an-danh@anonymized.invalid";
 
 const ago = (now: Date, ms: number): Date => new Date(now.getTime() - ms);
-const DAY = 86_400_000;
+const DAY = MS_PER_DAY;
 const HOUR = 3_600_000;
 
 async function audited(

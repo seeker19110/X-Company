@@ -6,6 +6,7 @@ import { AppError } from "../nen/app-error.ts";
 import { recordEvent } from "./events.ts";
 import { policyAt } from "./policy.ts";
 import { issueQr } from "./qr.ts";
+import { kb, secondsToMs } from "../nen/units.ts";
 
 const EventBody = z.object({
   kind: z.enum(["in", "out", "break_start", "break_end"]),
@@ -87,7 +88,7 @@ export function eventResponseBody(r: Awaited<ReturnType<typeof recordEvent>>) {
 }
 
 export const postEvent = withActor(async (ctx) => {
-  const r = await handleEvent(ctx, await readJson(ctx.req, 8 * 1024), ctx.req.headers.get("idempotency-key"));
+  const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
   return json(eventResponseBody(r), r.replayed ? 200 : 201);
 });
 
@@ -112,6 +113,6 @@ export const getQr = withActor(async (ctx) => {
   return json({
     token,
     ttl_sec: policy.qrTtlSec,
-    expires_at: new Date(now.getTime() + policy.qrTtlSec * 1000).toISOString(),
+    expires_at: new Date(now.getTime() + secondsToMs(policy.qrTtlSec)).toISOString(),
   });
 });

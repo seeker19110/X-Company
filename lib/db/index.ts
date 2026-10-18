@@ -13,12 +13,15 @@ let appPool: pg.Pool | undefined;
 
 /** Pool của ứng dụng — DATABASE_URL là role ứng dụng (không owner, không BYPASSRLS). */
 export function getPool(): pg.Pool {
-  appPool ??= new pg.Pool({
-    connectionString: env("DATABASE_URL"),
-    max: env("DB_POOL_MAX"),
-    options: PG_SESSION_OPTIONS,
-    ...POOL_TIMEOUTS,
-  });
+  if (appPool === undefined) {
+    appPool = new pg.Pool({
+      connectionString: env("DATABASE_URL"),
+      max: env("DB_POOL_MAX"),
+      options: PG_SESSION_OPTIONS,
+      ...POOL_TIMEOUTS,
+    });
+    guardIdleErrors(appPool, "app");
+  }
   return appPool;
 }
 
@@ -38,6 +41,16 @@ export const POOL_TIMEOUTS = {
 /** Thay pool (test). */
 export function setPool(pool: pg.Pool | undefined): void {
   appPool = pool;
+}
+
+/**
+ * Kết nối NHÀN RỖI trong pool bị máy chủ ngắt (DB khởi động lại/failover, admin kill, timeout phía server) làm pool phát
+ * sự kiện `error`; không có listener → uncaughtException → tiến trình chết. Ghi log và để pool tự bỏ kết nối hỏng —
+ * request kế tiếp mở kết nối mới (ARC-RES, tài liệu node-postgres "pool.on('error')").
+ */
+export function guardIdleErrors(pool: pg.Pool, name: string): pg.Pool {
+  pool.on("error", (err) => log.warn("kết nối nhàn rỗi của pool bị ngắt", { pool: name, err }));
+  return pool;
 }
 
 /** Đóng pool ứng dụng (tắt êm); không có pool thì không làm gì. */

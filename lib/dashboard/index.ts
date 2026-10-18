@@ -8,6 +8,7 @@ import { employeeResource } from "../attendance/scope.ts";
 import { addDays } from "../attendance/compute.ts";
 import { projectProgress } from "../work/progress.ts";
 import { projectAccess } from "../work/tasks.ts";
+import { MS_PER_DAY } from "../nen/units.ts";
 
 export const MILESTONE_RISK_POINTS = 10; // ⚙ chênh kế hoạch − nghiệm thu (điểm %)
 export const MILESTONE_HORIZON_DAYS = 7; // ⚙
@@ -122,7 +123,7 @@ export async function dashboard(
     for (const m of ms.rows) {
       const p = projects.find((x) => x.id === m.project_id)!;
       const slip = m.baseline_due_date
-        ? Math.round((Date.parse(m.due_date) - Date.parse(m.baseline_due_date)) / 86_400_000)
+        ? Math.round((Date.parse(m.due_date) - Date.parse(m.baseline_due_date)) / MS_PER_DAY)
         : null;
       milestones.push({
         id: m.id,
