@@ -16,6 +16,14 @@ export const ACTIONS: readonly TaskAction[] = [
   "cancel",
 ];
 
+/** Truy vấn lõi "việc của tôi" — xuất ra để test EXPLAIN (DB-PERF-001, docs/db/explain). */
+export const MY_TASKS_SQL = `SELECT t.id, t.title, t.status, t.due_date, t.priority, t.version, p.name AS project_name,
+            CASE WHEN t.responsible_employee_id = $2 THEN 'responsible' ELSE 'reviewer' END AS role
+     FROM task t JOIN project p ON p.id = t.project_id
+     WHERE t.company_id = $1 AND t.status NOT IN ('done', 'cancelled')
+       AND (t.responsible_employee_id = $2 OR (t.reviewer_employee_id = $2 AND t.status = 'awaiting_acceptance'))
+     ORDER BY t.priority, t.due_date NULLS LAST, t.created_at LIMIT 200`;
+
 export async function myTasks(db: Queryable, companyId: string, employeeId: string | null) {
   if (!employeeId) return [];
   const { rows } = await db.query<{
@@ -27,15 +35,7 @@ export async function myTasks(db: Queryable, companyId: string, employeeId: stri
     version: number;
     project_name: string;
     role: "responsible" | "reviewer";
-  }>(
-    `SELECT t.id, t.title, t.status, t.due_date, t.priority, t.version, p.name AS project_name,
-            CASE WHEN t.responsible_employee_id = $2 THEN 'responsible' ELSE 'reviewer' END AS role
-     FROM task t JOIN project p ON p.id = t.project_id
-     WHERE t.company_id = $1 AND t.status NOT IN ('done', 'cancelled')
-       AND (t.responsible_employee_id = $2 OR (t.reviewer_employee_id = $2 AND t.status = 'awaiting_acceptance'))
-     ORDER BY t.priority, t.due_date NULLS LAST, t.created_at LIMIT 200`,
-    [companyId, employeeId],
-  );
+  }>(MY_TASKS_SQL, [companyId, employeeId]);
   return rows;
 }
 

@@ -107,6 +107,23 @@ export interface SubmitResult {
   created: boolean;
 }
 
+/** INSERT … ON CONFLICT không chèn được vì submission_id đã có (DB-TX-004) → quay lại giao dịch để không đốt số mã. */
+class DuplicateSubmission extends Error {}
+
+/** Mã của hồ sơ đã có theo submission_id (đường lặp lại: cùng id → cùng mã, created=false). */
+async function existingCode(
+  db: Queryable,
+  table: "inquiry" | "job_application",
+  companyId: string,
+  submissionId: string,
+): Promise<SubmitResult | null> {
+  const { rows } = await db.query<{ code: string }>(
+    `SELECT code FROM ${table} WHERE company_id = $1 AND submission_id = $2`,
+    [companyId, submissionId],
+  );
+  return rows[0] ? { code: rows[0].code, created: false } : null;
+}
+
 export async function submitInquiry(
   pool: pg.Pool,
   companyId: string,
@@ -115,14 +132,27 @@ export async function submitInquiry(
   now: Date = new Date(),
 ): Promise<SubmitResult> {
   if (input.website) return { code: decoyCode("YC", now), created: false }; // honeypot: giả thành công, không lưu
+  try {
+    return await insertInquiry(companyId, input, meta, now);
+  } catch (err) {
+    // Hai lần gửi đồng thời cùng submission_id: UNIQUE quyết định (DB-TX-004), bên thua trả hồ sơ của bên thắng.
+    if (err instanceof DuplicateSubmission) {
+      const dup = await existingCode(pool, "inquiry", companyId, input.submission_id);
+      if (dup) return dup;
+    }
+    throw err;
+  }
+}
+
+async function insertInquiry(
+  companyId: string,
+  input: InquiryInputT,
+  meta: { ip: string; requestId?: string | null },
+  now: Date,
+): Promise<SubmitResult> {
   return withTx(async (tx) => {
-    // Khoá theo submission_id: hai lần gửi đồng thời cùng id không tạo hai hồ sơ.
-    await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('inq:' || $1, 0))", [input.submission_id]);
-    const existing = await tx.query<{ code: string }>(
-      "SELECT code FROM inquiry WHERE company_id = $1 AND submission_id = $2",
-      [companyId, input.submission_id],
-    );
-    if (existing.rows[0]) return { code: existing.rows[0].code, created: false };
+    const existing = await existingCode(tx, "inquiry", companyId, input.submission_id); // đường nhanh, không phải cổng chặn
+    if (existing) return existing;
 
     const route = await tx.query<{ assignee_user_id: string }>(
       `SELECT r.assignee_user_id FROM inquiry_route r JOIN app_user u ON u.id = r.assignee_user_id AND u.disabled_at IS NULL
@@ -137,7 +167,8 @@ export async function submitInquiry(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO inquiry (company_id, code, submission_id, name, email, phone, message, service_slug, source, consent_at,
          consent_notice_version, status, assignee_user_id, due_at, suspected_spam, ip_hash, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$10) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$10)
+       ON CONFLICT (company_id, submission_id) DO NOTHING RETURNING id`,
       [
         companyId,
         code,
@@ -157,7 +188,8 @@ export async function submitInquiry(
         hashIp(meta.ip),
       ],
     );
-    const id = rows[0]!.id;
+    if (!rows[0]) throw new DuplicateSubmission();
+    const id = rows[0].id;
     await tx.query(
       "INSERT INTO inquiry_history (company_id, inquiry_id, from_status, to_status, note, at) VALUES ($1, $2, NULL, $3, $4, $5)",
       [companyId, id, status, assignee ? "định tuyến tự động" : "chưa có quy tắc định tuyến", now],
@@ -185,13 +217,26 @@ export async function submitApplication(
   now: Date = new Date(),
 ): Promise<SubmitResult> {
   if (input.website) return { code: decoyCode("UV", now), created: false };
+  try {
+    return await insertApplication(companyId, input, meta, now);
+  } catch (err) {
+    if (err instanceof DuplicateSubmission) {
+      const dup = await existingCode(pool, "job_application", companyId, input.submission_id);
+      if (dup) return dup;
+    }
+    throw err;
+  }
+}
+
+async function insertApplication(
+  companyId: string,
+  input: z.infer<typeof ApplicationInput>,
+  meta: { ip: string; requestId?: string | null },
+  now: Date,
+): Promise<SubmitResult> {
   return withTx(async (tx) => {
-    await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('app:' || $1, 0))", [input.submission_id]);
-    const existing = await tx.query<{ code: string }>(
-      "SELECT code FROM job_application WHERE company_id = $1 AND submission_id = $2",
-      [companyId, input.submission_id],
-    );
-    if (existing.rows[0]) return { code: existing.rows[0].code, created: false };
+    const existing = await existingCode(tx, "job_application", companyId, input.submission_id);
+    if (existing) return existing;
     let jobPageId: string | null = null;
     if (input.job_slug) {
       const j = await tx.query<{ id: string }>(
@@ -205,7 +250,8 @@ export async function submitApplication(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO job_application (company_id, code, submission_id, job_page_id, name, email, phone, cover_letter, consent_at,
          consent_notice_version, suspected_spam, ip_hash, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$9) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$9)
+       ON CONFLICT (company_id, submission_id) DO NOTHING RETURNING id`,
       [
         companyId,
         code,
@@ -221,12 +267,13 @@ export async function submitApplication(
         hashIp(meta.ip),
       ],
     );
+    if (!rows[0]) throw new DuplicateSubmission();
     await appendAudit(tx, {
       actorUserId: null,
       companyId,
       action: "application.create",
       objectType: "job_application",
-      objectId: rows[0]!.id,
+      objectId: rows[0].id,
       after: { code },
       requestId: meta.requestId ?? null,
     });

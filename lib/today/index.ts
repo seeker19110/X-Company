@@ -24,6 +24,11 @@ export interface TodayView {
   toApprove: number;
 }
 
+/** Sự kiện công 20 giờ gần nhất của nhân viên — xuất ra để test EXPLAIN (DB-PERF-001). */
+export const TODAY_EVENTS_SQL = `SELECT kind, device_time, status, review_reason FROM attendance_event
+       WHERE employee_id = $1 AND device_time >= now() - interval '20 hours' AND voided_by_adjustment_id IS NULL
+       ORDER BY device_time`;
+
 export async function todayView(
   db: Queryable,
   actor: ActorContext,
@@ -70,12 +75,7 @@ export async function todayView(
       device_time: Date;
       status: string;
       review_reason: string | null;
-    }>(
-      `SELECT kind, device_time, status, review_reason FROM attendance_event
-       WHERE employee_id = $1 AND device_time >= now() - interval '20 hours' AND voided_by_adjustment_id IS NULL
-       ORDER BY device_time`,
-      [actor.employeeId],
-    );
+    }>(TODAY_EVENTS_SQL, [actor.employeeId]);
     view.events = e.rows.map((r) => ({
       kind: r.kind,
       at: r.device_time.toISOString(),

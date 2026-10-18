@@ -37,15 +37,17 @@ export const postSync = withActor(async (ctx) => {
         eventId: body.event_id,
       });
     } catch (err) {
-      if (err instanceof AppError)
+      if (err instanceof AppError) {
+        const ra = err.details?.retryAfter;
         results.push({
           id: item.id,
           ok: false,
           httpStatus: err.status,
           code: err.code,
           message: err.message,
+          ...(typeof ra === "number" ? { retryAfterSec: ra } : {}),
         });
-      else if (err instanceof ZodError)
+      } else if (err instanceof ZodError)
         results.push({
           id: item.id,
           ok: false,

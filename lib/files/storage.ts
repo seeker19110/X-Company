@@ -1,12 +1,14 @@
 // Kho tệp private qua adapter (D-005): mặc định đĩa cục bộ FILE_STORAGE_DIR; production thay bằng S3-compatible.
 // Khoá ngẫu nhiên, không chứa tên gốc; không có URL công khai — tải về chỉ qua route kiểm quyền.
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface Storage {
   put(data: Buffer): Promise<string>;
   get(key: string): Promise<Buffer>;
+  /** Xoá bù blob mồ côi (khi giao dịch DB lỗi sau lúc ghi kho). Không có tệp → bỏ qua. */
+  remove(key: string): Promise<void>;
 }
 
 const KEY_RE = /^[0-9a-f]{2}\/[0-9a-f]{40}$/;
@@ -31,6 +33,13 @@ export function diskStorage(
       return key;
     },
     get: (key) => readFile(/* turbopackIgnore: true */ fileOf(key)),
+    async remove(key) {
+      try {
+        await unlink(/* turbopackIgnore: true */ fileOf(key));
+      } catch (err) {
+        if ((err as { code?: string }).code !== "ENOENT") throw err;
+      }
+    },
   };
 }
 
