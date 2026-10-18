@@ -1,0 +1,23 @@
+-- attendance-events-today: lib/today/index.ts TODAY_EVENTS_SQL — sự kiện công theo nhân viên + ngày
+-- Dữ liệu seed: 1.000 nhân viên · 30.000 task · 60.000 sự kiện công · 20.000 đơn nghỉ · 20.000 đơn OT · 5.000 điều chỉnh công · 40.000 bút toán phép (sau ANALYZE)
+-- Truy vấn:
+--   SELECT kind, device_time, status, review_reason FROM attendance_event
+--          WHERE employee_id = $1 AND device_time >= now() - interval '20 hours' AND voided_by_adjustment_id IS NULL
+--          ORDER BY device_time
+-- Tham số: ["79bad88e-a085-4cf3-a013-1084a26a82b2"]
+-- Lệnh: EXPLAIN (ANALYZE, BUFFERS) <truy vấn> — sinh lại bằng XT_WRITE_EXPLAIN=1 npm run test:file -- tests/db/reliability.test.ts
+
+Sort  (cost=12.23..12.23 rows=2 width=31) (actual time=0.023..0.024 rows=2 loops=1)
+  Sort Key: device_time
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=4
+  ->  Bitmap Heap Scan on attendance_event  (cost=4.44..12.22 rows=2 width=31) (actual time=0.017..0.019 rows=2 loops=1)
+        Recheck Cond: ((employee_id = '79bad88e-a085-4cf3-a013-1084a26a82b2'::uuid) AND (device_time >= (now() - '20:00:00'::interval)))
+        Filter: (voided_by_adjustment_id IS NULL)
+        Heap Blocks: exact=1
+        Buffers: shared hit=4
+        ->  Bitmap Index Scan on attendance_event_emp_time_idx  (cost=0.00..4.44 rows=2 width=0) (actual time=0.012..0.012 rows=2 loops=1)
+              Index Cond: ((employee_id = '79bad88e-a085-4cf3-a013-1084a26a82b2'::uuid) AND (device_time >= (now() - '20:00:00'::interval)))
+              Buffers: shared hit=3
+Planning Time: 0.131 ms
+Execution Time: 0.039 ms

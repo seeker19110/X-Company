@@ -1,0 +1,19 @@
+-- leave-balance: lib/attendance/leave.ts LEAVE_BALANCE_SQL — số dư phép
+-- Dữ liệu seed: 1.000 nhân viên · 30.000 task · 60.000 sự kiện công · 20.000 đơn nghỉ · 20.000 đơn OT · 5.000 điều chỉnh công · 40.000 bút toán phép (sau ANALYZE)
+-- Truy vấn:
+--   SELECT sum(minutes) AS total FROM leave_ledger WHERE employee_id = $1 AND leave_type_id = $2
+-- Tham số: ["79bad88e-a085-4cf3-a013-1084a26a82b2","90850d6b-8d1b-4079-be77-fa10f109dbb4"]
+-- Lệnh: EXPLAIN (ANALYZE, BUFFERS) <truy vấn> — sinh lại bằng XT_WRITE_EXPLAIN=1 npm run test:file -- tests/db/reliability.test.ts
+
+Aggregate  (cost=131.86..131.87 rows=1 width=8) (actual time=0.032..0.032 rows=1 loops=1)
+  Buffers: shared hit=4
+  ->  Bitmap Heap Scan on leave_ledger  (cost=4.60..131.76 rows=40 width=4) (actual time=0.018..0.026 rows=40 loops=1)
+        Recheck Cond: (employee_id = '79bad88e-a085-4cf3-a013-1084a26a82b2'::uuid)
+        Filter: (leave_type_id = '90850d6b-8d1b-4079-be77-fa10f109dbb4'::uuid)
+        Heap Blocks: exact=2
+        Buffers: shared hit=4
+        ->  Bitmap Index Scan on leave_ledger_employee_id_company_id_fk_idx  (cost=0.00..4.59 rows=40 width=0) (actual time=0.010..0.010 rows=40 loops=1)
+              Index Cond: (employee_id = '79bad88e-a085-4cf3-a013-1084a26a82b2'::uuid)
+              Buffers: shared hit=2
+Planning Time: 0.068 ms
+Execution Time: 0.050 ms

@@ -20,17 +20,8 @@ export interface PendingItem {
   createdAt: Date;
 }
 
-export async function pendingApprovals(db: Queryable, actor: ActorContext): Promise<PendingItem[]> {
-  const { rows } = await db.query<{
-    type: ApprovalType;
-    id: string;
-    employee_id: string;
-    full_name: string;
-    summary: string;
-    created_at: Date;
-    created_by_user_id: string;
-  }>(
-    `SELECT 'leave' AS type, r.id, r.employee_id, e.full_name, t.name || ' · ' || r.minutes || ' phút' AS summary, r.created_at, r.created_by_user_id
+/** Truy vấn lõi hàng chờ duyệt — xuất ra để test EXPLAIN (DB-PERF-001). */
+export const PENDING_APPROVALS_SQL = `SELECT 'leave' AS type, r.id, r.employee_id, e.full_name, t.name || ' · ' || r.minutes || ' phút' AS summary, r.created_at, r.created_by_user_id
        FROM leave_request r JOIN employee e ON e.id = r.employee_id JOIN leave_type t ON t.id = r.leave_type_id
        WHERE r.company_id = $1 AND r.status = 'pending'
      UNION ALL
@@ -40,9 +31,18 @@ export async function pendingApprovals(db: Queryable, actor: ActorContext): Prom
      UNION ALL
      SELECT 'adjustment', a.id, a.employee_id, e.full_name, 'Sửa công: ' || a.reason, a.created_at, a.created_by_user_id
        FROM attendance_adjustment a JOIN employee e ON e.id = a.employee_id WHERE a.company_id = $1 AND a.status = 'pending'
-     ORDER BY created_at LIMIT 500`,
-    [actor.companyId],
-  );
+     ORDER BY created_at LIMIT 500`;
+
+export async function pendingApprovals(db: Queryable, actor: ActorContext): Promise<PendingItem[]> {
+  const { rows } = await db.query<{
+    type: ApprovalType;
+    id: string;
+    employee_id: string;
+    full_name: string;
+    summary: string;
+    created_at: Date;
+    created_by_user_id: string;
+  }>(PENDING_APPROVALS_SQL, [actor.companyId]);
   const out: PendingItem[] = [];
   for (const r of rows) {
     if (r.created_by_user_id === actor.userId || r.employee_id === actor.employeeId) continue; // R5

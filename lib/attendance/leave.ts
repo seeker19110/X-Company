@@ -7,11 +7,12 @@ import { localDate } from "../nen/time.ts";
 import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 
+/** Số dư phép = tổng sổ — xuất ra để test EXPLAIN (DB-PERF-001). */
+export const LEAVE_BALANCE_SQL =
+  "SELECT sum(minutes) AS total FROM leave_ledger WHERE employee_id = $1 AND leave_type_id = $2";
+
 export async function leaveBalance(db: Queryable, employeeId: string, leaveTypeId: string): Promise<number> {
-  const { rows } = await db.query<{ total: string | null }>(
-    "SELECT sum(minutes) AS total FROM leave_ledger WHERE employee_id = $1 AND leave_type_id = $2",
-    [employeeId, leaveTypeId],
-  );
+  const { rows } = await db.query<{ total: string | null }>(LEAVE_BALANCE_SQL, [employeeId, leaveTypeId]);
   return Number(rows[0]?.total ?? 0);
 }
 

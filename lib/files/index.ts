@@ -89,13 +89,44 @@ export async function uploadFile(
   if (!kind) throw new AppError("UNSUPPORTED_TYPE", 415, "Chỉ nhận PDF, ảnh PNG/JPEG/WebP, DOCX, XLSX");
   const sha256 = createHash("sha256").update(u.data).digest("hex");
   const name = u.originalName.replace(/[\\/\0\r\n"]/g, "_").slice(0, 200) || `tep.${kind.ext}`;
-  // Ghi kho trước, DB sau: lỗi DB để lại tệp mồ côi (dọn định kỳ) nhưng không bao giờ có bản ghi trỏ tệp không tồn tại.
+  // Ghi kho trước, DB sau: không bao giờ có bản ghi trỏ tệp không tồn tại. Giao dịch lỗi → xoá bù blob vừa ghi (BASE-DATA-009).
   const storageKey = await getStorage().put(u.data);
+  try {
+    return await recordUpload(pool, actor, u, { storageKey, sha256, name, mime: kind.mime }, requestId);
+  } catch (err) {
+    await discardOrphanBlob(pool, storageKey);
+    throw err;
+  }
+}
+
+/** Xoá blob chưa có bản ghi `file_object`. Không xác định được (lỗi DB) hoặc xoá lỗi → để lại, ghi log (mồ côi an toàn hơn trỏ hụt). */
+async function discardOrphanBlob(pool: pg.Pool, storageKey: string): Promise<void> {
+  try {
+    // COMMIT có thể đã áp dụng dù client nhận lỗi (mất kết nối): có bản ghi thì tuyệt đối không xoá.
+    const { rowCount } = await pool.query("SELECT 1 FROM file_object WHERE storage_key = $1", [storageKey]);
+    if (rowCount === 0) await getStorage().remove(storageKey);
+  } catch (err) {
+    console.error(
+      "[files] không xoá bù được blob mồ côi:",
+      storageKey,
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+async function recordUpload(
+  pool: pg.Pool,
+  actor: ActorContext,
+  u: UploadInput,
+  blob: { storageKey: string; sha256: string; name: string; mime: string },
+  requestId?: string,
+): Promise<UploadResult> {
+  const { storageKey, sha256, name, mime } = blob;
   return withTx(async (tx) => {
     const f = await tx.query<{ id: string }>(
       `INSERT INTO file_object (company_id, storage_key, sha256, mime, size_bytes, original_name, uploaded_by_user_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [actor.companyId, storageKey, sha256, kind.mime, u.data.length, name, actor.userId],
+      [actor.companyId, storageKey, sha256, mime, u.data.length, name, actor.userId],
     );
     const fileId = f.rows[0]!.id;
     let documentId = u.documentId ?? null;
@@ -124,10 +155,10 @@ export async function uploadFile(
       action: "file.upload",
       objectType: u.objectType,
       objectId: u.objectId,
-      after: { documentId, version: v.rows[0]!.version, sha256, mime: kind.mime, size: u.data.length },
+      after: { documentId, version: v.rows[0]!.version, sha256, mime: mime, size: u.data.length },
       requestId: requestId ?? null,
     });
-    return { documentId, version: v.rows[0]!.version, fileId, mime: kind.mime, sha256 };
+    return { documentId, version: v.rows[0]!.version, fileId, mime: mime, sha256 };
   }, pool);
 }
 

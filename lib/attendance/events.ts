@@ -109,6 +109,42 @@ export function timeReview(i: EventInput, now: Date, p: AttendancePolicy): strin
   return Math.abs(diffSec) > p.clockSkewMaxSec ? "CLOCK_SKEW" : null;
 }
 
+type Outcome = { conflict: string } | { result: EventResult };
+
+/** Sự kiện đã có cùng (employee, idempotencyKey): cùng nội dung → kết quả cũ (replayed); khác nội dung → conflict. */
+async function replayOrConflict(
+  db: Queryable,
+  actor: EventActor,
+  idempotencyKey: string,
+  hash: string,
+): Promise<Outcome | null> {
+  const prev = await db.query<{
+    id: string;
+    request_hash: string;
+    status: "accepted" | "needs_review";
+    review_reason: string | null;
+    server_received_at: Date;
+    shift_assignment_id: string | null;
+  }>(
+    `SELECT id, request_hash, status, review_reason, server_received_at, shift_assignment_id
+     FROM attendance_event WHERE employee_id = $1 AND idempotency_key = $2`,
+    [actor.employeeId, idempotencyKey],
+  );
+  const p0 = prev.rows[0];
+  if (!p0) return null;
+  if (p0.request_hash !== hash) return { conflict: p0.id };
+  return {
+    result: {
+      eventId: p0.id,
+      status: p0.status,
+      reviewReason: p0.review_reason,
+      serverReceivedAt: p0.server_received_at,
+      shiftAssignmentId: p0.shift_assignment_id,
+      replayed: true,
+    },
+  };
+}
+
 /**
  * Ghi một sự kiện của chính nhân viên (kiểm quyền `attendance.write_own` ở route). Idempotent theo
  * (employee, idempotencyKey): cùng nội dung → cùng kết quả; khác nội dung → 409 (có audit).
@@ -123,32 +159,9 @@ export async function recordEvent(
   const outcome = await withTx(async (tx) => {
     // Tuần tự hoá theo nhân viên: kiểm "ca đang mở" (I3) không bị chen.
     await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('att:' || $1, 0))", [actor.employeeId]);
-    const prev = await tx.query<{
-      id: string;
-      request_hash: string;
-      status: "accepted" | "needs_review";
-      review_reason: string | null;
-      server_received_at: Date;
-      shift_assignment_id: string | null;
-    }>(
-      `SELECT id, request_hash, status, review_reason, server_received_at, shift_assignment_id
-       FROM attendance_event WHERE employee_id = $1 AND idempotency_key = $2`,
-      [actor.employeeId, input.idempotencyKey],
-    );
-    const p0 = prev.rows[0];
-    if (p0) {
-      if (p0.request_hash !== hash) return { conflict: p0.id } as const;
-      return {
-        result: {
-          eventId: p0.id,
-          status: p0.status,
-          reviewReason: p0.review_reason,
-          serverReceivedAt: p0.server_received_at,
-          shiftAssignmentId: p0.shift_assignment_id,
-          replayed: true,
-        },
-      } as const;
-    }
+    // Đường nhanh cho lần gửi lặp (không tính QR/ca lại); cổng chặn trùng thật sự là UNIQUE ở INSERT bên dưới.
+    const dup = await replayOrConflict(tx, actor, input.idempotencyKey, hash);
+    if (dup) return dup;
 
     const policy = await policyAt(tx, actor.companyId, now);
     const reasons: string[] = [];
@@ -213,6 +226,7 @@ export async function recordEvent(
          server_received_at, source, queued, device, worksite_id, shift_assignment_id, policy_id, geo_lat, geo_lng,
          geo_accuracy_m, geo_captured_at, qr_nonce, status, review_reason)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+       ON CONFLICT (employee_id, idempotency_key) DO NOTHING
        RETURNING id, server_received_at`,
       [
         actor.companyId,
@@ -237,7 +251,13 @@ export async function recordEvent(
         reviewReason,
       ],
     );
-    const ev = rows[0]!;
+    const ev = rows[0];
+    if (!ev) {
+      // Thua cuộc đua cùng khoá (DB-TX-004): bản ghi của bên thắng đã commit → trả như lần gửi lặp.
+      const raced = await replayOrConflict(tx, actor, input.idempotencyKey, hash);
+      if (raced) return raced;
+      throw new Error("INSERT ON CONFLICT không chèn mà cũng không thấy bản ghi trùng khoá");
+    }
     await appendAudit(tx, {
       actorUserId: actor.userId,
       companyId: actor.companyId,

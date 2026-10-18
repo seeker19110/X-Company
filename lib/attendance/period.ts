@@ -40,6 +40,11 @@ function requireHr(actor: ActorContext, id: string): void {
     });
 }
 
+/** Sự kiện cần xác minh trong kỳ — xuất ra để test EXPLAIN (DB-PERF-001). */
+export const NEEDS_REVIEW_SQL = `SELECT id, employee_id FROM attendance_event WHERE company_id = $1 AND status = 'needs_review'
+     AND voided_by_adjustment_id IS NULL
+     AND (device_time AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date`;
+
 export async function createPeriod(
   tx: Queryable,
   actor: ActorContext,
@@ -260,12 +265,11 @@ export async function periodExceptions(
         employeeId: l.employeeId,
         note: null,
       });
-  const review = await db.query<{ id: string; employee_id: string }>(
-    `SELECT id, employee_id FROM attendance_event WHERE company_id = $1 AND status = 'needs_review'
-     AND voided_by_adjustment_id IS NULL
-     AND (device_time AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date`,
-    [companyId, p.startDate, p.endDate],
-  );
+  const review = await db.query<{ id: string; employee_id: string }>(NEEDS_REVIEW_SQL, [
+    companyId,
+    p.startDate,
+    p.endDate,
+  ]);
   for (const r of review.rows)
     out.push({ ref: `event:${r.id}`, kind: "NEEDS_REVIEW", employeeId: r.employee_id, note: null });
   const pending = await db.query<{ ref: string; employee_id: string }>(

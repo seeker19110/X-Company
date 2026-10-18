@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { API_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
 
 type State =
   | { kind: "idle" }
@@ -35,6 +36,7 @@ export function ContactForm() {
       const res = await fetch("/api/public/inquiries", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
         body: JSON.stringify({
           submission_id: submissionId.current,
           name: f.get("name"),

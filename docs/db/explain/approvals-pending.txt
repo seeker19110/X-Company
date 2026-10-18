@@ -1,0 +1,82 @@
+-- approvals-pending: lib/attendance/approvals.ts PENDING_APPROVALS_SQL — hàng chờ duyệt
+-- Dữ liệu seed: 1.000 nhân viên · 30.000 task · 60.000 sự kiện công · 20.000 đơn nghỉ · 20.000 đơn OT · 5.000 điều chỉnh công · 40.000 bút toán phép (sau ANALYZE)
+-- Truy vấn:
+--   SELECT 'leave' AS type, r.id, r.employee_id, e.full_name, t.name || ' · ' || r.minutes || ' phút' AS summary, r.created_at, r.created_by_user_id
+--          FROM leave_request r JOIN employee e ON e.id = r.employee_id JOIN leave_type t ON t.id = r.leave_type_id
+--          WHERE r.company_id = $1 AND r.status = 'pending'
+--        UNION ALL
+--        SELECT 'ot', o.id, o.employee_id, e.full_name, 'OT ' || o.business_date || ' · ' || o.minutes || ' phút'
+--                 || CASE WHEN o.employee_consent_at IS NULL THEN ' (chờ đồng ý)' ELSE '' END, o.created_at, o.created_by_user_id
+--          FROM ot_request o JOIN employee e ON e.id = o.employee_id WHERE o.company_id = $1 AND o.status = 'pending'
+--        UNION ALL
+--        SELECT 'adjustment', a.id, a.employee_id, e.full_name, 'Sửa công: ' || a.reason, a.created_at, a.created_by_user_id
+--          FROM attendance_adjustment a JOIN employee e ON e.id = a.employee_id WHERE a.company_id = $1 AND a.status = 'pending'
+--        ORDER BY created_at LIMIT 500
+-- Tham số: ["c1e41554-c755-43e2-99cd-1140127ad76e"]
+-- Lệnh: EXPLAIN (ANALYZE, BUFFERS) <truy vấn> — sinh lại bằng XT_WRITE_EXPLAIN=1 npm run test:file -- tests/db/reliability.test.ts
+
+Limit  (cost=1072.41..1073.66 rows=500 width=152) (actual time=2.730..2.817 rows=500 loops=1)
+  Buffers: shared hit=136
+  ->  Sort  (cost=1072.41..1073.76 rows=540 width=152) (actual time=2.729..2.770 rows=500 loops=1)
+        Sort Key: r.created_at
+        Sort Method: top-N heapsort  Memory: 137kB
+        Buffers: shared hit=136
+        ->  Append  (cost=47.11..1047.91 rows=540 width=152) (actual time=0.344..2.264 rows=1125 loops=1)
+              Buffers: shared hit=136
+              ->  Nested Loop  (cost=47.11..470.88 rows=240 width=152) (actual time=0.343..0.932 rows=500 loops=1)
+                    Buffers: shared hit=51
+                    ->  Hash Join  (cost=46.95..461.36 rows=240 width=108) (actual time=0.333..0.625 rows=500 loops=1)
+                          Hash Cond: (r.employee_id = e.id)
+                          Buffers: shared hit=49
+                          ->  Bitmap Heap Scan on leave_request r  (cost=24.15..437.24 rows=500 width=76) (actual time=0.040..0.152 rows=500 loops=1)
+                                Recheck Cond: ((company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid) AND (status = 'pending'::text))
+                                Heap Blocks: exact=33
+                                Buffers: shared hit=37
+                                ->  Bitmap Index Scan on leave_request_pending_idx  (cost=0.00..24.02 rows=500 width=0) (actual time=0.030..0.031 rows=500 loops=1)
+                                      Index Cond: (company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid)
+                                      Buffers: shared hit=4
+                          ->  Hash  (cost=16.80..16.80 rows=480 width=48) (actual time=0.289..0.289 rows=1000 loops=1)
+                                Buckets: 1024  Batches: 1  Memory Usage: 62kB
+                                Buffers: shared hit=12
+                                ->  Seq Scan on employee e  (cost=0.00..16.80 rows=480 width=48) (actual time=0.006..0.144 rows=1000 loops=1)
+                                      Buffers: shared hit=12
+                    ->  Memoize  (cost=0.16..0.27 rows=1 width=48) (actual time=0.000..0.000 rows=1 loops=500)
+                          Cache Key: r.leave_type_id
+                          Cache Mode: logical
+                          Hits: 499  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+                          Buffers: shared hit=2
+                          ->  Index Scan using leave_type_pkey on leave_type t  (cost=0.15..0.26 rows=1 width=48) (actual time=0.005..0.005 rows=1 loops=1)
+                                Index Cond: (id = r.leave_type_id)
+                                Buffers: shared hit=2
+              ->  Hash Join  (cost=46.95..444.33 rows=240 width=152) (actual time=0.331..0.791 rows=500 loops=1)
+                    Hash Cond: (o.employee_id = e_1.id)
+                    Buffers: shared hit=47
+                    ->  Bitmap Heap Scan on ot_request o  (cost=24.15..414.82 rows=500 width=72) (actual time=0.033..0.140 rows=500 loops=1)
+                          Recheck Cond: ((company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid) AND (status = 'pending'::text))
+                          Heap Blocks: exact=31
+                          Buffers: shared hit=35
+                          ->  Bitmap Index Scan on ot_request_pending_idx  (cost=0.00..24.02 rows=500 width=0) (actual time=0.026..0.027 rows=500 loops=1)
+                                Index Cond: (company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid)
+                                Buffers: shared hit=4
+                    ->  Hash  (cost=16.80..16.80 rows=480 width=48) (actual time=0.290..0.291 rows=1000 loops=1)
+                          Buckets: 1024  Batches: 1  Memory Usage: 62kB
+                          Buffers: shared hit=12
+                          ->  Seq Scan on employee e_1  (cost=0.00..16.80 rows=480 width=48) (actual time=0.004..0.136 rows=1000 loops=1)
+                                Buffers: shared hit=12
+              ->  Hash Join  (cost=31.91..130.00 rows=60 width=152) (actual time=0.298..0.433 rows=125 loops=1)
+                    Hash Cond: (a.employee_id = e_2.id)
+                    Buffers: shared hit=38
+                    ->  Bitmap Heap Scan on attendance_adjustment a  (cost=9.11..106.72 rows=125 width=58) (actual time=0.013..0.058 rows=125 loops=1)
+                          Recheck Cond: ((company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid) AND (status = 'pending'::text))
+                          Heap Blocks: exact=25
+                          Buffers: shared hit=26
+                          ->  Bitmap Index Scan on attendance_adjustment_pending_idx  (cost=0.00..9.08 rows=125 width=0) (actual time=0.008..0.009 rows=125 loops=1)
+                                Index Cond: (company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid)
+                                Buffers: shared hit=1
+                    ->  Hash  (cost=16.80..16.80 rows=480 width=48) (actual time=0.280..0.280 rows=1000 loops=1)
+                          Buckets: 1024  Batches: 1  Memory Usage: 62kB
+                          Buffers: shared hit=12
+                          ->  Seq Scan on employee e_2  (cost=0.00..16.80 rows=480 width=48) (actual time=0.004..0.132 rows=1000 loops=1)
+                                Buffers: shared hit=12
+Planning Time: 0.702 ms
+Execution Time: 2.901 ms
