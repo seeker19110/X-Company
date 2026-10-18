@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cổng chuẩn — đúng lệnh trong xt.yaml (build · typecheck · lint · test)
+        run: .xtemplates/scripts/dev-task.sh gate
+      - name: Coverage có ngưỡng (sàn Gate M)
+        run: npm run -s coverage
+      - name: Khung — PLAN/blueprint/CI hợp lệ
+        run: |
+          python3 .xtemplates/scripts/xt.py ci-check .github/workflows
+          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json > /dev/null
+
+  protection-guard:
+    name: protection-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Required check trong ruleset ↔ job có thật
+        run: |
+          set -euo pipefail
+          jobs=$(python3 - <<'PY'
+          import glob, re
+          names = set()
+          for f in glob.glob(".github/workflows/*.yml"):
+              txt = open(f, encoding="utf-8").read()
+              m = re.search(r"^jobs:\n(.*)", txt, re.S | re.M)
+              if not m: continue
+              for jm in re.finditer(r"^  ([A-Za-z0-9_-]+):\n((?:    .*\n|\n)*)", m.group(1), re.M):
+                  key, body = jm.group(1), jm.group(2)
+                  nm = re.search(r"^    name:\s*(.+?)\s*$", body, re.M)
+                  names.add(nm.group(1).strip('"\'') if nm else key)
+          print("\n".join(sorted(names)))
+          PY
+          )
+          fail=0
+          for c in $(python3 -c "import json;[print(x['context']) for r in json.load(open('.github/rulesets/main.json'))['rules'] if r['type']=='required_status_checks' for x in r['parameters']['required_status_checks']]"); do
+            grep -qx "$c" <<<"$jobs" || { echo "::error::Required check '$c' không khớp job nào trong .github/workflows/"; fail=1; }
+          done
+          [ "$fail" = 0 ] && echo "OK — mọi required check đều là job có thật."
+          exit $fail
+      - name: Ruleset trên nhánh mặc định đang hiệu lực? (cảnh báo)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -uo pipefail
+          rules=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/rules/branches/$BRANCH" || echo "[]")
+          for t in pull_request required_status_checks deletion non_fast_forward; do
+            if ! python3 -c "import json,sys; r=json.loads(sys.argv[1]); sys.exit(0 if any(x.get('type')==sys.argv[2] for x in r) else 1)" "$rules" "$t"; then
+              echo "::warning::Nhánh $BRANCH chưa có rule '$t' — import .github/rulesets/main.json (Settings → Rules → Rulesets → Import)."
+            fi
+          done
+          echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."

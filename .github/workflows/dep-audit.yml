@@ -1,0 +1,27 @@
+name: Dependency audit
+
+# Lỗ hổng đã biết trong phụ thuộc production (npm audit --omit=dev). Phụ thuộc dev được theo dõi qua Dependabot;
+# ngoại lệ hiện có: braces (GHSA-vfj7-8cjw-p6xm) chỉ trong chuỗi eslint-config-next, mọi phiên bản, chưa có bản sửa — D-008.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 2 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  dep-audit:
+    name: dep-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - name: Quét lỗ hổng phụ thuộc production (đỏ khi ≥ moderate)
+        run: npm audit --omit=dev --audit-level=moderate

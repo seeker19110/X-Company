@@ -12,16 +12,16 @@
 #           format_check: ruff format --check . · coverage: COVERAGE_FILE="$(mktemp)" PYTHONDONTWRITEBYTECODE=1 pytest -p no:cacheprovider --cov --cov-fail-under=80
 #   Go:     lint: go vet ./... · typecheck: "" · test: go test ./... · build: go build ./... · format: gofmt -l -w . · format_file: gofmt -w "{}"
 #           format_check: test -z "$(gofmt -l .)" · coverage: f="$(mktemp)" && go test -coverprofile="$f" ./... && go tool cover -func="$f" | awk '/^total:/{exit ($3+0 < 80)}'
-lint: ""
-typecheck: ""
-test: ""
-build: ""
-format: ""
+lint: npm run -s lint && npm run -s format:check
+typecheck: npm run -s typecheck
+test: npm run -s test
+build: npm run -s build
+format: npm run -s format
 # Sàn M/L (LOOP-HARNESS-023): kiểm format không ghi file, và test có ngưỡng coverage (đỏ khi dưới ngưỡng). Lệnh kiểm
 # không được ghi vào repo (artefact coverage ra `mktemp`) và không được có `|| true`.
-format_check: ""
-coverage: ""
-format_file: ""
+format_check: npm run -s format:check
+coverage: npm run -s coverage
+format_file: npx --no-install prettier --write --ignore-unknown "{}"
 # Merge PR (ADR-0013/0014/0015, LOOP-STOP-022): L3 (mặc định) = bật auto-merge của GitHub (làn nhanh khi mở, làn chuẩn sau review sạch — ADR-0024), merge khi required check
 # xanh (cần bật "Allow auto-merge" + ruleset có required check; ghi miễn trừ WF-REVIEW-007); L2 = máy chỉ tự merge làn nhanh
 # (`xt.py merge-check`); L1 = người merge mọi PR.
@@ -38,6 +38,6 @@ merge_hard_exceptions: human
 # e2e_affected: lệnh chạy CHỈ spec của lát/PR đang làm (vd `npx playwright test --grep @smoke e2e/<luồng>.spec.ts`); Gate mỗi task
 # dùng nó; suite đầy đủ `e2e` chạy khi push main / trước phát hành, và PLAN có task cuối Gate = `e2e` (`loop verify` chỉ
 # chạy lại Gate của từng task — QA-E2E-023). Trống = chạy `e2e` đầy đủ.
-e2e: ""
+e2e: npm run -s e2e
 e2e_affected: ""
-audit: ""
+audit: npm audit --omit=dev --audit-level=moderate
