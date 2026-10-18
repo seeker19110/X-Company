@@ -2,6 +2,12 @@
 
 > Cập nhật 2026-10-18. Phiên bản API nội bộ: `v1` ngầm định theo đường dẫn `/api/app/*` (cùng triển khai với web).
 
+## Nguồn sự thật: `docs/api/openapi.json`
+Hợp đồng HTTP máy đọc được (OpenAPI 3.1) là **nguồn duy nhất** cho endpoint, kiểu dữ liệu, tham số, mã trạng thái và lỗi (BE-API-001, BASE-DOC-007). Tệp được SINH, không sửa tay: `npm run -s gen:openapi` (`scripts/gen-openapi.ts`) dựng từ registry route↔hàm xử lý và schema zod thật của các route (`z.toJSONSchema`). Văn xuôi dưới đây chỉ **bổ sung** ý đồ, lý do và các điểm OpenAPI không nói được; chỗ nào lệch thì openapi đúng.
+- `npm run -s check:openapi` (nằm trong `check:arch`): sinh lại trong bộ nhớ và so với tệp đã commit (đỏ khi lệch — chạy `gen:openapi` rồi commit); kiểm cấu trúc OpenAPI 3.1 tối thiểu (openapi/info/paths, `$ref` resolve, `operationId` duy nhất, mọi response có mô tả, mọi path param được khai báo); mọi `route.ts` dưới `app/api` có mặt trong registry (đủ, không thừa, đúng phương thức, đúng hàm xử lý); cờ `Idempotency-Key` khớp mã.
+- `npm run -s check:api-breaking` (job `pr-policy`, QA-INT-007): so tệp hiện tại với `origin/main`; đỏ khi xoá path/method, bỏ response code, đổi kiểu/xoá thuộc tính response, thêm field bắt buộc vào request, thu hẹp enum request. Thêm thì được. Cố ý phá vỡ: `breakingApproved: "<lý do>"` ở mục registry (ra `x-breaking-approved` ở operation) hoặc `REMOVAL_APPROVALS` khi xoá operation. Không có bản gốc/không có git → bỏ qua.
+- Thêm route: thêm mục vào registry ở `scripts/gen-openapi.ts` (cùng `ROUTE_PATTERNS`, `docs/ROUTES.md`, `tests/http/authz-coverage.ts`), schema request lấy từ zod (xuất schema ra khỏi `routes.ts`, không chép tay), chạy `gen:openapi`.
+
 ## Quy ước
 - JSON UTF-8; thời điểm ISO 8601 UTC (`Z`); ngày nghiệp vụ `YYYY-MM-DD`; id là UUID.
 - Lỗi: `{"error": {"code": "SNAKE_UPPER", "message": "<tiếng Việt cho người dùng>", "details"?: {...}}, "request_id": "..."}`.

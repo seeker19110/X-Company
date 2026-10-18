@@ -1,6 +1,7 @@
 name: PR policy
 
-# Kiểm mô tả PR, tiêu đề (= subject commit sau squash), fix kèm test, lockfile, migration — scripts/pr-policy.mjs.
+# Kiểm mô tả PR, tiêu đề (= subject commit sau squash), fix kèm test, lockfile, migration — scripts/pr-policy.mjs;
+# và phá vỡ hợp đồng API (QA-INT-007) — scripts/check-api-breaking.mjs.
 on:
   pull_request:
     branches: [main]
@@ -20,3 +21,6 @@ jobs:
           fetch-depth: 0
       - name: Mô tả PR, tiêu đề Conventional Commits, fix kèm test, lockfile, migration
         run: node scripts/pr-policy.mjs
+      # QA-INT-007: chặn thay đổi phá vỡ hợp đồng API (so docs/api/openapi.json với origin/main; fetch-depth 0 ở trên).
+      - name: Hợp đồng API không bị phá vỡ (docs/api/openapi.json so với origin/main)
+        run: node scripts/check-api-breaking.mjs

@@ -15,6 +15,9 @@ import { t } from "../i18n/index.ts";
 /** POST ghi nghiệp vụ: bắt buộc Idempotency-Key (ARC-INT-001, BE-API-008). */
 const IDEMPOTENT: GuardOptions = { idempotent: true };
 
+/** Thân POST /api/app/approvals/:type/:id/:decision — xuất ra cho hợp đồng OpenAPI. */
+export const DecisionBody = z.object({ note: z.string().max(1000).nullish() });
+
 export const getApprovals = withActor(async (ctx) =>
   json(await pendingApprovalsPage(getPool(), ctx.actor, parsePage(new URL(ctx.req.url).searchParams))),
 );
@@ -30,7 +33,7 @@ export const postDecision = withActor(async (ctx) => {
     !z.uuid().safeParse(id).success
   )
     throw new AppError("NOT_FOUND", 404, t("err.shared.khongTimThay"));
-  const b = z.object({ note: z.string().max(1000).nullish() }).parse(await readJson(ctx.req));
+  const b = DecisionBody.parse(await readJson(ctx.req));
   await withTx((tx) => decide(tx, ctx.actor, type, id, decision as "approve" | "reject", b.note));
   return json({ ok: true });
 }, IDEMPOTENT);

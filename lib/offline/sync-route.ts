@@ -11,7 +11,8 @@ import type { ItemResult } from "./queue.ts";
 import { kb } from "../nen/units.ts";
 import { t } from "../i18n/index.ts";
 
-const Batch = z.object({
+/** Thân POST /api/app/sync — xuất ra cho hợp đồng OpenAPI. */
+export const Batch = z.object({
   items: z
     .array(
       z.object({

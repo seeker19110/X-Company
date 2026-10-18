@@ -9,7 +9,8 @@ import { issueQr } from "./qr.ts";
 import { kb, secondsToMs } from "../nen/units.ts";
 import { t } from "../i18n/index.ts";
 
-const EventBody = z.object({
+/** Thân POST /api/app/attendance/events — xuất ra cho hợp đồng OpenAPI (scripts/gen-openapi.ts). */
+export const EventBody = z.object({
   kind: z.enum(["in", "out", "break_start", "break_end"]),
   device_time: z.iso.datetime({ offset: true }),
   source: z.enum(["qr", "gps", "kiosk"]),

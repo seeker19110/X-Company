@@ -196,3 +196,10 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: review=1 không bypass khoá merge (chủ duy nhất, bot không duyệt được); bypass admin chưa kiểm chứng với auto-merge — rủi ro kẹt. Giữ ADR-0001 bất biến.
 - Đường lùi: Đặt review=1 + bypass admin ở ruleset khi có ≥2 maintainer
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi có thêm maintainer: đặt required_approving_review_count=1
+
+### D-028 · 2026-10-18T14:52:34+00:00 · Hợp đồng API máy đọc được (T-043): định dạng và nơi chạy kiểm phá vỡ?
+
+- Phương án: (1) docs/api/openapi.json sinh từ zod bằng script, check:openapi trong check:arch; check-api-breaking là bước trong job pr-policy (required sẵn) · (2) openapi.yaml (tự viết serializer/thêm phụ thuộc) và job riêng phải thêm vào ruleset
+- Chọn: docs/api/openapi.json sinh từ zod bằng script, check:openapi trong check:arch; check-api-breaking là bước trong job pr-policy (required sẵn)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: JSON là OpenAPI 3.1 hợp lệ, không thêm phụ thuộc, giữ format:check; gắn vào job required sẵn có nên không cần người import ruleset thêm.
+- Đường lùi: Chuyển sang YAML/job riêng khi có spectral/oasdiff trong CI

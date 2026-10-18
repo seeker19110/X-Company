@@ -19,8 +19,8 @@ import {
 } from "./index.ts";
 import { t } from "../i18n/index.ts";
 
-const STATUSES = ["received", "in_progress", "done", "rejected"] as const;
-const ACTIONS = ["start", "complete", "reject"] as const;
+export const STATUSES = ["received", "in_progress", "done", "rejected"] as const;
+export const ACTIONS = ["start", "complete", "reject"] as const;
 type Action = (typeof ACTIONS)[number];
 
 const guard = (ctx: ActorRequestContext) =>
@@ -64,7 +64,7 @@ function idAndAction(req: Request): { id: string; action: string } {
   return { id, action };
 }
 
-const ActionBody = z.object({ reason: z.string().trim().max(1000).nullish() });
+export const ActionBody = z.object({ reason: z.string().trim().max(1000).nullish() });
 
 export const postRequestAction = withActor(
   async (ctx) => {
