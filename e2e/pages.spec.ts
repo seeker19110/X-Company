@@ -32,6 +32,7 @@ test.describe("mọi trang ở 320 px (UX-RESP-001, UX-A11Y-001)", () => {
       await login(page, who);
       for (const p of paths) await checkPage(page, p);
       await logout(page);
+      await expect(page).toHaveURL(/\/app\/login$/);
     }
   });
 });
