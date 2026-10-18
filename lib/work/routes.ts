@@ -45,15 +45,18 @@ export const getTasks = withActor(async (ctx) =>
 
 const Body = z.object({ version: z.number().int().positive(), reason: z.string().max(1000).nullish() });
 
-export const postTaskAction = withActor(async (ctx) => {
-  const parts = new URL(ctx.req.url).pathname.split("/");
-  const action = parts.pop() as TaskAction;
-  const id = parts.pop() ?? "";
-  if (!ACTIONS.includes(action) || !z.uuid().safeParse(id).success)
-    throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
-  const b = Body.parse(await readJson(ctx.req));
-  const version = await withTx((tx) =>
-    transitionTask(tx, ctx.actor, id, action, { expectedVersion: b.version, reason: b.reason }),
-  );
-  return json({ id, version });
-});
+export const postTaskAction = withActor(
+  async (ctx) => {
+    const parts = new URL(ctx.req.url).pathname.split("/");
+    const action = parts.pop() as TaskAction;
+    const id = parts.pop() ?? "";
+    if (!ACTIONS.includes(action) || !z.uuid().safeParse(id).success)
+      throw new AppError("NOT_FOUND", 404, "Không tìm thấy");
+    const b = Body.parse(await readJson(ctx.req));
+    const version = await withTx((tx) =>
+      transitionTask(tx, ctx.actor, id, action, { expectedVersion: b.version, reason: b.reason }),
+    );
+    return json({ id, version });
+  },
+  { idempotent: true },
+); // ARC-INT-001, BE-API-008

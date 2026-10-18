@@ -120,6 +120,24 @@ test.describe("ứng dụng nội bộ", () => {
     await logout(page);
   });
 
+  test("UX-STATE-006: bấm đúp nút gửi đơn → chỉ 1 request, request có Idempotency-Key", async ({ page }) => {
+    await login(page, "nv2");
+    await page.goto("/app/attendance");
+    const sent: { key: string | undefined }[] = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/api/app/ot-requests"))
+        sent.push({ key: r.headers()["idempotency-key"] });
+    });
+    const ot = page.locator("form").filter({ has: page.getByRole("heading", { name: "Làm thêm giờ" }) });
+    await ot.getByLabel("Ngày").fill("2026-12-05");
+    await ot.getByLabel("Lý do").fill("Hoàn thiện hạng mục gấp");
+    await ot.getByRole("checkbox").check();
+    await ot.getByRole("button", { name: "Gửi đơn OT" }).dblclick();
+    await expect(page.getByRole("status").first()).toContainText("Đã gửi đơn");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.key).toMatch(/^[0-9a-f-]{16,}$/);
+  });
+
   test("AT12: đăng xuất rồi người khác đăng nhập cùng trình duyệt không thấy dữ liệu người trước", async ({
     page,
   }) => {

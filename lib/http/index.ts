@@ -19,6 +19,9 @@ import {
   runWithLogContext,
 } from "../nen/log.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
+import { guarded, type GuardOptions } from "./idempotency.ts";
+
+export type { GuardOptions } from "./idempotency.ts";
 
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
@@ -213,9 +216,13 @@ export function publicRoute(handler: Handler<RequestContext>): (req: Request) =>
 
 /**
  * Route nội bộ (R1, R8): phiên hợp lệ + tài khoản còn hiệu lực (nạp lại grant mỗi request) → actor; request ghi
- * thêm kiểm cùng origin + CSRF token gắn phiên. Thiếu phiên → 401.
+ * thêm kiểm cùng origin + CSRF token gắn phiên. Thiếu phiên → 401. `guard`: bắt buộc Idempotency-Key và/hoặc giới hạn
+ * tần suất theo user cho route ghi/đắt.
  */
-export function withActor(handler: Handler<ActorRequestContext>): (req: Request) => Promise<Response> {
+export function withActor(
+  handler: Handler<ActorRequestContext>,
+  guard: GuardOptions = {},
+): (req: Request) => Promise<Response> {
   return publicRoute(async ({ req, requestId }) => {
     const token = getCookie(req, cookieName());
     // Fail-closed (BASE-ERR-010): backend phiên/phân quyền lỗi → KHÔNG cho qua; 503, không bao giờ rơi về 2xx.
@@ -240,9 +247,11 @@ export function withActor(handler: Handler<ActorRequestContext>): (req: Request)
         throw new AppError("CSRF", 403, "Thiếu hoặc sai mã CSRF");
     }
     try {
-      return await runWithLogContext({ actor_id: actor.userId }, () =>
-        handler({ req, requestId, actor, sessionToken: token }),
-      );
+      return await runWithLogContext({ actor_id: actor.userId }, () => {
+        const ctx = { req, requestId, actor, sessionToken: token };
+        // POST ghi nghiệp vụ: Idempotency-Key + giới hạn tần suất (lib/http/idempotency.ts); route khác không đổi.
+        return guard.idempotent || guard.rateLimit ? guarded(ctx, guard, () => handler(ctx)) : handler(ctx);
+      });
     } catch (err) {
       // 403 từ lớp nghiệp vụ (requireOn) → ghi audit denied ở giao dịch riêng rồi trả lỗi như cũ.
       if (err instanceof AppError && err.code === "FORBIDDEN" && err.details?.action !== undefined) {

@@ -13,42 +13,50 @@ import {
   type ObjectType,
 } from "./index.ts";
 
+// BE-REL-006: route đắt (tải tệp: băm/quét/ghi đĩa; bình luận: ghi + audit) giới hạn theo user_id, đếm ở DB.
+// 60 lượt/phút/người cho mỗi nhóm: cao hơn thao tác tay bình thường, thấp hơn mức một script lặp có thể làm.
+const FILE_LIMIT = { bucket: "files.post", max: 60, windowSec: 60 };
+const COMMENT_LIMIT = { bucket: "comments.post", max: 60, windowSec: 60 };
+
 const ObjectRef = z.object({
   object_type: z.enum(OBJECT_TYPES as [ObjectType, ...ObjectType[]]),
   object_id: z.uuid(),
 });
 
-export const postFile = withActor(async (ctx) => {
-  const len = Number(ctx.req.headers.get("content-length") ?? "0");
-  if (len > MAX_FILE_BYTES + 64 * 1024) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
-  let form: FormData;
-  try {
-    form = await ctx.req.formData();
-  } catch {
-    throw new AppError("BAD_FORM", 400, "Cần multipart/form-data");
-  }
-  const ref = ObjectRef.parse({ object_type: form.get("object_type"), object_id: form.get("object_id") });
-  const file = form.get("file");
-  if (!(file instanceof File)) throw new AppError("VALIDATION", 422, "Thiếu tệp");
-  const documentId = form.get("document_id");
-  const r = await uploadFile(
-    getPool(),
-    ctx.actor,
-    {
-      objectType: ref.object_type,
-      objectId: ref.object_id,
-      documentId: typeof documentId === "string" && documentId !== "" ? z.uuid().parse(documentId) : null,
-      title: typeof form.get("title") === "string" ? (form.get("title") as string) : null,
-      originalName: file.name,
-      data: Buffer.from(await file.arrayBuffer()),
-    },
-    ctx.requestId,
-  );
-  return json(
-    { document_id: r.documentId, version: r.version, file_id: r.fileId, mime: r.mime, sha256: r.sha256 },
-    201,
-  );
-});
+export const postFile = withActor(
+  async (ctx) => {
+    const len = Number(ctx.req.headers.get("content-length") ?? "0");
+    if (len > MAX_FILE_BYTES + 64 * 1024) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Tệp vượt 20 MB");
+    let form: FormData;
+    try {
+      form = await ctx.req.formData();
+    } catch {
+      throw new AppError("BAD_FORM", 400, "Cần multipart/form-data");
+    }
+    const ref = ObjectRef.parse({ object_type: form.get("object_type"), object_id: form.get("object_id") });
+    const file = form.get("file");
+    if (!(file instanceof File)) throw new AppError("VALIDATION", 422, "Thiếu tệp");
+    const documentId = form.get("document_id");
+    const r = await uploadFile(
+      getPool(),
+      ctx.actor,
+      {
+        objectType: ref.object_type,
+        objectId: ref.object_id,
+        documentId: typeof documentId === "string" && documentId !== "" ? z.uuid().parse(documentId) : null,
+        title: typeof form.get("title") === "string" ? (form.get("title") as string) : null,
+        originalName: file.name,
+        data: Buffer.from(await file.arrayBuffer()),
+      },
+      ctx.requestId,
+    );
+    return json(
+      { document_id: r.documentId, version: r.version, file_id: r.fileId, mime: r.mime, sha256: r.sha256 },
+      201,
+    );
+  },
+  { idempotent: true, rateLimit: FILE_LIMIT },
+);
 
 export const getFile = withActor(async (ctx) => {
   const id = new URL(ctx.req.url).pathname.split("/").pop() ?? "";
@@ -77,8 +85,11 @@ export const getComments = withActor(async (ctx) => {
   return json({ items: await listComments(getPool(), ctx.actor, ref.object_type, ref.object_id) });
 });
 
-export const postComment = withActor(async (ctx) => {
-  const b = ObjectRef.extend({ body: z.string().max(4000) }).parse(await readJson(ctx.req, 16 * 1024));
-  const id = await withTx((tx) => addComment(tx, ctx.actor, b.object_type, b.object_id, b.body));
-  return json({ id }, 201);
-});
+export const postComment = withActor(
+  async (ctx) => {
+    const b = ObjectRef.extend({ body: z.string().max(4000) }).parse(await readJson(ctx.req, 16 * 1024));
+    const id = await withTx((tx) => addComment(tx, ctx.actor, b.object_type, b.object_id, b.body));
+    return json({ id }, 201);
+  },
+  { idempotent: true, rateLimit: COMMENT_LIMIT },
+);

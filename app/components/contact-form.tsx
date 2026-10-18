@@ -120,7 +120,7 @@ export function ContactForm() {
           <Link href="/chinh-sach-du-lieu">chính sách dữ liệu cá nhân</Link>.
         </label>
       </p>
-      <button type="submit" disabled={state.kind === "sending"}>
+      <button type="submit" disabled={state.kind === "sending"} aria-busy={state.kind === "sending"}>
         {state.kind === "sending" ? "Đang gửi…" : "Gửi yêu cầu"}
       </button>
     </form>

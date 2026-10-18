@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "./api";
 import { useSession } from "./session-context";
 
@@ -39,6 +39,7 @@ export function TaskActions({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
 
   async function run(a: Action) {
     let reason: string | null = null;
@@ -46,8 +47,11 @@ export function TaskActions({
       reason = window.prompt("Lý do:");
       if (!reason?.trim()) return;
     }
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     const r = await api("POST", `/api/app/tasks/${id}/${a}`, { csrf, body: { version, reason } });
+    sending.current = false;
     setBusy(false);
     if (r.ok) router.refresh();
     else setError(r.error ?? "Không thực hiện được");
@@ -58,7 +62,7 @@ export function TaskActions({
   return (
     <div className="row" style={{ marginTop: "0.5rem" }}>
       {acts.map((a) => (
-        <button key={a} className="btn" disabled={busy} onClick={() => run(a)}>
+        <button key={a} className="btn" disabled={busy} aria-busy={busy} onClick={() => run(a)}>
           {LABEL[a]}
         </button>
       ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { api, textOrNull } from "./api";
 import { useSession } from "./session-context";
 
@@ -8,13 +8,20 @@ import { useSession } from "./session-context";
 export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: string }[] }) {
   const { csrf } = useSession();
   const id = useId();
+  const [busy, setBusy] = useState(false);
+  const sending = useRef(false); // chặn bấm đúp trước khi React kịp vô hiệu nút (UX-STATE-006)
   const [msg, setMsg] = useState<{ text: string; cls: string } | null>(null);
   const vnIso = (d: string, t: string) => `${d}T${t}:00+07:00`;
 
   async function send(e: FormEvent<HTMLFormElement>, path: string, build: (f: FormData) => unknown) {
     e.preventDefault();
+    if (sending.current) return;
+    sending.current = true;
+    setBusy(true);
     const form = e.currentTarget;
     const r = await api("POST", path, { csrf, body: build(new FormData(form)) });
+    sending.current = false;
+    setBusy(false);
     setMsg(
       r.ok
         ? { text: "Đã gửi đơn, chờ duyệt.", cls: "ok" }
@@ -74,7 +81,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           Lý do
           <textarea name="reason" maxLength={1000} />
         </label>
-        <button className="btn btn-primary" type="submit">
+        <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy}>
           Gửi đơn nghỉ
         </button>
       </form>
@@ -107,7 +114,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           <input name="consent" type="checkbox" required /> Tôi đồng ý làm thêm giờ theo đề nghị này
         </label>
         <p>
-          <button className="btn btn-primary" type="submit">
+          <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy}>
             Gửi đơn OT
           </button>
         </p>
@@ -146,7 +153,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           Lý do (bắt buộc)
           <textarea name="reason" maxLength={1000} required />
         </label>
-        <button className="btn btn-primary" type="submit">
+        <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy}>
           Gửi đề nghị
         </button>
       </form>

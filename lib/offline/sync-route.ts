@@ -22,48 +22,55 @@ const Batch = z.object({
     .max(50),
 });
 
-export const postSync = withActor(async (ctx) => {
-  const b = Batch.parse(await readJson(ctx.req, 256 * 1024));
-  const results: ItemResult[] = [];
-  for (const item of b.items) {
-    try {
-      const r = await handleEvent(ctx, item.payload, item.id, true);
-      const body = eventResponseBody(r);
-      results.push({
-        id: item.id,
-        ok: true,
-        status: body.status,
-        reviewReason: body.review_reason,
-        eventId: body.event_id,
-      });
-    } catch (err) {
-      if (err instanceof AppError) {
-        const ra = err.details?.retryAfter;
+// Không bắt Idempotency-Key header: mỗi bản ghi đã idempotent theo `id` bản ghi hàng chờ (= khoá chấm công, UNIQUE trong DB).
+// BE-REL-006: giới hạn theo user_id (mỗi request tới 50 bản ghi) — 60 lô/phút, dư cho thiết bị thử lại sau khi có mạng.
+const SYNC_LIMIT = { bucket: "sync.post", max: 60, windowSec: 60 };
+
+export const postSync = withActor(
+  async (ctx) => {
+    const b = Batch.parse(await readJson(ctx.req, 256 * 1024));
+    const results: ItemResult[] = [];
+    for (const item of b.items) {
+      try {
+        const r = await handleEvent(ctx, item.payload, item.id, true);
+        const body = eventResponseBody(r);
         results.push({
           id: item.id,
-          ok: false,
-          httpStatus: err.status,
-          code: err.code,
-          message: err.message,
-          ...(typeof ra === "number" ? { retryAfterSec: ra } : {}),
+          ok: true,
+          status: body.status,
+          reviewReason: body.review_reason,
+          eventId: body.event_id,
         });
-      } else if (err instanceof ZodError)
-        results.push({
-          id: item.id,
-          ok: false,
-          httpStatus: 400,
-          code: "VALIDATION",
-          message: "Dữ liệu bản ghi không hợp lệ",
-        });
-      else
-        results.push({
-          id: item.id,
-          ok: false,
-          httpStatus: 500,
-          code: "INTERNAL",
-          message: "Lỗi hệ thống, sẽ thử lại",
-        });
+      } catch (err) {
+        if (err instanceof AppError) {
+          const ra = err.details?.retryAfter;
+          results.push({
+            id: item.id,
+            ok: false,
+            httpStatus: err.status,
+            code: err.code,
+            message: err.message,
+            ...(typeof ra === "number" ? { retryAfterSec: ra } : {}),
+          });
+        } else if (err instanceof ZodError)
+          results.push({
+            id: item.id,
+            ok: false,
+            httpStatus: 400,
+            code: "VALIDATION",
+            message: "Dữ liệu bản ghi không hợp lệ",
+          });
+        else
+          results.push({
+            id: item.id,
+            ok: false,
+            httpStatus: 500,
+            code: "INTERNAL",
+            message: "Lỗi hệ thống, sẽ thử lại",
+          });
+      }
     }
-  }
-  return json({ results });
-});
+    return json({ results });
+  },
+  { rateLimit: SYNC_LIMIT },
+);

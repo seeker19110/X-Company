@@ -2,12 +2,15 @@
 // POST /api/app/leave-requests, POST /api/app/ot-requests, POST /api/app/adjustments.
 import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
-import { json, readJson, withActor } from "../http/index.ts";
+import { json, readJson, withActor, type GuardOptions } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { decide, pendingApprovals, type ApprovalType } from "./approvals.ts";
 import { requestLeave } from "./leave.ts";
 import { requestOt } from "./ot.ts";
 import { requestAdjustment } from "./period.ts";
+
+/** POST ghi nghiệp vụ: bắt buộc Idempotency-Key (ARC-INT-001, BE-API-008). */
+const IDEMPOTENT: GuardOptions = { idempotent: true };
 
 export const getApprovals = withActor(async (ctx) =>
   json({ items: await pendingApprovals(getPool(), ctx.actor) }),
@@ -27,7 +30,7 @@ export const postDecision = withActor(async (ctx) => {
   const b = z.object({ note: z.string().max(1000).nullish() }).parse(await readJson(ctx.req));
   await withTx((tx) => decide(tx, ctx.actor, type, id, decision as "approve" | "reject", b.note));
   return json({ ok: true });
-});
+}, IDEMPOTENT);
 
 const iso = z.iso.datetime({ offset: true });
 
@@ -51,7 +54,7 @@ export const postLeave = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);
 
 export const postOt = withActor(async (ctx) => {
   const b = z
@@ -71,7 +74,7 @@ export const postOt = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);
 
 export const postAdjustment = withActor(async (ctx) => {
   const b = z
@@ -95,4 +98,4 @@ export const postAdjustment = withActor(async (ctx) => {
     }),
   );
   return json({ id }, 201);
-});
+}, IDEMPOTENT);
