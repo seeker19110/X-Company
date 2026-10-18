@@ -9,7 +9,7 @@ name: merge-gate
 # được chính job/lệnh kiểm nó (với `pull_request`, PR đổi file này hoặc `scripts/xt.py` là tắt được cổng). Job KHÔNG
 # checkout/chạy code của PR — chỉ đọc PR qua REST bằng GITHUB_TOKEN chỉ đọc; không secret nào khác (WF-CI-004, WF-CI-023).
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] — không checkout/chạy code PR, token chỉ đọc, không secret
     # auto_merge_enabled/disabled: bật auto-merge trên PR `hard` → đỏ ngay; người tắt auto-merge để merge tay → xanh lại.
     # labeled/unlabeled: nhãn `risk:` là ngoại lệ cứng. edited: đổi nhánh đích (PR chồng về `main`).
     types: [opened, synchronize, reopened, edited, labeled, unlabeled, auto_merge_enabled, auto_merge_disabled]
