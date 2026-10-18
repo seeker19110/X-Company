@@ -3,7 +3,7 @@
 // Mỗi nhóm một giao dịch + một bản ghi audit (chỉ đếm, không PII). Tắt: RETENTION_ENABLED=false (đường lùi D-016).
 import type pg from "pg";
 import { appendAudit } from "../audit/index.ts";
-import { getPool, type Tx } from "../db/index.ts";
+import { getPool, type Queryable, type Tx } from "../db/index.ts";
 import { env } from "../nen/env.ts";
 import { log } from "../nen/log.ts";
 import { MS_PER_DAY } from "../nen/units.ts";
@@ -84,18 +84,37 @@ async function inTx<T>(pool: pg.Pool, fn: (tx: Tx) => Promise<T>): Promise<T> {
   }
 }
 
-/** Ẩn danh các hàng quá hạn của `table` (inquiry|job_application); audit theo công ty. Trả tổng số hàng. */
-async function anonymize(
-  pool: pg.Pool,
-  table: "inquiry" | "job_application",
-  before: Date,
+type AnonTable = "inquiry" | "job_application";
+
+// email giữ giá trị giả hợp lệ vì CHECK (inquiry: email hoặc phone) và NOT NULL (job_application).
+const ANON_SETS: Record<AnonTable, string> = {
+  inquiry: "name = $3, email = $4, phone = NULL, message = $3, ip_hash = NULL",
+  job_application: "name = $3, email = $4, phone = NULL, cover_letter = NULL, ip_hash = NULL",
+};
+
+/**
+ * Ẩn danh MỘT hàng theo id (yêu cầu xoá của chủ thể — T-040), cùng bộ cột với job retention. Chưa ẩn danh mới ghi;
+ * trả true nếu hàng được ẩn danh lần này. Gọi trong giao dịch của người gọi (audit do người gọi ghi).
+ */
+export async function anonymizeById(
+  tx: Queryable,
+  table: AnonTable,
+  companyId: string,
+  id: string,
   now: Date,
-): Promise<number> {
-  // email giữ giá trị giả hợp lệ vì CHECK (inquiry: email hoặc phone) và NOT NULL (job_application).
-  const sets =
-    table === "inquiry"
-      ? "name = $3, email = $4, phone = NULL, message = $3, ip_hash = NULL"
-      : "name = $3, email = $4, phone = NULL, cover_letter = NULL, ip_hash = NULL";
+): Promise<boolean> {
+  // sql-interp-allow: `table` là AnonTable ("inquiry" | "job_application"); SET là hằng ANON_SETS; giá trị qua $1..$5.
+  const r = await tx.query(
+    `UPDATE ${table} SET ${ANON_SETS[table]}, anonymized_at = $2
+      WHERE id = $1 AND company_id = $5 AND anonymized_at IS NULL`,
+    [id, now, ANON_NAME, ANON_EMAIL, companyId],
+  );
+  return (r.rowCount ?? 0) > 0;
+}
+
+/** Ẩn danh các hàng quá hạn của `table` (inquiry|job_application); audit theo công ty. Trả tổng số hàng. */
+async function anonymize(pool: pg.Pool, table: AnonTable, before: Date, now: Date): Promise<number> {
+  const sets = ANON_SETS[table];
   const params = [before, now, ANON_NAME, ANON_EMAIL];
   return inTx(pool, async (tx) => {
     const r = await tx.query<{ company_id: string }>(

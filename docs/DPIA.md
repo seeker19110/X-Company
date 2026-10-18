@@ -34,11 +34,18 @@ Sơ đồ ở [THREAT-MODEL.md](THREAT-MODEL.md) mục 2. Bên nhận: SMTP giao
 
 ## 3. Đồng ý và quyền chủ thể
 - Khách/ứng viên: đồng ý bắt buộc ở form, lưu `consent_at` + `consent_notice_version`.
-- Quyền truy cập/xoá/rút đồng ý/chỉnh sửa: **chưa có** (thuộc T-040); thời hạn xử lý theo NĐ 356/2025 `<pháp chế xác nhận>`.
+- Bản ghi đồng ý (`consent_record`, **chỉ thêm**): mục đích, phiên bản thông báo, thời điểm, kênh, băm ảnh chụp văn bản hiển thị; rút đồng ý là **dòng mới** (không sửa dòng cũ). Hiện có hai mục đích dựa trên đồng ý: `inquiry_contact`, `job_application` — `<pháp chế xác định còn mục đích nào cần đồng ý riêng>`.
+- Quyền chủ thể (nháp kỹ thuật T-040, **chờ pháp chế duyệt**): người phụ trách (HR, quyền `privacy.manage`) nhận yêu cầu qua kênh liên hệ rồi ghi vào `data_subject_request` (mã hồ sơ, không email/SĐT):
+  - **Truy cập**: xuất JSON dữ liệu của chính chủ thể (liên hệ/ứng viên: hồ sơ + lịch sử + đồng ý; nhân viên: hồ sơ + lịch sử công tác + chấm công tóm tắt theo tháng), không kèm dữ liệu người khác.
+  - **Xoá**: ẩn danh bản ghi (cùng hàm với job lưu giữ), xoá blob tệp ở kho tệp, che payload outbox chứa mã/id, xoá ghi chú tự do của người xử lý, ghi dòng rút đồng ý, dừng xử lý. **Giữ lại** bằng chứng đồng ý/rút (không định danh) và nhật ký kiểm toán (đã che). Nhân viên: hồ sơ lao động và bảng công **không xoá** — đánh dấu `retained_by_law` kèm lý do; danh mục giữ cấu hình ở `lib/privacy/retained.ts` (`<pháp chế/HR xác nhận điều luật và số năm>`).
+  - **Rút đồng ý**: thêm dòng rút, liên hệ → `processing_stopped`, ứng viên → `withdrawn`; worker bỏ qua sự kiện của chủ thể đã rút (hiệu lực ngay khi hoàn tất; mục tiêu luật ≤ 72 giờ `<pháp chế xác minh số điều NĐ 356/2025>`).
+  - **Hạn chế xử lý**: cờ `processing_restriction`; worker và đổi trạng thái hồ sơ bị chặn tới khi gỡ cờ (**chưa có thao tác gỡ cờ** — việc tiếp theo).
+- Hạn xử lý: `DSAR_DAYS` (mặc định **30 ngày — giả định, pháp chế xác minh theo NĐ 356/2025**); danh sách quá hạn có ở `GET /api/app/privacy/requests?overdue=1`.
+- Chưa làm được: xoá khỏi **bản sao lưu** (chưa có quy trình/hạ tầng — `<chủ dự án điền>`); bên thứ ba nhận dữ liệu (SMTP/Web Push khi có) chưa có cơ chế báo xoá; chủ thể tự phục vụ (hiện qua người phụ trách) và xác thực lại danh tính chủ thể trước khi xoá là thủ tục ngoài hệ thống (HR xác minh qua kênh liên hệ); bản phản hồi API được lưu ở `idempotency_record` tối đa 24 giờ (job lưu giữ dọn) — xuất dữ liệu dùng GET để không lưu bản có PII.
 - Nhân viên: thông báo xử lý dữ liệu lúc vào làm — `<HR soạn>`.
 
 ## 4. Thời hạn lưu
-Mặc định cấu hình thận trọng (D-016): liên hệ 24 tháng, ứng viên 12 tháng, phiên hết hạn 30 ngày, `login_attempt` 90 ngày, outbox đã gửi 30 ngày. Hồ sơ nhân sự, công, audit: **chưa chốt** — pháp chế/HR. Job xoá/ẩn danh: T-029 (chưa có).
+Mặc định cấu hình thận trọng (D-016): liên hệ 24 tháng, ứng viên 12 tháng, phiên hết hạn 30 ngày, `login_attempt` 90 ngày, outbox đã gửi 30 ngày. Hồ sơ nhân sự, công, audit: **chưa chốt** — pháp chế/HR. Job xoá/ẩn danh: T-029 (đã có, bật mặc định); xoá theo yêu cầu chủ thể: T-040.
 
 ## 5. Biện pháp bảo vệ
 | Biện pháp | Bằng chứng |
@@ -56,7 +63,7 @@ Mặc định cấu hình thận trọng (D-016): liên hệ 24 tháng, ứng vi
 | DP-01 | lộ vị trí/hồ sơ nhân sự do truy cập trái phép | TB | Cao | T6, T11, T12 | thấp nếu test đủ |
 | DP-02 | dùng vị trí ngoài mục đích đối soát công | TB | Cao | GPS tắt mặc định; chỉ HR theo quyền; mục đích ghi ở data-map | cần chính sách nội bộ `<HR>` |
 | DP-03 | giữ dữ liệu quá hạn | Cao | TB | job lưu giữ (T-029) | mở |
-| DP-04 | không đáp ứng quyền chủ thể đúng hạn | TB | TB | T-040 | mở |
+| DP-04 | không đáp ứng quyền chủ thể đúng hạn | TB | TB | T-040: `DSAR_DAYS`, danh sách quá hạn, test `tests/db/data-rights.test.ts` | thấp nếu HR theo dõi quá hạn; còn mở: bản sao lưu, bên thứ ba |
 
 ## 7. Tự đánh giá
 Chưa đủ điều kiện nộp: thiếu người phụ trách, căn cứ pháp lý được xác nhận, chính sách nội bộ về vị trí, thông báo cho nhân viên, quyền chủ thể.
