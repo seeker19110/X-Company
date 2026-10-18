@@ -1,0 +1,25 @@
+name: Release
+
+# WF-REL-001: SemVer sinh tự động từ Conventional Commits bằng release-please (Release PR; không sửa tay số phiên bản).
+# Cần bật Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

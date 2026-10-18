@@ -1,0 +1,33 @@
+name: CodeQL
+
+# SAST (SEC-WEB-001, BASE-SEC-007): CodeQL javascript-typescript, suite security-extended (gồm js/sql-injection).
+# Chỗ nội suy SQL bằng hằng nội bộ: docs/security/sql-interpolation-allowlist.md. Cần bật Code scanning (Advanced setup).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "41 3 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: codeql
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: "/language:javascript-typescript"

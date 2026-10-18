@@ -1,0 +1,56 @@
+# Chính sách license phụ thuộc (CMP-LIC-002, BASE-DEP-005). Danh sách SPDX id; `scripts/check-licenses.mjs` đọc package-lock.json.
+# Biểu thức SPDX: OR = chọn được vế tốt nhất; AND = phải chấp nhận cả hai vế.
+# Đỏ khi: license thiếu/không rõ · thuộc deny · không nằm trong allow/review · thuộc review mà không có ngoại lệ còn hạn.
+# Định dạng giới hạn (parser nội bộ, không thêm phụ thuộc): danh sách `- giá trị` và danh sách khối ngoại lệ — không dùng anchor/flow.
+allow:
+  - MIT
+  - ISC
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - 0BSD
+  - CC0-1.0
+  - BlueOak-1.0.0
+  - Python-2.0
+  - Unlicense
+deny:
+  - AGPL-3.0-only
+  - AGPL-3.0-or-later
+  - GPL-2.0-only
+  - GPL-2.0-or-later
+  - GPL-3.0-only
+  - GPL-3.0-or-later
+  - SSPL-1.0
+  - BUSL-1.1
+  - Commons-Clause
+  - UNLICENSED
+review:
+  - LGPL-2.1-only
+  - LGPL-2.1-or-later
+  - LGPL-3.0-only
+  - LGPL-3.0-or-later
+  - MPL-2.0
+  - CC-BY-4.0
+  - EPL-2.0
+# Ngoại lệ có hạn: package (khớp tên đầy đủ hoặc tiền tố kết thúc bằng *), license (SPDX id đang xin), reason, approved_by, expires (YYYY-MM-DD).
+exceptions:
+  - package: "@img/sharp-*"
+    license: LGPL-3.0-or-later
+    reason: "Thư viện libvips liên kết ĐỘNG (binary prebuilt tách riêng, optionalDependencies của sharp qua next); không sửa mã, không sao chép vào mã nguồn dự án; LGPL cho phép dùng làm thư viện."
+    approved_by: "đề xuất T-037, phiên chính duyệt và ghi D-NNN ở docs/autopilot/DECISIONS.md; chủ dự án xác nhận khi phát hành"
+    expires: 2027-10-18
+  - package: "@axe-core/playwright"
+    license: MPL-2.0
+    reason: "Chỉ devDependency chạy kiểm a11y trong CI, không vào bản build/phát hành; MPL-2.0 là copyleft theo tệp, không sửa mã nguồn của nó."
+    approved_by: "đề xuất T-037, phiên chính duyệt và ghi D-NNN ở docs/autopilot/DECISIONS.md"
+    expires: 2027-10-18
+  - package: "axe-core"
+    license: MPL-2.0
+    reason: "Chỉ devDependency (engine của kiểm a11y), không vào bản build/phát hành; không sửa mã nguồn của nó."
+    approved_by: "đề xuất T-037, phiên chính duyệt và ghi D-NNN ở docs/autopilot/DECISIONS.md"
+    expires: 2027-10-18
+  - package: "caniuse-lite"
+    license: CC-BY-4.0
+    reason: "Dữ liệu tương thích trình duyệt (không phải mã), chỉ dùng lúc build qua browserslist; CC-BY-4.0 yêu cầu ghi công — đã liệt kê ở THIRD_PARTY_NOTICES.md."
+    approved_by: "đề xuất T-037, phiên chính duyệt và ghi D-NNN ở docs/autopilot/DECISIONS.md"
+    expires: 2027-10-18

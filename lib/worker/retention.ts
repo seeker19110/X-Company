@@ -99,6 +99,7 @@ async function anonymize(
   const params = [before, now, ANON_NAME, ANON_EMAIL];
   return inTx(pool, async (tx) => {
     const r = await tx.query<{ company_id: string }>(
+      // sql-interp-allow: `table` là "inquiry" | "job_application"; `sets` là một trong hai hằng ở trên; giá trị qua $1..$4.
       `UPDATE ${table} SET ${sets}, anonymized_at = $2
         WHERE created_at < $1 AND anonymized_at IS NULL RETURNING company_id`,
       params,
@@ -118,6 +119,7 @@ async function purge(
   before: Date,
 ): Promise<number> {
   return inTx(pool, async (tx) => {
+    // sql-interp-allow: `table` và `where` là hằng của các lời gọi purge(...) nội bộ trong tệp này; `before` qua $1.
     const r = await tx.query(`DELETE FROM ${table} WHERE ${where}`, [before]);
     await audited(tx, null, action, table, before, r.rowCount ?? 0);
     return r.rowCount ?? 0;
@@ -128,6 +130,7 @@ async function purge(
 async function purgeOutboxDone(pool: pg.Pool, before: Date): Promise<number> {
   return inTx(pool, async (tx) => {
     const old = "SELECT id FROM outbox_event WHERE status = 'done' AND processed_at < $1";
+    // sql-interp-allow: `old` là hằng SELECT cục bộ (dòng trên), `before` qua $1.
     await tx.query(`DELETE FROM processed_message WHERE event_id IN (${old})`, [before]);
     const r = await tx.query("DELETE FROM outbox_event WHERE status = 'done' AND processed_at < $1", [
       before,

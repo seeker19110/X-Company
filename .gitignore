@@ -34,3 +34,5 @@ Thumbs.db
 *.tfstate
 *.tfstate.*
 .terraform/
+.lycheecache
+sbom.cdx.json

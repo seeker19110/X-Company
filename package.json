@@ -38,7 +38,15 @@
     "check:coverage-baseline": "node scripts/check-coverage-baseline.mjs",
     "check:ci-policy": "node scripts/check-ci-policy.mjs",
     "check:deps": "npm ls --depth=0 > /dev/null",
-    "check:units": "node scripts/check-units.mjs"
+    "check:units": "node scripts/check-units.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "check:osv-exceptions": "node scripts/check-osv-exceptions.mjs",
+    "check:sql-interpolation": "tsx scripts/check-sql-interpolation.ts",
+    "check:sbom": "node scripts/check-sbom.mjs",
+    "check:supply-wiring": "node scripts/check-supply-wiring.mjs",
+    "notices": "node scripts/gen-third-party-notices.mjs",
+    "eol:check": "node scripts/eol-check.mjs",
+    "check:supply-chain": "npm run -s check:licenses && npm run -s check:osv-exceptions && node scripts/gen-third-party-notices.mjs --check && npm run -s check:sql-interpolation && npm run -s check:sbom && npm run -s check:supply-wiring && python3 .xtemplates/scripts/xt.py ci-check .github/workflows"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",
