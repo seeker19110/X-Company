@@ -66,6 +66,7 @@ export const PERMISSIONS = {
   "project.read": { roles: ["employee", "team_lead", "project_manager", "executive"], self: false },
   "project.manage": { roles: ["project_manager"], self: false },
   "project.create": { roles: ["project_manager", "executive"], self: false },
+  "project.approve_baseline": { roles: ["executive"], self: false },
   "cms.edit": { roles: ["editor"], self: false },
   "cms.approve": { roles: ["editor", "executive"], self: false },
   "inquiry.manage": { roles: ["sales"], self: false },
