@@ -43,6 +43,8 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/app/leave-requests`              | `app/api/app/leave-requests/route.ts`                | động   | API có xác thực, `no-store`                                |
 | `/api/app/me`                          | `app/api/app/me/route.ts`                            | động   | Thông tin phiên hiện tại, `no-store`                       |
 | `/api/app/ot-requests`                 | `app/api/app/ot-requests/route.ts`                   | động   | API có xác thực, `no-store`                                |
+| `/api/app/privacy/requests/[id]/[action]` | `app/api/app/privacy/requests/[id]/[action]/route.ts` | động | Xử lý/xuất dữ liệu yêu cầu chủ thể (quyền `privacy.manage`), `no-store` |
+| `/api/app/privacy/requests` | `app/api/app/privacy/requests/route.ts` | động | Danh sách/tạo yêu cầu chủ thể (quyền `privacy.manage`), `no-store` |
 | `/api/app/sync`                        | `app/api/app/sync/route.ts`                          | động   | Đồng bộ hàng chờ offline, `no-store`                       |
 | `/api/app/tasks/[id]/[action]`         | `app/api/app/tasks/[id]/[action]/route.ts`           | động   | API có xác thực, `no-store`                                |
 | `/api/app/tasks`                       | `app/api/app/tasks/route.ts`                         | động   | API có xác thực, `no-store`                                |

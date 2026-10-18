@@ -56,6 +56,7 @@ const out = await withTx(async (tx) => {
   await mk("ed", "Phạm Biên Tập", [{ role: "editor", scopeType: "company" }]);
   await mk("ed2", "Hoàng Duyệt Bài", [{ role: "editor", scopeType: "company" }]);
   await mk("sales", "Đỗ Kinh Doanh", [{ role: "sales", scopeType: "company" }]);
+  await mk("hr", "Ngô Nhân Sự", [{ role: "hr", scopeType: "company" }]);
   await mk("exec", "Vũ Giám Đốc", [{ role: "executive", scopeType: "company" }]);
   const ed = { userId: users.ed!.userId, companyId };
   const ed2 = { userId: users.ed2!.userId, companyId };

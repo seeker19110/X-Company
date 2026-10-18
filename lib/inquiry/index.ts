@@ -9,6 +9,7 @@ import { AppError } from "../nen/app-error.ts";
 import { sessionSecret } from "../nen/config.ts";
 import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
+import { CHANNEL_WEB_FORM, isProcessingBlocked, recordConsent } from "../privacy/consent.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
 export const RATE_LIMIT = { max: 5, windowMs: 10 * 60_000 };
@@ -190,6 +191,16 @@ async function insertInquiry(
     );
     if (!rows[0]) throw new DuplicateSubmission();
     const id = rows[0].id;
+    // Đồng ý theo mục đích (CMP-VN-001): bằng chứng ghi cùng giao dịch với hồ sơ — không có đồng ý thì không có hồ sơ.
+    await recordConsent(tx, {
+      companyId,
+      subjectType: "inquiry",
+      subjectId: id,
+      purposeId: "inquiry_contact",
+      policyVersion: CONSENT_NOTICE_VERSION,
+      channel: CHANNEL_WEB_FORM,
+      at: now,
+    });
     await tx.query(
       "INSERT INTO inquiry_history (company_id, inquiry_id, from_status, to_status, note, at) VALUES ($1, $2, NULL, $3, $4, $5)",
       [companyId, id, status, assignee ? "định tuyến tự động" : "chưa có quy tắc định tuyến", now],
@@ -268,6 +279,15 @@ async function insertApplication(
       ],
     );
     if (!rows[0]) throw new DuplicateSubmission();
+    await recordConsent(tx, {
+      companyId,
+      subjectType: "job_application",
+      subjectId: rows[0].id,
+      purposeId: "job_application",
+      policyVersion: CONSENT_NOTICE_VERSION,
+      channel: CHANNEL_WEB_FORM,
+      at: now,
+    });
     await appendAudit(tx, {
       actorUserId: null,
       companyId,
@@ -288,6 +308,8 @@ export const INQUIRY_TRANSITIONS: Record<string, readonly string[]> = {
   in_progress: ["qualified", "closed", "assigned"],
   qualified: ["closed"],
   closed: [],
+  // Rút đồng ý/xoá (T-040): dừng xử lý, không chuyển tiếp được.
+  processing_stopped: [],
 };
 
 /** Đổi trạng thái / người phụ trách — lịch sử + audit. */
@@ -303,6 +325,8 @@ export async function updateInquiry(
   );
   const cur = rows[0];
   if (!cur) throw new AppError("NOT_FOUND", 404, "Không tìm thấy yêu cầu");
+  if (await isProcessingBlocked(tx, "inquiry", inquiryId, "inquiry_contact"))
+    throw new AppError("PROCESSING_RESTRICTED", 409, "Chủ thể đã rút đồng ý hoặc yêu cầu hạn chế xử lý");
   if (!INQUIRY_TRANSITIONS[cur.status]!.includes(change.status))
     throw new AppError("INVALID_STATE", 409, `Không chuyển được từ ${cur.status} sang ${change.status}`);
   const assignee = change.assigneeUserId === undefined ? cur.assignee_user_id : change.assigneeUserId;

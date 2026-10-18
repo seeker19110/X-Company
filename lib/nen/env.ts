@@ -93,6 +93,9 @@ export const SERVER_SPEC = {
   RETENTION_LOGIN_ATTEMPT_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(90)),
   RETENTION_OUTBOX_DONE_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
+  // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007), tính bằng ngày lịch kể từ lúc nhận. Mặc định 30 ngày là
+  // GIẢ ĐỊNH thận trọng — pháp chế xác minh số ngày theo NĐ 356/2025 (rút đồng ý/xoá có thể ngắn hơn, vd 72 giờ).
+  DSAR_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
 } as const;
 
 /**

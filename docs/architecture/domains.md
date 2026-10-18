@@ -18,7 +18,8 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `work` | `index.ts`, `tasks.ts`, `progress.ts`, `routes.ts` | dự án/công việc; `progress-compute.ts` là lõi thuần                      |
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
 | `inquiry` | `index.ts`, `routes.ts` | liên hệ, tuyển dụng                                              |
-| `files` | `index.ts`, `routes.ts` | kho tệp private                                                  |
+| `privacy` | `index.ts`, `consent.ts`, `routes.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`) |
+| `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
 | `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
