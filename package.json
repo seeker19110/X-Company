@@ -37,7 +37,10 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:coverage-baseline": "node scripts/check-coverage-baseline.mjs",
     "check:ci-policy": "node scripts/check-ci-policy.mjs",
-    "check:deps": "npm ls --depth=0 > /dev/null"
+    "check:deps": "npm ls --depth=0 > /dev/null",
+    "lighthouse": "scripts/with-test-db.sh scripts/lighthouse.sh",
+    "check:perf-budget": "node scripts/check-perf-budget.mjs",
+    "check:alerts": "node scripts/check-alerts.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

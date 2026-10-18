@@ -20,6 +20,7 @@ import {
 } from "../nen/log.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { guarded, type GuardOptions } from "./idempotency.ts";
+import { observeRequest } from "./metrics.ts";
 
 export type { GuardOptions } from "./idempotency.ts";
 
@@ -193,6 +194,15 @@ function safeClientIp(req: Request): string | null {
   }
 }
 
+/** Đo RED (OPS-OBS-003); không bao giờ làm hỏng request. */
+function recordRequest(req: Request, status: number, startedMs: number): void {
+  try {
+    observeRequest(req.method, new URL(req.url).pathname, status, (performance.now() - startedMs) / 1000);
+  } catch {
+    /* đo lường best-effort */
+  }
+}
+
 /** Route công khai: request_id/trace_id + ngữ cảnh log + ánh xạ lỗi. */
 export function publicRoute(handler: Handler<RequestContext>): (req: Request) => Promise<Response> {
   return async (req) => {
@@ -204,13 +214,16 @@ export function publicRoute(handler: Handler<RequestContext>): (req: Request) =>
       source_ip: safeClientIp(req),
       user_agent: req.headers.get("user-agent"),
     };
-    return runWithLogContext(ctx, async () => {
+    const started = performance.now();
+    const response = await runWithLogContext(ctx, async () => {
       try {
         return await handler({ req, requestId });
       } catch (err) {
         return errorResponse(err, requestId);
       }
     });
+    recordRequest(req, response.status, started);
+    return response;
   };
 }
 

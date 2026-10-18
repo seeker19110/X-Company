@@ -12,3 +12,4 @@ docs/input/
 .github/rulesets/
 *.md
 .github/workflows/merge-gate.yml
+.lighthouseci/

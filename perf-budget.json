@@ -1,0 +1,16 @@
+{
+  "_doc": "Ngân sách hiệu năng máy đọc — lý do và cách đổi ở docs/PERF-BUDGET.md. Đo bằng scripts/check-perf-budget.mjs (KB gzip).",
+  "baseline_tolerance_pct": 10,
+  "max_static_js_gzip_kb_total": 230,
+  "routes": {
+    "/": { "max_js_gzip_kb": 195, "max_requests": 14 },
+    "/[...slug]": { "max_js_gzip_kb": 195, "max_requests": 14 },
+    "/app/login": { "max_js_gzip_kb": 195, "max_requests": 14 },
+    "/app/today": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/tasks": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/attendance": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/approvals": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/dashboard": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/me": { "max_js_gzip_kb": 200, "max_requests": 14 }
+  }
+}

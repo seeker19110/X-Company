@@ -76,6 +76,14 @@ export const SERVER_SPEC = {
   SITE_COMPANY_ID: field(z.uuid().optional()),
   LOG_LEVEL: field(z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info")),
   APP_VERSION: field(z.string().max(64).optional()),
+  // /api/metrics (OPS-OBS-003): bearer token nội bộ; không đặt = endpoint 404. Đặt thì ≥ 16 byte.
+  METRICS_TOKEN: field(
+    z
+      .string()
+      .refine((v) => bytes(v) >= 16, { error: "phải dài ≥ 16 byte" })
+      .optional(),
+    { secret: true },
+  ),
   // Worker outbox (BE-JOB-003): số lần thử tối đa (mặc định 5), cỡ lô và nhịp thăm dò khi hết việc.
   WORKER_MAX_ATTEMPTS: field(z.coerce.number().int().min(1).max(20).default(5)),
   WORKER_BATCH_SIZE: field(z.coerce.number().int().min(1).max(500).default(10)),

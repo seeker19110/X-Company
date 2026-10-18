@@ -174,3 +174,47 @@ jobs:
             fi
           done
           echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."
+
+  lighthouse:
+    name: lighthouse
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # FE-PERF-002, FE-PERF-004, XC-PERF-003, PRF-WEB-005: ngân sách bundle + Lighthouse mobile (3 lần, median) trên `next start` với DB seed như e2e.
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Build production
+        run: npm run -s build
+      - name: Ngân sách bundle/request so baseline (đỏ khi vượt — FE-PERF-004, XC-GREEN-002)
+        run: PERF_NO_BUILD=1 npm run -s check:perf-budget
+      - name: Rule cảnh báo Prometheus — kiểm cấu trúc (OPS-SLO-001, BE-JOB-004)
+        run: npm run -s check:alerts
+      - name: Cài Chromium đúng phiên bản Playwright
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Lighthouse CI (@lhci/cli 0.15.1; assert trong lighthouserc.json)
+        run: LH_SKIP_BUILD=1 npm run -s lighthouse
+      - name: Lưu báo cáo Lighthouse
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14
+          if-no-files-found: ignore

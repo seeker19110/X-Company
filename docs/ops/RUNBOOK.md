@@ -25,7 +25,7 @@ status: nháp — chưa có môi trường production thật; lệnh PM2/psql l�
 
 Biến môi trường mà mã đọc (tên thật trong mã; giá trị không ghi ở đây): `DATABASE_URL` (ứng dụng, role không phải owner) · `MIGRATE_DATABASE_URL` (chỉ migration, role owner) ·
 `SESSION_SECRET` (≥ 32 byte) · `QR_SIGNING_KEYS` (`kid1:khoá1,kid2:khoá2`; kid đầu dùng để ký) · `APP_ORIGIN` · `TRUST_PROXY`, `TRUST_PROXY_HOPS` ·
-`SITE_COMPANY_ID` · `FILE_STORAGE_DIR` · `DB_POOL_MAX` · `NEXT_TELEMETRY_DISABLED=1`.
+`SITE_COMPANY_ID` · `FILE_STORAGE_DIR` · `DB_POOL_MAX` · `NEXT_TELEMETRY_DISABLED=1` · `METRICS_TOKEN` (tuỳ chọn, bí mật, ≥ 16 byte; đặt thì `GET /api/metrics` với `Authorization: Bearer …` trả metric Prometheus, không đặt thì 404 — chỉ mở cho Prometheus nội bộ).
 
 ## 1. Lệnh vận hành (mẫu — chưa chạy trên production)
 
@@ -71,7 +71,7 @@ psql "$DATABASE_URL" -c "select count(*) from session where absolute_expires_at 
 ### DLQ / redrive
 Worker (`npm run worker`, một tiến trình dưới pm2/systemd; nhiều bản cùng chạy được — `SKIP LOCKED`) thử tối đa `WORKER_MAX_ATTEMPTS` (mặc định 5) lần với backoff mũ có jitter (10 s → trần 15 phút).
 Việc vào DLQ = `outbox_event.status = 'dead'` (giữ nguyên `payload`, `last_error`, `attempts`, `dead_at`) khi: hết lần thử · payload sai schema · không có handler cho topic · lỗi vĩnh viễn. Kênh tắt **không** vào DLQ (giữ `pending`).
-Cảnh báo: số hàng `dead` > 0 quá 15 phút (đang nhìn tay bằng truy vấn dưới; rule cảnh báo tự động chờ T-038).
+Cảnh báo: số hàng `dead` > 0 quá 15 phút (gauge `outbox_dead_total` ở `/api/metrics`; rule mẫu `XCOutboxDeadLetter` ở `ops/prometheus/alerts.yml`, chưa nối Prometheus thật — tạm nhìn tay bằng truy vấn dưới).
 ```bash
 psql "$DATABASE_URL" -c "select id, topic, attempts, dead_at, left(last_error, 120) from outbox_event where status = 'dead' order by dead_at"
 # Sửa nguyên nhân (mã/cấu hình/payload) TRƯỚC, rồi redrive: đưa về pending, attempts = 0. Xử lý lại vẫn được khử trùng bằng processed_message.
@@ -147,13 +147,20 @@ Nguyên tắc: **thu hồi trước, điều tra sau**; xoá commit không đủ
 Sau khi xoay: chạy `gitleaks` cục bộ nếu có, ghi incident (timeline có mốc "đã thu hồi" trước mốc "tìm nguyên nhân"), rà `.github/workflows` xem có bước in biến môi trường.
 
 ## 4. Cảnh báo → playbook
-Chưa có hệ thống cảnh báo (dự kiến T-038). Khi có, mỗi cảnh báo trong cấu hình phải có dòng ở đây (BASE-DOC-004).
+Rule mẫu ở `ops/prometheus/alerts.yml` (kiểm cấu trúc bằng `npm run -s check:alerts`); **chưa có Prometheus/Alertmanager thật** nên chưa cảnh báo tự động. Mỗi cảnh báo trong cấu hình phải có dòng ở đây (BASE-DOC-004):
+
+| Rule | Mức | Nghĩa là gì | Bước xử lý |
+|---|---|---|---|
+| `XCAvailabilityFastBurn` / `XCAvailabilitySlowBurn` | page / ticket | tỷ lệ 5xx đốt ngân sách khả dụng (SLO.md SLI-1) | `pm2 logs`, tìm `trace_id` lỗi 500; nếu vừa deploy thì rollback mục 1 |
+| `XCAttendanceLatencyFastBurn` | ticket | ghi chấm công chậm hơn 1 s quá ngân sách (SLI-2) | kiểm DB (`pg_stat_activity`), tải worker, bản deploy gần nhất |
+| `XCOutboxDeadLetter` | ticket | `outbox_dead_total > 0` quá 15 phút | mục "DLQ / redrive" |
+
+Các hàng `(chưa có)` bên dưới là cảnh báo chưa có rule mẫu.
 
 | Cảnh báo | Mức | Nghĩa là gì | Bước xử lý |
 |---|---|---|---|
 | (chưa có) `web_down` | SEV1/2 | web không trả 200 | `pm2 status`, `pm2 logs`, rollback mục 1 |
 | (chưa có) `outbox_backlog` | SEV3 | `outbox_event` `pending` tồn đọng | kiểm worker còn chạy (`npm run worker`), `attempts`, `last_error`; kênh tắt thì chờ bật kênh |
-| (chưa có) `dlq_nonzero` | SEV3 | có `outbox_event` `status='dead'` quá 15 phút | mục "DLQ / redrive" |
 | (chưa có) `audit_chain_broken` | SEV1 | `npm run audit:verify` exit 1 | nhánh sự cố bảo mật; bảo toàn chứng cứ trước khi sửa |
 
 ## 5. Việc định kỳ

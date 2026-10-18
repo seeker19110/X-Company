@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-18",
+  "commit": "4a7d9f48ba4f296e7ce0e8a6c63a7bbdf5946ae9",
+  "tool": "scripts/check-perf-budget.mjs (gzip -9 trên output next build, Turbopack)",
+  "note": "KB gzip JS 'first load' mỗi trang (rootMain + polyfill + entry của trang); requests = 1 tài liệu + JS + CSS của trang. Không gồm ảnh/phông/XHR; số trên mạng thật do Lighthouse (lighthouserc.json) đo.",
+  "pages": {
+    "/[...slug]": {
+      "js_gzip_kb": 176.2,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/": {
+      "js_gzip_kb": 174,
+      "css_gzip_kb": 0.9,
+      "requests": 11
+    },
+    "/app/approvals": {
+      "js_gzip_kb": 176,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/app/attendance": {
+      "js_gzip_kb": 176.7,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/app/dashboard": {
+      "js_gzip_kb": 174.6,
+      "css_gzip_kb": 0.9,
+      "requests": 11
+    },
+    "/app/me": {
+      "js_gzip_kb": 178.4,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/app/tasks": {
+      "js_gzip_kb": 176.1,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/app/today": {
+      "js_gzip_kb": 177.5,
+      "css_gzip_kb": 0.9,
+      "requests": 12
+    },
+    "/app/login": {
+      "js_gzip_kb": 172.2,
+      "css_gzip_kb": 0.9,
+      "requests": 11
+    }
+  },
+  "static_js_gzip_kb_total": 193.4,
+  "static_js_files": 19
+}
