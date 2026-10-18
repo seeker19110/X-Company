@@ -1,4 +1,5 @@
 // Dữ liệu dựng cho test: công ty, cơ cấu, tài khoản có mật khẩu và grant. Chỉ dùng trong test.
+import { randomUUID } from "node:crypto";
 import { withTx } from "../../lib/db/index.ts";
 import { grantRole } from "../../lib/authz/grants.ts";
 import type { Role, ScopeType } from "../../lib/authz/index.ts";
@@ -84,9 +85,15 @@ export function req(
     csrf?: string | null;
     origin?: string | null;
     headers?: Record<string, string>;
+    /** POST /api/app/*: mặc định tự sinh khoá mới (route ghi bắt buộc Idempotency-Key); null = không gửi. */
+    idempotencyKey?: string | null;
   } = {},
 ): Request {
   const headers: Record<string, string> = { ...opts.headers };
+  if (method === "POST" && path.startsWith("/api/app/") && !("idempotency-key" in headers)) {
+    if (opts.idempotencyKey === undefined) headers["idempotency-key"] = randomUUID();
+    else if (opts.idempotencyKey !== null) headers["idempotency-key"] = opts.idempotencyKey;
+  }
   if (opts.body !== undefined) headers["content-type"] = "application/json";
   const origin = opts.origin === undefined ? TEST_ORIGIN : opts.origin;
   if (origin) headers.origin = origin;

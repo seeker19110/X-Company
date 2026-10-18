@@ -49,7 +49,12 @@ function upload(s: S, fields: Record<string, string>, file?: { name: string; dat
   return postFile(
     new Request(`${TEST_ORIGIN}/api/app/files`, {
       method: "POST",
-      headers: { origin: TEST_ORIGIN, cookie: s.cookie, "x-csrf-token": s.csrf },
+      headers: {
+        origin: TEST_ORIGIN,
+        cookie: s.cookie,
+        "x-csrf-token": s.csrf,
+        "idempotency-key": randomUUID(),
+      },
       body: fd,
     }),
   );

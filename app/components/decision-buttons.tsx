@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "./api";
 import { useSession } from "./session-context";
 
@@ -11,6 +11,7 @@ export function DecisionButtons({ type, id }: { type: string; id: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
 
   async function decide(decision: "approve" | "reject") {
     let note: string | null = null;
@@ -18,8 +19,11 @@ export function DecisionButtons({ type, id }: { type: string; id: string }) {
       note = window.prompt("Lý do từ chối:");
       if (!note?.trim()) return;
     }
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     const r = await api("POST", `/api/app/approvals/${type}/${id}/${decision}`, { csrf, body: { note } });
+    sending.current = false;
     setBusy(false);
     if (r.ok) router.refresh();
     else setError(r.error ?? "Không thực hiện được");
@@ -27,10 +31,10 @@ export function DecisionButtons({ type, id }: { type: string; id: string }) {
 
   return (
     <div className="row" style={{ marginTop: "0.5rem" }}>
-      <button className="btn btn-primary" disabled={busy} onClick={() => decide("approve")}>
+      <button className="btn btn-primary" disabled={busy} aria-busy={busy} onClick={() => decide("approve")}>
         Duyệt
       </button>
-      <button className="btn" disabled={busy} onClick={() => decide("reject")}>
+      <button className="btn" disabled={busy} aria-busy={busy} onClick={() => decide("reject")}>
         Từ chối
       </button>
       {error && (
