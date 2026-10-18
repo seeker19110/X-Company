@@ -92,10 +92,20 @@ describe("role ứng dụng (THREAT-MODEL T12)", () => {
   });
 
   test("role ứng dụng không superuser, không BYPASSRLS, không tạo bảng được", async () => {
+    // Kiểm role ĐĂNG NHẬP (session_user) lẫn role hiệu lực (current_user).
     const { rows } = await db.app.query(
-      "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user",
+      `SELECT r.rolname, r.rolsuper, r.rolbypassrls FROM pg_roles r
+       WHERE r.rolname IN (session_user, current_user) ORDER BY r.rolname`,
     );
-    assert.deepEqual(rows[0], { rolsuper: false, rolbypassrls: false });
+    assert.ok(rows.length >= 1);
+    for (const r of rows)
+      assert.deepEqual([r.rolname, r.rolsuper, r.rolbypassrls], [r.rolname, false, false]);
+    const who = await db.app.query("SELECT session_user AS s, current_user AS c");
+    assert.equal(who.rows[0].s, "xc_app_test");
+    assert.ok(
+      (await db.app.query("SELECT pg_has_role(session_user, 'xc_app_rw', 'MEMBER') AS m")).rows[0].m,
+      "role đăng nhập là thành viên xc_app_rw",
+    );
     await assert.rejects(db.app.query("CREATE TABLE hack (x int)"), /permission denied/);
   });
 

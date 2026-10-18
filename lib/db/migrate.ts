@@ -67,7 +67,7 @@ export async function runMigrations(pool: Pool, dir: string = MIGRATIONS_DIR): P
         await client.query("COMMIT");
         ran.push(f.name);
       } catch (err) {
-        await client.query("ROLLBACK");
+        await client.query("ROLLBACK").catch(() => {});
         throw new Error(`Migration ${f.name} lỗi: ${err instanceof Error ? err.message : String(err)}`, {
           cause: err,
         });

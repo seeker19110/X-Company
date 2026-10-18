@@ -26,7 +26,7 @@ Luật lớp (kiểm bằng ESLint `no-restricted-imports`): `app/**` → `lib/*
 `lib/**` không import `next/*` hay `app/**`; `lib/domain-pure` (tính ca, tiến độ, quyền) không import `lib/db`.
 
 ## Dòng một request ghi
-`route handler` → `withActor` (phiên, CSRF, rate limit, request_id) → zod parse → `db.tx(async tx => { can() → nghiệp vụ → audit.append(tx) → outbox.add(tx) })` → JSON.
+`route handler` → `withActor` (phiên, CSRF, rate limit, request_id) → zod parse → `withTx(async tx => { can() → nghiệp vụ → audit.append(tx) → outbox.add(tx) })` → JSON.
 Mọi lỗi nghiệp vụ là `AppError(code, http)`; không lộ stack ra client.
 
 ## Lược đồ dữ liệu (nhóm → bảng; chi tiết trong migrations)
@@ -52,6 +52,6 @@ docs/{specs,adr,design,g0,autopilot}/
 ```
 
 ## Môi trường
-dev (Postgres cục bộ do `scripts/test-db.sh` dựng bằng `initdb` khi không có Docker) · test (CI service `postgres:17`) ·
+dev (Postgres cục bộ do `scripts/with-test-db.sh` dựng bằng `initdb` khi không có Docker) · test (CI service `postgres:17`) ·
 staging/production (tự host PM2 như XBOSS — `RUNBOOK.md` lập ở lát vận hành). Bí mật qua biến môi trường, mẫu ở
 `.env.example`, không commit giá trị.

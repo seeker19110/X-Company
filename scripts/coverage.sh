@@ -4,7 +4,7 @@
 set -euo pipefail
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
-exec scripts/with-test-db.sh npx --no-install c8 \
+scripts/with-test-db.sh npx --no-install c8 \
   --temp-directory "$OUT/tmp" --report-dir "$OUT/report" \
   --include 'lib/**' --exclude 'tests/**' \
   --check-coverage --lines 85 --branches 80 --functions 85 \
