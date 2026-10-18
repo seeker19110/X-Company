@@ -68,6 +68,23 @@ psql "$DATABASE_URL" -c "select count(*) filter (where processed_at is null) as 
 psql "$DATABASE_URL" -c "select count(*) from session where absolute_expires_at > now()"   # phiên còn hiệu lực
 ```
 
+### DLQ / redrive
+Worker (`npm run worker`, một tiến trình dưới pm2/systemd; nhiều bản cùng chạy được — `SKIP LOCKED`) thử tối đa `WORKER_MAX_ATTEMPTS` (mặc định 5) lần với backoff mũ có jitter (10 s → trần 15 phút).
+Việc vào DLQ = `outbox_event.status = 'dead'` (giữ nguyên `payload`, `last_error`, `attempts`, `dead_at`) khi: hết lần thử · payload sai schema · không có handler cho topic · lỗi vĩnh viễn. Kênh tắt **không** vào DLQ (giữ `pending`).
+Cảnh báo: số hàng `dead` > 0 quá 15 phút (đang nhìn tay bằng truy vấn dưới; rule cảnh báo tự động chờ T-038).
+```bash
+psql "$DATABASE_URL" -c "select id, topic, attempts, dead_at, left(last_error, 120) from outbox_event where status = 'dead' order by dead_at"
+# Sửa nguyên nhân (mã/cấu hình/payload) TRƯỚC, rồi redrive: đưa về pending, attempts = 0. Xử lý lại vẫn được khử trùng bằng processed_message.
+psql "$DATABASE_URL" -c "update outbox_event set status='pending', attempts=0, dead_at=NULL, next_attempt_at=now() where status='dead' and id in (<id>,<id>)"
+```
+Dead lâu hơn `RETENTION_OUTBOX_DONE_DAYS` vẫn **không** bị retention xoá (chỉ `done` bị xoá) — dọn tay sau khi điều tra: `delete from outbox_event where status='dead' and id = <id>`.
+
+### Lưu giữ dữ liệu
+Thời hạn là cấu hình (`.env`; mặc định thận trọng theo D-016 — số chính thức do HR/pháp chế chốt ở F02): `RETENTION_INQUIRY_DAYS` 730 · `RETENTION_APPLICATION_DAYS` 365 · `RETENTION_SESSION_DAYS` 30 (tính từ hết hạn tuyệt đối) · `RETENTION_LOGIN_ATTEMPT_DAYS` 90 · `RETENTION_OUTBOX_DONE_DAYS` 30 · `RETENTION_IDEMPOTENCY_HOURS` 24.
+Liên hệ/ứng viên quá hạn được **ẩn danh** (tên, email, SĐT, nội dung, thư xin việc, `ip_hash`; giữ mã, trạng thái, thời điểm để thống kê; đặt `anonymized_at`) và ghi audit `retention.anonymize` (chỉ số đếm). Session hết hạn, `login_attempt`, outbox `done` cũ, `idempotency_record` cũ bị **xoá** (audit `retention.purge`).
+Chạy theo lịch hằng ngày (đề xuất 03:00 UTC): `0 3 * * * cd /srv/x-company && npm run -s retention:run` (cron/systemd timer; chủ dự án điền). Tắt khẩn cấp: `RETENTION_ENABLED=false` (đường lùi D-016) — lệnh thoát 0 và không đụng dữ liệu; ẩn danh không hoàn tác được (khôi phục từ sao lưu).
+Chưa phủ: dữ liệu định vị/ảnh chấm công, tệp đính kèm hồ sơ ứng viên, log/sao lưu (chờ DPIA và pháp chế — kế hoạch §12).
+
 ### Khôi phục sao lưu
 Xem [runbooks/restore-db.md](runbooks/restore-db.md) và [runbooks/restore-files.md](runbooks/restore-files.md). Diễn tập gần nhất: chưa diễn tập; thời gian đo được: chưa có.
 
@@ -135,7 +152,8 @@ Chưa có hệ thống cảnh báo (dự kiến T-038). Khi có, mỗi cảnh b�
 | Cảnh báo | Mức | Nghĩa là gì | Bước xử lý |
 |---|---|---|---|
 | (chưa có) `web_down` | SEV1/2 | web không trả 200 | `pm2 status`, `pm2 logs`, rollback mục 1 |
-| (chưa có) `outbox_backlog` | SEV3 | `outbox_event` chưa xử lý tồn đọng (worker T-029) | kiểm worker, `attempts`, `last_error` |
+| (chưa có) `outbox_backlog` | SEV3 | `outbox_event` `pending` tồn đọng | kiểm worker còn chạy (`npm run worker`), `attempts`, `last_error`; kênh tắt thì chờ bật kênh |
+| (chưa có) `dlq_nonzero` | SEV3 | có `outbox_event` `status='dead'` quá 15 phút | mục "DLQ / redrive" |
 | (chưa có) `audit_chain_broken` | SEV1 | `npm run audit:verify` exit 1 | nhánh sự cố bảo mật; bảo toàn chứng cứ trước khi sửa |
 
 ## 5. Việc định kỳ

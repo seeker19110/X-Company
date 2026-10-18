@@ -22,6 +22,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "check:env": "tsx scripts/check-env.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "worker": "tsx scripts/worker.ts",
+    "retention:run": "tsx scripts/retention.ts",
     "audit:verify": "tsx scripts/verify-audit-chain.ts",
     "check:repo-docs": "node scripts/check-repo-docs.mjs",
     "check:docs": "node scripts/check-docs.mjs",
