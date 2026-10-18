@@ -126,7 +126,7 @@ describe("công việc (T-015, SPEC-work)", () => {
     );
     await assert.rejects(
       withTx((tx) => addEvidence(tx, outsider, id, { kind: "note", ref: "x" })),
-      isCode("FORBIDDEN"),
+      isCode("NOT_FOUND"),
     );
     await assert.rejects(
       withTx((tx) => addEvidence(tx, dev, id, { kind: "link", ref: "javascript:x" })),

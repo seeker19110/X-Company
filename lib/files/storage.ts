@@ -12,21 +12,25 @@ export interface Storage {
 const KEY_RE = /^[0-9a-f]{2}\/[0-9a-f]{40}$/;
 
 export function diskStorage(
-  root: string = process.env.FILE_STORAGE_DIR ?? path.join(process.cwd(), ".data", "files"),
+  root: string = process.env.FILE_STORAGE_DIR ??
+    path.join(/* turbopackIgnore: true */ process.cwd(), ".data", "files"),
 ): Storage {
   const fileOf = (key: string) => {
     if (!KEY_RE.test(key)) throw new Error("Khoá tệp không hợp lệ");
-    return path.join(root, key);
+    return path.join(/* turbopackIgnore: true */ root, key);
   };
   return {
     async put(data) {
       const id = randomBytes(20).toString("hex");
       const key = `${id.slice(0, 2)}/${id}`;
-      await mkdir(path.join(root, id.slice(0, 2)), { recursive: true, mode: 0o700 });
-      await writeFile(fileOf(key), data, { mode: 0o600, flag: "wx" });
+      await mkdir(path.join(/* turbopackIgnore: true */ root, id.slice(0, 2)), {
+        recursive: true,
+        mode: 0o700,
+      });
+      await writeFile(/* turbopackIgnore: true */ fileOf(key), data, { mode: 0o600, flag: "wx" });
       return key;
     },
-    get: (key) => readFile(fileOf(key)),
+    get: (key) => readFile(/* turbopackIgnore: true */ fileOf(key)),
   };
 }
 

@@ -349,6 +349,8 @@ export async function transitionTask(
 ): Promise<number> {
   const t = await loadTask(tx, actor, taskId);
   const a = await projectAccess(tx, actor, t.project_id);
+  // Không đọc được dự án → 404, không lộ việc tồn tại (API-CONTRACT).
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
   const me = actor.employeeId;
   const isResponsible = !!me && me === t.responsible_employee_id;
   const isReviewer = !!me && me === t.reviewer_employee_id;
@@ -436,6 +438,8 @@ export async function updateTask(
 ): Promise<number> {
   const t = await loadTask(tx, actor, taskId);
   const a = await projectAccess(tx, actor, t.project_id);
+  // Không đọc được dự án → 404, không lộ việc tồn tại (API-CONTRACT).
+  if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
   const isResponsible = !!actor.employeeId && actor.employeeId === t.responsible_employee_id;
   const keys = Object.keys(changes) as (keyof TaskChanges)[];
   const onlyProgress = keys.length > 0 && keys.every((k) => k === "reportedPct");
@@ -523,6 +527,8 @@ export async function addEvidence(
   e: { kind: "file" | "link" | "note"; ref: string },
 ): Promise<string> {
   const t = await loadTask(tx, actor, taskId);
+  if (!(await projectAccess(tx, actor, t.project_id)).canRead)
+    throw new AppError("NOT_FOUND", 404, "Không tìm thấy công việc");
   const collab = await tx.query("SELECT 1 FROM task_collaborator WHERE task_id = $1 AND employee_id = $2", [
     taskId,
     actor.employeeId,
