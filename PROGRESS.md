@@ -1,25 +1,24 @@
 # PROGRESS.md — X-Company
 
-> Giai đoạn hiện tại: G5 Build (autopilot) · Cập nhật: 2026-10-18 07:10 UTC · Nhánh: claude/focused-cannon-3iu4lk
+> Giai đoạn hiện tại: G7 Release (autopilot) · Cập nhật: 2026-10-18 08:10 UTC · Nhánh: claude/focused-cannon-3iu4lk
 
 ## Đang làm
-- `T-015` Dự án/hạng mục/task, máy trạng thái, lịch sử, khoá lạc quan — trạng thái: chuẩn bị code — chỗ dừng: lát 5 bắt đầu
-- PR lát 2 (đuôi) + 3 + 4 (T-007…T-014) — trạng thái: chờ CI / chờ chủ dự án merge (ngoại lệ cứng: auth)
+- Audit BLUEPRINT.md (469 MUST): tick `[x]` kèm `— Kiểm:` chạy lại được, `[~]` kèm lý do — trạng thái: đang gộp kết quả audit — chỗ dừng: BASE-CFG-001
+- PR #8 (T-002 sửa, T-007…T-024 + bản sửa review) — trạng thái: chờ chủ dự án merge (ngoại lệ cứng: auth/dữ liệu người dùng)
 
 ## Tiếp theo
-1. `T-015` Dự án/task (Gate: `npm run -s test:file -- tests/db/tasks.test.ts`)
-2. `T-016` Tiến độ 3 con số, ví dụ 35% (Gate: `npm run -s test:file -- tests/unit/progress.test.ts tests/db/assign-warning.test.ts`)
-3. `T-017` Tệp private + bình luận; `T-018` giờ dự án; lát 6 PWA; lát 7 dashboard + E2E
-4. Cổng sắp tới: G7 — còn thiếu: E2E đầy đủ, tick blueprint kèm `— Kiểm:`, GO-NO-GO
+1. Áp kết quả audit vào BLUEPRINT.md → `xt.py blueprint-status BLUEPRINT.md --strict --run`
+2. Mục áp dụng được nhưng cần người/hạ tầng → `loop defer` kèm cách làm
+3. `xt.py loop verify` → `loop stats` → `feedback collect` → GO-NO-GO.md
 
 ## Quyết định
-- 2026-10-18 D-001…D-011 tự duyệt — `docs/autopilot/DECISIONS.md` (repo mới cùng stack XBOSS; Argon2id; một ứng dụng; tự host; PLAN; giá trị ca/OT là cấu hình có hiệu lực; I3 thu hẹp)
-- 2026-10-18 ESLint có kiểu `no-floating-promises` sau lỗi quên `await` hàm kiểm quyền (đã sửa trước commit)
-- Nợ kỹ thuật chấp nhận: đính kèm tệp ở form liên hệ — làm cùng T-017; advisory `braces` (dev) — chờ bản sửa (D-008)
+- 2026-10-18 D-001…D-013 tự duyệt — `docs/autopilot/DECISIONS.md` (stack, Argon2id, tự host, mật khẩu NCSC 100k, I3 thu hẹp, C2 cắt phút + trừ nghỉ cố định, đính kèm form công khai hoãn P1)
+- PLAN T-001…T-024 xong, Gate xanh; coverage dòng 98,2 %, nhánh 89,8 %; E2E + axe WCAG 2.2 AA xanh
+- Rủi ro vận hành: production phải đặt `TRUST_PROXY_HOPS`; quy tắc ca/OT là cấu hình (D-007) chờ HR chốt F02
 
 ## Bàn giao phiên
-- Commit cuối trên nhánh chính: `ea5fa9a77bc28a5fa40d756c46f61451f7884336` (PR #4 + nâng khung 3.0.1) · CI: xanh trên PR #4
-- Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` → exit 0 lúc 07:05
+- Commit cuối trên nhánh: `c891dd2` (T-024) · CI: theo dõi trên PR #8
+- Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate`
 - Đang chặn: không
-- Việc dở chưa commit: không
-- Câu hỏi cần người: merge các PR chạm auth/mật mã (ngoại lệ cứng) — chủ dự án seeker19110
+- Việc dở chưa commit: không (ngoài PROGRESS.md này)
+- Câu hỏi cần người: merge PR #8 (ngoại lệ cứng), import ruleset, DPIA + HR chốt F02, hạ tầng production
