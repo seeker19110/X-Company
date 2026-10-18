@@ -531,6 +531,15 @@ export async function addEvidence(
   if (!ok) throw forbidden("task.evidence", "task", taskId);
   if (e.kind === "link" && !/^https?:\/\//.test(e.ref))
     throw new AppError("VALIDATION", 422, "Liên kết phải là http(s)");
+  if (e.kind === "file") {
+    // Bằng chứng tệp phải là tài liệu đã tải lên CHÍNH công việc này (không trỏ tệp của đối tượng khác).
+    const d = await tx.query(
+      "SELECT 1 FROM document WHERE company_id = $1 AND id::text = $2 AND object_type = 'task' AND object_id = $3",
+      [actor.companyId, e.ref, taskId],
+    );
+    if (!d.rowCount)
+      throw new AppError("VALIDATION", 422, "Bằng chứng tệp phải là tài liệu của công việc này");
+  }
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO task_evidence (company_id, task_id, kind, ref, added_by_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
     [actor.companyId, taskId, e.kind, e.ref, actor.userId],

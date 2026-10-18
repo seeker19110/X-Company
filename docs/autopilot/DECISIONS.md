@@ -86,3 +86,11 @@
 - Chọn: Tính toàn bộ vào ngày (giờ VN) bắt đầu đơn và kỳ chứa ngày đó; ghi rõ ở SPEC; HR chốt ở F02
 - Lý do (tiêu chí chất lượng cuối): Phút phép là phút làm việc người lao động xin, không phải thời gian lịch — chia tỷ lệ lịch sai với ca đêm/cuối tuần; chia theo ca cần quy tắc HR chưa có (F02). Cách 2 đơn giản, tất định, không mất phút (vào đúng một kỳ); đơn qua kỳ hiếm và HR thấy trên bảng công kỳ bắt đầu
 - Đường lùi: Đổi truy vấn lvMap trong computeLines sang chia theo ca khi HR chốt quy tắc
+
+### D-013 · 2026-10-18T07:23:52+00:00 · Đính kèm tệp ở form liên hệ công khai (SPEC-website-cms) làm ở T-017 hay hoãn
+
+- Phương án: (1) Làm ngay: nhận tệp từ khách vô danh vào kho · (2) Hoãn sang P1 cùng cách ly + quét tệp; P0 chỉ nhận tệp từ người dùng nội bộ đã đăng nhập
+- Chọn: Hoãn sang P1 cùng cách ly + quét tệp; P0 chỉ nhận tệp từ người dùng nội bộ đã đăng nhập
+- Lý do (tiêu chí chất lượng cuối): Kế hoạch §12: kiểm loại/dung lượng, cách ly tệp chưa kiểm tra, không gửi hồ sơ nhạy cảm lên dịch vụ quét công khai — nhận tệp từ người lạ cần hàng cách ly + máy quét tự host (ClamAV) chưa có; khách vẫn gửi được yêu cầu, nhân viên nhận tệp qua email/kênh khác
+- Đường lùi: Thêm endpoint đính kèm theo mã hồ sơ + hàng cách ly khi có máy quét
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): ClamAV tự host trong mạng nội bộ cho hàng cách ly tệp công khai

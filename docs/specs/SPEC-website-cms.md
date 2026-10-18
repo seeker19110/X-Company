@@ -15,7 +15,7 @@ Trang chủ, Giới thiệu, Dịch vụ (danh sách + chi tiết), Dự án ti�
 - SEO: `<title>`, mô tả, canonical, Open Graph, `sitemap.xml` (chỉ trang published), `robots.txt` (chặn `/app`, `/api`), redirect 301 khi đổi slug (`cms_redirect`).
 
 ## Liên hệ & tuyển dụng
-- Form liên hệ: họ tên (bắt buộc, ≤ 120), phương thức liên hệ (email hoặc điện thoại hợp lệ — ít nhất một), nhu cầu (≤ 4.000), dịch vụ quan tâm (tuỳ chọn), đồng ý xử lý dữ liệu (bắt buộc, lưu phiên bản thông báo quyền riêng tư đã hiển thị), tệp tuỳ chọn (≤ 10 MB⚙, pdf/png/jpg/docx dò theo nội dung) — làm cùng module tệp private (T-017), lát 3 chưa có.
+- Form liên hệ: họ tên (bắt buộc, ≤ 120), phương thức liên hệ (email hoặc điện thoại hợp lệ — ít nhất một), nhu cầu (≤ 4.000), dịch vụ quan tâm (tuỳ chọn), đồng ý xử lý dữ liệu (bắt buộc, lưu phiên bản thông báo quyền riêng tư đã hiển thị), tệp tuỳ chọn (≤ 10 MB⚙, pdf/png/jpg/docx dò theo nội dung) — hoãn sang P1 cùng hàng cách ly + quét tệp (D-013); P0 chỉ nhận tệp từ người dùng nội bộ.
 - Gửi thành công → **đúng một** `inquiry` có mã `YC-YYYYMMDD-NNNN`, `source` (trang/UTM), `assignee` theo quy tắc định tuyến (dịch vụ → người phụ trách; mặc định hàng chung kinh doanh), `due_at` = +1 ngày làm việc⚙, lịch sử trạng thái `new → assigned → in_progress → qualified|closed`.
 - Chống gửi trùng: client gửi `submission_id` (UUID sinh khi mở form); cùng id → trả cùng mã hồ sơ (không tạo thêm).
 - Chống spam nhiều lớp: trường bẫy ẩn (honeypot) có giá trị → trả 200 giả nhưng không lưu; thời gian điền < 3 s → đánh dấu `suspected_spam`; giới hạn 5 lần/10 phút/IP → 429. Thử thách bổ sung (captcha) chỉ khi bật cấu hình.
