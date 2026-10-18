@@ -1,0 +1,8 @@
+# Ngoại lệ OSV-Scanner (BASE-DEP-004, SEC-SUPPLY-006). Mỗi mục BẮT BUỘC có id, ignoreUntil (hạn xem lại), reason;
+# reason nêu người duyệt ("approved_by") và D-NNN. Quá hạn → `npm run -s check:osv-exceptions` đỏ.
+# Chỉ cho lỗ hổng thật đang có trong package-lock.json. Gia hạn = PR mới nêu lý do.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-18
+reason = "braces 3.0.3 (dev-only, qua chuỗi eslint-config-next → micromatch/glob), mọi phiên bản bị ảnh hưởng, chưa có bản sửa; không vào bundle production. approved_by: phiên chính tự duyệt, D-008; xem lại trước hạn."

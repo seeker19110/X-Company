@@ -188,6 +188,7 @@ export interface VerifyResult {
 export async function verifyAuditChain(db: Queryable, chainKey?: string): Promise<VerifyResult> {
   const hasKey = chainKey !== undefined && chainKey !== "";
   const { rows } = await db.query<Row>(
+    // sql-interp-allow: mảnh WHERE là hằng nội bộ ("WHERE chain_key = $1" hoặc rỗng); chainKey đi qua tham số $1.
     `SELECT * FROM audit_event ${hasKey ? "WHERE chain_key = $1" : ""} ORDER BY chain_key, seq`,
     hasKey ? [chainKey] : [],
   );

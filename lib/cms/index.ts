@@ -411,6 +411,7 @@ export async function getPublished(
   opts: { locale?: Locale; now?: Date } = {},
 ): Promise<PublishedPage | null> {
   const { rows } = await db.query<VisibleRow>(
+    // sql-interp-allow: VISIBLE_SQL là hằng module; type/slug đi qua tham số $4/$5.
     `${VISIBLE_SQL} AND p.type = $4 AND p.slug = $5 ORDER BY p.id, r.publish_at DESC, r.version DESC`,
     [companyId, opts.locale ?? "vi", opts.now ?? new Date(), type, slug],
   );
@@ -426,9 +427,11 @@ export async function listPublished(
   let where = "";
   if (opts.type !== undefined) {
     params.push(opts.type);
+    // sql-interp-allow: chỉ chèn SỐ THỨ TỰ tham số (params.length), giá trị type đi qua tham số.
     where = ` AND p.type = $${params.length}`;
   }
   const { rows } = await db.query<VisibleRow>(
+    // sql-interp-allow: VISIBLE_SQL là hằng module; `where` do nhánh trên dựng từ hằng + số thứ tự tham số.
     `SELECT * FROM (${VISIBLE_SQL}${where} ORDER BY p.id, r.publish_at DESC, r.version DESC) v ORDER BY v.publish_at DESC`,
     params,
   );

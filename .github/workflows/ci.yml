@@ -174,3 +174,31 @@ jobs:
             fi
           done
           echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."
+
+  supply-chain:
+    name: supply-chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # CMP-LIC-001/002/003, BASE-DEP-005, SEC-SUPPLY-006: license, ngoại lệ OSV còn hạn, SBOM, THIRD_PARTY_NOTICES, nối dây workflow.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cổng chuỗi cung ứng (license, hạn ngoại lệ OSV, notices, workflow, ci-check)
+        run: npm run -s check:supply-chain
+      - name: Sinh lại THIRD_PARTY_NOTICES.md và so với bản commit (CMP-LIC-001)
+        run: |
+          node scripts/gen-third-party-notices.mjs
+          git diff --exit-code THIRD_PARTY_NOTICES.md
+      - name: SBOM CycloneDX (production) và kiểm license ≥ 99% (CMP-LIC-003)
+        run: node scripts/check-sbom.mjs --out sbom.cdx.json
+      - name: Lưu SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90

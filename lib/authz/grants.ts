@@ -28,6 +28,7 @@ export async function grantRole(
   if (needsId !== !!g.scopeId) throw new AppError("INVALID_SCOPE", 422, "Phạm vi và mã phạm vi không khớp");
   const table = SCOPE_TABLE[g.scopeType];
   if (table) {
+    // sql-interp-allow: `table` lấy từ SCOPE_TABLE (hằng "branch"/"department"), không bao giờ từ đầu vào.
     const ok = await tx.query(`SELECT 1 FROM ${table} WHERE company_id = $1 AND id = $2`, [
       companyId,
       g.scopeId,

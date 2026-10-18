@@ -118,6 +118,7 @@ async function existingCode(
   submissionId: string,
 ): Promise<SubmitResult | null> {
   const { rows } = await db.query<{ code: string }>(
+    // sql-interp-allow: `table` có kiểu hợp nhất "inquiry" | "job_application" (hằng của người gọi).
     `SELECT code FROM ${table} WHERE company_id = $1 AND submission_id = $2`,
     [companyId, submissionId],
   );

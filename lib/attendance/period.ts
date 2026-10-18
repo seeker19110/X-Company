@@ -74,10 +74,11 @@ async function loadPeriod(db: Queryable, companyId: string, periodId: string, lo
     end_date: string;
     status: PeriodStatus;
     current_version: number;
-  }>(`SELECT * FROM attendance_period WHERE company_id = $1 AND id = $2 ${lock ? "FOR UPDATE" : ""}`, [
-    companyId,
-    periodId,
-  ]);
+  }>(
+    // sql-interp-allow: `lock` là boolean nội bộ, chỉ chọn giữa "FOR UPDATE" và rỗng.
+    `SELECT * FROM attendance_period WHERE company_id = $1 AND id = $2 ${lock ? "FOR UPDATE" : ""}`,
+    [companyId, periodId],
+  );
   const r = rows[0];
   if (!r) throw new AppError("NOT_FOUND", 404, "Không tìm thấy kỳ công");
   return {
@@ -126,6 +127,7 @@ export async function computeLines(
     late_grace_minutes: number;
     tz: string;
   }>(
+    // sql-interp-allow: `empFilter` là hằng "AND a.employee_id = $4" hoặc rỗng; employeeId đi qua tham số $4.
     `SELECT a.id, a.employee_id, a.business_date, to_char(s.start_time, 'HH24:MI') AS start_time,
             to_char(s.end_time, 'HH24:MI') AS end_time, s.break_minutes, s.early_grace_minutes, s.late_grace_minutes, s.tz
      FROM shift_assignment a JOIN shift_template s ON s.id = a.shift_template_id
@@ -142,6 +144,7 @@ export async function computeLines(
     device_time: Date;
     device: string | null;
   }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT id, employee_id, kind, device_time, device FROM attendance_event
      WHERE company_id = $1 AND status = 'accepted' AND voided_by_adjustment_id IS NULL
        AND device_time >= $2::date AND device_time < $3::date ${employeeId ? "AND employee_id = $4" : ""}`,
@@ -157,6 +160,7 @@ export async function computeLines(
     });
   }
   const ot = await db.query<{ employee_id: string; business_date: string; m: string }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT employee_id, business_date, sum(minutes) AS m FROM ot_request
      WHERE company_id = $1 AND status = 'approved' AND business_date BETWEEN $2::date AND $3::date
      ${employeeId ? "AND employee_id = $4" : ""} GROUP BY 1, 2`,
@@ -164,6 +168,7 @@ export async function computeLines(
   );
   // Phút nghỉ phép tính vào ngày (giờ VN) bắt đầu của đơn đã duyệt.
   const lv = await db.query<{ employee_id: string; d: string; m: string }>(
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
     `SELECT employee_id, (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date::text AS d, sum(minutes) AS m FROM leave_request
      WHERE company_id = $1 AND status = 'approved'
        AND (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date
@@ -497,6 +502,7 @@ export interface AdjustmentInput {
 
 async function periodOfDate(db: Queryable, companyId: string, date: string, lock = false) {
   const { rows } = await db.query<{ id: string; status: PeriodStatus }>(
+    // sql-interp-allow: `lock` là boolean nội bộ, chỉ chọn giữa "FOR UPDATE" và rỗng.
     `SELECT id, status FROM attendance_period WHERE company_id = $1 AND $2::date BETWEEN start_date AND end_date
      ${lock ? "FOR UPDATE" : ""}`,
     [companyId, date],

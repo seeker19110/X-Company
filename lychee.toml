@@ -1,0 +1,14 @@
+# Cấu hình lychee cho job kiểm link ngoài hằng tuần (.github/workflows/maintenance.yml) — BASE-DOC-006, WF-DOC-002.
+# Link nội bộ đã bị chặn merge bởi `npm run check:docs`; ở đây chỉ CẢNH BÁO (mở/cập nhật issue), không làm đỏ.
+cache = true
+max_cache_age = "1d"
+max_retries = 3
+retry_wait_time = 5
+timeout = 20
+max_concurrency = 8
+no_progress = true
+# 429 (chống bot) và 403 từ các trang chặn crawler không phải link chết.
+accept = [200, 201, 202, 204, 206, 301, 302, 303, 307, 308, 403, 429]
+exclude_all_private = true
+exclude_path = [".xtemplates", "node_modules", ".next", "coverage", "docs/input", "docs/autopilot", ".claude", "THIRD_PARTY_NOTICES.md"]
+exclude = ["^https?://localhost", "^https?://127\\.0\\.0\\.1", "^https?://example\\.(com|org)", "^mailto:"]
