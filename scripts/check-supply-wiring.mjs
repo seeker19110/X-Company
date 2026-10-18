@@ -52,7 +52,10 @@ export function checkWiring(readFn = read) {
   if (/^permissions:\s*\n\s+contents:\s*write/m.test(rp))
     errs.push("WF-REL-001: quyền write phải ở job, không ở workflow");
   const cq = readFn(".github/workflows/codeql.yml");
-  if (/^permissions:\s*\n(?:\s+.*\n)*?\s+security-events:\s*write/m.test(cq.split("jobs:")[0] ?? ""))
+  // Khối permissions cấp workflow = phần trước `jobs:` kể từ dòng `permissions:` (không dùng regex lồng lượng từ — ReDoS).
+  const cqHead = cq.split("jobs:")[0] ?? "";
+  const cqPerm = cqHead.search(/^permissions:/m);
+  if (cqPerm !== -1 && /^[ \t]+security-events:[ \t]*write/m.test(cqHead.slice(cqPerm)))
     errs.push("SEC-WEB-001: security-events: write chỉ được ở job codeql");
   return errs;
 }

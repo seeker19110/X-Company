@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 // @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
 import { checkLicenses, classify, parsePolicy } from "../../scripts/check-licenses.mjs";
@@ -143,6 +144,9 @@ describe("THIRD_PARTY_NOTICES, SBOM, wiring", () => {
     assert.ok(!out.includes("| d |"));
     assert.ok(out.includes("Tổng: 3 thành phần."));
     assert.equal(render(lock), out);
+    // ô bảng markdown: `\` thoát trước `|` (CodeQL js/incomplete-sanitization)
+    const odd = render({ packages: { "node_modules/x": { version: "1", license: "A\\|B" } } }) as string;
+    assert.ok(odd.includes("A\\\\\\|B"), odd);
     assert.ok((render({ packages: {} }) as string).includes("Tổng: 0 thành phần."));
   });
   test("SBOM: tỉ lệ license ≥ 99%, rỗng đỏ, sai định dạng đỏ", () => {
@@ -163,6 +167,16 @@ describe("THIRD_PARTY_NOTICES, SBOM, wiring", () => {
   test("wiring: repo thật đạt; thiếu tệp → đỏ", () => {
     assert.deepEqual(checkWiring(), []);
     assert.ok((checkWiring(() => "") as string[]).length > 10);
+  });
+  test("wiring: security-events: write ở cấp workflow bị bắt; chuỗi dài nhiều dòng trống không treo (ReDoS)", () => {
+    const real = (f: string) => readFileSync(f, "utf8");
+    const withCq = (cq: string) => (f: string) => (f.endsWith("codeql.yml") ? cq : real(f));
+    const bad = "permissions:\n  contents: read\n  security-events: write\njobs:\n  a: {}\n";
+    assert.ok((checkWiring(withCq(bad)) as string[]).some((e) => e.startsWith("SEC-WEB-001")));
+    const evil = "permissions:\n" + " \n".repeat(50_000) + "x";
+    const t0 = performance.now();
+    checkWiring(withCq(evil));
+    assert.ok(performance.now() - t0 < 1000);
   });
 });
 

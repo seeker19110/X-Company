@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 // @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
-import { checkPr, section } from "../../scripts/pr-policy.mjs";
+import { checkPr, section, stripComments } from "../../scripts/pr-policy.mjs";
 // @ts-expect-error -- script .mjs thuần JS
 import { bannedOps, nameProblems } from "../../scripts/check-migrations.mjs";
 // @ts-expect-error -- script .mjs thuần JS
@@ -35,6 +35,13 @@ describe("pr-policy (WF-REVIEW-002, STD-PROC-004, QA-STRATEGY)", () => {
     assert.match(pr({ title: "Cập nhật", body: BODY, files: [] }).errors[0]!, /Conventional Commits/);
     const long = "feat: " + "a".repeat(70);
     assert.ok(pr({ title: long, body: BODY, files: [] }).errors.some((e) => e.includes("> 72")));
+  });
+
+  test("stripComments: comment nhiều dòng, ghép lồng và chưa đóng không để sót `<!--`", () => {
+    assert.equal(stripComments("a<!-- x\ny -->b"), "ab");
+    assert.equal(stripComments("a<!<!-- x -->-- y -->b"), "ab");
+    assert.equal(stripComments("a <!-- chưa đóng\nb"), "a ");
+    assert.equal((stripComments("<!<!--- -->-- z") as string).includes("<!--"), false);
   });
 
   test("mục bắt buộc rỗng (chỉ comment) bị báo", () => {

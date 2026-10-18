@@ -9,17 +9,29 @@ const TITLE = new RegExp(`^(${TYPES})(\\([a-z0-9-]+\\))?!?: \\S.*$`);
 const MAX_SUBJECT = 72;
 export const REQUIRED_SECTIONS = ["Mô tả", "Bằng chứng", "Rủi ro", "Rollback", "Tài liệu"];
 
+/** Bỏ comment HTML: lặp tới khi ổn định (comment lồng/ghép không sót `<!--`), comment chưa đóng ẩn tới hết chuỗi
+ *  như trình duyệt hiển thị markdown. */
+export function stripComments(s) {
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(/<!--[\s\S]*?-->/g, "");
+  } while (s !== prev);
+  const open = s.indexOf("<!--");
+  return open === -1 ? s : s.slice(0, open);
+}
+
 /** Nội dung một mục `## Tên` (bỏ comment HTML); null nếu không có mục. */
 export function section(body, name) {
   const re = new RegExp(`^##\\s+${name}\\s*$([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, "m");
   const m = re.exec(body);
-  return m === null ? null : m[1].replace(/<!--[\s\S]*?-->/g, "").trim();
+  return m === null ? null : stripComments(m[1]).trim();
 }
 
 /** Dòng `- [x] <nhãn>: <nội dung>` — nội dung sau nhãn (rỗng nếu chưa điền). */
 function field(body, label) {
   const m = new RegExp(`${label}[ \\t]*:?[ \\t]*(.*)$`, "m").exec(body);
-  return m === null ? null : m[1].replace(/<!--.*?-->/g, "").trim();
+  return m === null ? null : stripComments(m[1]).trim();
 }
 
 export function checkPr({ title, body, files }) {

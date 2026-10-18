@@ -23,6 +23,9 @@ import { enqueue } from "../../lib/outbox/index.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { setTestEnv } from "../helpers/fixtures.ts";
 
+/** Thoát mọi ký tự đặc biệt của RegExp (kể cả `\`). */
+const reEsc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+
 setTestEnv();
 const TOKEN = "metrics-token-0123456789abcdef";
 const ROOT = new URL("../..", import.meta.url).pathname;
@@ -124,20 +127,14 @@ describe("histogram http_server_request_duration_seconds (exposition Prometheus)
     observeRequest("POST", r, 201, 99); // chỉ +Inf
     const out = renderMetrics(null);
     const sel = `http_request_method="POST",http_route="${r}",http_response_status_code="201"`;
-    const b = (le: string) =>
-      line(
-        out,
-        new RegExp(`_bucket\\{${sel.replace(/[/]/g, "\\/")},le="${le.replace("+", "\\+")}"\\} (\\d+)`),
-      );
+    const b = (le: string) => line(out, new RegExp(`_bucket\\{${reEsc(sel)},le="${reEsc(le)}"\\} (\\d+)`));
     assert.equal(b("0.005"), 1);
     assert.equal(b("1"), 2);
     assert.equal(b("2.5"), 3);
     assert.equal(b("10"), 3);
     assert.equal(b("+Inf"), 4);
-    assert.equal(line(out, new RegExp(`_count\\{${sel.replace(/[/]/g, "\\/")}\\} (\\d+)`)), 4);
-    assert.ok(
-      Math.abs(line(out, new RegExp(`_sum\\{${sel.replace(/[/]/g, "\\/")}\\} ([\\d.]+)`)) - 101.0041) < 1e-9,
-    );
+    assert.equal(line(out, new RegExp(`_count\\{${reEsc(sel)}\\} (\\d+)`)), 4);
+    assert.ok(Math.abs(line(out, new RegExp(`_sum\\{${reEsc(sel)}\\} ([\\d.]+)`)) - 101.0041) < 1e-9);
     let prev = -1;
     for (const le of DURATION_BUCKETS) {
       const v = b(String(le));

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(ROOT, "THIRD_PARTY_NOTICES.md");
 
-const esc = (s) => String(s).replace(/\|/g, "\\|");
+const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 
 export function render(lock) {
   const rows = new Map();
