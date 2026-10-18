@@ -33,7 +33,10 @@ export function diskStorage(
       await writeFile(/* turbopackIgnore: true */ fileOf(key), data, { mode: 0o600, flag: "wx" });
       return key;
     },
-    get: (key) => readFile(/* turbopackIgnore: true */ fileOf(key)),
+    // async: khoá sai phải thành promise bị từ chối (không ném đồng bộ ra khỏi lời gọi không `await`).
+    async get(key) {
+      return readFile(/* turbopackIgnore: true */ fileOf(key));
+    },
     async remove(key) {
       try {
         await unlink(/* turbopackIgnore: true */ fileOf(key));

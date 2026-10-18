@@ -12,6 +12,7 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
     assert.match(h["content-security-policy"]!, /script-src 'self' 'nonce-abc' 'strict-dynamic'(;|$)/);
     assert.match(h["content-security-policy"]!, /frame-ancestors 'none'/);
     assert.match(h["content-security-policy"]!, /object-src 'none'/);
+    assert.match(h["content-security-policy"]!, /base-uri 'none'(;|$)/);
     assert.ok(!/script-src[^;]*unsafe-inline/.test(h["content-security-policy"]!));
     assert.equal(h["x-content-type-options"], "nosniff");
     assert.ok(h["strict-transport-security"]);
@@ -35,5 +36,21 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
     assert.equal(withCookie.status, 200);
     const pub = proxy(new NextRequest("http://xc.test/dich-vu"));
     assert.equal(pub.headers.get("x-frame-options"), "DENY");
+  });
+
+  test("HTML /app/* (kể cả chuyển hướng đăng nhập) là private, no-store; trang công khai không bị ép", () => {
+    const withCookie = proxy(
+      new NextRequest("http://xc.test/app/today", { headers: { cookie: "xc_session=abc" } }),
+    );
+    assert.equal(withCookie.headers.get("cache-control"), "private, no-store");
+    assert.equal(
+      proxy(new NextRequest("http://xc.test/app/today")).headers.get("cache-control"),
+      "private, no-store",
+    );
+    assert.equal(
+      proxy(new NextRequest("http://xc.test/app/login")).headers.get("cache-control"),
+      "private, no-store",
+    );
+    assert.equal(proxy(new NextRequest("http://xc.test/dich-vu")).headers.get("cache-control"), null);
   });
 });

@@ -17,7 +17,7 @@ export function securityHeaders(
     "worker-src 'self'",
     "manifest-src 'self'",
     "frame-ancestors 'none'",
-    "base-uri 'self'",
+    "base-uri 'none'",
     "form-action 'self'",
     "object-src 'none'",
   ].join("; ");
@@ -33,6 +33,9 @@ export function securityHeaders(
   return h;
 }
 
+// BE-CACHE-001: HTML khu nội bộ là dữ liệu theo người dùng — không cache ở CDN/proxy/bfcache chia sẻ.
+const PRIVATE_NO_STORE = "private, no-store";
+
 const SESSION_COOKIES = ["__Host-xc_session", "xc_session"];
 
 export function proxy(request: NextRequest) {
@@ -45,7 +48,9 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/app/login";
     url.search = "";
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    redirect.headers.set("cache-control", PRIVATE_NO_STORE);
+    return redirect;
   }
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const headers = securityHeaders(nonce, {
@@ -58,6 +63,7 @@ export function proxy(request: NextRequest) {
   reqHeaders.set("content-security-policy", headers["content-security-policy"]!);
   const res = NextResponse.next({ request: { headers: reqHeaders } });
   for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+  if (pathname.startsWith("/app")) res.headers.set("cache-control", PRIVATE_NO_STORE);
   return res;
 }
 
