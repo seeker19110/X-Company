@@ -69,7 +69,11 @@ export const getTasks = withActor(async (ctx) =>
   ),
 );
 
-const Body = z.object({ version: z.number().int().positive(), reason: z.string().max(1000).nullish() });
+/** Thân POST /api/app/tasks/:id/:action — xuất ra cho hợp đồng OpenAPI. */
+export const Body = z.object({
+  version: z.number().int().positive(),
+  reason: z.string().max(1000).nullish(),
+});
 
 export const postTaskAction = withActor(
   async (ctx) => {

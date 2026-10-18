@@ -21,7 +21,8 @@ import { t } from "../i18n/index.ts";
 const FILE_LIMIT = { bucket: "files.post", max: 60, windowSec: 60 };
 const COMMENT_LIMIT = { bucket: "comments.post", max: 60, windowSec: 60 };
 
-const ObjectRef = z.object({
+/** Tham chiếu đối tượng (query/thân) — xuất ra cho hợp đồng OpenAPI. */
+export const ObjectRef = z.object({
   object_type: z.enum(OBJECT_TYPES as [ObjectType, ...ObjectType[]]),
   object_id: z.uuid(),
 });

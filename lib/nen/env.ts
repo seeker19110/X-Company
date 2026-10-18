@@ -55,8 +55,8 @@ export const SERVER_SPEC = {
       .pipe(z.string()),
     { required: true },
   ),
-  DATABASE_URL: field(url(/^postgres(ql)?$/, "postgres://"), { required: true, secret: true }),
-  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "postgres://").optional(), { secret: true }),
+  DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), { required: true, secret: true }),
+  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), { secret: true }),
   DB_POOL_MAX: field(z.coerce.number().int().min(1).max(100).default(10)),
   // Tắt êm (ARC-RES-009): thời gian chờ request đang chạy và thời gian giữ readiness 503 trước khi ngừng nhận.
   SHUTDOWN_GRACE_MS: field(z.coerce.number().int().min(0).max(120_000).default(20_000)),

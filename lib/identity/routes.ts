@@ -16,7 +16,8 @@ import { login } from "./auth.ts";
 import { ABSOLUTE_MS, csrfTokenFor, destroySession } from "./session.ts";
 import { kb, msToSeconds } from "../nen/units.ts";
 
-const LoginBody = z.object({ email: z.string().max(254), password: z.string().min(1).max(256) });
+/** Thân POST /api/app/auth/login — xuất ra cho hợp đồng OpenAPI. */
+export const LoginBody = z.object({ email: z.string().max(254), password: z.string().min(1).max(256) });
 
 export const loginHandler = publicRoute(async ({ req, requestId }) => {
   assertSameOrigin(req); // chống login CSRF

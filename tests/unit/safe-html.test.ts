@@ -126,7 +126,7 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("DOM sink (FE-SEC-001, SEC-WEB-004)", () => {
-  test("dangerouslySetInnerHTML/innerHTML chỉ ở đúng 2 tệp trang công khai, mỗi chỗ có eslint-disable kèm lý do", () => {
+  test("dangerouslySetInnerHTML/innerHTML chỉ ở đúng 2 tệp trang công khai, mỗi chỗ có chú thích tắt lint kèm lý do", () => {
     const hits: string[] = [];
     for (const dir of ["app", "lib", "public"]) {
       for (const f of walk(path.join(root, dir))) {
@@ -138,7 +138,7 @@ describe("DOM sink (FE-SEC-001, SEC-WEB-004)", () => {
           assert.match(
             src,
             /eslint-disable-next-line react\/no-danger -- \S.{10,}/,
-            `${rel}: thiếu eslint-disable kèm lý do`,
+            `${rel}: thiếu chú thích tắt lint kèm lý do`,
           );
           assert.match(src, /safe-html/, `${rel}: lý do phải trỏ module safe-html`);
         }
