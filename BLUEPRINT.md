@@ -22,7 +22,7 @@ backlog: BLUEPRINT-BACKLOG.md
 | Mức | Số mục |
 |---|---|
 | MUST | 469 |
-| SHOULD | 1314 |
+| SHOULD | 1323 |
 
 ### Cấu hình, biến môi trường và bí mật
 

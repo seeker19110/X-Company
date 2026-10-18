@@ -17,7 +17,7 @@
 - Rủi ro vận hành: production phải đặt `TRUST_PROXY_HOPS`; quy tắc ca/OT là cấu hình (D-007) chờ HR chốt F02
 
 ## Bàn giao phiên
-- Commit cuối trên nhánh: `c891dd2` (T-024) · CI: theo dõi trên PR #8
+- Commit cuối trên nhánh chính: `54161ce` (nâng khung 3.1.0, #9) · nhánh làm việc chờ merge qua PR #8 · CI: xanh trên PR #8
 - Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate`
 - Đang chặn: không
 - Việc dở chưa commit: không (ngoài PROGRESS.md này)
