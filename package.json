@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",
-    "markdown-it": "14.3.3",
+    "markdown-it": "15.0.2",
     "next": "16.4.2",
     "pg": "8.23.1",
     "react": "19.3.1",
