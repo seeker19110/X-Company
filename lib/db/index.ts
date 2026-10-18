@@ -14,18 +14,17 @@ export function getPool(): pg.Pool {
   if (!appPool) {
     const url = process.env.DATABASE_URL?.trim();
     if (!url) throw new Error("Thiếu DATABASE_URL");
-    appPool = new pg.Pool({ connectionString: url, max: Number(process.env.DB_POOL_MAX ?? 10) });
-    appPool.on("connect", configureConnection);
+    appPool = new pg.Pool({
+      connectionString: url,
+      max: Number(process.env.DB_POOL_MAX ?? 10),
+      options: PG_SESSION_OPTIONS,
+    });
   }
   return appPool;
 }
 
-/** Thiết lập phiên cho mọi kết nối mới (pool production và test dùng chung). Lỗi được ghi, không thành unhandled. */
-export function configureConnection(c: pg.PoolClient): void {
-  c.query("SET statement_timeout = '30s'; SET TIME ZONE 'UTC'").catch((err: unknown) => {
-    console.error("[db] thiết lập kết nối lỗi:", err instanceof Error ? err.message : err);
-  });
-}
+/** Tham số phiên cho mọi kết nối (pool production và test dùng chung) — đặt lúc bắt tay, không chạy query riêng. */
+export const PG_SESSION_OPTIONS = "-c statement_timeout=30000 -c TimeZone=UTC";
 
 /** Thay pool (test). */
 export function setPool(pool: pg.Pool | undefined): void {

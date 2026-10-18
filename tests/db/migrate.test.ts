@@ -109,6 +109,13 @@ describe("role ứng dụng (THREAT-MODEL T12)", () => {
     await assert.rejects(db.app.query("CREATE TABLE hack (x int)"), /permission denied/);
   });
 
+  test("kết nối ứng dụng có statement_timeout 30s và múi giờ UTC", async () => {
+    const { rows } = await db.app.query(
+      "SELECT current_setting('statement_timeout') AS t, current_setting('TimeZone') AS z",
+    );
+    assert.deepEqual(rows[0], { t: "30s", z: "UTC" });
+  });
+
   test("withTx commit khi thành công, rollback khi lỗi", async () => {
     await db.admin.query("CREATE TABLE tx_probe (x int)");
     await withTx(async (tx) => {

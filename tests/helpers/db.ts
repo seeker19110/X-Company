@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import pg from "pg";
 import { listMigrations, runMigrations } from "../../lib/db/migrate.ts";
-import { configureConnection, setPool } from "../../lib/db/index.ts";
+import { PG_SESSION_OPTIONS, setPool } from "../../lib/db/index.ts";
 
 export const APP_LOGIN = "xc_app_test";
 // Mật khẩu của role test trên cụm test (không phải bí mật: cụm tạm/CI service, không có dữ liệu thật).
@@ -98,8 +98,8 @@ export async function freshDb(): Promise<TestDb> {
   const app = new pg.Pool({
     connectionString: urlFor(name, { user: APP_LOGIN, password: APP_LOGIN_PW }),
     max: 6,
+    options: PG_SESSION_OPTIONS,
   });
-  app.on("connect", configureConnection);
   setPool(app);
   return {
     name,
