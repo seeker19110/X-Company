@@ -23,6 +23,27 @@ const config = [
     },
   },
   {
+    // Hàng rào: promise bị bỏ rơi (gọi hàm kiểm quyền async mà quên await → bỏ qua kiểm quyền). Cần lint có kiểu.
+    files: ["lib/**/*.ts", "app/**/*.ts", "app/**/*.tsx", "tests/**/*.ts", "scripts/**/*.ts"],
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
+    rules: {
+      "@typescript-eslint/no-floating-promises": [
+        "error",
+        {
+          allowForKnownSafeCalls: [
+            {
+              from: "package",
+              package: "node:test",
+              name: ["describe", "test", "it", "before", "after", "beforeEach", "afterEach", "suite"],
+            },
+          ],
+        },
+      ],
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
+      "@typescript-eslint/await-thenable": "error",
+    },
+  },
+  {
     // Luật lớp (docs/design/ARCHITECTURE.md): lib/ không phụ thuộc Next hay app/.
     files: ["lib/**/*.ts"],
     rules: {

@@ -172,6 +172,14 @@ export async function recordEvent(
     const tr = timeReview(input, now, policy);
     if (tr) reasons.push(tr);
 
+    // Log đến muộn thuộc kỳ đã khoá: lưu để HR xem, không đổi số liệu chính thức (AT06, S-AT-07).
+    const locked = await tx.query(
+      `SELECT 1 FROM attendance_period WHERE company_id = $1 AND status = 'locked'
+       AND ($2::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN start_date AND end_date`,
+      [actor.companyId, input.deviceTime],
+    );
+    if (locked.rowCount) reasons.push("LATE_FOR_LOCKED_PERIOD");
+
     const assignment = await findAssignment(tx, actor.companyId, actor.employeeId, input.deviceTime);
     if (assignment?.worksite_id && worksiteId && assignment.worksite_id !== worksiteId)
       reasons.push("WORKSITE_MISMATCH");
