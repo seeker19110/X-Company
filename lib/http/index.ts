@@ -9,6 +9,16 @@ import { getPool, withTx } from "../db/index.ts";
 import { checkCsrf, cookieName, resolveSession } from "../identity/session.ts";
 import { AppError } from "../nen/app-error.ts";
 import { appOrigin, isSecureOrigin } from "../nen/config.ts";
+import { env } from "../nen/env.ts";
+import {
+  currentLogContext,
+  log,
+  newSpanId,
+  newTraceId,
+  parseTraceparent,
+  runWithLogContext,
+} from "../nen/log.ts";
+import { logSecurityEvent } from "../nen/security-event.ts";
 
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
@@ -17,35 +27,86 @@ export function json(data: unknown, status = 200, headers: Record<string, string
   });
 }
 
+const TITLES: Record<number, string> = {
+  400: "Yêu cầu không hợp lệ",
+  401: "Chưa đăng nhập",
+  403: "Không có quyền",
+  404: "Không tìm thấy",
+  409: "Xung đột dữ liệu",
+  413: "Dữ liệu quá lớn",
+  422: "Không xử lý được yêu cầu",
+  429: "Quá nhiều yêu cầu",
+  500: "Lỗi hệ thống",
+  503: "Dịch vụ tạm thời không khả dụng",
+};
+
+/**
+ * Lỗi theo RFC 9457 (D-017): `application/problem+json` với type/title/status/detail/instance, GIỮ trường cũ để client
+ * đang chạy không vỡ: `error{code,message,details}` (app/components/api.ts đọc `error.message`), `code`, `message`,
+ * `request_id`; thêm `trace_id` và `fields` (lỗi theo trường, khi có). Không bao giờ chứa stack/SQL/đường dẫn.
+ */
+export function problemResponse(
+  status: number,
+  code: string,
+  detail: string,
+  requestId: string,
+  extra: {
+    details?: Record<string, unknown>;
+    fields?: { path: string; message: string }[];
+    headers?: Record<string, string>;
+  } = {},
+): Response {
+  const traceId = currentLogContext().trace_id;
+  const body = {
+    type: `/problems/${code.toLowerCase().replace(/_/g, "-")}`,
+    title: TITLES[status] ?? (status >= 500 ? TITLES[500]! : "Yêu cầu không thành công"),
+    status,
+    detail,
+    instance: `urn:uuid:${requestId}`,
+    code,
+    message: detail,
+    request_id: requestId,
+    ...(traceId ? { trace_id: traceId } : {}),
+    ...(extra.fields ? { fields: extra.fields } : {}),
+    error: { code, message: detail, details: extra.details },
+  };
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/problem+json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-request-id": requestId,
+      ...extra.headers,
+    },
+  });
+}
+
 export function errorResponse(err: unknown, requestId: string): Response {
   if (err instanceof AppError) {
     const headers: Record<string, string> = {};
     const retry = err.details?.retryAfter;
     if (typeof retry === "number") headers["retry-after"] = String(retry);
-    return json(
-      { error: { code: err.code, message: err.message, details: err.details }, request_id: requestId },
-      err.status,
-      headers,
-    );
+    if (err.status >= 500)
+      log.error("lỗi nghiệp vụ mức hệ thống", { err, code: err.code, status: err.status });
+    return problemResponse(err.status, err.code, err.message, requestId, { details: err.details, headers });
   }
   if (err instanceof ZodError) {
-    return json(
-      {
-        error: {
-          code: "VALIDATION",
-          message: "Dữ liệu gửi lên không hợp lệ",
-          details: { issues: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
-        },
-        request_id: requestId,
-      },
-      400,
-    );
+    const fields = err.issues.map((i) => ({ path: i.path.join("."), message: i.message }));
+    logSecurityEvent({
+      event: "input.validation_failed",
+      outcome: "denied",
+      target: { type: "request" },
+      requestId,
+      detail: { paths: fields.map((f) => f.path) },
+    });
+    return problemResponse(400, "VALIDATION", "Dữ liệu gửi lên không hợp lệ", requestId, {
+      details: { issues: fields },
+      fields,
+    });
   }
-  console.error(`[http] ${requestId}`, err instanceof Error ? err.message : err);
-  return json(
-    { error: { code: "INTERNAL", message: "Lỗi hệ thống, vui lòng thử lại" }, request_id: requestId },
-    500,
-  );
+  // Lỗi chưa lường: log ERROR kèm stack + chuỗi cause (BASE-ERR-002/009); phản hồi chung, không lộ chi tiết (BASE-ERR-003).
+  runWithLogContext({ request_id: requestId }, () => log.error("lỗi chưa xử lý trong request", { err }));
+  return problemResponse(500, "INTERNAL", "Lỗi hệ thống, vui lòng thử lại", requestId);
 }
 
 export function getCookie(req: Request, name: string): string | null {
@@ -82,8 +143,8 @@ export function sessionCookie(token: string | null, maxAgeSec: number): string {
  * bên trái do client tự đặt được (review PR #8 #6).
  */
 export function clientIp(req: Request): string {
-  const hops = Number(process.env.TRUST_PROXY_HOPS ?? (process.env.TRUST_PROXY === "1" ? 1 : 0));
-  if (Number.isInteger(hops) && hops > 0) {
+  const hops = env("TRUST_PROXY_HOPS") ?? (env("TRUST_PROXY") === "1" ? 1 : 0);
+  if (hops > 0) {
     const list = (req.headers.get("x-forwarded-for") ?? "")
       .split(",")
       .map((x) => x.trim())
@@ -119,15 +180,34 @@ export interface ActorRequestContext extends RequestContext {
 
 type Handler<C> = (ctx: C) => Promise<Response>;
 
-/** Route công khai: request_id + ánh xạ lỗi. */
+/** IP client cho ngữ cảnh log/audit; cấu hình proxy sai → ghi log và coi như không biết (request vẫn xử lý được). */
+function safeClientIp(req: Request): string | null {
+  try {
+    return clientIp(req);
+  } catch (err) {
+    log.error("không xác định được IP client (cấu hình proxy sai)", { err });
+    return null;
+  }
+}
+
+/** Route công khai: request_id/trace_id + ngữ cảnh log + ánh xạ lỗi. */
 export function publicRoute(handler: Handler<RequestContext>): (req: Request) => Promise<Response> {
   return async (req) => {
     const requestId = randomUUID();
-    try {
-      return await handler({ req, requestId });
-    } catch (err) {
-      return errorResponse(err, requestId);
-    }
+    const ctx = {
+      request_id: requestId,
+      trace_id: parseTraceparent(req.headers.get("traceparent"))?.trace_id ?? newTraceId(),
+      span_id: newSpanId(),
+      source_ip: safeClientIp(req),
+      user_agent: req.headers.get("user-agent"),
+    };
+    return runWithLogContext(ctx, async () => {
+      try {
+        return await handler({ req, requestId });
+      } catch (err) {
+        return errorResponse(err, requestId);
+      }
+    });
   };
 }
 
@@ -138,9 +218,21 @@ export function publicRoute(handler: Handler<RequestContext>): (req: Request) =>
 export function withActor(handler: Handler<ActorRequestContext>): (req: Request) => Promise<Response> {
   return publicRoute(async ({ req, requestId }) => {
     const token = getCookie(req, cookieName());
-    const pool = getPool();
-    const session = await resolveSession(pool, token);
-    const actor = session ? await loadActor(pool, session.userId) : null;
+    // Fail-closed (BASE-ERR-010): backend phiên/phân quyền lỗi → KHÔNG cho qua; 503, không bao giờ rơi về 2xx.
+    let session: Awaited<ReturnType<typeof resolveSession>>;
+    let actor: Awaited<ReturnType<typeof loadActor>>;
+    try {
+      const pool = getPool();
+      session = await resolveSession(pool, token);
+      actor = session ? await loadActor(pool, session.userId) : null;
+    } catch (err) {
+      log.error("backend xác thực/phân quyền lỗi — từ chối request (fail-closed)", { err });
+      throw new AppError(
+        "AUTH_UNAVAILABLE",
+        503,
+        "Hệ thống xác thực tạm thời không khả dụng, vui lòng thử lại",
+      );
+    }
     if (!session || !actor || !token) throw new AppError("UNAUTHENTICATED", 401, "Vui lòng đăng nhập");
     if (!SAFE_METHODS.has(req.method)) {
       assertSameOrigin(req);
@@ -148,7 +240,9 @@ export function withActor(handler: Handler<ActorRequestContext>): (req: Request)
         throw new AppError("CSRF", 403, "Thiếu hoặc sai mã CSRF");
     }
     try {
-      return await handler({ req, requestId, actor, sessionToken: token });
+      return await runWithLogContext({ actor_id: actor.userId }, () =>
+        handler({ req, requestId, actor, sessionToken: token }),
+      );
     } catch (err) {
       // 403 từ lớp nghiệp vụ (requireOn) → ghi audit denied ở giao dịch riêng rồi trả lỗi như cũ.
       if (err instanceof AppError && err.code === "FORBIDDEN" && err.details?.action !== undefined) {
@@ -164,6 +258,13 @@ export function withActor(handler: Handler<ActorRequestContext>): (req: Request)
             requestId,
           }),
         );
+        logSecurityEvent({
+          event: "authz.denied",
+          outcome: "denied",
+          actorId: actor.userId,
+          target: { type: object?.type ?? "unknown", id: object?.id ?? null },
+          detail: { action: String(err.details.action) },
+        });
       }
       throw err;
     }
@@ -191,6 +292,13 @@ export async function authorize(
       requestId: ctx.requestId,
     }),
   );
+  logSecurityEvent({
+    event: "authz.denied",
+    outcome: "denied",
+    actorId: ctx.actor.userId,
+    target: { type: object.type, id: object.id ?? null },
+    detail: { action },
+  });
   throw new AppError("FORBIDDEN", 403, "Bạn không có quyền thực hiện thao tác này");
 }
 

@@ -2,6 +2,7 @@
 // Khoá ký: QR_SIGNING_KEYS = "kid1:secret1,kid2:secret2" (kid đầu tiên dùng để ký; các kid khác chỉ để kiểm).
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { AppError } from "../nen/app-error.ts";
+import { env } from "../nen/env.ts";
 
 export interface QrPayload {
   v: 1;
@@ -14,7 +15,7 @@ export interface QrPayload {
 }
 
 function keys(): Map<string, Buffer> {
-  const raw = process.env.QR_SIGNING_KEYS ?? "";
+  const raw = env("QR_SIGNING_KEYS");
   const m = new Map<string, Buffer>();
   for (const part of raw.split(",")) {
     const i = part.indexOf(":");

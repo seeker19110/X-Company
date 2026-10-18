@@ -6,6 +6,7 @@ import { appendAudit } from "../audit/index.ts";
 import type { ActorContext } from "../authz/index.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { log } from "../nen/log.ts";
 import { projectAccess } from "../work/tasks.ts";
 import { sniff } from "./sniff.ts";
 import { getStorage } from "./storage.ts";
@@ -107,11 +108,7 @@ async function discardOrphanBlob(pool: pg.Pool, storageKey: string): Promise<voi
     const { rowCount } = await pool.query("SELECT 1 FROM file_object WHERE storage_key = $1", [storageKey]);
     if (rowCount === 0) await getStorage().remove(storageKey);
   } catch (err) {
-    console.error(
-      "[files] không xoá bù được blob mồ côi:",
-      storageKey,
-      err instanceof Error ? err.message : err,
-    );
+    log.error("không xoá bù được blob mồ côi", { storage_key: storageKey, err });
   }
 }
 

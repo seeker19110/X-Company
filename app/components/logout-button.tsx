@@ -5,6 +5,7 @@ import { useState } from "react";
 import { flush, summarize } from "@/lib/offline/queue";
 import { logoutPlan } from "@/lib/offline/device";
 import { api } from "./api";
+import { reportClientError } from "./client-log";
 import { deleteUserDatabase, openQueue } from "./offline/idb-store";
 import { sendBatch } from "./offline/sync-client";
 import { useSession } from "./session-context";
@@ -22,7 +23,9 @@ export function LogoutButton() {
     let plan = logoutPlan(summarize(await store.all()));
     if (plan.needsConfirmation) {
       if (window.confirm(`Còn ${plan.pending} thao tác chưa gửi. Đồng bộ trước khi đăng xuất?`)) {
-        await flush(store, sendBatch(csrf), Date.now(), true).catch(() => undefined);
+        await flush(store, sendBatch(csrf), Date.now(), true).catch((e: unknown) =>
+          reportClientError("đồng bộ trước khi đăng xuất thất bại", e),
+        );
         plan = logoutPlan(summarize(await store.all()));
       }
       if (

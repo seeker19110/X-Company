@@ -10,7 +10,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 
 | Miền         | Công khai             | Ghi chú                                                          |
 | ------------ | --------------------- | ---------------------------------------------------------------- |
-| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts` | tài khoản, phiên, đăng nhập                                      |
+| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts` | tài khoản, phiên, đăng nhập                                      |
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |
@@ -30,7 +30,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | Miền      | Công khai                | Ghi chú                                                  |
 | --------- | ------------------------ | -------------------------------------------------------- |
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
-| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
+| `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
 | `http`    | `index.ts`               | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |

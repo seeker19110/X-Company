@@ -11,6 +11,7 @@ export const PASSWORD = "Mat-khau-dai-du-12!";
 export function setTestEnv(): void {
   process.env.SESSION_SECRET ??= "test-session-secret-0123456789abcdef-xyz";
   process.env.APP_ORIGIN = TEST_ORIGIN;
+  process.env.LOG_LEVEL ??= "silent"; // test log tự bật mức khi cần
 }
 
 const sys = { userId: null };

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { NextRequest } from "next/server";
 import { proxy, securityHeaders } from "../../proxy.ts";
+import { setTestEnv } from "../helpers/fixtures.ts";
+
+setTestEnv(); // proxy đọc APP_ORIGIN qua module env (thiếu = lỗi cấu hình, không im lặng)
 
 describe("proxy: header bảo mật + chuyển hướng /app", () => {
   test("CSP có nonce, không unsafe-inline cho script, chặn nhúng khung; HSTS chỉ khi https", () => {

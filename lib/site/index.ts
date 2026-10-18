@@ -11,9 +11,10 @@ import {
 } from "../cms/index.ts";
 import { renderMarkdown } from "../cms/markdown.ts";
 import { appOrigin } from "../nen/config.ts";
+import { env } from "../nen/env.ts";
 
 export function siteCompanyId(): string {
-  const id = process.env.SITE_COMPANY_ID?.trim();
+  const id = env("SITE_COMPANY_ID");
   if (!id) throw new Error("Thiếu SITE_COMPANY_ID");
   return id;
 }
