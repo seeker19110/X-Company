@@ -85,6 +85,27 @@ describe("timeout tường minh cho phụ thuộc", () => {
     }
   });
 
+  test("DB-TX-003: lib/ (nơi chứa withTx) không có client mạng — gọi ngoài phải qua outbox, không trong giao dịch", () => {
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (e.name.endsWith(".ts")) {
+          const src = readFileSync(p, "utf8");
+          // lib/nen/shutdown.ts chỉ móc vào http.Server của chính tiến trình (không gọi ra ngoài).
+          if (
+            /\bfetch\(|node:https?["']|undici|node:net["']|nodemailer/.test(src) &&
+            !p.endsWith("shutdown.ts")
+          )
+            hits.push(path.relative(ROOT, p));
+        }
+      }
+    };
+    walk(path.join(ROOT, "lib"));
+    assert.deepEqual(hits, []);
+  });
+
   test("mọi fetch phía client có AbortSignal.timeout (grep cấu hình client)", () => {
     const files: string[] = [];
     const walk = (dir: string) => {
