@@ -177,6 +177,13 @@ const config = [
           selector: "CallExpression[callee.object.name='t'][callee.property.name=/^(skip|todo)$/]",
           message: "Cấm t.skip()/t.todo() trong test (QA-STRAT-008)",
         },
+        {
+          // FE-TEST-001: truy vấn theo vai trò/nhãn (getByRole/getByLabel/getByText); testid chỉ khi không còn cách khác
+          // — khi đó thêm eslint-disable-next-line kèm chú thích lý do.
+          selector: "CallExpression[callee.property.name='getByTestId']",
+          message:
+            "Dùng getByRole/getByLabel thay getByTestId; bất khả kháng thì eslint-disable kèm lý do (FE-TEST-001)",
+        },
       ],
     },
   },

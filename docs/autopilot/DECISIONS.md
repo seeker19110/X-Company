@@ -188,3 +188,11 @@
 - Chọn: Chỉ AppError/chuỗi tới người dùng vào t(); new Error khác, log.*, # HELP, giá trị dữ liệu ổn định (MASK, ANON_NAME), RAISE của trigger miễn bằng i18n-ignore có lý do; khoá sinh tự động tiếng Việt không dấu
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: chuỗi tới lập trình viên/vận hành không cần người dịch; MASK nằm trong dữ liệu băm nên không được đổi; migration append-only nên không sửa RAISE. Hàng rào vẫn đỏ với literal mới ở đường hiển thị.
 - Đường lùi: Bỏ các i18n-ignore và chuyển dần
+
+### D-027 · 2026-10-18T14:28:27+00:00 · ARC-ADR-001 và XC-OSS-005 (review ≥1) cho dự án một maintainer + bot?
+
+- Phương án: (1) ARC-ADR-001: chấp nhận ADR-0001 + ADR-0002 làm bằng chứng; XC-OSS-005: giữ required_approving_review_count=0, ghi rủi ro, bù bằng required checks + review bởi model khác (pr reviewed) + chủ dự án merge PR ngoại lệ cứng · (2) Viết ADR-0004 phương án thay thế; đặt review=1 kèm bypass admin
+- Chọn: ARC-ADR-001: chấp nhận ADR-0001 + ADR-0002 làm bằng chứng; XC-OSS-005: giữ required_approving_review_count=0, ghi rủi ro, bù bằng required checks + review bởi model khác (pr reviewed) + chủ dự án merge PR ngoại lệ cứng
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: review=1 không bypass khoá merge (chủ duy nhất, bot không duyệt được); bypass admin chưa kiểm chứng với auto-merge — rủi ro kẹt. Giữ ADR-0001 bất biến.
+- Đường lùi: Đặt review=1 + bypass admin ở ruleset khi có ≥2 maintainer
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi có thêm maintainer: đặt required_approving_review_count=1

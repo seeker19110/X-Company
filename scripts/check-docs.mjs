@@ -1,7 +1,7 @@
 // npm run check:docs — kiểm tài liệu vận hành/bảo mật/tuân thủ + spec (T-039). Không ghi file; exit 1 nếu có lỗi.
 // Gồm: frontmatter spec · AC ↔ S-ID ↔ test (WF-SDD-003) · threat model · RISKS · SLO · ops docs · data map ↔ migrations ·
 // kiểm kê CSV · fixture không có email/SĐT thật · tệp dữ liệu lớn · liên kết nội bộ.
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -562,7 +562,21 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     ...walk(p("e2e")),
     ...walk(p("scripts"), (x) => !/check-(repo-)?docs\.mjs$/.test(x)),
   ].filter((f) => /\.(ts|tsx|mjs|js|json|sql|csv|sh)$/.test(f));
+  // Chỉ quét fixture ĐƯỢC THEO DÕI bởi git: tệp sinh ra lúc chạy (vd e2e/.seed.json, gitignore) không phải fixture commit
+  // và chứa id/băm ngẫu nhiên có thể trùng mẫu SĐT. Ngoài git (không có repo) → quét hết.
+  const tracked = (() => {
+    try {
+      return new Set(
+        execFileSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8", maxBuffer: 1 << 26 })
+          .split("\0")
+          .filter(Boolean),
+      );
+    } catch {
+      return null;
+    }
+  })();
   for (const f of files) {
+    if (tracked !== null && !tracked.has(relative(ROOT, p(f)).split("\\").join("/"))) continue;
     const txt = read(f);
     for (const m of txt.matchAll(/[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})/g)) {
       if (okDomain(m[1])) continue;

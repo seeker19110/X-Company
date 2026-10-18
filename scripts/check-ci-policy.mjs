@@ -61,6 +61,10 @@ need(existsSync(".github/PULL_REQUEST_TEMPLATE/major-upgrade.md"), "OPS-MAINT-00
 need(pkg.scripts.prepare === "node scripts/install-git-hooks.mjs", "FE-BUILD-004: prepare cài git hook");
 for (const h of ["pre-commit", "commit-msg"])
   need(read(`scripts/git-hooks/${h}`).includes("xc-managed-hook"), `thiếu hook ${h}`);
+need(
+  /gitleaks git --staged/.test(read("scripts/git-hooks/pre-commit")),
+  "WF-GIT-010: pre-commit quét bí mật staged bằng gitleaks",
+);
 
 if (errs.length > 0) {
   console.error(`check:ci-policy — ${errs.length} lỗi:\n  ${errs.join("\n  ")}`);

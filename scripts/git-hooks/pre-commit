@@ -6,3 +6,10 @@ mapfile -t files < <(git diff --cached --name-only --diff-filter=ACMR)
 npx --no-install prettier --check --ignore-unknown "${files[@]}"
 mapfile -t code < <(printf '%s\n' "${files[@]}" | grep -E '\.(ts|tsx|mjs|js)$' || true)
 [ "${#code[@]}" -eq 0 ] || npx --no-install eslint --max-warnings=0 --no-warn-ignored "${code[@]}"
+# WF-GIT-010: quét bí mật trên phần staged (cùng .gitleaks.toml với CI). Thiếu gitleaks → cảnh báo, CI vẫn chặn
+# (job "Secret scan" quét cả lịch sử); cài: https://github.com/gitleaks/gitleaks/releases
+if command -v gitleaks > /dev/null 2>&1; then
+  gitleaks git --staged --no-banner --redact --exit-code 1
+else
+  echo "pre-commit: CẢNH BÁO — chưa cài gitleaks, bỏ qua quét bí mật staged (CI sẽ quét)" >&2
+fi
