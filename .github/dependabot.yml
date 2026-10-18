@@ -22,3 +22,8 @@ updates:
         dependency-type: production
       dev:
         dependency-type: development
+    ignore:
+      # typescript-eslint 8.x khai peer typescript ">=4.8.4 <6.1.0": nâng TS ≥ 6.1 làm `npm ci` lỗi ERESOLVE (đã xảy ra
+      # với #6 — TS 7.0.2). Bỏ dòng này khi typescript-eslint hỗ trợ TS mới; nâng hai gói cùng một PR.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]

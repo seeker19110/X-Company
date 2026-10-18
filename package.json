@@ -11,7 +11,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "NEXT_MANUAL_SIG_HANDLE=true next start -H ${HOST:-127.0.0.1}",
-    "lint": "eslint . --max-warnings=0 && npm run -s check:env",
+    "lint": "eslint . --max-warnings=0 && npm run -s check:env && npm run -s check:deps",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -33,7 +33,8 @@
     "prepare": "node scripts/install-git-hooks.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:coverage-baseline": "node scripts/check-coverage-baseline.mjs",
-    "check:ci-policy": "node scripts/check-ci-policy.mjs"
+    "check:ci-policy": "node scripts/check-ci-policy.mjs",
+    "check:deps": "npm ls --depth=0 > /dev/null"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",
@@ -57,7 +58,7 @@
     "eslint-config-next": "16.4.2",
     "prettier": "3.9.10",
     "tsx": "4.23.15",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.71.2"
   },
   "packageManager": "npm@10.9.4"
