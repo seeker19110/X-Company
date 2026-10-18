@@ -72,3 +72,10 @@
 - Chọn: Mục ≥ 12 ký tự trong danh sách 100k NCSC (SecLists, MIT)
 - Lý do (tiêu chí chất lượng cuối): Top 1.000 không có mục nào ≥ 12 ký tự nên vô tác dụng khi độ dài tối thiểu là 12 (đo 2026-10-18); 1.274 mục dài thật sự chặn được mật khẩu phổ biến vượt ngưỡng độ dài
 - Đường lùi: Đổi nguồn trong lib/identity/common-passwords.ts
+
+### D-011 · 2026-10-18T06:54:20+00:00 · SPEC I3 (vào lần 2 khi có ca mở → needs_review) mâu thuẫn S-AT-02 (hai thiết bị chồng giờ hợp lệ)
+
+- Phương án: (1) Giữ I3: mọi lần vào thứ hai khi đang mở → needs_review · (2) I3 chỉ với lần vào từ thiết bị khác trong cửa sổ trùng ⚙2 phút (bấm hai nơi gần như cùng lúc); ngoài cửa sổ → accepted, hợp khoảng chống đếm trùng
+- Chọn: I3 chỉ với lần vào từ thiết bị khác trong cửa sổ trùng ⚙2 phút (bấm hai nơi gần như cùng lúc); ngoài cửa sổ → accepted, hợp khoảng chống đếm trùng
+- Lý do (tiêu chí chất lượng cuối): Hợp khoảng ở computeShift đã bảo đảm không cộng trùng thời gian (C1) nên lần vào thứ hai không thể tạo công trùng; đánh dấu mọi lần sẽ đẩy ca đổi địa điểm/kiosk hợp lệ vào hàng xác minh; vẫn giữ cả hai sự kiện để điều tra
+- Đường lùi: Đặt duplicate_window_sec rất lớn trong attendance_policy để quay về hành vi cũ

@@ -5,7 +5,7 @@
 > hình có ngày hiệu lực** — HR chốt ở F02 trước pilot; mã không hard-code chúng.
 
 ## Ba lớp dữ liệu (§6)
-1. **Sự kiện gốc** `attendance_event` (chỉ thêm): `id`, `idempotency_key` (duy nhất theo `employee_id`), `employee_id`, `company_id`, `kind` (`in|out|break_start|break_end`), `device_time`, `server_received_at`, `source` (`qr|gps|kiosk|manual_request|offline_sync`), `worksite_id`, `shift_assignment_id` (null = chưa gán), `policy_version_id`, `geo` (lat, lng, accuracy_m, captured_at — tuỳ chọn), `qr_token_id`, `status` (`accepted|needs_review|rejected`), `review_reason`.
+1. **Sự kiện gốc** `attendance_event` (chỉ thêm): `id`, `idempotency_key` (duy nhất theo `employee_id`), `employee_id`, `company_id`, `kind` (`in|out|break_start|break_end`), `device_time`, `server_received_at`, `source` (`qr|gps|kiosk|manual_request`), `queued` (gửi từ hàng chờ ngoại tuyến), `worksite_id`, `shift_assignment_id` (null = chưa gán), `policy_version_id`, `geo` (lat, lng, accuracy_m, captured_at — tuỳ chọn), `qr_token_id`, `status` (`accepted|needs_review|rejected`), `review_reason`.
 2. **Tổng hợp** `attendance_summary` theo (nhân viên, ca nghiệp vụ): tính lại được, không sửa tay.
 3. **Bảng công kỳ** `attendance_period` + `period_export` (khoá, có phiên bản).
 
@@ -30,7 +30,7 @@
 ## Chống trùng (AT04)
 - I1. Cùng `(employee_id, idempotency_key)` + cùng nội dung → trả **cùng kết quả** (200, cùng `event_id`), không tạo bản ghi mới.
 - I2. Cùng khoá, khác nội dung → 409 `IDEMPOTENCY_CONFLICT`, ghi audit.
-- I3. Hai thiết bị, hai khoá khác nhau, cùng `in` khi đã có ca mở → bản thứ hai `needs_review` (`DUPLICATE_OPEN`), không tạo ca mở thứ hai; vẫn lưu để điều tra.
+- I3. Lần `in` từ **thiết bị khác** trong cửa sổ trùng ⚙(2 phút) sau một `in` đã nhận còn mở → `needs_review` (`DUPLICATE_OPEN`), vẫn lưu để điều tra. Ngoài cửa sổ (đổi địa điểm, kiosk) → `accepted`; hợp khoảng (C1) bảo đảm không cộng trùng thời gian (D-011).
 - I4. Ràng buộc DB: `UNIQUE(employee_id, idempotency_key)`.
 
 ## Nghỉ phép (F-005)
