@@ -51,3 +51,10 @@
 - Chọn: Cấu hình có ngày hiệu lực + mặc định ⚙ ghi trong SPEC, HR chốt trước pilot
 - Lý do (tiêu chí chất lượng cuối): Giữ đường lùi khi thiếu dữ kiện chỉ người có; không chặn vòng; đổi giá trị không cần sửa mã; kỳ đã khoá giữ policy_version cũ
 - Đường lùi: Cập nhật bản ghi ot_policy/shift config với valid_from mới
+
+### D-008 · 2026-10-18T06:26:41+00:00 · Advisory high braces (GHSA-vfj7-8cjw-p6xm) trong chuỗi phụ thuộc dev eslint-config-next, mọi phiên bản, chưa có bản sửa
+
+- Phương án: (1) dep-audit quét phụ thuộc production (--omit=dev), theo dõi dev qua Dependabot · (2) Bỏ eslint-config-next · (3) Hạ eslint-config-next về 14.2.35 (npm audit fix --force)
+- Chọn: dep-audit quét phụ thuộc production (--omit=dev), theo dõi dev qua Dependabot
+- Lý do (tiêu chí chất lượng cuối): Lỗ hổng DoS khi glob lồng sâu, chỉ chạy lúc lint với mẫu glob của chính repo, không vào bản build; bỏ plugin Next làm mất luật core-web-vitals; hạ về 14 không tương thích Next 16
+- Đường lùi: Bỏ --omit=dev khi braces có bản sửa

@@ -56,7 +56,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 ### Lát 1 — Nền (F-000)
 - [x] `T-001` Khởi tạo Next.js + TS strict + ESLint + Prettier + node:test/c8; điền xt.yaml lệnh thật (F-000) — Gate: `.xtemplates/scripts/dev-task.sh gate`
 - [ ] `T-002` Postgres thật cho test (`scripts/with-test-db.sh`), migration runner append-only + checksum, role ứng dụng không superuser/BYPASSRLS (F-000) — Gate: `npm run -s test:file -- tests/db/migrate.test.ts`
-- [ ] `T-003` CI: job quality (gate + coverage + format_check), protection-guard, gitleaks, dep-audit; ghim SHA action (F-000) — Gate: `python3 .xtemplates/scripts/xt.py ci-check .github/workflows`
+- [x] `T-003` CI: job quality (gate + coverage + format_check), protection-guard, gitleaks, dep-audit; ghim SHA action (F-000) — Gate: `python3 .xtemplates/scripts/xt.py ci-check .github/workflows`
 
 ### Lát 2 — Danh tính, tổ chức, quyền, audit (F-001, F-002)
 - [ ] `T-004` audit_event chỉ thêm + chuỗi băm + `verify-audit-chain` (S-ID-08) — Gate: `npm run -s test:file -- tests/db/audit.test.ts`
