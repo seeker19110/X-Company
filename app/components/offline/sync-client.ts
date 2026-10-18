@@ -1,5 +1,6 @@
 "use client";
 
+import { t } from "@/lib/i18n/client-app";
 import { SYNC_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
 import {
   parseRetryAfter,
@@ -21,11 +22,12 @@ export function sendBatch(csrf: string): SendBatch {
         items: items.map((i) => ({ id: i.id, kind: i.kind, payload: i.payload, created_at: i.createdAt })),
       }),
     });
-    if (res.status === 401) throw new Error("Phiên đăng nhập hết hạn — đăng nhập lại để gửi");
+    if (res.status === 401) throw new Error(t("syncClient.sessionExpired"));
     if (!res.ok) {
       const wait = parseRetryAfter(res.headers.get("retry-after"));
-      if (wait !== undefined) throw new RetryAfterError(`Máy chủ lỗi ${res.status}`, wait);
-      throw new Error(`Máy chủ lỗi ${res.status}`);
+      if (wait !== undefined)
+        throw new RetryAfterError(t("syncClient.serverError", { status: res.status }), wait);
+      throw new Error(t("syncClient.serverError", { status: res.status }));
     }
     return ((await res.json()) as { results: ItemResult[] }).results;
   };

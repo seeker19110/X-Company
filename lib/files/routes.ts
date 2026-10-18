@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
 import { json, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { parsePage } from "../nen/pagination.ts";
 import {
   addComment,
   downloadFile,
@@ -83,7 +84,8 @@ export const getComments = withActor(async (ctx) => {
     object_type: u.searchParams.get("object_type"),
     object_id: u.searchParams.get("object_id"),
   });
-  return json({ items: await listComments(getPool(), ctx.actor, ref.object_type, ref.object_id) });
+  const page = parsePage(u.searchParams);
+  return json(await listComments(getPool(), ctx.actor, ref.object_type, ref.object_id, page));
 });
 
 export const postComment = withActor(

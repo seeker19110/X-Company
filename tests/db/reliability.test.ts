@@ -550,7 +550,7 @@ describe("EXPLAIN các truy vấn lõi: không Seq Scan trên bảng lớn", () 
       name: "tasks-mine",
       from: "lib/work/routes.ts MY_TASKS_SQL — danh sách việc của tôi",
       sql: MY_TASKS_SQL,
-      params: () => [companyId, empId],
+      params: () => [companyId, empId, 201, 0], // LIMIT $3 (= trần 200 + 1) OFFSET $4
     },
     {
       name: "attendance-events-today",

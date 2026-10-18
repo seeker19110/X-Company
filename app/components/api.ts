@@ -1,4 +1,5 @@
 // Gọi API nội bộ từ client: gắn CSRF, Idempotency-Key khi cần; lỗi trả thông điệp tiếng Việt từ server.
+import { t } from "@/lib/i18n/client";
 import { API_FETCH_TIMEOUT_MS, isTimeoutError } from "@/lib/nen/timeouts";
 import { minutesToMs } from "@/lib/nen/units";
 
@@ -69,15 +70,13 @@ export async function api<T = unknown>(
       return {
         ok: false,
         status: res.status,
-        error: json.error?.message ?? `Lỗi ${res.status}`,
+        error: json.error?.message ?? t("api.status", { status: res.status }),
         ...(Array.isArray(json.fields) ? { fields: json.fields } : {}),
       };
     }
     return { ok: true, status: res.status, data: json };
   } catch (err) {
-    const error = isTimeoutError(err)
-      ? "Máy chủ phản hồi quá lâu, vui lòng thử lại"
-      : "Không kết nối được máy chủ";
+    const error = isTimeoutError(err) ? t("api.timeout") : t("api.offline");
     return { ok: false, status: 0, error };
   }
 }

@@ -4,6 +4,7 @@ import type { ActorContext } from "../authz/index.ts";
 import { can } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { fetchLimit, MAX_PAGE, toPage, type Page, type PageRequest } from "../nen/pagination.ts";
 import { decideLeave } from "./leave.ts";
 import { decideOt } from "./ot.ts";
 import { decideAdjustment } from "./period.ts";
@@ -31,7 +32,7 @@ export const PENDING_APPROVALS_SQL = `SELECT 'leave' AS type, r.id, r.employee_i
      UNION ALL
      SELECT 'adjustment', a.id, a.employee_id, e.full_name, 'Sửa công: ' || a.reason, a.created_at, a.created_by_user_id
        FROM attendance_adjustment a JOIN employee e ON e.id = a.employee_id WHERE a.company_id = $1 AND a.status = 'pending'
-     ORDER BY created_at LIMIT 500`;
+     ORDER BY created_at, id LIMIT 500`;
 
 export async function pendingApprovals(db: Queryable, actor: ActorContext): Promise<PendingItem[]> {
   const { rows } = await db.query<{
@@ -58,6 +59,19 @@ export async function pendingApprovals(db: Queryable, actor: ActorContext): Prom
     });
   }
   return out;
+}
+
+/**
+ * Một trang hộp duyệt (XC-PERF-006). Lọc quyền chạy sau SQL (trần 500 ứng viên) nên phân trang cắt trên kết quả đã lọc,
+ * thứ tự ổn định (created_at, id).
+ */
+export async function pendingApprovalsPage(
+  db: Queryable,
+  actor: ActorContext,
+  page: PageRequest = MAX_PAGE,
+): Promise<Page<PendingItem>> {
+  const all = await pendingApprovals(db, actor);
+  return toPage(all.slice(page.offset, page.offset + fetchLimit(page)), page);
 }
 
 export async function decide(

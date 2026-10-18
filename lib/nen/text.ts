@@ -13,3 +13,17 @@ export function normalizeNfc(v: unknown): unknown {
   }
   return v;
 }
+
+/** Khoá so sánh duy nhất (email, mã…): NFC + bỏ khoảng trắng hai đầu + chữ thường (BASE-DATA-002, XC-UNITS-012). */
+export function comparisonKey(s: string): string {
+  return s.normalize("NFC").trim().toLowerCase();
+}
+
+/**
+ * Khoá TÌM KIẾM không phân biệt dấu/hoa thường (XC-I18N-005): "Việt" ↔ "viet". Chủ ý: chỉ dùng để so khớp tìm kiếm, không
+ * dùng làm khoá duy nhất ("Việt" và "Viet" là hai giá trị khác nhau). Hiện sản phẩm chưa có tính năng tìm theo tên;
+ * khi thêm, tính cột chuẩn hoá bằng hàm này (hoặc unaccent + lower ở DB) cả hai phía.
+ */
+export function searchKey(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d").trim();
+}

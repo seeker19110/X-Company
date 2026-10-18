@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { resolvePath, sectionPages } from "@/app/components/site-data";
 import { pathFor } from "@/lib/cms";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const r = await resolvePath([]);
-  if (r.kind !== "page") return { title: "X-Company" };
+  if (r.kind !== "page") return { title: t("brand.name") };
   return {
     title: { absolute: r.page.seoTitle ?? r.page.title },
     description: r.page.seoDescription ?? r.page.summary ?? undefined,
@@ -27,11 +28,11 @@ export default async function HomePage() {
           <div dangerouslySetInnerHTML={{ __html: home.html }} />
         </article>
       ) : (
-        <h1>X-Company</h1>
+        <h1>{t("brand.name")}</h1>
       )}
       {services.length > 0 && (
         <section aria-labelledby="dv">
-          <h2 id="dv">Dịch vụ</h2>
+          <h2 id="dv">{t("site.home.servicesHeading")}</h2>
           <ul className="card-list">
             {services.map((s) => (
               <li key={s.pageId}>
@@ -45,7 +46,7 @@ export default async function HomePage() {
         </section>
       )}
       <p>
-        <Link href="/lien-he">Gửi yêu cầu cho chúng tôi</Link>
+        <Link href="/lien-he">{t("site.home.contactCta")}</Link>
       </p>
     </>
   );

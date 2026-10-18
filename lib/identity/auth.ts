@@ -3,6 +3,7 @@ import { appendAudit } from "../audit/index.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { comparisonKey } from "../nen/text.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
@@ -12,7 +13,7 @@ export const MAX_FAILURES = 5;
 export const WINDOW_MS = minutesToMs(15);
 
 export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
+  return comparisonKey(email); // NFC + trim + lower: một địa chỉ = một khoá, dù gõ tổ hợp hay dựng sẵn
 }
 
 export interface LoginResult {

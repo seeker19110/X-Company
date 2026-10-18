@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { t } from "@/lib/i18n/client-site";
 import { API_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
 import { textOrNull } from "./api";
 import {
@@ -55,7 +56,7 @@ export function ContactForm() {
     const parsed = schema?.safeParse(payload);
     if (parsed && !parsed.success) {
       const { fields } = toFieldErrors(parsed.error.issues, toInput);
-      setState({ kind: "error", message: "Vui lòng kiểm tra các ô được đánh dấu.", fields });
+      setState({ kind: "error", message: t("common.checkMarkedFields"), fields });
       focusFirstInvalid(form);
       return;
     }
@@ -71,13 +72,13 @@ export function ContactForm() {
       if (res.ok) setState({ kind: "done", code: body.code });
       else {
         const { fields } = toFieldErrors(Array.isArray(body?.fields) ? body.fields : [], toInput);
-        setState({ kind: "error", message: body?.error?.message ?? "Gửi không thành công", fields });
+        setState({ kind: "error", message: body?.error?.message ?? t("common.sendFailed"), fields });
         focusFirstInvalid(form);
       }
     } catch {
       setState({
         kind: "error",
-        message: "Không kết nối được. Nội dung vẫn còn trên form, vui lòng gửi lại.",
+        message: t("contact.offline"),
         fields: {},
       });
     }
@@ -100,7 +101,9 @@ export function ContactFormView({
   if (state.kind === "done") {
     return (
       <p role="status">
-        Cảm ơn bạn. Mã yêu cầu: <strong>{state.code}</strong>. Chúng tôi sẽ liên hệ trong 1 ngày làm việc.
+        {t("contact.thanksPrefix")}
+        <strong>{state.code}</strong>
+        {t("contact.thanksSuffix")}
       </p>
     );
   }
@@ -114,14 +117,14 @@ export function ContactFormView({
       aria-describedby={err ? `${base}-form-error` : undefined}
       className="contact-form"
     >
-      <h2>Gửi yêu cầu</h2>
+      <h2>{t("contact.heading")}</h2>
       {err && (
         <p id={`${base}-form-error`} role="alert" className="form-error">
           {err.message}
         </p>
       )}
       <p>
-        <label htmlFor={id("name")}>Họ tên (bắt buộc)</label>
+        <label htmlFor={id("name")}>{t("contact.name")}</label>
         <br />
         <input
           id={id("name")}
@@ -134,7 +137,7 @@ export function ContactFormView({
         <FieldError base={base} name="name" errors={errors} />
       </p>
       <p>
-        <label htmlFor={id("email")}>Email</label>
+        <label htmlFor={id("email")}>{t("contact.email")}</label>
         <br />
         <input
           id={id("email")}
@@ -147,7 +150,7 @@ export function ContactFormView({
         <FieldError base={base} name="email" errors={errors} />
       </p>
       <p>
-        <label htmlFor={id("phone")}>Điện thoại</label>
+        <label htmlFor={id("phone")}>{t("contact.phone")}</label>
         <br />
         <input
           id={id("phone")}
@@ -160,11 +163,11 @@ export function ContactFormView({
         <FieldError base={base} name="phone" errors={errors} />
         <br />
         <small id={id("phone-hint")} className="muted">
-          Cần ít nhất email hoặc điện thoại.
+          {t("contact.phoneHint")}
         </small>
       </p>
       <p>
-        <label htmlFor={id("message")}>Nhu cầu (bắt buộc)</label>
+        <label htmlFor={id("message")}>{t("contact.message")}</label>
         <br />
         <textarea
           id={id("message")}
@@ -177,7 +180,7 @@ export function ContactFormView({
         <FieldError base={base} name="message" errors={errors} />
       </p>
       <p className="hp" aria-hidden="true">
-        <label htmlFor={id("hp")}>Để trống ô này</label>
+        <label htmlFor={id("hp")}>{t("contact.honeypot")}</label>
         <input id={id("hp")} name="website" tabIndex={-1} autoComplete="off" />
       </p>
       <p>
@@ -189,13 +192,13 @@ export function ContactFormView({
           {...fieldA11y(base, "consent", errors)}
         />{" "}
         <label htmlFor={id("consent")}>
-          Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu, theo{" "}
-          <Link href="/chinh-sach-du-lieu">chính sách dữ liệu cá nhân</Link>.
+          {t("contact.consent")}
+          <Link href="/chinh-sach-du-lieu">{t("contact.consentLink")}</Link>.
         </label>
         <FieldError base={base} name="consent" errors={errors} />
       </p>
-      <SubmitButton busy={sending} busyText="Đang gửi…">
-        Gửi yêu cầu
+      <SubmitButton busy={sending} busyText={t("contact.submitting")}>
+        {t("contact.submit")}
       </SubmitButton>
     </form>
   );

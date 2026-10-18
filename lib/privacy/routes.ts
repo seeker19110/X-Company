@@ -6,12 +6,13 @@ import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
 import { authorize, json, readJson, withActor, type ActorRequestContext } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { parsePage } from "../nen/pagination.ts";
 import {
   completeRequest,
   createRequest,
   CreateRequestInput,
   exportSubject,
-  listRequests,
+  listRequestsPage,
   rejectRequest,
   startRequest,
   type PrivacyActor,
@@ -36,11 +37,12 @@ export const getRequests = withActor(async (ctx) => {
   const status = q.get("status");
   if (status !== null && !(STATUSES as readonly string[]).includes(status))
     throw new AppError("VALIDATION", 400, "status không hợp lệ");
-  const items = await listRequests(getPool(), ctx.actor.companyId, {
+  const page = await listRequestsPage(getPool(), ctx.actor.companyId, {
     status: (status as (typeof STATUSES)[number] | null) ?? undefined,
     overdueOnly: q.get("overdue") === "1",
+    page: parsePage(q),
   });
-  return json({ items });
+  return json(page);
 });
 
 export const postRequest = withActor(

@@ -7,6 +7,7 @@ import type { ActorContext } from "../authz/index.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
+import { fetchLimit, MAX_PAGE, toPage, type PageRequest } from "../nen/pagination.ts";
 import { projectAccess } from "../work/tasks.ts";
 import { checkedFileName } from "./names.ts";
 import { sniff } from "./sniff.ts";
@@ -231,7 +232,13 @@ export async function addComment(
   return rows[0]!.id;
 }
 
-export async function listComments(db: Queryable, actor: ActorContext, type: ObjectType, id: string) {
+export async function listComments(
+  db: Queryable,
+  actor: ActorContext,
+  type: ObjectType,
+  id: string,
+  page: PageRequest = MAX_PAGE,
+) {
   await objectAccess(db, actor, type, id);
   const { rows } = await db.query<{
     id: string;
@@ -241,8 +248,9 @@ export async function listComments(db: Queryable, actor: ActorContext, type: Obj
     created_at: Date;
   }>(
     `SELECT c.id, c.author_user_id, u.display_name, c.body, c.created_at FROM comment c JOIN app_user u ON u.id = c.author_user_id
-     WHERE c.company_id = $1 AND c.object_type = $2 AND c.object_id = $3 ORDER BY c.created_at, c.id`,
-    [actor.companyId, type, id],
+     WHERE c.company_id = $1 AND c.object_type = $2 AND c.object_id = $3 ORDER BY c.created_at, c.id
+     LIMIT $4 OFFSET $5`,
+    [actor.companyId, type, id, fetchLimit(page), page.offset],
   );
-  return rows;
+  return toPage(rows, page);
 }

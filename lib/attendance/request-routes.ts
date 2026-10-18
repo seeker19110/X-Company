@@ -4,7 +4,8 @@ import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
 import { json, readJson, withActor, type GuardOptions } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
-import { decide, pendingApprovals, type ApprovalType } from "./approvals.ts";
+import { parsePage } from "../nen/pagination.ts";
+import { decide, pendingApprovalsPage, type ApprovalType } from "./approvals.ts";
 import { requestLeave } from "./leave.ts";
 import { requestOt } from "./ot.ts";
 import { requestAdjustment } from "./period.ts";
@@ -14,7 +15,7 @@ import { AdjustmentInput, LeaveInput, OtInput } from "./request-schema.pure.ts";
 const IDEMPOTENT: GuardOptions = { idempotent: true };
 
 export const getApprovals = withActor(async (ctx) =>
-  json({ items: await pendingApprovals(getPool(), ctx.actor) }),
+  json(await pendingApprovalsPage(getPool(), ctx.actor, parsePage(new URL(ctx.req.url).searchParams))),
 );
 
 export const postDecision = withActor(async (ctx) => {

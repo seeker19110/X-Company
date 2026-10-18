@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { t } from "@/lib/i18n/client-app";
 import { flush, summarize } from "@/lib/offline/queue";
 import { logoutPlan } from "@/lib/offline/device";
 import { api } from "./api";
@@ -25,11 +26,11 @@ export function LogoutButton() {
     let plan = logoutPlan(summarize(await store.all()));
     if (plan.needsConfirmation) {
       const sync = await ask({
-        title: "Đồng bộ trước khi đăng xuất?",
-        object: `${plan.pending} thao tác chưa gửi`,
-        consequence: "Nên gửi chúng lên máy chủ trước khi rời đi.",
-        confirmLabel: "Đồng bộ",
-        cancelLabel: "Không đồng bộ",
+        title: t("logout.syncTitle"),
+        object: t("logout.pendingObject", { count: plan.pending }),
+        consequence: t("logout.syncConsequence"),
+        confirmLabel: t("logout.syncConfirm"),
+        cancelLabel: t("logout.syncCancel"),
       });
       if (sync.confirmed) {
         await flush(store, sendBatch(csrf), Date.now(), true).catch((e: unknown) =>
@@ -39,15 +40,15 @@ export function LogoutButton() {
       }
       if (plan.needsConfirmation) {
         const discard = await ask({
-          title: "Xoá thao tác chưa gửi và đăng xuất?",
-          object: `${plan.pending} thao tác chưa gửi`,
-          consequence: "Sẽ bị xoá khỏi thiết bị, không thể khôi phục.",
-          confirmLabel: "Xoá và đăng xuất",
-          cancelLabel: "Giữ lại",
+          title: t("logout.discardTitle"),
+          object: t("logout.pendingObject", { count: plan.pending }),
+          consequence: t("logout.discardConsequence"),
+          confirmLabel: t("logout.discardConfirm"),
+          cancelLabel: t("logout.discardCancel"),
         });
         if (!discard.confirmed) {
           setBusy(false);
-          setMsg("Đã huỷ đăng xuất — dữ liệu chưa gửi vẫn còn trên thiết bị.");
+          setMsg(t("logout.cancelled"));
           return;
         }
       }
@@ -61,7 +62,7 @@ export function LogoutButton() {
   return (
     <section className="card">
       <button className="btn" disabled={busy} onClick={() => void logout()}>
-        Đăng xuất
+        {t("logout.button")}
       </button>
       {msg && <p role="status">{msg}</p>}
       {dialog}

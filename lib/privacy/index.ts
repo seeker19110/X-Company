@@ -7,6 +7,7 @@ import type { Queryable } from "../db/index.ts";
 import { getStorage } from "../files/storage.ts";
 import { AppError } from "../nen/app-error.ts";
 import { env } from "../nen/env.ts";
+import { fetchLimit, MAX_PAGE, toPage, type Page, type PageRequest } from "../nen/pagination.ts";
 import { BUSINESS_TZ } from "../nen/time.ts";
 import { anonymizeById } from "../worker/retention.ts";
 import { activePurposes, listConsents, withdrawConsent, type SubjectType } from "./consent.ts";
@@ -151,14 +152,17 @@ export interface ListOptions {
   status?: RequestStatus;
   overdueOnly?: boolean;
   now?: Date;
+  /** Mặc định trang lớn nhất (200) cho nơi gọi nội bộ; route truyền trang người dùng xin (XC-PERF-006). */
+  page?: PageRequest;
 }
 
-export async function listRequests(
+export async function listRequestsPage(
   db: Queryable,
   companyId: string,
   opts: ListOptions = {},
-): Promise<(RequestRow & { overdue: boolean })[]> {
+): Promise<Page<RequestRow & { overdue: boolean }>> {
   const now = opts.now ?? new Date();
+  const page = opts.page ?? MAX_PAGE;
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
   const { rows } = await db.query<RequestRow & { overdue: boolean }>(
     `SELECT ${COLS}, (status IN ('received', 'in_progress') AND due_at < $2) AS overdue
@@ -166,10 +170,18 @@ export async function listRequests(
       WHERE company_id = $1
         AND ($3::text IS NULL OR status = $3)
         AND (NOT $4::boolean OR (status IN ('received', 'in_progress') AND due_at < $2))
-      ORDER BY (status IN ('done', 'rejected')), due_at, id LIMIT 200`,
-    [companyId, now, opts.status ?? null, opts.overdueOnly ?? false],
+      ORDER BY (status IN ('done', 'rejected')), due_at, id LIMIT $5 OFFSET $6`,
+    [companyId, now, opts.status ?? null, opts.overdueOnly ?? false, fetchLimit(page), page.offset],
   );
-  return rows;
+  return toPage(rows, page);
+}
+
+export async function listRequests(
+  db: Queryable,
+  companyId: string,
+  opts: ListOptions = {},
+): Promise<(RequestRow & { overdue: boolean })[]> {
+  return (await listRequestsPage(db, companyId, opts)).items;
 }
 
 /** Yêu cầu quá hạn chưa đóng (cho dashboard/cảnh báo — CMP-INTL-007: số quá hạn phải = 0). */

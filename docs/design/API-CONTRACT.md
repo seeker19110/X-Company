@@ -7,7 +7,7 @@
 - Lỗi: `{"error": {"code": "SNAKE_UPPER", "message": "<tiếng Việt cho người dùng>", "details"?: {...}}, "request_id": "..."}`.
   HTTP: 400 sai định dạng · 401 chưa đăng nhập · 403 không có quyền · 404 không thấy (cả khi không có quyền đọc) · 409 xung đột (`VERSION_CONFLICT`, `IDEMPOTENCY_CONFLICT`, `IDEMPOTENCY_IN_PROGRESS`, `SELF_APPROVAL`) · 422 vi phạm nghiệp vụ (`IDEMPOTENCY_KEY_REUSED`) · 429 giới hạn (`RATE_LIMITED`, kèm `Retry-After`).
 - Ghi: header `x-csrf-token` (route nội bộ); `Idempotency-Key` bắt buộc với lệnh có thể gửi lại (xem mục Idempotency).
-- Phân trang: `?cursor=&limit=` (≤ 100), trả `next_cursor`.
+- Phân trang (XC-PERF-006, `lib/nen/pagination.ts`): mọi GET danh sách nhận `?limit=&offset=`. `limit` mặc định **50**, tối đa **200**; `offset` mặc định 0, tối đa **10.000**. Giá trị ngoài khoảng hoặc không phải số nguyên thập phân (`0`, âm, `abc`, `1e3`, `1.5`, rỗng) → **400 `VALIDATION`** (không kẹp ngầm, để client biết mình xin quá mức). Phản hồi: `{ items, limit, offset, next_offset }` (`next_offset` = `null` khi hết). Sắp xếp luôn có khoá phụ duy nhất (`id`) để trang không trùng/sót. Áp dụng: `/api/app/tasks`, `/api/app/approvals` (lọc quyền sau SQL, trần 500 ứng viên), `/api/app/inquiries`, `/api/app/applications`, `/api/app/privacy/requests`, `/api/app/comments`. Route danh sách mới bắt buộc dùng `parsePage` + `toPage`. Chưa chọn keyset: dữ liệu mỗi công ty ở mức M, offset có trần đủ; đổi sang keyset khi một danh sách vượt ~10.000 dòng.
 
 ## Idempotency và giới hạn tần suất (ARC-INT-001, BE-API-008, BE-REL-006)
 Cài ở `lib/http/idempotency.ts`, bật qua `withActor(handler, { idempotent: true, rateLimit })`; bảng `idempotency_record`, `api_rate_window` (migration 0020).

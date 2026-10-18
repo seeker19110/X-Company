@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { t } from "@/lib/i18n/client-app";
 import { flush, summarize, type QueueSummary } from "@/lib/offline/queue";
 import { reportClientError } from "./client-log";
 import { syncErrorMessage } from "./messages";
@@ -46,14 +47,15 @@ export function SyncStatus() {
 
   return (
     <section className="card" aria-labelledby="dong-bo">
-      <h2 id="dong-bo">Đồng bộ</h2>
+      <h2 id="dong-bo">{t("sync.heading")}</h2>
       <p role="status" aria-live="polite">
         {s ? (
           <>
-            Chờ gửi: <strong>{s.pending}</strong> · Chờ xác minh: {s.needsReview} · Bị từ chối: {s.rejected}
+            {t("sync.pending")} <strong>{s.pending}</strong> · {t("sync.needsReview")} {s.needsReview} ·{" "}
+            {t("sync.rejected")} {s.rejected}
           </>
         ) : (
-          "Đang kiểm tra…"
+          t("sync.checking")
         )}
       </p>
       {err && (
@@ -62,7 +64,7 @@ export function SyncStatus() {
         </p>
       )}
       <button className="btn" onClick={() => void sync(true)}>
-        Đồng bộ
+        {t("sync.button")}
       </button>
     </section>
   );

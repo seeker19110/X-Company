@@ -160,3 +160,24 @@
 - Chọn: Schema dùng chung viết bằng zod/mini và client nạp động lúc gửi; server bắt $ZodError (lớp gốc chung)
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: giữ một nguồn schema và kiểm theo ô (FE-FORM-001/002) mà không nới cổng; 9 trang trong ngân sách, tổng 222.5 KB ≤ 230.
 - Đường lùi: Revert commit perf(forms) — schema về zod đầy đủ, import tĩnh
+
+### D-023 · 2026-10-18T12:58:51+00:00 · Phân trang API danh sách (XC-PERF-006): kiểu và xử lý limit vượt trần?
+
+- Phương án: (1) Offset có trần (limit mặc định 50, tối đa 200, offset tối đa 10.000); vượt trần → 400 VALIDATION · (2) Keyset cursor theo từng danh sách; vượt trần kẹp về 200
+- Chọn: Offset có trần (limit mặc định 50, tối đa 200, offset tối đa 10.000); vượt trần → 400 VALIDATION
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: dữ liệu cỡ M mỗi công ty, một cơ chế chung cho 6 API, test được; 400 báo rõ client xin quá thay vì che lỗi (tiêu chí 1). Chưa client nào dùng cursor.
+- Đường lùi: Đổi lib/nen/pagination.ts sang kẹp hoặc thêm keyset cho danh sách lớn
+
+### D-024 · 2026-10-18T12:58:51+00:00 · Tệp chuỗi i18n: một vi.json hay chia theo nơi dùng (JSON không tree-shake, vượt ngân sách JS 235,5/230 KB)?
+
+- Phương án: (1) Chia vi.json (lõi) + vi.app.json + vi.site.json + vi.server.json, mỗi phần một bộ dịch client; sai tệp → tsc báo · (2) Một vi.json và nâng trần ngân sách JS
+- Chọn: Chia vi.json (lõi) + vi.app.json + vi.site.json + vi.server.json, mỗi phần một bộ dịch client; sai tệp → tsc báo
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: giữ cổng hiệu năng không nới (225,8 KB); khoá vẫn có kiểu, check:i18n giữ đồng bộ với vi.context.json.
+- Đường lùi: Gộp lại một tệp khi có loader cắt theo khoá
+
+### D-025 · 2026-10-18T12:58:51+00:00 · Chuỗi thông điệp lỗi/nghiệp vụ ở lib/** (~400) chưa vào tệp tài nguyên (XC-I18N-001)?
+
+- Phương án: (1) Task riêng T-041 chuyển dần + mở rộng check:i18n sang lib/ khi xong · (2) Mở rộng check:i18n sang lib/ ngay kèm baseline
+- Chọn: Task riêng T-041 chuyển dần + mở rộng check:i18n sang lib/ khi xong
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: app/ đã đủ và có hàng rào; lib/ là việc cơ học lớn, tách task giữ PR nhỏ; mục blueprint giữ [ ] tới khi xong (không khai đạt).
+- Đường lùi: Gộp vào T-031

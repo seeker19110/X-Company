@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
+import { t } from "@/lib/i18n/client-app";
 import type * as RequestSchemas from "@/lib/attendance/request-schema.pure";
 import { api, textOrNull } from "./api";
 import {
@@ -12,6 +13,7 @@ import {
   type FieldErrors,
   type FieldMap,
 } from "./form-parts";
+import { KIND_LABEL } from "./labels";
 import { useSession } from "./session-context";
 
 type FormKey = "leave" | "ot" | "adj";
@@ -75,7 +77,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
       sending.current = false;
       const { fields, general } = toFieldErrors(parsed.error.issues, map);
       setFormErrors(key, fields);
-      setMsg({ text: general[0] ?? "Vui lòng kiểm tra các ô được đánh dấu.", cls: "err" });
+      setMsg({ text: general[0] ?? t("common.checkMarkedFields"), cls: "err" });
       focusFirstInvalid(form);
       return;
     }
@@ -90,8 +92,8 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
     }
     setMsg(
       r.ok
-        ? { text: "Đã gửi đơn, chờ duyệt.", cls: "ok" }
-        : { text: r.error ?? "Gửi không thành công", cls: "err" },
+        ? { text: t("requests.sent"), cls: "ok" }
+        : { text: r.error ?? t("common.sendFailed"), cls: "err" },
     );
     if (r.ok) form.reset();
   }
@@ -128,41 +130,41 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           )
         }
       >
-        <h2 id={`${lb}-h`}>Xin nghỉ</h2>
+        <h2 id={`${lb}-h`}>{t("requests.leave.heading")}</h2>
         <label className="field">
-          Loại nghỉ
+          {t("requests.leave.type")}
           <select name="type" required {...fieldA11y(lb, "type", L)}>
-            {leaveTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            {leaveTypes.map((lt) => (
+              <option key={lt.id} value={lt.id}>
+                {lt.name}
               </option>
             ))}
           </select>
         </label>
         <FieldError base={lb} name="type" errors={L} />
         <label className="field">
-          Ngày
+          {t("requests.date")}
           <input name="date" type="date" required {...fieldA11y(lb, "date", L)} />
         </label>
         <FieldError base={lb} name="date" errors={L} />
         <div className="row">
           <div>
             <label className="field">
-              Từ
+              {t("requests.leave.from")}
               <input name="from" type="time" defaultValue="08:00" required {...fieldA11y(lb, "from", L)} />
             </label>
             <FieldError base={lb} name="from" errors={L} />
           </div>
           <div>
             <label className="field">
-              Đến
+              {t("requests.leave.to")}
               <input name="to" type="time" defaultValue="17:00" required {...fieldA11y(lb, "to", L)} />
             </label>
             <FieldError base={lb} name="to" errors={L} />
           </div>
           <div>
             <label className="field">
-              Số phút làm việc nghỉ
+              {t("requests.leave.minutes")}
               <input
                 name="minutes"
                 type="number"
@@ -176,12 +178,12 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           </div>
         </div>
         <label className="field">
-          Lý do
+          {t("requests.reason")}
           <textarea name="reason" maxLength={1000} {...fieldA11y(lb, "reason", L)} />
         </label>
         <FieldError base={lb} name="reason" errors={L} />
         <SubmitButton className="btn btn-primary" busy={busy}>
-          Gửi đơn nghỉ
+          {t("requests.leave.submit")}
         </SubmitButton>
       </form>
       <form
@@ -204,14 +206,14 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           )
         }
       >
-        <h2 id={`${ob}-h`}>Làm thêm giờ</h2>
+        <h2 id={`${ob}-h`}>{t("requests.ot.heading")}</h2>
         <label className="field">
-          Ngày
+          {t("requests.date")}
           <input name="date" type="date" required {...fieldA11y(ob, "date", O)} />
         </label>
         <FieldError base={ob} name="date" errors={O} />
         <label className="field">
-          Số phút
+          {t("requests.ot.minutes")}
           <input
             name="minutes"
             type="number"
@@ -224,18 +226,18 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         </label>
         <FieldError base={ob} name="minutes" errors={O} />
         <label className="field">
-          Lý do
+          {t("requests.reason")}
           <textarea name="reason" maxLength={1000} required {...fieldA11y(ob, "reason", O)} />
         </label>
         <FieldError base={ob} name="reason" errors={O} />
         <label>
-          <input name="consent" type="checkbox" required {...fieldA11y(ob, "consent", O)} /> Tôi đồng ý làm
-          thêm giờ theo đề nghị này
+          <input name="consent" type="checkbox" required {...fieldA11y(ob, "consent", O)} />{" "}
+          {t("requests.ot.consent")}
         </label>
         <FieldError base={ob} name="consent" errors={O} />
         <p>
           <SubmitButton className="btn btn-primary" busy={busy}>
-            Gửi đơn OT
+            {t("requests.ot.submit")}
           </SubmitButton>
         </p>
       </form>
@@ -259,38 +261,38 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           )
         }
       >
-        <h2 id={`${ab}-h`}>Đề nghị sửa công (quên chấm)</h2>
+        <h2 id={`${ab}-h`}>{t("requests.adjustment.heading")}</h2>
         <label className="field">
-          Loại
+          {t("requests.adjustment.kind")}
           <select name="kind" {...fieldA11y(ab, "kind", A)}>
-            <option value="in">Vào ca</option>
-            <option value="out">Ra ca</option>
+            <option value="in">{KIND_LABEL.in}</option>
+            <option value="out">{KIND_LABEL.out}</option>
           </select>
         </label>
         <FieldError base={ab} name="kind" errors={A} />
         <div className="row">
           <div>
             <label className="field">
-              Ngày
+              {t("requests.date")}
               <input name="date" type="date" required {...fieldA11y(ab, "date", A)} />
             </label>
             <FieldError base={ab} name="date" errors={A} />
           </div>
           <div>
             <label className="field">
-              Giờ
+              {t("requests.adjustment.time")}
               <input name="time" type="time" required {...fieldA11y(ab, "time", A)} />
             </label>
             <FieldError base={ab} name="time" errors={A} />
           </div>
         </div>
         <label className="field">
-          Lý do (bắt buộc)
+          {t("requests.adjustment.reason")}
           <textarea name="reason" maxLength={1000} required {...fieldA11y(ab, "reason", A)} />
         </label>
         <FieldError base={ab} name="reason" errors={A} />
         <SubmitButton className="btn btn-primary" busy={busy}>
-          Gửi đề nghị
+          {t("requests.adjustment.submit")}
         </SubmitButton>
       </form>
     </>

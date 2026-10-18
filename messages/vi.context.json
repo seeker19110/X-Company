@@ -1,0 +1,308 @@
+{
+  "brand": {
+    "name": "Tên thương hiệu hiển thị ở đầu trang, tiêu đề thanh trên khu nội bộ, tên khi cài PWA. Không dịch.",
+    "titleTemplate": "Mẫu tiêu đề tab trình duyệt: %s là tên trang, theo sau là tên thương hiệu.",
+    "siteDescription": "Mô tả ngắn của website công khai cho công cụ tìm kiếm và bản xem trước khi chia sẻ.",
+    "internalTitle": "Tiêu đề tab mặc định của khu nội bộ (webapp điều hành/PWA nhân viên)."
+  },
+  "manifest": {
+    "name": "Tên đầy đủ của ứng dụng khi cài lên màn hình chính (PWA).",
+    "description": "Mô tả ứng dụng trong manifest PWA, hiện ở hộp thoại cài đặt."
+  },
+  "common": {
+    "loading": "Chữ hiện khi một màn hình hoặc vùng đang tải dữ liệu.",
+    "cancel": "Nút đóng hộp thoại xác nhận mà không thực hiện hành động (mặc định khi nơi gọi không đặt chữ riêng).",
+    "reasonRequired": "Lỗi dưới ô nhập lý do trong hộp thoại xác nhận khi người dùng bỏ trống.",
+    "checkMarkedFields": "Thông báo chung phía trên biểu mẫu khi có ô nhập sai; các ô lỗi được đánh dấu bên dưới.",
+    "actionFailed": "Thông báo khi một thao tác (duyệt, từ chối, chuyển trạng thái việc) thất bại mà máy chủ không nêu lý do.",
+    "sendFailed": "Thông báo khi gửi biểu mẫu thất bại mà máy chủ không nêu lý do."
+  },
+  "errorView": {
+    "title": "Tiêu đề màn hình lỗi chung khi một trang hiển thị lỗi bất ngờ.",
+    "body": "Đoạn giải thích trên màn hình lỗi chung: trấn an dữ liệu không mất, gợi ý thử lại và liên hệ quản trị. Không lộ chi tiết kỹ thuật.",
+    "retry": "Nút tải lại nội dung bị lỗi trên màn hình lỗi chung.",
+    "homePublic": "Liên kết về trang chủ trên màn hình lỗi của website công khai.",
+    "homeSecure": "Liên kết về màn hình Hôm nay trên màn hình lỗi của khu nội bộ."
+  },
+  "api": {
+    "status": "Thông báo dự phòng khi máy chủ trả lỗi HTTP không kèm lời nhắn; {status} là mã HTTP (số).",
+    "timeout": "Thông báo khi yêu cầu tới máy chủ quá thời gian chờ.",
+    "offline": "Thông báo khi không kết nối được tới máy chủ (mất mạng)."
+  },
+  "syncClient": {
+    "sessionExpired": "Lý do giữ lại bản ghi chấm công chưa gửi khi phiên đăng nhập hết hạn (hiện kèm trạng thái chấm công).",
+    "serverError": "Lý do giữ lại bản ghi chưa gửi khi máy chủ lỗi; {status} là mã HTTP (số)."
+  },
+  "sync": {
+    "heading": "Tiêu đề thẻ trạng thái đồng bộ hàng chờ ngoại tuyến ở màn hình Cá nhân.",
+    "button": "Nút đồng bộ thủ công các thao tác đang chờ gửi.",
+    "checking": "Chữ hiện trong lúc đang đọc trạng thái hàng chờ lần đầu.",
+    "pending": "Nhãn số thao tác đang chờ gửi; theo sau là con số in đậm.",
+    "needsReview": "Nhãn số thao tác đã gửi nhưng chờ người xác minh; theo sau là con số.",
+    "rejected": "Nhãn số thao tác bị máy chủ từ chối; theo sau là con số.",
+    "error": {
+      "quota": "Lỗi lưu hàng chờ: bộ nhớ trình duyệt/thiết bị đầy (QuotaExceededError).",
+      "blocked": "Lỗi lưu hàng chờ: trình duyệt chặn lưu trữ (chế độ riêng tư, quyền bị tắt).",
+      "version": "Lỗi lưu hàng chờ: cơ sở dữ liệu trên thiết bị thuộc phiên bản khác (VersionError).",
+      "unknown": "Lỗi lưu hàng chờ không phân loại được; gợi ý đồng bộ lại hoặc tải lại trang."
+    }
+  },
+  "attendance": {
+    "kind": {
+      "in": "Loại lần chấm công: vào ca. Dùng cho nút, nhãn lịch sử và lựa chọn trong biểu mẫu sửa công.",
+      "out": "Loại lần chấm công: ra ca.",
+      "break_start": "Loại lần chấm công: bắt đầu giờ nghỉ.",
+      "break_end": "Loại lần chấm công: kết thúc giờ nghỉ."
+    },
+    "eventStatus": {
+      "accepted": "Trạng thái lần chấm công: đã được hệ thống xác nhận (màu xanh kèm chữ).",
+      "needs_review": "Trạng thái lần chấm công: cần người xác minh (màu vàng kèm chữ).",
+      "rejected": "Trạng thái lần chấm công: bị từ chối (màu đỏ kèm chữ)."
+    },
+    "title": "Tiêu đề màn hình và tab Chấm công (lịch sử + biểu mẫu đơn từ).",
+    "historyHeading": "Tiêu đề danh sách lần chấm công của nhân viên trong 14 ngày gần nhất.",
+    "historyEmpty": "Thông báo khi nhân viên chưa có lần chấm công nào trong 14 ngày."
+  },
+  "clock": {
+    "confirmed": "Kết quả sau khi bấm Vào ca/Ra ca: đã được xác nhận ngay.",
+    "needs_review": "Kết quả sau khi bấm Vào ca/Ra ca: đã gửi, đang chờ người xác minh.",
+    "pending": "Kết quả sau khi bấm Vào ca/Ra ca khi mất mạng: đã lưu trên thiết bị, sẽ gửi khi có mạng.",
+    "rejected": "Kết quả sau khi bấm Vào ca/Ra ca: bị từ chối.",
+    "result": "Dòng trạng thái dưới nút chấm công: {kind} là loại lần chấm (Vào ca/Ra ca), {state} là kết quả.",
+    "resultWithReason": "Như dòng kết quả chấm công nhưng kèm lý do trong ngoặc; {reason} là lý do do hệ thống trả về."
+  },
+  "tasks": {
+    "title": "Tiêu đề màn hình danh sách công việc của tôi.",
+    "empty": "Thông báo khi nhân viên không có công việc đang mở.",
+    "due": "Hạn hoàn thành của việc; {date} là ngày đã định dạng theo locale.",
+    "youReview": "Ghi chú cạnh việc cho biết người dùng là người nghiệm thu việc này.",
+    "status": {
+      "todo": "Trạng thái công việc: chưa bắt đầu.",
+      "in_progress": "Trạng thái công việc: đang làm.",
+      "blocked": "Trạng thái công việc: bị chặn, cần gỡ vướng.",
+      "awaiting_acceptance": "Trạng thái công việc: đã nộp, chờ người nghiệm thu.",
+      "done": "Trạng thái công việc: đã hoàn tất và được nghiệm thu.",
+      "cancelled": "Trạng thái công việc: đã huỷ."
+    },
+    "action": {
+      "start": "Nút bắt đầu làm một việc chưa làm.",
+      "submit": "Nút nộp việc đang làm để người khác nghiệm thu.",
+      "block": "Nút báo việc đang bị chặn.",
+      "unblock": "Nút tiếp tục làm việc sau khi hết bị chặn.",
+      "accept": "Nút của người nghiệm thu: chấp nhận kết quả.",
+      "return": "Nút của người nghiệm thu: trả việc lại cho người làm."
+    },
+    "reasonLabel": "Nhãn ô nhập lý do trong hộp thoại báo chặn hoặc trả lại việc.",
+    "confirm": {
+      "blockTitle": "Tiêu đề hộp thoại xác nhận báo việc bị chặn (dạng câu hỏi).",
+      "blockConsequence": "Hậu quả nêu trong hộp thoại báo chặn: ai sẽ thấy.",
+      "blockButton": "Nút xác nhận trong hộp thoại báo chặn; ghi đúng động từ, không dùng OK.",
+      "returnTitle": "Tiêu đề hộp thoại xác nhận trả lại việc (dạng câu hỏi).",
+      "returnConsequence": "Hậu quả nêu trong hộp thoại trả lại việc.",
+      "returnButton": "Nút xác nhận trong hộp thoại trả lại việc.",
+      "acceptTitle": "Tiêu đề hộp thoại xác nhận nghiệm thu việc (dạng câu hỏi).",
+      "acceptConsequence": "Hậu quả nêu trong hộp thoại nghiệm thu: việc hoàn thành và rời danh sách mở.",
+      "acceptButton": "Nút xác nhận trong hộp thoại nghiệm thu."
+    }
+  },
+  "approvals": {
+    "title": "Tiêu đề màn hình và tab danh sách đơn chờ người dùng phê duyệt.",
+    "empty": "Thông báo khi không có đơn nào chờ người dùng duyệt.",
+    "sentAt": "Thời điểm đơn được gửi; {time} là ngày giờ đã định dạng.",
+    "subject": "Đối tượng nêu trong hộp thoại từ chối: {type} là loại đơn, {name} là tên người gửi.",
+    "type": {
+      "leave": "Loại đơn: nghỉ phép.",
+      "ot": "Loại đơn: làm thêm giờ.",
+      "adjustment": "Loại đơn: đề nghị sửa công."
+    },
+    "approve": "Nút duyệt đơn.",
+    "reject": "Nút từ chối đơn (mở hộp thoại hỏi lý do).",
+    "rejectTitle": "Tiêu đề hộp thoại xác nhận từ chối đơn (dạng câu hỏi).",
+    "rejectConsequence": "Hậu quả nêu trong hộp thoại từ chối: người gửi nhận được lý do.",
+    "rejectReason": "Nhãn ô nhập lý do từ chối (bắt buộc).",
+    "rejectConfirm": "Nút xác nhận từ chối trong hộp thoại; ghi đúng động từ.",
+    "rejectCancel": "Nút bỏ qua việc từ chối trong hộp thoại; không từ chối."
+  },
+  "dashboard": {
+    "title": "Tiêu đề màn hình bảng điều hành cho quản lý (mốc bàn giao và ngoại lệ).",
+    "milestones": {
+      "heading": "Tiêu đề bảng mốc bàn giao dự án.",
+      "empty": "Thông báo khi người xem không có mốc nào trong các dự án mình xem được.",
+      "project": "Tiêu đề cột: tên dự án.",
+      "milestone": "Tiêu đề cột: tên mốc bàn giao.",
+      "due": "Tiêu đề cột: ngày hạn của mốc.",
+      "slip": "Tiêu đề cột: số ngày mốc trượt so với kế hoạch gốc (baseline).",
+      "status": "Tiêu đề cột: trạng thái đạt/chưa đạt của mốc.",
+      "slipDays": "Số ngày trượt; {days} là số nguyên.",
+      "achieved": "Trạng thái mốc: đã đạt.",
+      "notAchieved": "Trạng thái mốc: chưa đạt."
+    },
+    "alerts": {
+      "heading": "Tiêu đề danh sách cảnh báo; {count} là số cảnh báo.",
+      "empty": "Thông báo khi không có cảnh báo/ngoại lệ nào.",
+      "nextAction": "Dòng nêu hành động tiếp theo gợi ý; {action} là nội dung hành động do hệ thống sinh.",
+      "code": {
+        "TASK_OVERDUE": "Nhãn cảnh báo: việc quá hạn.",
+        "TASK_BLOCKED_LONG": "Nhãn cảnh báo: việc bị chặn quá lâu.",
+        "MILESTONE_AT_RISK": "Nhãn cảnh báo: mốc có nguy cơ trễ.",
+        "ATTENDANCE_NEEDS_REVIEW": "Nhãn cảnh báo: công cần xác minh.",
+        "MISSING_CHECKOUT": "Nhãn cảnh báo: thiếu giờ ra ca."
+      }
+    }
+  },
+  "me": {
+    "title": "Tiêu đề màn hình Cá nhân (thông tin tài khoản, đồng bộ, đăng xuất).",
+    "roles": "Dòng liệt kê vai trò của người dùng; {roles} là danh sách vai trò phân cách bằng dấu phẩy.",
+    "role": {
+      "employee": "Vai trò: nhân viên.",
+      "team_lead": "Vai trò: trưởng nhóm.",
+      "project_manager": "Vai trò: quản lý dự án.",
+      "hr": "Vai trò: nhân sự.",
+      "accountant": "Vai trò: kế toán.",
+      "editor": "Vai trò: biên tập nội dung website.",
+      "sales": "Vai trò: kinh doanh.",
+      "executive": "Vai trò: lãnh đạo.",
+      "sysadmin": "Vai trò: quản trị hệ thống.",
+      "sensitive_exporter": "Vai trò: được xuất dữ liệu nhạy cảm."
+    }
+  },
+  "today": {
+    "title": "Tiêu đề màn hình Hôm nay của nhân viên (ca, chấm công, việc ưu tiên).",
+    "shiftsHeading": "Tiêu đề khối ca làm việc được giao trong ngày.",
+    "shiftsEmpty": "Thông báo khi hôm nay nhân viên không có ca được giao.",
+    "recentEvents": "Nhãn truy cập (đọc bằng trình đọc màn hình) của danh sách các lần chấm gần đây.",
+    "eventAt": "Một lần chấm trong ngày: {kind} là loại (Vào ca/Ra ca…), {time} là giờ:phút.",
+    "tasksHeading": "Tiêu đề khối việc ưu tiên của nhân viên.",
+    "tasksEmpty": "Thông báo khi nhân viên không có việc đang mở.",
+    "allTasks": "Liên kết sang danh sách đầy đủ công việc.",
+    "waitingHeading": "Tiêu đề khối các việc đang chờ (đơn chờ duyệt).",
+    "myPending": "Số đơn của chính người dùng đang chờ duyệt; {count} là số nguyên.",
+    "dashboardLink": "Liên kết sang bảng điều hành (ngoại lệ, mốc bàn giao).",
+    "toApprove": "Liên kết sang danh sách duyệt; {count} là số đơn chờ người dùng duyệt."
+  },
+  "nav": {
+    "label": "Tên (aria-label) của thanh điều hướng chính khu nội bộ, cho trình đọc màn hình.",
+    "today": "Mục điều hướng: màn hình Hôm nay.",
+    "tasks": "Mục điều hướng: công việc.",
+    "attendance": "Mục điều hướng: chấm công.",
+    "approvals": "Mục điều hướng (rút gọn cho vừa thanh dưới): phê duyệt; chỉ hiện với người duyệt.",
+    "me": "Mục điều hướng: cá nhân."
+  },
+  "login": {
+    "title": "Tiêu đề tab của trang đăng nhập.",
+    "heading": "Tiêu đề chính của trang đăng nhập nội bộ.",
+    "email": "Nhãn ô nhập email đăng nhập.",
+    "password": "Nhãn ô nhập mật khẩu.",
+    "submit": "Nút gửi biểu mẫu đăng nhập.",
+    "submitting": "Chữ của nút đăng nhập trong lúc đang gửi.",
+    "failed": "Thông báo dự phòng khi đăng nhập thất bại mà máy chủ không nêu lý do."
+  },
+  "logout": {
+    "button": "Nút đăng xuất khỏi ứng dụng.",
+    "pendingObject": "Đối tượng nêu trong hộp thoại đăng xuất; {count} là số thao tác chưa gửi.",
+    "syncTitle": "Tiêu đề hộp thoại hỏi có đồng bộ thao tác chưa gửi trước khi đăng xuất (dạng câu hỏi).",
+    "syncConsequence": "Hậu quả nêu trong hộp thoại đồng bộ trước khi đăng xuất.",
+    "syncConfirm": "Nút xác nhận đồng bộ trước khi đăng xuất.",
+    "syncCancel": "Nút bỏ qua đồng bộ.",
+    "discardTitle": "Tiêu đề hộp thoại xác nhận xoá thao tác chưa gửi và đăng xuất (không đảo ngược).",
+    "discardConsequence": "Hậu quả nêu trong hộp thoại xoá: dữ liệu mất khỏi thiết bị, không khôi phục được.",
+    "discardConfirm": "Nút xác nhận xoá và đăng xuất; ghi đúng động từ.",
+    "discardCancel": "Nút giữ lại dữ liệu chưa gửi, không đăng xuất.",
+    "cancelled": "Thông báo sau khi người dùng huỷ đăng xuất: dữ liệu chưa gửi vẫn còn."
+  },
+  "requests": {
+    "sent": "Thông báo thành công sau khi gửi một đơn (nghỉ, làm thêm, sửa công).",
+    "date": "Nhãn ô chọn ngày dùng chung cho các biểu mẫu đơn.",
+    "reason": "Nhãn ô nhập lý do dùng chung cho các biểu mẫu đơn.",
+    "leave": {
+      "heading": "Tiêu đề biểu mẫu xin nghỉ.",
+      "type": "Nhãn ô chọn loại nghỉ (phép năm, ốm…).",
+      "from": "Nhãn ô giờ bắt đầu nghỉ.",
+      "to": "Nhãn ô giờ kết thúc nghỉ.",
+      "minutes": "Nhãn ô nhập số phút làm việc được nghỉ (tính vào số dư phép).",
+      "submit": "Nút gửi đơn xin nghỉ."
+    },
+    "ot": {
+      "heading": "Tiêu đề biểu mẫu đăng ký làm thêm giờ (OT).",
+      "minutes": "Nhãn ô nhập số phút làm thêm.",
+      "consent": "Nhãn hộp kiểm: nhân viên đồng ý làm thêm giờ (đồng ý ghi riêng theo luật lao động).",
+      "submit": "Nút gửi đơn làm thêm giờ."
+    },
+    "adjustment": {
+      "heading": "Tiêu đề biểu mẫu đề nghị sửa công khi quên chấm.",
+      "kind": "Nhãn ô chọn loại lần chấm cần bổ sung (vào ca/ra ca).",
+      "time": "Nhãn ô nhập giờ của lần chấm cần bổ sung.",
+      "reason": "Nhãn ô nhập lý do sửa công; bắt buộc.",
+      "submit": "Nút gửi đề nghị sửa công."
+    }
+  },
+  "contact": {
+    "title": "Tiêu đề tab và tiêu đề trang Liên hệ của website.",
+    "heading": "Tiêu đề biểu mẫu gửi yêu cầu của khách.",
+    "name": "Nhãn ô họ tên; bắt buộc.",
+    "email": "Nhãn ô email (không bắt buộc nếu có điện thoại).",
+    "phone": "Nhãn ô điện thoại (không bắt buộc nếu có email).",
+    "phoneHint": "Gợi ý dưới ô điện thoại: cần ít nhất một cách liên hệ.",
+    "message": "Nhãn ô nội dung nhu cầu của khách; bắt buộc.",
+    "honeypot": "Nhãn ô bẫy chống spam, ẩn với người dùng thật; chỉ trình đọc màn hình có thể gặp.",
+    "consent": "Đầu câu đồng ý xử lý dữ liệu cá nhân; kết thúc bằng khoảng trắng vì kế tiếp là liên kết.",
+    "consentLink": "Chữ của liên kết sang chính sách dữ liệu cá nhân, nằm giữa câu đồng ý.",
+    "submit": "Nút gửi biểu mẫu liên hệ.",
+    "submitting": "Chữ của nút gửi trong lúc đang gửi.",
+    "thanksPrefix": "Phần đầu lời cảm ơn sau khi gửi thành công; theo sau là mã yêu cầu in đậm.",
+    "thanksSuffix": "Phần cuối lời cảm ơn: cam kết thời hạn phản hồi (1 ngày làm việc).",
+    "offline": "Thông báo khi mất kết nối lúc gửi; nội dung form được giữ nguyên."
+  },
+  "site": {
+    "skip": "Liên kết ẩn cho bàn phím và trình đọc màn hình: nhảy tới nội dung chính.",
+    "navLabel": "Tên (aria-label) của thanh điều hướng chính website công khai.",
+    "nav": {
+      "about": "Mục menu website: giới thiệu công ty.",
+      "services": "Mục menu website: dịch vụ.",
+      "projects": "Mục menu website: dự án.",
+      "capability": "Mục menu website: năng lực và chứng nhận.",
+      "news": "Mục menu website: tin tức.",
+      "jobs": "Mục menu website: tuyển dụng.",
+      "contact": "Mục menu website: liên hệ."
+    },
+    "footer": {
+      "copyright": "Dòng bản quyền ở chân trang website.",
+      "sendRequest": "Liên kết ở chân trang tới biểu mẫu gửi yêu cầu.",
+      "privacy": "Liên kết ở chân trang tới chính sách dữ liệu cá nhân."
+    },
+    "home": {
+      "servicesHeading": "Tiêu đề khối danh sách dịch vụ trên trang chủ.",
+      "contactCta": "Liên kết kêu gọi hành động cuối trang chủ, dẫn tới trang liên hệ."
+    },
+    "section": {
+      "services": "Tiêu đề trang danh mục dịch vụ.",
+      "projects": "Tiêu đề trang danh mục dự án tiêu biểu.",
+      "capability": "Tiêu đề trang năng lực và chứng nhận.",
+      "news": "Tiêu đề trang danh mục tin tức.",
+      "jobs": "Tiêu đề trang danh mục tuyển dụng.",
+      "empty": "Thông báo khi một danh mục chưa có bài nào."
+    }
+  },
+  "validation": {
+    "inquiry": {
+      "name": "Lỗi ô họ tên của form liên hệ khi để trống.",
+      "emailInvalid": "Lỗi ô email của form liên hệ khi sai định dạng.",
+      "phoneInvalid": "Lỗi ô điện thoại của form liên hệ khi sai định dạng.",
+      "message": "Lỗi ô nhu cầu của form liên hệ khi để trống.",
+      "consent": "Lỗi hộp kiểm đồng ý của form liên hệ khi chưa tích.",
+      "contactRequired": "Lỗi khi cả email lẫn điện thoại đều trống; gắn vào ô email."
+    },
+    "request": {
+      "datetime": "Lỗi khi ngày hoặc giờ của đơn không hợp lệ.",
+      "reasonRequired": "Lỗi khi lý do của đơn để trống.",
+      "reasonMax": "Lỗi khi lý do dài quá 1000 ký tự.",
+      "minutesNumber": "Lỗi khi số phút không phải số.",
+      "minutesInt": "Lỗi khi số phút không phải số nguyên.",
+      "minutesPositive": "Lỗi khi số phút không lớn hơn 0.",
+      "leaveType": "Lỗi khi chưa chọn loại nghỉ.",
+      "endAfterStart": "Lỗi khi giờ kết thúc không sau giờ bắt đầu.",
+      "date": "Lỗi khi ngày của đơn làm thêm không hợp lệ.",
+      "otConsent": "Lỗi khi chưa tích đồng ý làm thêm giờ."
+    }
+  }
+}

@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { t } from "@/lib/i18n";
 import { THEME_COLOR } from "@/lib/web/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "X-Company", template: "%s · X-Company" },
-  description: "X-Company — giới thiệu năng lực, dịch vụ và tiếp nhận yêu cầu khách hàng.",
+  title: { default: t("brand.name"), template: t("brand.titleTemplate") },
+  description: t("brand.siteDescription"),
 };
 
 export const viewport: Viewport = {

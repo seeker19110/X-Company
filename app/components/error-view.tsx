@@ -1,6 +1,6 @@
 // Giao diện lỗi dùng chung cho error.tsx (UX-STATE-005): thông báo thân thiện, KHÔNG hiện message/stack của lỗi,
 // có nút "Thử lại" (gọi reset của Next) và đường đi khác (về trang an toàn).
-import { ERROR_VIEW_TEXT } from "./messages";
+import { ERROR_VIEW_TEXT } from "./error-text";
 
 export function ErrorView({
   reset,

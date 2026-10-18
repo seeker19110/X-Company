@@ -4,6 +4,7 @@
 // vô hiệu (focus không thoát ra ngoài), Esc = huỷ, focus trả về nút đã mở; nút ghi đúng động từ, nêu đối tượng và hậu quả.
 // Cần lý do (từ chối, trả lại…) → ô nhập có nhãn, bắt buộc không rỗng.
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { t } from "@/lib/i18n/client";
 
 export interface ConfirmRequest {
   /** Câu hỏi ngắn, vd. "Từ chối đơn?" */
@@ -27,7 +28,7 @@ export interface ConfirmResult {
 
 /** Lý do hợp lệ = không rỗng sau khi bỏ khoảng trắng. Trả thông điệp lỗi hoặc null. */
 export function reasonError(reason: string): string | null {
-  return reason.trim() === "" ? "Vui lòng nhập lý do." : null;
+  return reason.trim() === "" ? t("common.reasonRequired") : null;
 }
 
 /** Quyết định khi bấm nút xác nhận: cần lý do mà rỗng → báo lỗi, không đóng; ngược lại trả kết quả. */
@@ -146,7 +147,7 @@ export function ConfirmBody({
           autoFocus={!needsReason}
           onClick={() => onResult({ confirmed: false })}
         >
-          {request.cancelLabel ?? "Huỷ"}
+          {request.cancelLabel ?? t("common.cancel")}
         </button>
         <button type="submit" className="btn btn-primary">
           {request.confirmLabel}

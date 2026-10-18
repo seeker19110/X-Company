@@ -1,0 +1,131 @@
+{
+  "brand": {
+    "name": "X-Company",
+    "titleTemplate": "%s · X-Company",
+    "siteDescription": "X-Company — giới thiệu năng lực, dịch vụ và tiếp nhận yêu cầu khách hàng.",
+    "internalTitle": "X-Company nội bộ"
+  },
+  "manifest": {
+    "name": "X-Company — làm việc",
+    "description": "Chấm công, công việc và phê duyệt của X-Company."
+  },
+  "dashboard": {
+    "title": "Bảng điều hành",
+    "milestones": {
+      "heading": "Mốc bàn giao",
+      "empty": "Không có mốc trong các dự án bạn xem được.",
+      "project": "Dự án",
+      "milestone": "Mốc",
+      "due": "Hạn",
+      "slip": "Trượt so với baseline",
+      "status": "Trạng thái",
+      "slipDays": "{days} ngày",
+      "achieved": "Đã đạt",
+      "notAchieved": "Chưa đạt"
+    },
+    "alerts": {
+      "heading": "Cần xử lý ({count})",
+      "empty": "Không có ngoại lệ.",
+      "nextAction": "Việc tiếp theo: {action}",
+      "code": {
+        "TASK_OVERDUE": "Quá hạn",
+        "TASK_BLOCKED_LONG": "Bị chặn lâu",
+        "MILESTONE_AT_RISK": "Mốc nguy cơ trễ",
+        "ATTENDANCE_NEEDS_REVIEW": "Công cần xác minh",
+        "MISSING_CHECKOUT": "Thiếu giờ ra"
+      }
+    }
+  },
+  "me": {
+    "title": "Cá nhân",
+    "roles": "Vai trò: {roles}",
+    "role": {
+      "employee": "Nhân viên",
+      "team_lead": "Trưởng nhóm",
+      "project_manager": "Quản lý dự án",
+      "hr": "Nhân sự",
+      "accountant": "Kế toán",
+      "editor": "Biên tập",
+      "sales": "Kinh doanh",
+      "executive": "Lãnh đạo",
+      "sysadmin": "Quản trị",
+      "sensitive_exporter": "Xuất dữ liệu nhạy cảm"
+    }
+  },
+  "today": {
+    "title": "Hôm nay",
+    "shiftsHeading": "Ca làm việc",
+    "shiftsEmpty": "Hôm nay bạn không có ca được giao.",
+    "recentEvents": "Lần chấm gần đây",
+    "eventAt": "{kind} lúc {time}",
+    "tasksHeading": "Việc ưu tiên",
+    "tasksEmpty": "Không có việc đang mở.",
+    "allTasks": "Xem tất cả công việc",
+    "waitingHeading": "Đang chờ",
+    "myPending": "Đơn của tôi đang chờ duyệt: {count}",
+    "dashboardLink": "Bảng điều hành (ngoại lệ, mốc bàn giao)",
+    "toApprove": "Có {count} đơn chờ bạn duyệt"
+  },
+  "site": {
+    "skip": "Bỏ qua tới nội dung",
+    "navLabel": "Điều hướng chính",
+    "nav": {
+      "about": "Giới thiệu",
+      "services": "Dịch vụ",
+      "projects": "Dự án",
+      "capability": "Năng lực",
+      "news": "Tin tức",
+      "jobs": "Tuyển dụng",
+      "contact": "Liên hệ"
+    },
+    "footer": {
+      "copyright": "© X-Company",
+      "sendRequest": "Gửi yêu cầu",
+      "privacy": "Chính sách dữ liệu cá nhân"
+    },
+    "home": {
+      "servicesHeading": "Dịch vụ",
+      "contactCta": "Gửi yêu cầu cho chúng tôi"
+    },
+    "section": {
+      "services": "Dịch vụ",
+      "projects": "Dự án tiêu biểu",
+      "capability": "Năng lực và chứng nhận",
+      "news": "Tin tức",
+      "jobs": "Tuyển dụng",
+      "empty": "Nội dung đang được cập nhật."
+    }
+  },
+  "attendance": {
+    "title": "Chấm công",
+    "historyHeading": "14 ngày gần đây",
+    "historyEmpty": "Chưa có lần chấm nào."
+  },
+  "tasks": {
+    "title": "Công việc",
+    "empty": "Bạn không có việc đang mở.",
+    "due": "hạn {date}",
+    "youReview": "bạn nghiệm thu"
+  },
+  "approvals": {
+    "title": "Phê duyệt",
+    "empty": "Không có đơn chờ bạn duyệt.",
+    "sentAt": "Gửi lúc {time}",
+    "subject": "{type} của {name}",
+    "type": {
+      "leave": "Nghỉ phép",
+      "ot": "Làm thêm",
+      "adjustment": "Sửa công"
+    }
+  },
+  "contact": {
+    "title": "Liên hệ"
+  },
+  "common": {
+    "loading": "Đang tải…"
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "heading": "Đăng nhập X-Company"
+  }
+}

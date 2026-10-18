@@ -2,36 +2,37 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
 import { useConfirm, type ConfirmRequest } from "./confirm-dialog";
 import { useSession } from "./session-context";
 
 type Action = "start" | "submit" | "block" | "unblock" | "accept" | "return";
 const LABEL: Record<Action, string> = {
-  start: "Bắt đầu",
-  submit: "Gửi nghiệm thu",
-  block: "Báo bị chặn",
-  unblock: "Tiếp tục",
-  accept: "Nghiệm thu",
-  return: "Trả lại",
+  start: t("tasks.action.start"),
+  submit: t("tasks.action.submit"),
+  block: t("tasks.action.block"),
+  unblock: t("tasks.action.unblock"),
+  accept: t("tasks.action.accept"),
+  return: t("tasks.action.return"),
 };
 const NEEDS_REASON: Action[] = ["block", "return"];
 /** Hành động cần xác nhận: nêu đối tượng (tên việc) + hậu quả; nút ghi đúng động từ. */
 const CONFIRM: Partial<Record<Action, Omit<ConfirmRequest, "object" | "reasonLabel">>> = {
   block: {
-    title: "Báo việc bị chặn?",
-    consequence: "Người nghiệm thu và quản lý sẽ thấy việc đang bị chặn.",
-    confirmLabel: "Báo bị chặn",
+    title: t("tasks.confirm.blockTitle"),
+    consequence: t("tasks.confirm.blockConsequence"),
+    confirmLabel: t("tasks.confirm.blockButton"),
   },
   return: {
-    title: "Trả lại việc?",
-    consequence: "Việc quay về cho người làm, kèm lý do bạn nhập.",
-    confirmLabel: "Trả lại việc",
+    title: t("tasks.confirm.returnTitle"),
+    consequence: t("tasks.confirm.returnConsequence"),
+    confirmLabel: t("tasks.confirm.returnButton"),
   },
   accept: {
-    title: "Nghiệm thu việc?",
-    consequence: "Việc được ghi nhận hoàn thành và rời khỏi danh sách đang mở.",
-    confirmLabel: "Nghiệm thu việc",
+    title: t("tasks.confirm.acceptTitle"),
+    consequence: t("tasks.confirm.acceptConsequence"),
+    confirmLabel: t("tasks.confirm.acceptButton"),
   },
 };
 
@@ -70,7 +71,7 @@ export function TaskActions({
       const r = await ask({
         ...ask1,
         object: title,
-        ...(NEEDS_REASON.includes(a) ? { reasonLabel: "Lý do" } : {}),
+        ...(NEEDS_REASON.includes(a) ? { reasonLabel: t("tasks.reasonLabel") } : {}),
       });
       if (!r.confirmed) return;
       reason = r.reason ?? null;
@@ -82,7 +83,7 @@ export function TaskActions({
     sending.current = false;
     setBusy(false);
     if (r.ok) router.refresh();
-    else setError(r.error ?? "Không thực hiện được");
+    else setError(r.error ?? t("common.actionFailed"));
   }
 
   const acts = actionsFor(status, role);

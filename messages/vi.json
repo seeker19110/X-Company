@@ -1,0 +1,28 @@
+{
+  "common": {
+    "cancel": "Huỷ",
+    "reasonRequired": "Vui lòng nhập lý do.",
+    "checkMarkedFields": "Vui lòng kiểm tra các ô được đánh dấu.",
+    "actionFailed": "Không thực hiện được",
+    "sendFailed": "Gửi không thành công"
+  },
+  "errorView": {
+    "title": "Đã xảy ra lỗi",
+    "body": "Chưa tải được nội dung này. Dữ liệu của bạn không bị mất. Hãy thử lại; nếu lỗi lặp lại, vui lòng liên hệ quản trị.",
+    "retry": "Thử lại",
+    "homePublic": "Về trang chủ",
+    "homeSecure": "Về màn hình Hôm nay"
+  },
+  "api": {
+    "status": "Lỗi {status}",
+    "timeout": "Máy chủ phản hồi quá lâu, vui lòng thử lại",
+    "offline": "Không kết nối được máy chủ"
+  },
+  "login": {
+    "email": "Email",
+    "password": "Mật khẩu",
+    "submit": "Đăng nhập",
+    "submitting": "Đang đăng nhập…",
+    "failed": "Đăng nhập không thành công"
+  }
+}
