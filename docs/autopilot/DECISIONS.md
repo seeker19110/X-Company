@@ -94,3 +94,32 @@
 - Lý do (tiêu chí chất lượng cuối): Kế hoạch §12: kiểm loại/dung lượng, cách ly tệp chưa kiểm tra, không gửi hồ sơ nhạy cảm lên dịch vụ quét công khai — nhận tệp từ người lạ cần hàng cách ly + máy quét tự host (ClamAV) chưa có; khách vẫn gửi được yêu cầu, nhân viên nhận tệp qua email/kênh khác
 - Đường lùi: Thêm endpoint đính kèm theo mã hồ sơ + hàng cách ly khi có máy quét
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): ClamAV tự host trong mạng nội bộ cho hàng cách ly tệp công khai
+
+### D-014 · 2026-10-18T08:16:02+00:00 · Sau audit còn 298 MUST mở: xử lý thế nào trong phiên này?
+
+- Phương án: (1) Thêm lát 8 cứng hoá (T-025…T-040) làm mọi mục làm được trong repo; mục cần hạ tầng/người → loop defer kèm cách làm · (2) Dừng ở P0 tính năng, defer toàn bộ
+- Chọn: Thêm lát 8 cứng hoá (T-025…T-040) làm mọi mục làm được trong repo; mục cần hạ tầng/người → loop defer kèm cách làm
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1 (đúng, an toàn): phần lớn mục mở là cổng/test/tài liệu làm được ngay; defer hàng loạt sẽ giấu nợ. Hạ tầng thật, ruleset, pháp chế thì không tự làm được → defer có hướng dẫn.
+- Đường lùi: Bỏ lát 8 khỏi PLAN; các mục quay về [ ]
+
+### D-015 · 2026-10-18T08:16:02+00:00 · DB-SEC-007 RLS theo tenant có áp dụng không?
+
+- Phương án: (1) Không áp dụng lúc này: hệ thống một công ty (một tenant); company_id là khoá phạm vi dự phòng; quyền theo người dùng cưỡng chế ở can() + test BOLA/BFLA; bật RLS khi có công ty thứ hai · (2) Bật RLS FORCE theo company_id cho mọi bảng ngay
+- Chọn: Không áp dụng lúc này: hệ thống một công ty (một tenant); company_id là khoá phạm vi dự phòng; quyền theo người dùng cưỡng chế ở can() + test BOLA/BFLA; bật RLS khi có công ty thứ hai
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3 (đơn giản, bền): RLS với một tenant không giảm rủi ro thực mà buộc refactor mọi đường đọc pool; điều kiện mở lại ghi rõ ở blueprint. Kiểm quyền theo người dùng đã có test BOLA/BFLA.
+- Đường lùi: Thêm migration ENABLE+FORCE RLS + SET LOCAL app.company_id trong withTx/withActor
+
+### D-016 · 2026-10-18T08:16:03+00:00 · Thời hạn lưu dữ liệu (STD-PRIV-005, XC-GREEN-007) khi HR/pháp chế chưa chốt?
+
+- Phương án: (1) Làm job xoá/ẩn danh với thời hạn là CẤU HÌNH mặc định thận trọng (liên hệ 24 tháng, ứng viên 12 tháng, phiên hết hạn 30 ngày, login_attempt 90 ngày, outbox đã gửi 30 ngày), pháp chế chốt số ở F02 · (2) Chờ pháp chế rồi mới làm
+- Chọn: Làm job xoá/ẩn danh với thời hạn là CẤU HÌNH mặc định thận trọng (liên hệ 24 tháng, ứng viên 12 tháng, phiên hết hạn 30 ngày, login_attempt 90 ngày, outbox đã gửi 30 ngày), pháp chế chốt số ở F02
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+2: có cơ chế xoá đúng hạn tốt hơn giữ vô hạn; số là cấu hình đổi không cần deploy mã — giữ đường lùi.
+- Đường lùi: Tắt job retention (cấu hình enabled=false)
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Pháp chế/HR chốt thời hạn từng loại dữ liệu
+
+### D-017 · 2026-10-18T08:16:03+00:00 · Thông báo lỗi API theo RFC 9457 mà không phá client hiện có?
+
+- Phương án: (1) application/problem+json với type/title/status/detail/instance + giữ trường mở rộng code, message, fields, request_id · (2) Đổi hẳn sang chỉ trường chuẩn
+- Chọn: application/problem+json với type/title/status/detail/instance + giữ trường mở rộng code, message, fields, request_id
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 2: RFC 9457 cho phép trường mở rộng — client PWA ngoại tuyến cũ vẫn đọc code/message.
+- Đường lùi: Trả lại content-type application/json
