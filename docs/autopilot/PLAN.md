@@ -66,7 +66,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 
 ### Lát 3 — Website, CMS, liên hệ (F-003)
 - [x] `T-008` CMS: trang/phiên bản, luồng nháp→duyệt→xuất bản, người duyệt ≠ tác giả, markdown an toàn (S-WEB-02, 03, 06) — Gate: `npm run -s test:file -- tests/db/cms.test.ts`
-- [ ] `T-009` Trang công khai đọc bản published + sitemap/robots/redirect (S-WEB-02) — Gate: `npm run -s test:file -- tests/http/public-site.test.ts`
+- [x] `T-009` Trang công khai đọc bản published + sitemap/robots/redirect (S-WEB-02) — Gate: `npm run -s test:file -- tests/http/public-site.test.ts`
 - [ ] `T-010` Liên hệ & tuyển dụng: một hồ sơ/submission_id, định tuyến, honeypot, rate limit, tách quyền ứng viên (S-WEB-01, 04, 05) — Gate: `npm run -s test:file -- tests/http/inquiry.test.ts`
 
 ### Lát 4 — Chấm công (F-004, F-005, F-006)
