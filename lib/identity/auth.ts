@@ -3,6 +3,7 @@ import { appendAudit } from "../audit/index.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
 
@@ -35,6 +36,7 @@ export async function login(
   now: Date = new Date(),
 ): Promise<LoginResult> {
   const email = normalizeEmail(input.email);
+  const meta = { sourceIp: input.ip, userAgent: input.userAgent, requestId: input.requestId };
   const since = new Date(now.getTime() - WINDOW_MS);
   // Bước 1 (ngắn, dưới khoá theo email+IP): đếm lần sai và GHI TRƯỚC lượt thử này là "sai" rồi commit — request song
   // song luôn thấy nhau nên không vượt giới hạn (review PR #8 #3) mà không giữ kết nối DB trong lúc băm Argon2.
@@ -52,6 +54,12 @@ export async function login(
     if (f.n >= MAX_FAILURES) {
       const oldest = f.oldest?.getTime() ?? now.getTime();
       const retryAfter = Math.max(1, Math.ceil((oldest + WINDOW_MS - now.getTime()) / 1000));
+      logSecurityEvent({
+        ...meta,
+        event: "auth.rate_limited",
+        outcome: "denied",
+        target: { type: "app_user" },
+      });
       throw new AppError("RATE_LIMITED", 429, "Đăng nhập sai quá nhiều lần, thử lại sau", { retryAfter });
     }
     const attempt = await tx.query<{ id: string }>(
@@ -82,6 +90,8 @@ export async function login(
         objectId: user?.id ?? null,
         result: "denied",
         requestId: input.requestId ?? null,
+        sourceIp: input.ip,
+        userAgent: input.userAgent,
       });
       return null;
     }
@@ -94,9 +104,19 @@ export async function login(
       objectType: "session",
       objectId: s.id,
       requestId: input.requestId ?? null,
+      sourceIp: input.ip,
+      userAgent: input.userAgent,
     });
     return { token: s.token, userId: user.id, companyId: user.company_id };
   }, pool);
+  // Sự kiện bảo mật: không ghi email (chỉ id khi biết tài khoản).
+  logSecurityEvent({
+    ...meta,
+    event: "auth.login",
+    outcome: r ? "success" : "denied",
+    actorId: r ? r.userId : null,
+    target: { type: "app_user", id: user?.id ?? null },
+  });
   // Cùng một thông điệp cho sai email và sai mật khẩu.
   if (!r) throw new AppError("INVALID_CREDENTIALS", 401, "Email hoặc mật khẩu không đúng");
   return r;

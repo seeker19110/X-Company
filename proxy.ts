@@ -1,6 +1,7 @@
 // Proxy (Next 16, thay middleware): header bảo mật + CSP có nonce cho mọi trang; chuyển chưa đăng nhập ở /app về
 // /app/login (chỉ xét có cookie phiên — KIỂM QUYỀN THẬT nằm ở server: withActor / requireSession).
 import { NextResponse, type NextRequest } from "next/server";
+import { env } from "./lib/nen/env.ts";
 
 export function securityHeaders(
   nonce: string,
@@ -48,8 +49,8 @@ export function proxy(request: NextRequest) {
   }
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const headers = securityHeaders(nonce, {
-    dev: process.env.NODE_ENV === "development",
-    https: (process.env.APP_ORIGIN ?? "").startsWith("https://"),
+    dev: env("NODE_ENV") === "development",
+    https: env("APP_ORIGIN").startsWith("https://"),
   });
   // Next đọc CSP ở request header để gắn nonce cho script của nó.
   const reqHeaders = new Headers(request.headers);

@@ -5,6 +5,8 @@
 // Lib không import `next/*`: instrumentation.ts chỉ gọi `registerShutdown()`.
 import http, { type Server, type ServerResponse } from "node:http";
 import { closePool } from "../db/index.ts";
+import { env } from "./env.ts";
+import { log as logger } from "./log.ts";
 
 export interface ShutdownDeps {
   graceMs: number;
@@ -15,15 +17,8 @@ export interface ShutdownDeps {
   log: (msg: string) => void;
 }
 
-function envMs(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (raw === undefined || raw.trim() === "") return fallback;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
-}
-
-export const defaultGraceMs = (): number => envMs("SHUTDOWN_GRACE_MS", 20_000);
-export const defaultReadyDelayMs = (): number => envMs("SHUTDOWN_READY_DELAY_MS", 2_000);
+export const defaultGraceMs = (): number => env("SHUTDOWN_GRACE_MS");
+export const defaultReadyDelayMs = (): number => env("SHUTDOWN_READY_DELAY_MS");
 
 export class ShutdownController {
   private inflight = 0;
@@ -129,7 +124,7 @@ const processDeps = (): ShutdownDeps => ({
   readyDelayMs: defaultReadyDelayMs(),
   closePool,
   exit: (code) => process.exit(code),
-  log: (msg) => console.error(msg),
+  log: (msg) => logger.warn(msg),
 });
 
 let current: ShutdownController | undefined;

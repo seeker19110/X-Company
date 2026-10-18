@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
+import { log } from "../nen/log.ts";
 
 export const MIGRATIONS_DIR = path.join(process.cwd(), "migrations");
 const MIGRATION_LOCK_KEY = 731_904_552;
@@ -67,7 +68,9 @@ export async function runMigrations(pool: Pool, dir: string = MIGRATIONS_DIR): P
         await client.query("COMMIT");
         ran.push(f.name);
       } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
+        await client
+          .query("ROLLBACK")
+          .catch((e: unknown) => log.warn("rollback migration thất bại", { migration: f.name, err: e }));
         throw new Error(`Migration ${f.name} lỗi: ${err instanceof Error ? err.message : String(err)}`, {
           cause: err,
         });
@@ -75,7 +78,10 @@ export async function runMigrations(pool: Pool, dir: string = MIGRATIONS_DIR): P
     }
     return ran;
   } finally {
-    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY]).catch(() => {});
+    // Khoá advisory tự nhả khi kết nối đóng; lỗi nhả chỉ ghi log.
+    await client
+      .query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY])
+      .catch((e: unknown) => log.warn("nhả khoá migration thất bại", { err: e }));
     client.release();
   }
 }

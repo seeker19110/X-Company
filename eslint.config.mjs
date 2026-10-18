@@ -42,13 +42,34 @@ const config = [
   {
     rules: {
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      "no-console": ["error", { allow: ["warn", "error"] }],
+      // Mọi log đi qua lib/nen/log.ts (JSON một dòng, có che bí mật) — BASE-GATE-003, BASE-ERR-005.
+      "no-console": "error",
       // ARC-MOD-004: không vòng phụ thuộc (plugin import đi kèm eslint-config-next).
       "import/no-cycle": "error",
       // FE-SEC-001: DOM sink chỉ qua module safe-html, mỗi chỗ dùng phải eslint-disable kèm lý do.
       "react/no-danger": "error",
       // UX-A11Y-011: ô nhập phải có nhãn gắn chương trình.
       "jsx-a11y/label-has-associated-control": ["error", { assert: "either", depth: 3 }],
+    },
+  },
+  {
+    // BASE-ERR-001: không nuốt lỗi bằng `.catch(() => {})`; xử lý, chuyển tiếp có ngữ cảnh hoặc ghi log.
+    files: ["lib/**/*.{ts,tsx}", "app/**/*.{ts,tsx}", "scripts/**/*.ts", "proxy.ts", "instrumentation.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.property.name='catch'] > :matches(ArrowFunctionExpression, FunctionExpression)[body.type='BlockStatement'][body.body.length=0]",
+          message: "Không nuốt lỗi bằng .catch(() => {}) — xử lý hoặc ghi log có ngữ cảnh (BASE-ERR-001).",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[body.type='Identifier'][body.name='undefined']",
+          message:
+            "Không nuốt lỗi bằng .catch(() => undefined) — xử lý hoặc ghi log có ngữ cảnh (BASE-ERR-001).",
+        },
+      ],
     },
   },
   {
@@ -123,6 +144,7 @@ const config = [
     },
   },
   {
+    // Lý do tắt (BASE-GATE-003): script CLI và test in kết quả cho người chạy ra stdout/stderr — không phải log ứng dụng.
     files: ["scripts/**/*.ts", "scripts/**/*.mjs", "tests/**/*.ts"],
     rules: { "no-console": "off" },
   },

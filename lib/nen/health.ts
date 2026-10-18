@@ -3,6 +3,7 @@
 // chuỗi kết nối, không thông điệp lỗi) — chỉ trạng thái ngắn; chi tiết lỗi ghi log phía server.
 import type pg from "pg";
 import { getPool } from "../db/index.ts";
+import { log } from "./log.ts";
 import { isShuttingDown } from "./shutdown.ts";
 
 export const READY_DB_TIMEOUT_MS = 2_000;
@@ -25,7 +26,7 @@ export async function dbReachable(pool: pg.Pool, timeoutMs: number = READY_DB_TI
   const ping = pool.query("SELECT 1").then(
     () => true as const,
     (err: unknown) => {
-      console.error("[readyz] DB lỗi:", err instanceof Error ? err.message : err);
+      log.warn("readyz: DB lỗi", { err });
       return false as const;
     },
   );

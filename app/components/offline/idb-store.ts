@@ -3,6 +3,7 @@
 // Kho IndexedDB cho hàng chờ (trình duyệt). Database theo người dùng; nâng cấp lược đồ giữ bản ghi chờ.
 import { dbNameFor, foreignDatabases, migrateItem, SCHEMA_VERSION } from "@/lib/offline/device";
 import type { QueueItem, QueueStore } from "@/lib/offline/queue";
+import { reportClientError } from "../client-log";
 
 const STORE = "queue";
 
@@ -48,10 +49,14 @@ export async function openQueue(userId: string): Promise<QueueStore> {
 export async function removeForeignDatabases(currentUserId: string | null): Promise<void> {
   const list = typeof indexedDB.databases === "function" ? await indexedDB.databases() : [];
   for (const name of foreignDatabases(list.map((d) => d.name ?? "").filter(Boolean), currentUserId)) {
-    await req(indexedDB.deleteDatabase(name)).catch(() => undefined);
+    await req(indexedDB.deleteDatabase(name)).catch((e: unknown) =>
+      reportClientError("xoá database người dùng khác thất bại", e),
+    );
   }
 }
 
 export async function deleteUserDatabase(userId: string): Promise<void> {
-  await req(indexedDB.deleteDatabase(dbNameFor(userId))).catch(() => undefined);
+  await req(indexedDB.deleteDatabase(dbNameFor(userId))).catch((e: unknown) =>
+    reportClientError("xoá database người dùng thất bại", e),
+  );
 }

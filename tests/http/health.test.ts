@@ -13,6 +13,7 @@ import { dbReachable, readiness } from "../../lib/nen/health.ts";
 import { setShutdownControllerForTest, ShutdownController } from "../../lib/nen/shutdown.ts";
 import { config as proxyConfig, proxy } from "../../proxy.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
+import { setTestEnv } from "../helpers/fixtures.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -134,6 +135,7 @@ describe("health endpoint (OPS-OBS-006)", () => {
   });
 
   test("proxy/CSP không chặn: matcher loại /api; gọi proxy cho /api/* không chuyển hướng", () => {
+    setTestEnv(); // proxy đọc APP_ORIGIN qua module env (thiếu = lỗi cấu hình, không im lặng)
     assert.match(proxyConfig.matcher[0]!.source, /\(\?!api\|/);
     for (const p of ["/api/healthz", "/api/readyz"]) {
       const r = proxy(new NextRequest(`http://xc.test${p}`));

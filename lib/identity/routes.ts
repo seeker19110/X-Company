@@ -11,6 +11,7 @@ import {
   withActor,
 } from "../http/index.ts";
 import { appendAudit } from "../audit/index.ts";
+import { logSecurityEvent } from "../nen/security-event.ts";
 import { login } from "./auth.ts";
 import { ABSOLUTE_MS, csrfTokenFor, destroySession } from "./session.ts";
 
@@ -41,6 +42,12 @@ export const logoutHandler = withActor(async ({ actor, sessionToken, requestId }
       objectType: "session",
       requestId,
     });
+  });
+  logSecurityEvent({
+    event: "auth.logout",
+    outcome: "success",
+    actorId: actor.userId,
+    target: { type: "session" },
   });
   return json({ ok: true }, 200, {
     "set-cookie": sessionCookie(null, 0),

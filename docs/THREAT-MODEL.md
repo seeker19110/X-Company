@@ -145,3 +145,11 @@ Không có nhóm nào "không áp dụng": cả mười đều chạm hệ thố
 ## 7. Giả định
 - Nhà cung cấp hạ tầng bảo vệ lớp vật lý/ảo hoá — kiểm: `<chủ dự án điền khi chọn nhà cung cấp>`.
 - Nhân viên giữ bí mật mật khẩu/TOTP; thiết bị cá nhân không bị root — giảm nhẹ bằng phiên ngắn, không lưu bí mật ở client.
+
+## 8. Fail-closed / fail-open (BASE-ERR-010)
+- **Fail-closed (mặc định):** `withActor` — `resolveSession`/`loadActor`/pool lỗi → 503 `AUTH_UNAVAILABLE`, handler không chạy
+  (test `tests/http/errors.test.ts`); server component `getSession` ném lỗi → trang lỗi, không render dữ liệu; `can()` mặc định
+  từ chối; env sai → tiến trình không khởi động (exit 78); CSRF/Origin sai → 403.
+- **Fail-open (có chủ đích, ghi log):** ghi nhật ký log/stdout hỏng → bỏ qua dòng log (không chặn request); ROLLBACK/nhả khoá
+  advisory lỗi → chỉ log cảnh báo (lỗi gốc vẫn được ném); IP client không xác định (cấu hình proxy sai) → coi là "không biết",
+  request vẫn xử lý nhưng giới hạn đăng nhập theo IP khi đó gộp chung `direct`.

@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { env } from "../nen/env.ts";
 
 export interface Storage {
   put(data: Buffer): Promise<string>;
@@ -14,7 +15,7 @@ export interface Storage {
 const KEY_RE = /^[0-9a-f]{2}\/[0-9a-f]{40}$/;
 
 export function diskStorage(
-  root: string = process.env.FILE_STORAGE_DIR ??
+  root: string = env("FILE_STORAGE_DIR") ??
     path.join(/* turbopackIgnore: true */ process.cwd(), ".data", "files"),
 ): Storage {
   const fileOf = (key: string) => {
