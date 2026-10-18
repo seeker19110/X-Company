@@ -48,7 +48,10 @@
     "eol:check": "node scripts/eol-check.mjs",
     "check:supply-chain": "npm run -s check:licenses && npm run -s check:osv-exceptions && node scripts/gen-third-party-notices.mjs --check && npm run -s check:sql-interpolation && npm run -s check:sbom && npm run -s check:supply-wiring && python3 .xtemplates/scripts/xt.py ci-check .github/workflows",
     "build:tokens": "node scripts/build-tokens.mjs",
-    "check:tokens": "node scripts/check-tokens.mjs"
+    "check:tokens": "node scripts/check-tokens.mjs",
+    "lighthouse": "scripts/with-test-db.sh scripts/lighthouse.sh",
+    "check:perf-budget": "node scripts/check-perf-budget.mjs",
+    "check:alerts": "node scripts/check-alerts.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

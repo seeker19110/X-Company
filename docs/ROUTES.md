@@ -15,6 +15,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/public/applications` | `app/api/public/applications/route.ts` | động | Ghi hồ sơ ứng tuyển; không cache |
 | `/api/public/inquiries` | `app/api/public/inquiries/route.ts` | động | Ghi yêu cầu liên hệ; không cache |
 | `/api/healthz` | `app/api/healthz/route.ts` | động | Liveness, không chạm DB; `no-store` |
+| `/api/metrics` | `app/api/metrics/route.ts` | động | Metric Prometheus (RED + DLQ); bearer `METRICS_TOKEN`, không đặt thì 404; `no-store` |
 | `/api/readyz` | `app/api/readyz/route.ts` | động | Readiness: `SELECT 1` có timeout, 503 khi DB lỗi/đang tắt; `no-store` |
 
 ## Khu nội bộ (đăng nhập)

@@ -32,7 +32,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | --------- | ------------------------ | -------------------------------------------------------- |
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
 | `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
-| `http`    | `index.ts`               | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
+| `http`    | `index.ts`, `metrics-route.ts` | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
 | `web`     | `safe-html.ts`, `theme.ts` | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002); `theme.ts` SINH từ token (`npm run build:tokens`) |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |

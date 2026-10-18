@@ -157,6 +157,7 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     ...GOOD,
     MIGRATE_DATABASE_URL: "postgres://owner:owner-pw-leak@db:5432/xc",
     NODE_ENV: "production",
+    METRICS_TOKEN: "metrics-leak-0123456789abcdef",
     FILE_STORAGE_DIR: "/srv/files",
   };
 
@@ -168,7 +169,7 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     assert.ok(secrets.length >= 4);
     for (const n of secrets) assert.equal(masked[n], "***", n);
     const dump = JSON.stringify(masked);
-    for (const leaked of ["hunter2", SECRET, "qr-key-0123", "owner-pw-leak"])
+    for (const leaked of ["hunter2", SECRET, "qr-key-0123", "owner-pw-leak", "metrics-leak"])
       assert.equal(dump.includes(leaked), false, `lộ ${leaked}`);
     assert.equal(masked.NODE_ENV, "production"); // không bí mật thì giữ nguyên
     assert.equal(masked.FILE_STORAGE_DIR, "/srv/files");

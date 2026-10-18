@@ -1,0 +1,74 @@
+# Rule cảnh báo MẪU (OPS-SLO-001, OPS-OBS-003, BE-JOB-004). CHƯA chạy trên Prometheus thật (chưa có hạ tầng giám sát);
+# cấu trúc được kiểm bằng `npm run -s check:alerts` (scripts/check-alerts.mjs). Khi có Prometheus: `promtool check rules ops/prometheus/alerts.yml`.
+# Metric nguồn: lib/http/metrics.ts (`/api/metrics`). SLO ở docs/ops/SLO.md. Mọi rule có severity, owner, runbook_url.
+groups:
+  - name: x-company-slo-burn
+    rules:
+      # SLI-1 khả dụng, SLO 99,9% → ngân sách lỗi 0,001. Burn rate đa cửa sổ (Google SRE Workbook): cả cửa sổ dài và ngắn.
+      - alert: XCAvailabilityFastBurn
+        expr: |
+          (
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[1h]))
+            / sum(rate(http_server_request_duration_seconds_count[1h]))
+          ) > (14.4 * 0.001)
+          and
+          (
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            / sum(rate(http_server_request_duration_seconds_count[5m]))
+          ) > (14.4 * 0.001)
+        for: 2m
+        labels:
+          severity: page
+          owner: seeker19110
+        annotations:
+          summary: "Đốt ngân sách khả dụng nhanh (14,4x trong 1h và 5m)"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      - alert: XCAvailabilitySlowBurn
+        expr: |
+          (
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[6h]))
+            / sum(rate(http_server_request_duration_seconds_count[6h]))
+          ) > (6 * 0.001)
+          and
+          (
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[30m]))
+            / sum(rate(http_server_request_duration_seconds_count[30m]))
+          ) > (6 * 0.001)
+        for: 15m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "Đốt ngân sách khả dụng chậm (6x trong 6h và 30m)"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      # SLI-2 độ trễ ghi chấm công, SLO 95% ≤ 1 s → ngân sách 0,05.
+      - alert: XCAttendanceLatencyFastBurn
+        expr: |
+          (
+            1 - sum(rate(http_server_request_duration_seconds_bucket{http_route="/api/app/attendance/events",le="1"}[1h]))
+            / sum(rate(http_server_request_duration_seconds_count{http_route="/api/app/attendance/events"}[1h]))
+          ) > (6 * 0.05)
+          and
+          (
+            1 - sum(rate(http_server_request_duration_seconds_bucket{http_route="/api/app/attendance/events",le="1"}[5m]))
+            / sum(rate(http_server_request_duration_seconds_count{http_route="/api/app/attendance/events"}[5m]))
+          ) > (6 * 0.05)
+        for: 5m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "Đốt ngân sách độ trễ ghi chấm công (6x trong 1h và 5m)"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+  - name: x-company-jobs
+    rules:
+      # BE-JOB-004: DLQ > 0 quá 15 phút. Gauge vắng mặt (DB không đọc được) thì rule không bắn — availability bắt ca đó.
+      - alert: XCOutboxDeadLetter
+        expr: outbox_dead_total > 0
+        for: 15m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "Có việc outbox ở DLQ (status=dead) quá 15 phút"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#dlq--redrive"
