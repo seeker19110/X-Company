@@ -65,6 +65,9 @@ export default async function TodayPage() {
       <section className="card" aria-labelledby="cho">
         <h2 id="cho">Đang chờ</h2>
         <p>Đơn của tôi đang chờ duyệt: {v.myPending}</p>
+        <p>
+          <Link href="/app/dashboard">Bảng điều hành (ngoại lệ, mốc bàn giao)</Link>
+        </p>
         {v.toApprove > 0 && (
           <p>
             <Link href="/app/approvals">Có {v.toApprove} đơn chờ bạn duyệt</Link>
