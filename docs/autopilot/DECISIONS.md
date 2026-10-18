@@ -58,3 +58,10 @@
 - Chọn: dep-audit quét phụ thuộc production (--omit=dev), theo dõi dev qua Dependabot
 - Lý do (tiêu chí chất lượng cuối): Lỗ hổng DoS khi glob lồng sâu, chỉ chạy lúc lint với mẫu glob của chính repo, không vào bản build; bỏ plugin Next làm mất luật core-web-vitals; hạ về 14 không tương thích Next 16
 - Đường lùi: Bỏ --omit=dev khi braces có bản sửa
+
+### D-009 · 2026-10-18T06:28:36+00:00 · Mỗi lát một PR nhưng phiên chỉ được push lên một nhánh (claude/focused-cannon-3iu4lk)
+
+- Phương án: (1) Tạo nhánh riêng cho từng lát · (2) Dùng một nhánh: lát kế tiếp nối vào PR đang mở; khi PR merge thì nhánh nối lại main và lát sau mở PR mới
+- Chọn: Dùng một nhánh: lát kế tiếp nối vào PR đang mở; khi PR merge thì nhánh nối lại main và lát sau mở PR mới
+- Lý do (tiêu chí chất lượng cuối): Chỉ dẫn phiên cấm push sang nhánh khác khi chưa được phép; không chặn vòng chờ người merge; mô tả PR liệt kê từng lát và Gate
+- Đường lùi: Chủ dự án cho phép nhiều nhánh → tách các lát còn lại thành PR riêng

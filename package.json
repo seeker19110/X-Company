@@ -18,7 +18,8 @@
     "test:file": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1",
     "coverage": "scripts/coverage.sh",
     "e2e": "playwright test",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "audit:verify": "tsx scripts/verify-audit-chain.ts"
   },
   "dependencies": {
     "next": "16.4.2",
