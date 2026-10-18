@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { requireSession } from "@/app/server/session";
 import { SessionProvider } from "@/app/components/session-context";
 import { AppNav } from "@/app/components/app-nav";
+import { ServiceWorkerRegister } from "@/app/components/sw-register";
 import { can } from "@/lib/authz";
 import "../app.css";
 
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { default: "X-Company nội bộ", template: "%s · X-Company" },
   robots: { index: false },
+  appleWebApp: { capable: true, title: "X-Company", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export default async function SecureLayout({ children }: { children: ReactNode }) {
@@ -28,6 +31,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
           {children}
         </main>
         <AppNav approver={approver} />
+        <ServiceWorkerRegister />
       </div>
     </SessionProvider>
   );

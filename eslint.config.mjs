@@ -61,7 +61,7 @@ const config = [
     },
   },
   {
-    files: ["scripts/**/*.ts", "tests/**/*.ts"],
+    files: ["scripts/**/*.ts", "scripts/**/*.mjs", "tests/**/*.ts"],
     rules: { "no-console": "off" },
   },
 ];
