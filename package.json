@@ -22,7 +22,12 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "audit:verify": "tsx scripts/verify-audit-chain.ts",
     "check:repo-docs": "node scripts/check-repo-docs.mjs",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:domains": "tsx scripts/check-domains.ts",
+    "check:routes": "tsx scripts/check-routes.ts",
+    "check:adr": "tsx scripts/check-adr-immutable.ts",
+    "check:tests": "tsx scripts/check-tests.ts",
+    "check:arch": "npm run -s check:domains && npm run -s check:routes && npm run -s check:adr && npm run -s check:tests"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

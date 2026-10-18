@@ -44,14 +44,14 @@ export async function resolvePublicPath(
   if (segments.length === 0) type = "home";
   else if (segments.length === 1 && segments[0] === "gioi-thieu") type = "about";
   else if (segments.length === 1 && segments[0] === "lien-he") type = "contact";
-  else if (segments.length === 2 && SECTION_BY_PREFIX[segments[0]!]) {
+  else if (segments.length === 2 && SECTION_BY_PREFIX[segments[0]!] !== undefined) {
     type = SECTION_BY_PREFIX[segments[0]!]!;
     slug = segments[1]!;
   } else if (segments.length === 1) {
     type = "page";
     slug = segments[0]!;
   }
-  if (type) {
+  if (type !== null) {
     const page = await getPublished(db, companyId, type, slug, { now });
     if (page) return { kind: "page", page, html: renderMarkdown(page.bodyMarkdown) };
   }

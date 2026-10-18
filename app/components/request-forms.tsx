@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
-import { api } from "./api";
+import { api, textOrNull } from "./api";
 import { useSession } from "./session-context";
 
 /** Đơn nghỉ, OT (đồng ý làm thêm ghi riêng), đề nghị sửa công — luôn có lý do. */
@@ -37,7 +37,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             start_at: vnIso(String(f.get("date")), String(f.get("from"))),
             end_at: vnIso(String(f.get("date")), String(f.get("to"))),
             minutes: Number(f.get("minutes")),
-            reason: f.get("reason") || null,
+            reason: textOrNull(f.get("reason")),
           }))
         }
       >

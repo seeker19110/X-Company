@@ -152,7 +152,8 @@ export async function createWorkPackage(
       w.parentId,
       projectId,
     ]);
-    if (!p.rowCount) throw new AppError("INVALID_REFERENCE", 422, "Hạng mục cha không thuộc dự án");
+    if ((p.rowCount ?? 0) === 0)
+      throw new AppError("INVALID_REFERENCE", 422, "Hạng mục cha không thuộc dự án");
   }
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO work_package (company_id, project_id, parent_id, code, name) VALUES ($1, $2, $3, $4, $5) RETURNING id",
@@ -169,7 +170,7 @@ async function requireMembers(tx: Queryable, projectId: string, ids: (string | n
       projectId,
       id,
     ]);
-    if (!m.rowCount)
+    if ((m.rowCount ?? 0) === 0)
       throw new AppError("NOT_MEMBER", 422, "Người được giao phải là thành viên dự án", { employeeId: id });
   }
 }
@@ -203,7 +204,7 @@ export async function createTask(tx: Queryable, actor: ActorContext, t: TaskInpu
       t.workPackageId,
       t.projectId,
     ]);
-    if (!w.rowCount) throw new AppError("INVALID_REFERENCE", 422, "Hạng mục không thuộc dự án");
+    if ((w.rowCount ?? 0) === 0) throw new AppError("INVALID_REFERENCE", 422, "Hạng mục không thuộc dự án");
   }
   const requires = t.requiresAcceptance ?? true;
   if (requires && !t.reviewerEmployeeId)
@@ -296,7 +297,7 @@ async function notify(
   topic: string,
 ) {
   const to = [...new Set(employees.filter((e): e is string => !!e && e !== actor.employeeId))];
-  if (to.length)
+  if (to.length > 0)
     await enqueue(tx, actor.companyId, topic, { taskId, employeeIds: to, byUserId: actor.userId });
 }
 
@@ -381,13 +382,14 @@ export async function transitionTask(
       409,
       `Không thể "${action}" khi công việc đang ở trạng thái ${t.status}`,
     );
-  const reason = opts.reason?.trim() || null;
+  const trimmed = opts.reason?.trim();
+  const reason = trimmed === undefined || trimmed === "" ? null : trimmed;
   if (rule.needsReason && !reason) throw new AppError("VALIDATION", 422, "Cần lý do");
   let to = rule.to;
   if (action === "submit") {
     if (t.evidence_required) {
       const ev = await tx.query("SELECT 1 FROM task_evidence WHERE task_id = $1 LIMIT 1", [taskId]);
-      if (!ev.rowCount)
+      if ((ev.rowCount ?? 0) === 0)
         throw new AppError("EVIDENCE_REQUIRED", 422, "Cần bằng chứng trước khi gửi nghiệm thu");
     }
     // Hoàn thành giản lược (W2): việc không cần nghiệm thu → hoàn tất ngay, vẫn ghi lịch sử.
@@ -533,7 +535,8 @@ export async function addEvidence(
     taskId,
     actor.employeeId,
   ]);
-  const ok = (!!actor.employeeId && actor.employeeId === t.responsible_employee_id) || !!collab.rowCount;
+  const ok =
+    (!!actor.employeeId && actor.employeeId === t.responsible_employee_id) || (collab.rowCount ?? 0) > 0;
   if (!ok) throw forbidden("task.evidence", "task", taskId);
   if (e.kind === "link" && !/^https?:\/\//.test(e.ref))
     throw new AppError("VALIDATION", 422, "Liên kết phải là http(s)");
@@ -543,7 +546,7 @@ export async function addEvidence(
       "SELECT 1 FROM document WHERE company_id = $1 AND id::text = $2 AND object_type = 'task' AND object_id = $3",
       [actor.companyId, e.ref, taskId],
     );
-    if (!d.rowCount)
+    if ((d.rowCount ?? 0) === 0)
       throw new AppError("VALIDATION", 422, "Bằng chứng tệp phải là tài liệu của công việc này");
   }
   const { rows } = await tx.query<{ id: string }>(
@@ -574,7 +577,7 @@ export async function addDependency(
      ) SELECT 1 FROM down WHERE id = $2`,
     [successorId, predecessorId],
   );
-  if (cyc.rowCount) throw new AppError("DEPENDENCY_CYCLE", 422, "Phụ thuộc tạo vòng lặp");
+  if ((cyc.rowCount ?? 0) > 0) throw new AppError("DEPENDENCY_CYCLE", 422, "Phụ thuộc tạo vòng lặp");
   await tx.query(
     "INSERT INTO task_dependency (company_id, predecessor_id, successor_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
     [actor.companyId, predecessorId, successorId],

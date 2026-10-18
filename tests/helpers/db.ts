@@ -11,7 +11,7 @@ const APP_LOGIN_PW = "xc_app_test_pw";
 
 function adminUrl(): URL {
   const raw = process.env.DATABASE_URL;
-  if (!raw)
+  if (raw === undefined || raw === "")
     throw new Error("Thiếu DATABASE_URL — chạy test qua scripts/with-test-db.sh (test DB không skip)");
   return new URL(raw);
 }

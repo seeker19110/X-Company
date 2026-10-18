@@ -63,7 +63,7 @@ export async function dashboard(
   const ids = projects.map((p) => p.id);
   const managerOf = new Map(projects.map((p) => [p.id, p.manager]));
 
-  if (ids.length) {
+  if (ids.length > 0) {
     const overdue = await db.query<{
       id: string;
       title: string;
@@ -109,7 +109,7 @@ export async function dashboard(
   }
 
   const milestones: MilestoneRow[] = [];
-  if (ids.length) {
+  if (ids.length > 0) {
     const ms = await db.query<{
       id: string;
       project_id: string;

@@ -165,7 +165,10 @@ describe("API nội bộ: công việc, đơn từ, phê duyệt (T-019)", () =>
       await getApprovals(req("GET", "/api/app/approvals", { cookie: lead.cookie }))
     ).json();
     assert.deepEqual(inbox.items.map((i: { type: string }) => i.type).sort(), ["adjustment", "leave", "ot"]);
-    assert.ok(inbox.items.every((i: { employeeId: string }) => i.employeeId === empEmployeeId));
+    assert.equal(
+      inbox.items.every((i: { employeeId: string }) => i.employeeId === empEmployeeId),
+      true,
+    );
     assert.equal(
       (await (await getApprovals(req("GET", "/api/app/approvals", { cookie: other.cookie }))).json()).items
         .length,

@@ -60,9 +60,12 @@ describe("xác thực (T-007)", () => {
     assert.match(sc, /^xc_session=[A-Za-z0-9_-]{43};/);
     assert.match(sc, /HttpOnly/);
     assert.match(sc, /SameSite=Lax/);
-    assert.ok(body.csrf_token);
+    assert.match(String(body.csrf_token), /\S/);
     const me = await meHandler(req("GET", "/api/app/me", { cookie }));
     assert.equal(me.status, 200);
+    // PRF-WEB-001: route có xác thực không bao giờ vào cache dùng chung.
+    assert.equal(me.headers.get("cache-control"), "no-store");
+    assert.equal(res.headers.get("cache-control"), "no-store");
     const meBody = await me.json();
     assert.equal(meBody.user_id, u.userId);
     assert.deepEqual(meBody.roles, [{ role: "hr", scope_type: "company", scope_id: null }]);

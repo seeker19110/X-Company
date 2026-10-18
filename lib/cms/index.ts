@@ -67,7 +67,7 @@ export function pathFor(type: PageType, slug: string): string {
     page: "",
   };
   if (type === "home") return "/";
-  if (!slug) return base[type] || "/";
+  if (slug === "") return base[type] === "" ? "/" : base[type];
   return `${base[type]}/${slug}`;
 }
 
@@ -91,7 +91,7 @@ function audit(
 }
 
 function validateContent(c: Content): void {
-  if (!c.title?.trim()) throw new AppError("VALIDATION", 422, "Tiêu đề không được trống");
+  if ((c.title?.trim() ?? "") === "") throw new AppError("VALIDATION", 422, "Tiêu đề không được trống");
   if (c.canonicalUrl && !/^https?:\/\//.test(c.canonicalUrl))
     throw new AppError("VALIDATION", 422, "Canonical phải là URL http(s)");
 }
@@ -275,7 +275,7 @@ export async function returnToDraft(
   revisionId: string,
   reason: string,
 ): Promise<void> {
-  if (!reason.trim()) throw new AppError("VALIDATION", 422, "Cần lý do trả lại");
+  if (reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do trả lại");
   await transition(tx, a, revisionId, "in_review", "draft");
   await audit(tx, a, "cms.return", revisionId, { reason });
 }
@@ -424,7 +424,7 @@ export async function listPublished(
 ): Promise<PublishedPage[]> {
   const params: unknown[] = [companyId, opts.locale ?? "vi", opts.now ?? new Date()];
   let where = "";
-  if (opts.type) {
+  if (opts.type !== undefined) {
     params.push(opts.type);
     where = ` AND p.type = $${params.length}`;
   }

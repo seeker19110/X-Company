@@ -29,7 +29,7 @@ export function lintMarkdown(source: string): ContentWarning[] {
   const warnings: ContentWarning[] = [];
   const walk = (tokens: ReturnType<typeof md.parse>) => {
     for (const t of tokens) {
-      if (t.type === "image" && !t.content.trim()) {
+      if (t.type === "image" && t.content.trim() === "") {
         warnings.push({
           code: "IMAGE_MISSING_ALT",
           message: `Ảnh ${t.attrGet("src") ?? ""} thiếu văn bản thay thế`,

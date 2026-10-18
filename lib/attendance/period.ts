@@ -302,7 +302,7 @@ export async function explainException(
 ) {
   requireHr(actor, periodId);
   await loadPeriod(tx, actor.companyId, periodId);
-  if (!note.trim()) throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
+  if (note.trim() === "") throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
   await tx.query(
     `INSERT INTO period_exception_note (period_id, ref, note, created_by_user_id) VALUES ($1, $2, $3, $4)
      ON CONFLICT (period_id, ref) DO UPDATE SET note = EXCLUDED.note, created_by_user_id = EXCLUDED.created_by_user_id`,
@@ -340,7 +340,7 @@ export async function lockPeriod(
   const p = await loadPeriod(tx, actor.companyId, periodId, true);
   if (p.status !== "hr_closed") throw new AppError("INVALID_STATE", 409, "Chỉ khoá kỳ đã được HR chốt");
   const open = (await periodExceptions(tx, actor.companyId, p)).filter((e) => !e.note);
-  if (open.length)
+  if (open.length > 0)
     throw new AppError("PERIOD_HAS_EXCEPTIONS", 409, "Còn ngoại lệ chưa xử lý hoặc chưa giải trình", {
       exceptions: open.map((e) => ({ ref: e.ref, kind: e.kind, employeeId: e.employeeId })),
     });
@@ -545,7 +545,7 @@ export async function requestAdjustment(
     type: "employee",
     id: a.employeeId,
   });
-  if (!a.reason.trim()) throw new AppError("VALIDATION", 422, "Sửa công cần lý do");
+  if (a.reason.trim() === "") throw new AppError("VALIDATION", 422, "Sửa công cần lý do");
   let before: unknown = null;
   let after: unknown;
   let at: Date;
@@ -566,7 +566,8 @@ export async function requestAdjustment(
     after = { voided: true };
     at = t.device_time;
   } else {
-    if (!a.newKind || !a.newAt) throw new AppError("VALIDATION", 422, "Thiếu loại và thời điểm sự kiện mới");
+    if (a.newKind === undefined || a.newAt === undefined)
+      throw new AppError("VALIDATION", 422, "Thiếu loại và thời điểm sự kiện mới");
     after = { kind: a.newKind, at: a.newAt.toISOString() };
     at = a.newAt;
   }

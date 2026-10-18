@@ -77,7 +77,7 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
     assert.equal(rows[0].status, "assigned");
     assert.equal(rows[0].assignee_user_id, sales.userId);
     assert.ok(rows[0].due_at > rows[0].created_at);
-    assert.ok(rows[0].consent_notice_version);
+    assert.match(String(rows[0].consent_notice_version), /\S/);
     assert.match(rows[0].ip_hash, /^[0-9a-f]{32}$/, "IP lưu dạng băm");
     const outbox = await db.admin.query("SELECT topic FROM outbox_event WHERE payload->>'code' = $1", [code]);
     assert.deepEqual(

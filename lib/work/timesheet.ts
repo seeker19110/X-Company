@@ -200,7 +200,7 @@ export async function explainDay(
   const res = await employeeResource(tx, actor.companyId, employeeId);
   // Chính chủ hoặc người quản lý công (attendance.read đi kèm vai trò quản lý) giải trình.
   await requireOn(tx, actor, "attendance.read", res, { type: "employee", id: employeeId });
-  if (!note.trim()) throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
+  if (note.trim() === "") throw new AppError("VALIDATION", 422, "Cần nội dung giải trình");
   await tx.query(
     `INSERT INTO reconciliation_note (company_id, employee_id, business_date, note, created_by_user_id) VALUES ($1,$2,$3,$4,$5)
      ON CONFLICT (employee_id, business_date) DO UPDATE SET note = EXCLUDED.note, created_by_user_id = EXCLUDED.created_by_user_id`,

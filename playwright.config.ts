@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // E2E chạy trên bản build production (`next start`) với Postgres thật — xem scripts/e2e.sh.
 // PW_CHROMIUM_PATH: dùng Chromium có sẵn khi phiên bản trình duyệt của Playwright chưa được cài (môi trường dev).
-const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
+const executablePath = process.env.PW_CHROMIUM_PATH === "" ? undefined : process.env.PW_CHROMIUM_PATH;
 
 export default defineConfig({
   testDir: "e2e",

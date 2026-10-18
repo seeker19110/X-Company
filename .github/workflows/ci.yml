@@ -32,12 +32,21 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check:arch so ADR với nhánh gốc
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
+      # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
+      - name: Typecheck và lint trước build
+        run: |
+          npm run -s typecheck
+          npm run -s lint
+      - name: Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
+        run: npm run -s check:arch
       - name: Cổng chuẩn — đúng lệnh trong xt.yaml (build · typecheck · lint · test)
         run: .xtemplates/scripts/dev-task.sh gate
       - name: Coverage có ngưỡng (sàn Gate M)

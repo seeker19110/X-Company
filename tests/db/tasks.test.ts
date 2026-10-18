@@ -239,8 +239,8 @@ describe("công việc (T-015, SPEC-work)", () => {
       "SELECT payload FROM outbox_event WHERE topic = 'task.updated' AND payload->>'taskId' = $1",
       [id],
     );
-    assert.ok(ob.rows[0].payload.employeeIds.includes(dev.employeeId), "người cũ được báo");
-    assert.ok(ob.rows[0].payload.employeeIds.includes(extra.employeeId), "người mới được báo");
+    assert.equal(ob.rows[0].payload.employeeIds.includes(dev.employeeId), true, "người cũ được báo");
+    assert.equal(ob.rows[0].payload.employeeIds.includes(extra.employeeId), true, "người mới được báo");
     await assert.rejects(
       withTx((tx) => updateTask(tx, dev, id, v, { reportedPct: 50 })),
       isCode("FORBIDDEN"),

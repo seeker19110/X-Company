@@ -150,7 +150,10 @@ function pair(
   }
   const out: Interval[] = [];
   for (const list of byDevice.values()) {
-    list.sort((a, b) => a.at.getTime() - b.at.getTime() || (a.kind === open ? -1 : 1));
+    list.sort((a, b) => {
+      const d = a.at.getTime() - b.at.getTime();
+      return d !== 0 ? d : a.kind === open ? -1 : 1;
+    });
     let cur: ShiftEvent | null = null;
     for (const e of list) {
       if (e.kind === open) {

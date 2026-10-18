@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { API_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
+import { textOrNull } from "./api";
 
 type State =
   | { kind: "idle" }
@@ -40,11 +41,11 @@ export function ContactForm() {
         body: JSON.stringify({
           submission_id: submissionId.current,
           name: f.get("name"),
-          email: f.get("email") || null,
-          phone: f.get("phone") || null,
+          email: textOrNull(f.get("email")),
+          phone: textOrNull(f.get("phone")),
           message: f.get("message"),
           consent: f.get("consent") === "on",
-          website: f.get("website") || "",
+          website: textOrNull(f.get("website")) ?? "",
           elapsed_ms: Date.now() - openedAt.current,
           source: typeof window !== "undefined" ? window.location.pathname + window.location.search : null,
         }),

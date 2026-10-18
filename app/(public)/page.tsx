@@ -23,6 +23,7 @@ export default async function HomePage() {
         <article className="prose">
           <h1>{home.page.title}</h1>
           {home.page.summary && <p className="muted">{home.page.summary}</p>}
+          {/* eslint-disable-next-line react/no-danger -- HTML do markdown-it (html:false) sinh từ bản đã duyệt, không nhận HTML thô */}
           <div dangerouslySetInnerHTML={{ __html: home.html }} />
         </article>
       ) : (

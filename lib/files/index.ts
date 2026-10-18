@@ -88,7 +88,8 @@ export async function uploadFile(
   const kind = sniff(u.data);
   if (!kind) throw new AppError("UNSUPPORTED_TYPE", 415, "Chỉ nhận PDF, ảnh PNG/JPEG/WebP, DOCX, XLSX");
   const sha256 = createHash("sha256").update(u.data).digest("hex");
-  const name = u.originalName.replace(/[\\/\0\r\n"]/g, "_").slice(0, 200) || `tep.${kind.ext}`;
+  const cleaned = u.originalName.replace(/[\\/\0\r\n"]/g, "_").slice(0, 200);
+  const name = cleaned === "" ? `tep.${kind.ext}` : cleaned;
   // Ghi kho trước, DB sau: không bao giờ có bản ghi trỏ tệp không tồn tại. Giao dịch lỗi → xoá bù blob vừa ghi (BASE-DATA-009).
   const storageKey = await getStorage().put(u.data);
   try {
@@ -135,7 +136,8 @@ async function recordUpload(
         "SELECT 1 FROM document WHERE company_id = $1 AND id = $2 AND object_type = $3 AND object_id = $4 FOR UPDATE",
         [actor.companyId, documentId, u.objectType, u.objectId],
       );
-      if (!d.rowCount) throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài liệu của đối tượng này");
+      if ((d.rowCount ?? 0) === 0)
+        throw new AppError("NOT_FOUND", 404, "Không tìm thấy tài liệu của đối tượng này");
     } else {
       const d = await tx.query<{ id: string }>(
         "INSERT INTO document (company_id, object_type, object_id, title) VALUES ($1, $2, $3, $4) RETURNING id",
@@ -215,7 +217,8 @@ export async function addComment(
   // Bình luận: ai đọc được đối tượng thì bình luận được (trao đổi theo đối tượng — §4 P0).
   if (!a.canRead) throw new AppError("NOT_FOUND", 404, "Không tìm thấy đối tượng");
   const text = body.trim();
-  if (!text || text.length > 4000) throw new AppError("VALIDATION", 422, "Bình luận từ 1 đến 4.000 ký tự");
+  if (text === "" || text.length > 4000)
+    throw new AppError("VALIDATION", 422, "Bình luận từ 1 đến 4.000 ký tự");
   const { rows } = await tx.query<{ id: string }>(
     "INSERT INTO comment (company_id, object_type, object_id, author_user_id, body) VALUES ($1, $2, $3, $4, $5) RETURNING id",
     [actor.companyId, type, id, actor.userId, text],

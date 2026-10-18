@@ -37,7 +37,7 @@ export const postFile = withActor(async (ctx) => {
     {
       objectType: ref.object_type,
       objectId: ref.object_id,
-      documentId: typeof documentId === "string" && documentId ? z.uuid().parse(documentId) : null,
+      documentId: typeof documentId === "string" && documentId !== "" ? z.uuid().parse(documentId) : null,
       title: typeof form.get("title") === "string" ? (form.get("title") as string) : null,
       originalName: file.name,
       data: Buffer.from(await file.arrayBuffer()),

@@ -8,6 +8,11 @@ export interface ApiResult<T> {
   error?: string;
 }
 
+/** Giá trị ô biểu mẫu → chuỗi, hoặc null khi trống/không phải chuỗi (BASE-DATA-003: rỗng = chưa nhập). */
+export function textOrNull(v: FormDataEntryValue | null): string | null {
+  return typeof v === "string" && v !== "" ? v : null;
+}
+
 export async function api<T = unknown>(
   method: "GET" | "POST",
   path: string,

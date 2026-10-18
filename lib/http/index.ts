@@ -151,7 +151,7 @@ export function withActor(handler: Handler<ActorRequestContext>): (req: Request)
       return await handler({ req, requestId, actor, sessionToken: token });
     } catch (err) {
       // 403 từ lớp nghiệp vụ (requireOn) → ghi audit denied ở giao dịch riêng rồi trả lỗi như cũ.
-      if (err instanceof AppError && err.code === "FORBIDDEN" && err.details?.action) {
+      if (err instanceof AppError && err.code === "FORBIDDEN" && err.details?.action !== undefined) {
         const object = err.details.object as { type?: string; id?: string } | undefined;
         await withTx((tx) =>
           appendAudit(tx, {
@@ -200,7 +200,7 @@ export async function readJson(req: Request, maxBytes = 64 * 1024): Promise<unkn
   const text = await req.text();
   if (Buffer.byteLength(text) > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, "Dữ liệu quá lớn");
   try {
-    return text ? JSON.parse(text) : {};
+    return text !== "" ? JSON.parse(text) : {};
   } catch {
     throw new AppError("BAD_JSON", 400, "JSON không hợp lệ");
   }

@@ -70,6 +70,7 @@ export default async function CmsPage({ params }: Props) {
         <article className="prose">
           <h1>{r.page.title}</h1>
           {r.page.summary && <p className="muted">{r.page.summary}</p>}
+          {/* eslint-disable-next-line react/no-danger -- HTML do markdown-it (html:false) sinh từ bản đã duyệt, không nhận HTML thô */}
           <div dangerouslySetInnerHTML={{ __html: r.html }} />
         </article>
       ) : (

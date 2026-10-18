@@ -30,7 +30,7 @@ export async function postLedger(
 ): Promise<void> {
   const res = await employeeResource(tx, actor.companyId, e.employeeId);
   await requireOn(tx, actor, "leave.adjust", res, { type: "leave_ledger", id: e.employeeId });
-  if (e.entryType === "adjustment" && !e.reason.trim())
+  if (e.entryType === "adjustment" && e.reason.trim() === "")
     throw new AppError("VALIDATION", 422, "Điều chỉnh cần lý do");
   try {
     await tx.query(
@@ -126,7 +126,8 @@ export async function decideLeave(
        AND tstzrange(start_at, end_at, '[)') && tstzrange($3, $4, '[)')`,
       [req.employee_id, req.id, req.start_at, req.end_at],
     );
-    if (overlap.rowCount) throw new AppError("LEAVE_OVERLAP", 409, "Trùng thời gian với đơn nghỉ đã duyệt");
+    if ((overlap.rowCount ?? 0) > 0)
+      throw new AppError("LEAVE_OVERLAP", 409, "Trùng thời gian với đơn nghỉ đã duyệt");
     // Phút phép tính vào ngày (giờ VN) bắt đầu đơn (D-012) — kỳ chứa ngày đó; đã khoá → chỉ HR, phiên bản mới.
     const guard = await guardPeriodChange(
       tx,
@@ -176,7 +177,7 @@ export async function cancelApprovedLeave(
   // Không tự huỷ đơn của mình để hoàn phép (review PR #8, nghi vấn) — người duyệt khác làm.
   requireNotSelf(actor, req.created_by_user_id, req.employee_id);
   if (req.status !== "approved") throw new AppError("INVALID_STATE", 409, "Chỉ huỷ đơn đã duyệt");
-  if (!reason.trim()) throw new AppError("VALIDATION", 422, "Huỷ cần lý do");
+  if (reason.trim() === "") throw new AppError("VALIDATION", 422, "Huỷ cần lý do");
   const guard = await guardPeriodChange(
     tx,
     actor,

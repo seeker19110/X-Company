@@ -196,7 +196,7 @@ export async function recordEvent(
       `SELECT 1 FROM attendance_period WHERE company_id = $1 AND status = 'locked' AND $2::date BETWEEN start_date AND end_date`,
       [actor.companyId, businessDate],
     );
-    if (locked.rowCount) reasons.push("LATE_FOR_LOCKED_PERIOD");
+    if ((locked.rowCount ?? 0) > 0) reasons.push("LATE_FOR_LOCKED_PERIOD");
     if (assignment?.worksite_id && worksiteId && assignment.worksite_id !== worksiteId)
       reasons.push("WORKSITE_MISMATCH");
 
@@ -219,8 +219,8 @@ export async function recordEvent(
       if (open.rows.some((r) => (r.device ?? "") !== (input.device ?? ""))) reasons.push("DUPLICATE_OPEN");
     }
 
-    const status = reasons.length ? "needs_review" : "accepted";
-    const reviewReason = reasons.length ? reasons.join(",") : null;
+    const status = reasons.length > 0 ? "needs_review" : "accepted";
+    const reviewReason = reasons.length > 0 ? reasons.join(",") : null;
     const { rows } = await tx.query<{ id: string; server_received_at: Date }>(
       `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
          server_received_at, source, queued, device, worksite_id, shift_assignment_id, policy_id, geo_lat, geo_lng,

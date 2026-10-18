@@ -131,7 +131,7 @@ export async function submitInquiry(
   meta: { ip: string; requestId?: string | null },
   now: Date = new Date(),
 ): Promise<SubmitResult> {
-  if (input.website) return { code: decoyCode("YC", now), created: false }; // honeypot: giả thành công, không lưu
+  if (input.website !== "") return { code: decoyCode("YC", now), created: false }; // honeypot: giả thành công, không lưu
   try {
     return await insertInquiry(companyId, input, meta, now);
   } catch (err) {
@@ -216,7 +216,7 @@ export async function submitApplication(
   meta: { ip: string; requestId?: string | null },
   now: Date = new Date(),
 ): Promise<SubmitResult> {
-  if (input.website) return { code: decoyCode("UV", now), created: false };
+  if (input.website !== "") return { code: decoyCode("UV", now), created: false };
   try {
     return await insertApplication(companyId, input, meta, now);
   } catch (err) {

@@ -119,10 +119,10 @@ export async function requestOt(
     type: "employee",
     id: employeeId,
   });
-  if (!r.reason.trim()) throw new AppError("VALIDATION", 422, "Cần lý do làm thêm");
+  if (r.reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do làm thêm");
   const policy = await otPolicyAt(tx, actor.companyId, r.businessDate);
   const v = await checkOtLimits(tx, employeeId, r.businessDate, r.minutes, policy);
-  if (v.length && !r.exceptionBasis?.trim()) throw limitError(v);
+  if (v.length > 0 && !r.exceptionBasis?.trim()) throw limitError(v);
   // Đồng ý chỉ do chính người lao động đưa ra; người khác tạo hộ thì chờ đồng ý.
   const consentAt = self && r.consent ? new Date() : null;
   const { rows } = await tx.query<{ id: string }>(
@@ -185,7 +185,7 @@ export async function decideOt(
     await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('ot:' || $1, 0))", [req.employee_id]);
     const policy = await otPolicyAt(tx, actor.companyId, req.business_date);
     const v = await checkOtLimits(tx, req.employee_id, req.business_date, req.minutes, policy, requestId);
-    if (v.length) {
+    if (v.length > 0) {
       if (!req.exception_basis?.trim()) throw limitError(v);
       if (!can(actor, "attendance.ot_exception", res))
         throw new AppError("FORBIDDEN", 403, "Vượt hạn mức cần quyền duyệt ngoại lệ", {

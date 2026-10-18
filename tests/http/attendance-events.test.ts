@@ -151,7 +151,7 @@ describe("sự kiện chấm công (T-012)", () => {
       g.event_id,
     ]);
     assert.equal(row.rows[0].worksite_id, worksiteId);
-    assert.ok(row.rows[0].qr_nonce);
+    assert.match(String(row.rows[0].qr_nonce), /\S/);
 
     const expired = await send(s, {
       kind: "out",

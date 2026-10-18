@@ -7,53 +7,9 @@ import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { projectAccess } from "./tasks.ts";
 
-export interface LeafInput {
-  workPackageId: string;
-  weight: number;
-  tasks: { status: string; reportedPct: number; dueDate: string | null }[];
-}
-
-export interface Progress {
-  /** null khi không có baseline/trọng số (không đồng nhất với 0%). */
-  acceptedPct: number | null;
-  reportedPct: number | null;
-  plannedPct: number | null;
-  leaves: { workPackageId: string; weight: number; accepted: number; reported: number; planned: number }[];
-}
-
-const round2 = (x: number) => Math.round(x * 100) / 100;
-
-/**
- * Mỗi lá: tỷ lệ = phần việc (không tính việc huỷ) — chia đều trong lá. accepted = việc `done` / tổng; reported =
- * trung bình % báo (done = 100); planned = việc có hạn ≤ hôm nay / tổng. Tiến độ = Σ(trọng số × tỷ lệ) / Σ trọng số.
- * Chia nhỏ việc trong một lá không vượt được trọng số của lá.
- */
-export function computeProgress(leaves: LeafInput[], today: string): Progress {
-  const valid = leaves.filter((l) => l.weight > 0);
-  const total = valid.reduce((s, l) => s + l.weight, 0);
-  const out: Progress["leaves"] = valid.map((l) => {
-    const tasks = l.tasks.filter((t) => t.status !== "cancelled");
-    const n = tasks.length;
-    if (n === 0)
-      return { workPackageId: l.workPackageId, weight: l.weight, accepted: 0, reported: 0, planned: 0 };
-    return {
-      workPackageId: l.workPackageId,
-      weight: l.weight,
-      accepted: tasks.filter((t) => t.status === "done").length / n,
-      reported: tasks.reduce((s, t) => s + (t.status === "done" ? 100 : t.reportedPct), 0) / (100 * n),
-      planned: tasks.filter((t) => t.dueDate !== null && t.dueDate <= today).length / n,
-    };
-  });
-  if (total === 0) return { acceptedPct: null, reportedPct: null, plannedPct: null, leaves: out };
-  const pct = (k: "accepted" | "reported" | "planned") =>
-    round2((100 * out.reduce((s, l) => s + l.weight * l[k], 0)) / total);
-  return {
-    acceptedPct: pct("accepted"),
-    reportedPct: pct("reported"),
-    plannedPct: pct("planned"),
-    leaves: out,
-  };
-}
+import { computeProgress, type LeafInput, type Progress } from "./progress-compute.ts";
+export { computeProgress } from "./progress-compute.ts";
+export type { LeafInput, Progress } from "./progress-compute.ts";
 
 /** Đề xuất baseline: trọng số chỉ cho hạng mục LÁ của dự án. */
 export async function proposeBaseline(
@@ -69,7 +25,7 @@ export async function proposeBaseline(
       action: "project.manage",
       object: { type: "project", id: projectId },
     });
-  if (!reason.trim()) throw new AppError("VALIDATION", 422, "Cần lý do đề xuất baseline");
+  if (reason.trim() === "") throw new AppError("VALIDATION", 422, "Cần lý do đề xuất baseline");
   const leaves = await tx.query<{ id: string }>(
     `SELECT w.id FROM work_package w WHERE w.project_id = $1
      AND NOT EXISTS (SELECT 1 FROM work_package c WHERE c.parent_id = w.id)`,
@@ -178,5 +134,5 @@ export async function assignmentWarnings(
                                                        ($2::date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh', '[)')`,
     [employeeId, dueDate],
   );
-  return rows.length ? [{ code: "ASSIGNEE_ON_LEAVE", employeeId, date: dueDate }] : [];
+  return rows.length > 0 ? [{ code: "ASSIGNEE_ON_LEAVE", employeeId, date: dueDate }] : [];
 }

@@ -20,5 +20,5 @@ const server = http.createServer((req, res) => void handle(req, res));
 await getPool().query("SELECT 1"); // có sẵn một kết nối trong pool để kiểm pool.end()
 server.listen(0, "127.0.0.1", () => {
   const addr = server.address();
-  if (addr && typeof addr === "object") console.log(`READY ${addr.port}`);
+  if (addr !== null && typeof addr === "object") console.log(`READY ${addr.port}`);
 });

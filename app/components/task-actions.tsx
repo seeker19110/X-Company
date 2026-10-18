@@ -54,7 +54,7 @@ export function TaskActions({
   }
 
   const acts = actionsFor(status, role);
-  if (!acts.length) return null;
+  if (acts.length === 0) return null;
   return (
     <div className="row" style={{ marginTop: "0.5rem" }}>
       {acts.map((a) => (

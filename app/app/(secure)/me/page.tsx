@@ -19,6 +19,7 @@ const ROLE: Record<string, string> = {
 
 export default async function MePage() {
   const s = await requireSession();
+  const roles = s.actor.grants.map((g) => ROLE[g.role] ?? g.role).join(", ");
   return (
     <>
       <h1>Cá nhân</h1>
@@ -26,7 +27,7 @@ export default async function MePage() {
         <p>
           <strong>{s.displayName}</strong>
         </p>
-        <p>Vai trò: {s.actor.grants.map((g) => ROLE[g.role] ?? g.role).join(", ") || "—"}</p>
+        <p>Vai trò: {roles === "" ? "—" : roles}</p>
       </section>
       <SyncStatus />
       <LogoutButton />
