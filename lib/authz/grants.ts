@@ -1,6 +1,7 @@
-// Cấp/thu hồi quyền (access.manage — sysadmin). Mỗi thay đổi tăng app_user.auth_version để phiên đang mở kiểm lại (R8).
+// Cấp/thu hồi quyền (access.manage — sysadmin). Mỗi thay đổi tăng app_user.auth_version và huỷ mọi phiên đang mở của người đó (đổi đặc quyền → ID phiên mới, BE-AUTH-004).
 import { appendAudit } from "../audit/index.ts";
 import type { Queryable } from "../db/index.ts";
+import { destroyUserSessions } from "../identity/session.ts";
 import { AppError } from "../nen/app-error.ts";
 import type { Actor } from "../org/index.ts";
 import { ROLES, type Role, type ScopeType } from "./index.ts";
@@ -51,6 +52,7 @@ export async function grantRole(
   );
   const id = rows[0]!.id;
   await tx.query("UPDATE app_user SET auth_version = auth_version + 1 WHERE id = $1", [g.userId]);
+  await destroyUserSessions(tx, g.userId); // đổi đặc quyền → ID phiên cũ vô hiệu, phải đăng nhập lại (BE-AUTH-004)
   await appendAudit(tx, {
     actorUserId: actor.userId,
     companyId,
@@ -77,6 +79,7 @@ export async function revokeGrant(
   const row = rows[0];
   if (!row) throw new AppError("NOT_FOUND", 404, "Không tìm thấy quyền đang hiệu lực");
   await tx.query("UPDATE app_user SET auth_version = auth_version + 1 WHERE id = $1", [row.user_id]);
+  await destroyUserSessions(tx, row.user_id); // thu hồi quyền → mọi phiên cũ của người đó bị huỷ
   await appendAudit(tx, {
     actorUserId: actor.userId,
     companyId,

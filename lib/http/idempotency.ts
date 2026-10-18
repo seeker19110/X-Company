@@ -87,14 +87,23 @@ export async function requestHash(req: Request): Promise<string> {
   return h.digest("hex");
 }
 
+// Đồng hồ của cửa sổ đếm: null = now() của DB (production — một nguồn giờ cho mọi instance). Test cố định thời điểm
+// để không vắt qua ranh giới cửa sổ giữa chừng (cửa sổ căn theo đồng hồ).
+let rateClock: (() => Date) | null = null;
+export function setRateClockForTest(fn: (() => Date) | null): void {
+  rateClock = fn;
+}
+
 /** Đếm một lượt; vượt ngưỡng → 429 + retryAfter. Một câu lệnh upsert: nguyên tử giữa nhiều instance. */
 export async function enforceRateLimit(userId: string, rl: RateLimit): Promise<void> {
   const r = await getPool().query<{ n: number; retry: number }>(
-    `INSERT INTO api_rate_window (user_id, bucket, window_start, n)
-     VALUES ($1, $2, to_timestamp(floor(extract(epoch FROM now()) / $3::int) * $3::int), 1)
+    `WITH t AS (SELECT COALESCE($4::timestamptz, now()) AS now)
+     INSERT INTO api_rate_window (user_id, bucket, window_start, n)
+     SELECT $1, $2, to_timestamp(floor(extract(epoch FROM t.now) / $3::int) * $3::int), 1 FROM t
      ON CONFLICT (user_id, bucket, window_start) DO UPDATE SET n = api_rate_window.n + 1
-     RETURNING n, GREATEST(1, ceil(extract(epoch FROM window_start + make_interval(secs => $3::int) - now())))::int AS retry`,
-    [userId, rl.bucket, rl.windowSec],
+     RETURNING n, GREATEST(1, ceil(extract(epoch FROM window_start + make_interval(secs => $3::int)
+       - (SELECT now FROM t))))::int AS retry`,
+    [userId, rl.bucket, rl.windowSec, rateClock?.() ?? null],
   );
   const row = r.rows[0]!;
   if (row.n > rl.max) {

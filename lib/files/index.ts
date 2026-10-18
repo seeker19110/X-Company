@@ -8,6 +8,7 @@ import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
 import { projectAccess } from "../work/tasks.ts";
+import { checkedFileName } from "./names.ts";
 import { sniff } from "./sniff.ts";
 import { getStorage } from "./storage.ts";
 
@@ -89,8 +90,7 @@ export async function uploadFile(
   const kind = sniff(u.data);
   if (!kind) throw new AppError("UNSUPPORTED_TYPE", 415, "Chỉ nhận PDF, ảnh PNG/JPEG/WebP, DOCX, XLSX");
   const sha256 = createHash("sha256").update(u.data).digest("hex");
-  const cleaned = u.originalName.replace(/[\\/\0\r\n"]/g, "_").slice(0, 200);
-  const name = cleaned === "" ? `tep.${kind.ext}` : cleaned;
+  const name = checkedFileName(u.originalName, kind);
   // Ghi kho trước, DB sau: không bao giờ có bản ghi trỏ tệp không tồn tại. Giao dịch lỗi → xoá bù blob vừa ghi (BASE-DATA-009).
   const storageKey = await getStorage().put(u.data);
   try {

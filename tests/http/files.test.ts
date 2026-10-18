@@ -7,6 +7,7 @@ import { after, before, describe, test } from "node:test";
 import { getComments, getFile, postComment, postFile } from "../../lib/files/routes.ts";
 import { diskStorage, setStorage } from "../../lib/files/storage.ts";
 import { sniff } from "../../lib/files/sniff.ts";
+import { checkedFileName } from "../../lib/files/names.ts";
 import { loginHandler } from "../../lib/identity/routes.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import { withTx } from "../../lib/db/index.ts";
@@ -83,6 +84,13 @@ describe("sniff (loại tệp theo nội dung)", () => {
     assert.equal(sniff(Buffer.concat([zipHead, Buffer.from("plain zip")])), null);
     assert.equal(sniff(Buffer.from("MZ\x90\x00 exe")), null);
     assert.equal(sniff(Buffer.from("<html><script>alert(1)</script>")), null);
+  });
+});
+
+describe("checkedFileName (BE-FILE-001/003)", () => {
+  test("tên rỗng/khoảng trắng → tên mặc định theo loại dò", () => {
+    assert.equal(checkedFileName("", { mime: "application/pdf", ext: "pdf" }), "tep.pdf");
+    assert.equal(checkedFileName("   ", { mime: "image/png", ext: "png" }), "tep.png");
   });
 });
 
@@ -291,6 +299,84 @@ describe("tệp private & bình luận (T-017, S-WK-05, AT02)", () => {
     );
   });
 
+  test("BE-FILE-001: allowlist đuôi, đuôi khớp nội dung, đuôi kép bị từ chối (415)", async () => {
+    const ref = { object_type: "task", object_id: taskId };
+    const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
+    const php = Buffer.from("<?php system($_GET['c']); ?>");
+    const cases: [string, Buffer][] = [
+      ["shell.png", php], // .php đổi tên .png: nội dung không phải ảnh
+      ["anh.jpg", PNG], // PNG mang đuôi .jpg
+      ["a.jpg.exe", JPG], // đuôi kép, đuôi cuối ngoài allowlist
+      ["a.php.jpg", JPG], // đuôi kép, đoạn giữa thực thi
+      ["a.png.jpg", JPG], // hai đuôi ảnh
+      ["a.PDF.EXE", PDF],
+      ["a.exe", PDF],
+      ["khong-duoi", PDF],
+      ["a.pdf.", PDF], // dấu chấm cuối (lách trên Windows)
+      ["a.svg", PDF],
+      ["a.pdf", PNG], // đuôi pdf nhưng nội dung PNG
+    ];
+    for (const [name, data] of cases) {
+      const r = await upload(dev, ref, { name, data });
+      assert.equal(r.status, 415, `${name} phải bị từ chối`);
+    }
+    // Hợp lệ: đuôi hoa/thường, jpeg ↔ jpg, tên có nhiều dấu chấm không phải đuôi.
+    for (const [name, data] of [
+      ["ANH.JPG", JPG],
+      ["anh.jpeg", JPG],
+      ["bao.cao.v2.pdf", PDF],
+      ["A.PNG", PNG],
+    ] as [string, Buffer][]) {
+      assert.equal((await upload(dev, ref, { name, data })).status, 201, `${name} phải được nhận`);
+    }
+    // Không có từ chối nào để lại bản ghi/tệp mồ côi.
+    const bad = await db.admin.query(
+      "SELECT count(*)::int AS n FROM file_object WHERE original_name = 'a.jpg.exe'",
+    );
+    assert.equal(bad.rows[0].n, 0);
+  });
+
+  test("BE-FILE-003: tên `../../etc/passwd` → khoá lưu không chứa `..`; DB lưu tên đã lọc ký tự điều khiển", async () => {
+    const ref = { object_type: "task", object_id: taskId };
+    const before = new Set(readdirSync(storeDir, { recursive: true }).map(String));
+    const r = await upload(dev, ref, { name: "../../etc/passwd.pdf", data: PDF });
+    assert.equal(r.status, 201);
+    const row = (
+      await db.admin.query("SELECT storage_key, original_name FROM file_object WHERE id = $1", [
+        (await r.json()).file_id,
+      ])
+    ).rows[0];
+    assert.match(row.storage_key, /^[0-9a-f]{2}\/[0-9a-f]{40}$/);
+    assert.equal((row.storage_key as string).includes(".."), false);
+    assert.equal(
+      /[/\\]/.test(row.original_name as string),
+      false,
+      "tên gốc không còn dấu phân cách đường dẫn",
+    );
+    const added = readdirSync(storeDir, { recursive: true })
+      .map(String)
+      .filter((f) => !before.has(f));
+    assert.ok(added.every((f) => !f.includes("passwd") && !f.includes("..")));
+    // Ký tự điều khiển \x00-\x1f, \x7f, dấu nháy kép và đảo chiều văn bản bị thay.
+    const nasty = 'a\x00b\x01c\x1fd\x7fe\r\nf"g\\h/i\u202ej.pdf';
+    const r2 = await upload(dev, ref, { name: nasty, data: PDF });
+    assert.equal(r2.status, 201);
+    const name2 = (
+      await db.admin.query("SELECT original_name FROM file_object WHERE id = $1", [(await r2.json()).file_id])
+    ).rows[0].original_name as string;
+    assert.equal(name2, "a_b_c_d_e__f_g_h_i_j.pdf");
+    assert.doesNotMatch(name2, /[\x00-\x1f\x7f/\\"]/);
+    // Tên quá dài: cắt nhưng giữ đuôi, ≤ 200 ký tự.
+    const r3 = await upload(dev, ref, { name: `${"x".repeat(500)}.pdf`, data: PDF });
+    const name3 = (
+      await db.admin.query("SELECT original_name FROM file_object WHERE id = $1", [(await r3.json()).file_id])
+    ).rows[0].original_name as string;
+    assert.equal(name3.length, 200);
+    assert.ok(name3.endsWith(".pdf"));
+    // Chỉ ký tự điều khiển → thành "__" không đuôi → 415 (tên rỗng không tới được đây qua multipart: coi như thiếu tệp).
+    assert.equal((await upload(dev, ref, { name: "\x00\x01", data: PDF })).status, 415);
+  });
+
   test("tệp trong kho bị sửa → không phục vụ (kiểm dấu băm)", async () => {
     const b = await (
       await upload(dev, { object_type: "task", object_id: taskId }, { name: "z.pdf", data: PDF })
@@ -299,5 +385,33 @@ describe("tệp private & bình luận (T-017, S-WK-05, AT02)", () => {
       .rows[0].storage_key;
     writeFileSync(path.join(storeDir, key), Buffer.from("%PDF-1.7 giả mạo"));
     assert.equal((await download(dev, b.file_id)).status, 500);
+  });
+});
+
+describe("kho tệp: path traversal (BASE-SEC-007, BE-FILE-003)", () => {
+  test("khoá do server sinh; đọc/xoá với khoá có `..`, tuyệt đối, sai định dạng đều bị từ chối", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "xc-store-"));
+    const st = diskStorage(dir);
+    const key = await st.put(PDF);
+    assert.match(key, /^[0-9a-f]{2}\/[0-9a-f]{40}$/);
+    assert.deepEqual(await st.get(key), PDF);
+    const evil = [
+      "../../etc/passwd",
+      `../${key}`,
+      `${key}/../../x`,
+      `/${key}`,
+      "/etc/passwd",
+      "ab/../../../etc/passwd",
+      `${key}\u0000.png`,
+      `${key}\n`,
+      "",
+      "..",
+      "ab\\cd",
+    ];
+    for (const k of evil) {
+      await assert.rejects(st.get(k), /Khoá tệp không hợp lệ/, `get(${JSON.stringify(k)})`);
+      await assert.rejects(st.remove(k), /Khoá tệp không hợp lệ/, `remove(${JSON.stringify(k)})`);
+    }
+    assert.ok(readdirSync(dir, { recursive: true }).length >= 1, "tệp hợp lệ còn nguyên");
   });
 });

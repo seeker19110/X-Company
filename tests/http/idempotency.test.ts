@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
 import { postLeave, postOt } from "../../lib/attendance/request-routes.ts";
 import { postComment } from "../../lib/files/routes.ts";
-import { canonicalJson } from "../../lib/http/idempotency.ts";
+import { canonicalJson, setRateClockForTest } from "../../lib/http/idempotency.ts";
 import { loginHandler } from "../../lib/identity/routes.ts";
 import { postSync } from "../../lib/offline/sync-route.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
@@ -195,7 +195,10 @@ describe("idempotency + giới hạn tần suất (T-028)", () => {
     assert.equal(other.status, 422); // ... mà là xung đột với khoá CỦA CHÍNH B
   });
 
-  test("giới hạn tần suất: vượt ngưỡng → 429 + Retry-After; theo từng user", async () => {
+  test("giới hạn tần suất: vượt ngưỡng → 429 + Retry-After; theo từng user", async (t) => {
+    // Cố định đồng hồ giữa một cửa sổ phút: 61 lượt không vắt qua ranh giới (trước đây flake khi chạy cả bộ).
+    setRateClockForTest(() => new Date("2026-10-18T10:00:30Z"));
+    t.after(() => setRateClockForTest(null));
     const comment = (s: S) =>
       postComment(
         req("POST", "/api/app/comments", {
@@ -217,7 +220,9 @@ describe("idempotency + giới hạn tần suất (T-028)", () => {
     assert.notEqual((await comment(a)).status, 429); // người khác không bị ảnh hưởng
   });
 
-  test("sync giới hạn theo user nhưng không đòi Idempotency-Key header (khoá theo id bản ghi)", async () => {
+  test("sync giới hạn theo user nhưng không đòi Idempotency-Key header (khoá theo id bản ghi)", async (t) => {
+    setRateClockForTest(() => new Date("2026-10-18T11:00:30Z"));
+    t.after(() => setRateClockForTest(null));
     const sync = (s: S) =>
       postSync(
         req("POST", "/api/app/sync", {

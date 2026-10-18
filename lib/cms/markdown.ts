@@ -1,22 +1,8 @@
-// Markdown → HTML an toàn (SPEC-website-cms, THREAT-MODEL T8): html:false nên mọi thẻ HTML thô bị escape;
-// validateLink của markdown-it chặn javascript:/vbscript:/data: (trừ ảnh). Thêm rel cho link ngoài.
-import MarkdownIt from "markdown-it";
-
-const md = new MarkdownIt({ html: false, linkify: false, typographer: false, breaks: false });
-
-const defaultLinkOpen =
-  md.renderer.rules.link_open ??
-  ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
-md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
-  const href = tokens[idx]!.attrGet("href") ?? "";
-  if (/^https?:\/\//i.test(href)) {
-    tokens[idx]!.attrSet("rel", "noopener noreferrer");
-  }
-  return defaultLinkOpen(tokens, idx, options, env, self);
-};
+// Markdown → HTML cho website: toàn bộ việc sinh HTML/kiểm URL nằm ở lib/web/safe-html.ts (FE-SEC-001/002, T8).
+import { parseMarkdown, renderSafeHtml } from "../web/safe-html.ts";
 
 export function renderMarkdown(source: string): string {
-  return md.render(source);
+  return renderSafeHtml(source);
 }
 
 export interface ContentWarning {
@@ -27,7 +13,7 @@ export interface ContentWarning {
 /** Cảnh báo khi duyệt (không chặn): ảnh thiếu văn bản thay thế (WCAG 1.1.1). */
 export function lintMarkdown(source: string): ContentWarning[] {
   const warnings: ContentWarning[] = [];
-  const walk = (tokens: ReturnType<typeof md.parse>) => {
+  const walk = (tokens: ReturnType<typeof parseMarkdown>) => {
     for (const t of tokens) {
       if (t.type === "image" && t.content.trim() === "") {
         warnings.push({
@@ -38,6 +24,6 @@ export function lintMarkdown(source: string): ContentWarning[] {
       if (t.children) walk(t.children);
     }
   };
-  walk(md.parse(source, {}));
+  walk(parseMarkdown(source));
   return warnings;
 }
