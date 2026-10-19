@@ -14,6 +14,9 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
     assert.match(h["content-security-policy"]!, /object-src 'none'/);
     assert.match(h["content-security-policy"]!, /base-uri 'none'(;|$)/);
     assert.ok(!/script-src[^;]*unsafe-inline/.test(h["content-security-policy"]!));
+    // ZAP 10055: style cũng không 'unsafe-inline' — <style> của Next mang nonce.
+    assert.match(h["content-security-policy"]!, /style-src 'self' 'nonce-abc'(;|$)/);
+    assert.ok(!/unsafe-inline/.test(h["content-security-policy"]!));
     assert.equal(h["x-content-type-options"], "nosniff");
     assert.ok(h["strict-transport-security"]);
     assert.equal(securityHeaders("x", { dev: false, https: false })["strict-transport-security"], undefined);
@@ -52,5 +55,16 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
       "private, no-store",
     );
     assert.equal(proxy(new NextRequest("http://xc.test/dich-vu")).headers.get("cache-control"), null);
+  });
+});
+
+describe("next.config: CSP cho /api (ZAP 10038, 10055)", () => {
+  test("/api/:path* có CSP chặt kèm các directive không rơi về default-src", async () => {
+    const { default: cfg } = await import("../../next.config.ts");
+    const rules = await cfg.headers!();
+    const api = rules.find((r) => r.source === "/api/:path*");
+    const csp = api?.headers.find((h) => h.key === "Content-Security-Policy")?.value ?? "";
+    for (const d of ["default-src 'none'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'"])
+      assert.ok(csp.includes(d), `thiếu ${d}`);
   });
 });

@@ -68,6 +68,9 @@
           },
           {
             "context": "lighthouse"
+          },
+          {
+            "context": "dast"
           }
         ]
       }

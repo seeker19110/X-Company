@@ -89,7 +89,7 @@ export function TaskActions({
   const acts = actionsFor(status, role);
   if (acts.length === 0) return null;
   return (
-    <div className="row" style={{ marginTop: "0.5rem" }}>
+    <div className="row row-actions">
       {acts.map((a) => (
         <button key={a} className="btn" disabled={busy} aria-busy={busy} onClick={() => run(a)}>
           {LABEL[a]}
