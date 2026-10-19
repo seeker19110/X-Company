@@ -56,7 +56,10 @@
     "check:tokens": "node scripts/check-tokens.mjs",
     "lighthouse": "scripts/with-test-db.sh scripts/lighthouse.sh",
     "check:perf-budget": "node scripts/check-perf-budget.mjs",
-    "check:alerts": "node scripts/check-alerts.mjs"
+    "check:alerts": "node scripts/check-alerts.mjs",
+    "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
+    "backup": "scripts/backup.sh",
+    "backup:drill": "scripts/restore-drill.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

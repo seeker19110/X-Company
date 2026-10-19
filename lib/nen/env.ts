@@ -105,6 +105,25 @@ export const SERVER_SPEC = {
   // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007), tính bằng ngày lịch kể từ lúc nhận. Mặc định 30 ngày là
   // GIẢ ĐỊNH thận trọng — pháp chế xác minh số ngày theo NĐ 356/2025 (rút đồng ý/xoá có thể ngắn hơn, vd 72 giờ).
   DSAR_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Cảnh báo vận hành cục bộ (T-046): bộ đánh giá chạy trong tiến trình worker khi ALERTS_ENABLED=true (mặc định tắt).
+  ALERTS_ENABLED: field(
+    z
+      .enum(["true", "false"], { error: "phải là true|false" })
+      .default("false")
+      .transform((v) => v === "true"),
+  ),
+  ALERT_INTERVAL_MS: field(z.coerce.number().int().min(1_000).max(3_600_000).default(60_000)),
+  // Cửa sổ chống lặp: cùng một luật đang bắn chỉ được nhắc lại sau ngần ấy ms (0 = không nhắc lại).
+  ALERT_REPEAT_MS: field(z.coerce.number().int().min(0).max(604_800_000).default(3_600_000)),
+  ALERT_RULES_FILE: field(z.string().min(1).default("docs/ops/alerts.json")),
+  ALERT_SINK_FILE: field(z.string().min(1).default(".data/alerts/alerts.jsonl")),
+  // URL webhook có thể chứa token → bí mật (che khi in cấu hình, không vào log).
+  ALERT_WEBHOOK_URL: field(url(/^https?$/, "http(s)").optional(), { secret: true }),
+  ALERT_WEBHOOK_TIMEOUT_MS: field(z.coerce.number().int().min(500).max(60_000).default(5_000)),
+  ALERT_METRICS_URL: field(url(/^https?$/, "http(s)").optional()),
+  ALERT_READYZ_URL: field(url(/^https?$/, "http(s)").optional()),
+  // Thư mục sao lưu (scripts/backup.sh ghi vào đây; cảnh báo tuổi bản sao lưu đọc manifest ở đây).
+  BACKUP_DIR: field(z.string().min(1).default(".data/backups")),
 } as const;
 
 /**

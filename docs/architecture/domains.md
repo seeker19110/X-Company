@@ -33,11 +33,12 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | --------- | ------------------------ | -------------------------------------------------------- |
 | `db`      | `index.ts`, `migrate.ts` | kết nối, giao dịch, migration runner                     |
 | `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts`, `pagination.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
-| `http`    | `index.ts`, `metrics-route.ts` | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
+| `http`    | `index.ts`, `metrics-route.ts`, `metrics.ts` | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
 | `web`     | `safe-html.ts`, `theme.ts` | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002); `theme.ts` SINH từ token (`npm run build:tokens`) |
 | `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
 | `i18n`    | `index.ts`, `client.ts`, `client-app.ts`, `client-site.ts`, `format.ts` | `t(khoá, tham số)` trên `messages/vi.json` (+ `vi.context.json`), định dạng Intl (số/tiền VND/ngày giờ múi VN/danh sách/tương đối) — thuần, dùng ở client + server + `*.pure.ts` |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |
+| `ops` | `index.ts` | cảnh báo vận hành cục bộ (T-046): luật `docs/ops/alerts.json`, kênh đích, bộ đánh giá chạy trong worker (`rules.ts` kiểm luật là mô-đun thuần về I/O mạng) |
 
 ## Mô-đun thuần (ARC-MOD-003)
 

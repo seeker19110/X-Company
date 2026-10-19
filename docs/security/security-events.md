@@ -14,6 +14,7 @@ Không ghi email, mật khẩu, token. Thành công = mức INFO, từ chối = 
 | `auth.rate_limited`       | vượt 5 lần sai / 15 phút                         | denied         | `lib/identity/auth.ts`        |
 | `authz.denied`            | từ chối quyền (403) ở `authorize`/`withActor`    | denied         | `lib/http/index.ts`           |
 | `input.validation_failed` | dữ liệu gửi lên sai schema (400)                 | denied         | `lib/http/index.ts`           |
+| `ops.alert`               | cảnh báo vận hành bắn (error) / hết (success)    | error/success  | `lib/ops/sinks.ts`            |
 
 ## Chưa nối (tính năng chưa tồn tại hoặc chưa phát sự kiện log)
 Đổi mật khẩu/MFA, cấp/thu hồi token, đổi vai/quyền (đã có audit `grant.*`, chưa có dòng log), hành động admin, xuất dữ liệu

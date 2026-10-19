@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "XCLocalAvailabilityFastBurn",
+      "summary": "Đốt ngân sách khả dụng nhanh: tỷ lệ 5xx > 14,4 × 0,001 trong 1 giờ và 5 phút (SLI-1)",
+      "severity": "page",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "http_5xx_ratio",
+      "op": "gt",
+      "threshold": 0.0144,
+      "forSeconds": 120,
+      "windows": [3600, 300],
+      "minEvents": 20
+    },
+    {
+      "id": "XCLocalAvailabilitySlowBurn",
+      "summary": "Đốt ngân sách khả dụng chậm: tỷ lệ 5xx > 6 × 0,001 trong 6 giờ và 30 phút (SLI-1)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "http_5xx_ratio",
+      "op": "gt",
+      "threshold": 0.006,
+      "forSeconds": 900,
+      "windows": [21600, 1800],
+      "minEvents": 20
+    },
+    {
+      "id": "XCLocalAttendanceLatencyBurn",
+      "summary": "Đốt ngân sách độ trễ ghi chấm công: tỷ lệ chậm hơn 1 giây > 6 × 0,05 trong 1 giờ và 5 phút (SLI-2)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "attendance_slow_ratio",
+      "op": "gt",
+      "threshold": 0.3,
+      "forSeconds": 300,
+      "windows": [3600, 300],
+      "minEvents": 10
+    },
+    {
+      "id": "XCLocalAttendanceP95Slow",
+      "summary": "p95 ghi chấm công vượt 1 giây: hơn 5% yêu cầu ghi sự kiện công chậm hơn 1 giây trong 15 phút (SLI-2)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "attendance_slow_ratio",
+      "op": "gt",
+      "threshold": 0.05,
+      "forSeconds": 300,
+      "windows": [900],
+      "minEvents": 20
+    },
+    {
+      "id": "XCLocalOutboxDeadLetter",
+      "summary": "Có việc outbox ở DLQ (status = dead) quá 15 phút (BE-JOB-004)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#dlq--redrive",
+      "signal": "outbox_dead",
+      "op": "gt",
+      "threshold": 0,
+      "forSeconds": 900
+    },
+    {
+      "id": "XCLocalOutboxStale",
+      "summary": "Việc outbox tới hạn nhưng chưa được worker lấy quá 5 phút (SLI-3 độ tươi outbox)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#dlq--redrive",
+      "signal": "outbox_stale",
+      "op": "gt",
+      "threshold": 0,
+      "forSeconds": 300,
+      "params": { "stale_seconds": 300 }
+    },
+    {
+      "id": "XCLocalDsarOverdue",
+      "summary": "Có yêu cầu chủ thể dữ liệu (DSAR) quá hạn xử lý (CMP-INTL-007)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#dsar-quá-hạn",
+      "signal": "dsar_overdue",
+      "op": "gt",
+      "threshold": 0,
+      "forSeconds": 0
+    },
+    {
+      "id": "XCLocalReadyzDown",
+      "summary": "Ứng dụng không sẵn sàng (readiness thất bại: DB không phản hồi hoặc đang tắt) quá 1 phút",
+      "severity": "page",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "readyz_down",
+      "op": "gte",
+      "threshold": 1,
+      "forSeconds": 60
+    },
+    {
+      "id": "XCLocalMetricsScrapeFailed",
+      "summary": "Không scrape được /api/metrics quá 3 phút: mù về tỷ lệ lỗi và độ trễ, web có thể đã chết",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#4-cảnh-báo--playbook",
+      "signal": "scrape_failed",
+      "op": "gte",
+      "threshold": 1,
+      "forSeconds": 180
+    },
+    {
+      "id": "XCLocalBackupStale",
+      "summary": "Bản sao lưu hoàn chỉnh mới nhất cũ hơn 25 giờ (RPO cục bộ = chu kỳ sao lưu hằng ngày + 1 giờ), hoặc chưa từng sao lưu",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#sao-lưu-và-khôi-phục-thử-cục-bộ",
+      "signal": "backup_age_seconds",
+      "op": "gt",
+      "threshold": 90000,
+      "forSeconds": 0
+    },
+    {
+      "id": "XCLocalPeriodCloseOverdue",
+      "summary": "Có kỳ công đã kết thúc quá 7 ngày mà chưa khoá (đồng hồ khoá kỳ)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#khoá-kỳ-công-quá-hạn",
+      "signal": "period_close_overdue",
+      "op": "gt",
+      "threshold": 0,
+      "forSeconds": 0,
+      "params": { "grace_days": 7 }
+    },
+    {
+      "id": "XCLocalAuditChainBroken",
+      "summary": "Chuỗi băm audit_event không hợp lệ (nghi bị sửa/xoá): sự cố bảo mật",
+      "severity": "page",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#chuỗi-audit-hỏng",
+      "signal": "audit_chain_broken",
+      "op": "gte",
+      "threshold": 1,
+      "forSeconds": 0,
+      "params": { "min_interval_seconds": 3600 }
+    }
+  ]
+}

@@ -203,3 +203,50 @@
 - Chọn: docs/api/openapi.json sinh từ zod bằng script, check:openapi trong check:arch; check-api-breaking là bước trong job pr-policy (required sẵn)
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: JSON là OpenAPI 3.1 hợp lệ, không thêm phụ thuộc, giữ format:check; gắn vào job required sẵn có nên không cần người import ruleset thêm.
 - Đường lùi: Chuyển sang YAML/job riêng khi có spectral/oasdiff trong CI
+
+### D-029 · 2026-10-19T01:34:18+00:00 · Hạn xử lý yêu cầu của chủ thể dữ liệu (thay DSAR_DAYS=30 một số cho mọi loại)?
+
+- Phương án: (1) Hạn theo từng loại yêu cầu theo NĐ 356/2025 Điều 5 (nguồn mức B, chưa đối chiếu Công báo): phản hồi nhận trong 2 ngày làm việc; xem/chỉnh sửa/cung cấp 10 ngày; rút đồng ý/hạn chế/phản đối 15 ngày; xoá 20 ngày; gia hạn tối đa một lần kèm lý do; mỗi số là cấu hình · (2) Giữ một hạn chung 30 ngày
+- Chọn: Hạn theo từng loại yêu cầu theo NĐ 356/2025 Điều 5 (nguồn mức B, chưa đối chiếu Công báo): phản hồi nhận trong 2 ngày làm việc; xem/chỉnh sửa/cung cấp 10 ngày; rút đồng ý/hạn chế/phản đối 15 ngày; xoá 20 ngày; gia hạn tối đa một lần kèm lý do; mỗi số là cấu hình
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: 30 ngày vượt hạn luật cho mọi loại — cách hiểu chặt hơn là theo hạn ngắn nhất từng loại; cấu hình nên đổi được khi văn bản đối chiếu khác.
+- Đường lùi: Đổi bảng hạn trong cấu hình về một số chung
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Luật sư đối chiếu Điều 5 NĐ 356/2025 với Công báo (nguồn hiện mức B) và số ngày gia hạn khoản 2-4 (chưa xác minh)
+
+### D-030 · 2026-10-19T01:34:18+00:00 · Thời hạn lưu dữ liệu cá nhân khi luật chỉ nói 'phù hợp mục đích' (STD-PRIV-005)?
+
+- Phương án: (1) Cấu hình thận trọng: liên hệ khách 24 tháng; ứng viên KHÔNG trúng tuyển ẩn danh sau 30 ngày kể từ khi chốt trừ khi có đồng ý riêng 'kho nhân tài' (khi đó 12 tháng); dữ liệu nhân sự xoá/ẩn danh khi chấm dứt hợp đồng trừ phần luật bắt buộc giữ; chấm công/lương giữ 10 năm như tài liệu kế toán; hồ sơ vi phạm dữ liệu giữ 5 năm; sao lưu giữ theo BACKUP_KEEP · (2) Giữ mọi dữ liệu tới khi có yêu cầu xoá
+- Chọn: Cấu hình thận trọng: liên hệ khách 24 tháng; ứng viên KHÔNG trúng tuyển ẩn danh sau 30 ngày kể từ khi chốt trừ khi có đồng ý riêng 'kho nhân tài' (khi đó 12 tháng); dữ liệu nhân sự xoá/ẩn danh khi chấm dứt hợp đồng trừ phần luật bắt buộc giữ; chấm công/lương giữ 10 năm như tài liệu kế toán; hồ sơ vi phạm dữ liệu giữ 5 năm; sao lưu giữ theo BACKUP_KEEP
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: Luật 91/2025 Điều 25.1c bắt xoá thông tin ứng viên khi không tuyển trừ thỏa thuận khác; Điều 14 xoá khi hết mục đích; giữ vô hạn trái luật. Số năm kế toán nguồn mức B.
+- Đường lùi: Đổi các hằng retention trong cấu hình
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Luật sư xác nhận 5/10 năm cho bảng lương và chấm công (Luật Kế toán 2015 sửa đổi 56/2024, mức B) và thời hạn hồ sơ nhân sự
+
+### D-031 · 2026-10-19T01:34:19+00:00 · Quy tắc ca/OT/nghỉ (RK-001) khi HR chưa cung cấp ví dụ?
+
+- Phương án: (1) Mặc định theo Bộ luật Lao động 2019 (nguồn bản đọc được mức A): 8 giờ/ngày, 48 giờ/tuần; OT cần đồng ý, ≤ 50% giờ bình thường/ngày và tổng ≤ 12 giờ/ngày, ≤ 40 giờ/tháng, ≤ 200 giờ/năm (300 giờ chỉ khi bật cờ ngành được phép); nghỉ giữa ca 30 phút (45 phút ca đêm), nghỉ giữa hai ca ≥ 12 giờ, nghỉ tuần ≥ 24 giờ; hệ số lương OT 150%/200%/300%, đêm 22h-6h +30%, OT đêm +20%; tất cả là cấu hình có ngày hiệu lực; vượt trần bị chặn khi tạo đơn OT và cảnh báo ở chấm công · (2) Không áp trần, chỉ ghi nhận
+- Chọn: Mặc định theo Bộ luật Lao động 2019 (nguồn bản đọc được mức A): 8 giờ/ngày, 48 giờ/tuần; OT cần đồng ý, ≤ 50% giờ bình thường/ngày và tổng ≤ 12 giờ/ngày, ≤ 40 giờ/tháng, ≤ 200 giờ/năm (300 giờ chỉ khi bật cờ ngành được phép); nghỉ giữa ca 30 phút (45 phút ca đêm), nghỉ giữa hai ca ≥ 12 giờ, nghỉ tuần ≥ 24 giờ; hệ số lương OT 150%/200%/300%, đêm 22h-6h +30%, OT đêm +20%; tất cả là cấu hình có ngày hiệu lực; vượt trần bị chặn khi tạo đơn OT và cảnh báo ở chấm công
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: trần luật là biên an toàn pháp lý; cấu hình có hiệu lực giữ đường lùi (kỳ khoá giữ policy_version cũ, D-007); HR vẫn đổi được cho nội quy chặt hơn.
+- Đường lùi: Nới/tắt kiểm trần bằng cấu hình mới có ngày hiệu lực
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HR chốt nội quy ca/OT thực tế; xác nhận NĐ 145/2020 (chỉ có nguồn thứ cấp) và ngành có được 300 giờ/năm không
+
+### D-032 · 2026-10-19T01:34:19+00:00 · DPIA và dữ liệu nhạy cảm (vị trí GPS, sinh trắc) khi chủ dự án uỷ quyền 'tự quyết'?
+
+- Phương án: (1) Lập hồ sơ DPIA đầy đủ theo nội dung Mẫu số 10 (NĐ 356/2025 Điều 19.3) trong docs/DPIA.md; GPS chỉ thu khi có đồng ý riêng, rõ mục đích và nhân viên biết biện pháp giám sát (Luật 91/2025 Điều 25.3, 31.3a); KHÔNG thu sinh trắc/ảnh khuôn mặt; nộp hồ sơ cho cơ quan chuyên trách trong 60 ngày kể từ ngày bắt đầu xử lý thật là VIỆC CỦA CHỦ DỰ ÁN — agent không nộp · (2) Bật thu GPS/ảnh trước, lập hồ sơ sau
+- Chọn: Lập hồ sơ DPIA đầy đủ theo nội dung Mẫu số 10 (NĐ 356/2025 Điều 19.3) trong docs/DPIA.md; GPS chỉ thu khi có đồng ý riêng, rõ mục đích và nhân viên biết biện pháp giám sát (Luật 91/2025 Điều 25.3, 31.3a); KHÔNG thu sinh trắc/ảnh khuôn mặt; nộp hồ sơ cho cơ quan chuyên trách trong 60 ngày kể từ ngày bắt đầu xử lý thật là VIỆC CỦA CHỦ DỰ ÁN — agent không nộp
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: nộp hồ sơ cho cơ quan nhà nước và xác nhận pháp chế là hành động ngoài khả năng và thẩm quyền của agent; thu mặc định tắt giữ đường lùi.
+- Đường lùi: Bật cờ thu GPS sau khi chủ dự án nộp hồ sơ và có xác nhận
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Chủ dự án nộp DPIA trong 60 ngày từ ngày xử lý đầu tiên; luật sư đọc bản chính thức Luật 91/2025 và NĐ 356/2025 (hiện đọc qua bản sao thương mại)
+
+### D-033 · 2026-10-19T01:34:19+00:00 · Cách ghi nhận 'tự quyết' về pháp lý trong hồ sơ?
+
+- Phương án: (1) Mọi giá trị ghi kèm nguồn luật + mức tin cậy + người quyết = chủ dự án uỷ quyền cho phiên chính; không ghi 'luật sư đã duyệt'; mục 'Khi chạy thật' liệt kê việc người phải làm · (2) Ghi như đã được pháp chế xác nhận
+- Chọn: Mọi giá trị ghi kèm nguồn luật + mức tin cậy + người quyết = chủ dự án uỷ quyền cho phiên chính; không ghi 'luật sư đã duyệt'; mục 'Khi chạy thật' liệt kê việc người phải làm
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: không khai bằng chứng không có (AGENTS.md: bằng chứng, không lời khai).
+- Đường lùi: Cập nhật hồ sơ khi có xác nhận pháp chế
+
+### D-034 · 2026-10-19T02:07:34+00:00 · Định dạng luật cảnh báo, mã hoá sao lưu và vị trí mã mạng của T-045/T-046?
+
+- Phương án: (1) alerts.json (không thêm parser); sao lưu openssl AES-256-CBC + PBKDF2 kèm sha256 sidecar kiểm toàn vẹn bản mã; webhook/scrape/probe ở scripts/alert-channels.ts vì lib/ cấm client mạng (DB-TX-003) · (2) YAML + age/gpg hoặc AES-GCM tự viết; nới test DB-TX-003
+- Chọn: alerts.json (không thêm parser); sao lưu openssl AES-256-CBC + PBKDF2 kèm sha256 sidecar kiểm toàn vẹn bản mã; webhook/scrape/probe ở scripts/alert-channels.ts vì lib/ cấm client mạng (DB-TX-003)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: không thêm phụ thuộc, không nới hàng rào; CBC không xác thực nhưng toàn vẹn được bảo vệ bằng sha256 kiểm trước khi giải mã.
+- Đường lùi: Chuyển sang age/AES-GCM khi có công cụ chuẩn trên máy chủ
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Dùng KMS/age và lưu sao lưu off-site; Prometheus/Alertmanager thật

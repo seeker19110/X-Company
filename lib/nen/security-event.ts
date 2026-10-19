@@ -11,6 +11,7 @@ export const SECURITY_EVENTS = [
   "auth.rate_limited",
   "authz.denied",
   "input.validation_failed",
+  "ops.alert",
 ] as const;
 export type SecurityEventName = (typeof SECURITY_EVENTS)[number];
 
