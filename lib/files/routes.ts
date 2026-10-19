@@ -1,7 +1,7 @@
 // Route: POST /api/app/files (multipart), GET /api/app/files/:id, GET|POST /api/app/comments.
 import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
-import { json, readJson, withActor } from "../http/index.ts";
+import { json, readFormCapped, readJson, withActor } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { parsePage } from "../nen/pagination.ts";
 import {
@@ -29,14 +29,13 @@ export const ObjectRef = z.object({
 
 export const postFile = withActor(
   async (ctx) => {
-    const len = Number(ctx.req.headers.get("content-length") ?? "0");
-    if (len > MAX_FILE_BYTES + kb(64))
-      throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.files.tepVuot20Mb"));
     let form: FormData;
     try {
-      form = await ctx.req.formData();
-    } catch {
-      throw new AppError("BAD_FORM", 400, t("err.shared.canMultipartFormData"));
+      form = await readFormCapped(ctx.req, MAX_FILE_BYTES + kb(64));
+    } catch (e) {
+      if (e instanceof AppError && e.code === "PAYLOAD_TOO_LARGE")
+        throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.files.tepVuot20Mb"));
+      throw e;
     }
     const ref = ObjectRef.parse({ object_type: form.get("object_type"), object_id: form.get("object_id") });
     const file = form.get("file");

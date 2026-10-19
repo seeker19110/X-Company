@@ -350,3 +350,10 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chặn lỗ thật (dữ liệu nhạy cảm lên URL); 10202 ở hai trang này là dương tính giả — gửi gốc của form về chính trang, không handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (+ header CSRF khi đã đăng nhập, tests/http). Allowlist theo đường dẫn giữ cổng chặt cho mọi form khác.
 - Đường lùi: Xoá mục 10202 trong security/zap/allowlist.json (cổng đỏ lại) hoặc bỏ method=post
 - Đính chính (review PR #33): chỉ `/api/app/auth/login` kiểm Origin; `/api/public/inquiries` không kiểm Origin — là endpoint công khai không phiên nên CSRF không áp dụng (giới hạn tần suất theo IP). Kết luận dương tính giả không đổi.
+
+### D-048 · 2026-10-19T21:11:02+00:00 · Duyệt kế hoạch sửa audit 2026-10-19 (6 đợt, AUDIT-REPORT §5)
+
+- Phương án: (1) Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa · (2) Chờ người duyệt
+- Chọn: Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa
+- Lý do (tiêu chí chất lượng cuối): Đúng/an toàn trước: DATA/XFEAT/CODE 🟠 có tái hiện hoặc đọc mã; mục chạm auth/migration vẫn do người merge
+- Đường lùi: Đóng PR đợt chưa merge
