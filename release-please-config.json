@@ -2,6 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "node",
   "include-component-in-tag": false,
+  "bootstrap-sha": "1c2a28e756c83ee2ff4c764bfe6adbed92418c52",
+  "bump-minor-pre-major": true,
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md"
