@@ -1,6 +1,6 @@
 // perf-load.mjs — đo hiệu năng dưới tải CỤC BỘ (T-049, QA-PERF-002/006/010, XC-PERF-004, PRF-WEB-005): bộ tải tự viết trên
 // node:http keep-alive đánh vào bản build production (`next start`, cổng riêng) + Postgres tạm + dữ liệu seed.
-// Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Ghi docs/perf/load-report-<ngày>.md + .json;
+// Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Báo cáo docs/perf/load-report-<ngày>.md + .json ghi ra thư mục tạm (vào repo khi XC_REPORT_DIR=. / npm run -s reports:refresh);
 // exit 1 khi một kịch bản vượt ngân sách. Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/thực địa.
 // Chỉ nhắm localhost (QA-PERF-007): BASE_URL không có ở đây, bộ tải không bao giờ gửi tới host ngoài máy này.
 import { randomUUID } from "node:crypto";
