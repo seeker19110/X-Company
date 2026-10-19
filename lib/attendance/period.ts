@@ -585,6 +585,9 @@ export async function requestAdjustment(
   } else {
     if (a.newKind === undefined || a.newAt === undefined)
       throw new AppError("VALIDATION", 422, tr("err.attendance.thieuLoaiVaThoiDiemSu"));
+    // Sự kiện thêm tay không được ở tương lai (dung sai 5 phút cho lệch đồng hồ): chặn "chấm ra 23:59" khai trước.
+    if (a.newAt.getTime() > Date.now() + 5 * 60_000)
+      throw new AppError("VALIDATION", 422, tr("err.attendance.thoiDiemSuKienTuongLai"));
     after = { kind: a.newKind, at: a.newAt.toISOString() };
     at = a.newAt;
   }

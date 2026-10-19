@@ -562,7 +562,7 @@ describe("EXPLAIN các truy vấn lõi: không Seq Scan trên bảng lớn", () 
       name: "approvals-pending",
       from: "lib/attendance/approvals.ts PENDING_APPROVALS_SQL — hàng chờ duyệt",
       sql: PENDING_APPROVALS_SQL,
-      params: () => [companyId],
+      params: () => [companyId, null, null],
     },
     {
       name: "attendance-needs-review",

@@ -12,6 +12,8 @@ import {
   requestLeave,
 } from "../../lib/attendance/leave.ts";
 import { checkOtLimits, decideOt, giveOtConsent, otPolicyAt, requestOt } from "../../lib/attendance/ot.ts";
+import { pendingApprovals, pendingApprovalsPage } from "../../lib/attendance/approvals.ts";
+import { formatDate } from "../../lib/i18n/format.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { seedCompany, seedUser } from "../helpers/fixtures.ts";
@@ -389,6 +391,79 @@ describe("nghỉ phép & OT (T-013)", () => {
         ),
         /check constraint/,
       );
+    });
+  });
+
+  describe("kiểm tra đầu vào + hộp duyệt (audit 2026-10-19)", () => {
+    test("AUD-CODE-006: số phút nghỉ không được vượt khoảng start..end; đúng bằng khoảng thì qua", async () => {
+      const base = {
+        leaveTypeId: annual,
+        startAt: D("2026-11-09T01:00:00Z"),
+        endAt: D("2026-11-09T10:00:00Z"), // 540 phút
+      };
+      await withTx((tx) =>
+        assert.rejects(requestLeave(tx, emp, { ...base, minutes: 541 }), isCode("VALIDATION")),
+      );
+      const id = await withTx((tx) => requestLeave(tx, emp, { ...base, minutes: 540 }));
+      assert.notEqual(id, "");
+      await db.admin.query("UPDATE leave_request SET status = 'cancelled' WHERE id = $1", [id]);
+    });
+
+    test("AUD-CODE-006: hộp duyệt hiện khoảng ngày của đơn nghỉ", async () => {
+      const id = await withTx((tx) =>
+        requestLeave(tx, emp, {
+          leaveTypeId: annual,
+          startAt: D("2026-12-01T01:00:00Z"),
+          endAt: D("2026-12-03T10:00:00Z"),
+          minutes: 120,
+        }),
+      );
+      const items = await pendingApprovals(db.app, lead);
+      const it = items.find((x) => x.id === id);
+      assert.ok(it, "đơn nằm trong hộp duyệt của trưởng nhóm");
+      assert.match(it.summary, new RegExp(formatDate("2026-12-01").replace(/\//g, "\\/")));
+      assert.match(it.summary, new RegExp(formatDate("2026-12-03").replace(/\//g, "\\/")));
+      await db.admin.query("UPDATE leave_request SET status = 'cancelled' WHERE id = $1", [id]);
+    });
+
+    test("AUD-CODE-008: >500 đơn chờ của phòng khác không làm trống hộp của trưởng nhóm có đơn phía sau", async () => {
+      const x = await seedUser(org.companyId, { grants: [{ role: "employee", scopeType: "self" }] });
+      await withTx((tx) =>
+        assignEmployment(tx, { userId: null }, org.companyId, x.employeeId!, {
+          departmentId: org.otherDeptId,
+          validFrom: "2026-01-01",
+        }),
+      );
+      await db.admin.query(
+        `INSERT INTO leave_request (company_id, employee_id, leave_type_id, start_at, end_at, minutes, created_by_user_id, created_at)
+         SELECT $1, $2, $3, '2027-03-01T01:00:00Z', '2027-03-01T05:00:00Z', 60, $4, now() - interval '1 day' - g * interval '1 second'
+           FROM generate_series(1, 501) g`,
+        [org.companyId, x.employeeId, annual, x.userId],
+      );
+      const id = await withTx((tx) =>
+        requestLeave(tx, emp, {
+          leaveTypeId: annual,
+          startAt: D("2027-04-01T01:00:00Z"),
+          endAt: D("2027-04-01T05:00:00Z"),
+          minutes: 120,
+        }),
+      );
+      const items = await pendingApprovals(db.app, lead);
+      assert.ok(
+        items.some((i) => i.id === id),
+        "đơn của D1 phải hiện dù 501 đơn D2 cũ hơn đứng trước",
+      );
+      assert.ok(
+        items.every((i) => i.employeeId !== x.employeeId),
+        "không thấy đơn của phòng khác",
+      );
+      const page = await pendingApprovalsPage(db.app, lead, { limit: 1, offset: 0 });
+      assert.equal(page.items.length, 1);
+      // trưởng nhóm D2 vẫn thấy đủ 501 đơn của phòng mình (lấy qua nhiều lô)
+      const other = await pendingApprovals(db.app, otherLead);
+      assert.equal(other.filter((i) => i.employeeId === x.employeeId).length, 501);
+      await db.admin.query("DELETE FROM leave_request WHERE employee_id = $1", [x.employeeId]);
+      await db.admin.query("UPDATE leave_request SET status = 'cancelled' WHERE id = $1", [id]);
     });
   });
 });
