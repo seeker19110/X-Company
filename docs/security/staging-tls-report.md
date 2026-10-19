@@ -6,7 +6,7 @@ status: faithful-fixture — máy dev, CA nội bộ của Caddy; KHÔNG phải 
 
 # Staging có TLS cục bộ (T-055)
 
-Sinh bởi `npm run -s staging:drill` lúc 2026-10-19T12:33:57.332Z trên commit `00a1e45ed0eae4263109e460f0013570876a2532+dirty`. Kết luận: **PASS**.
+Sinh bởi `npm run -s staging:drill` lúc 2026-10-19T13:03:12.041Z trên commit `df88317946a38a14bb0b0cdc5d9ab727c6e0571d+dirty`. Kết luận: **PASS**.
 
 Caddy 2.11.7 (`tls internal`) chấm dứt TLS cho `https://staging.localhost` → `next start` (TRUST_PROXY_HOPS=1); OWASP ZAP 2.17.0 quét qua https. Công cụ ghim hash ở `scripts/tools/install-tool.mjs`. Node v22.22.0, Next 16.4.2.
 
@@ -19,11 +19,11 @@ Caddy 2.11.7 (`tls internal`) chấm dứt TLS cho `https://staging.localhost` �
 | TLS | tên lạ không được phục vụ chứng chỉ hợp lệ | đạt | từ chối: EPROTO |
 | TLS | máy chủ từ chối TLS ≤ 1.1 | đạt | từ chối: EPROTO |
 | TLS | TLS 1.2 (khách cũ) vẫn bắt tay với bộ mã ECDHE + AEAD | đạt | TLSv1.2 · ECDHE-ECDSA-AES128-GCM-SHA256 |
-| HTTP | http chuyển hướng 308 sang https giữ nguyên đường dẫn | đạt | 308 → https://staging.localhost:42357/lien-he?x=1 |
+| HTTP | http chuyển hướng 308 sang https giữ nguyên đường dẫn | đạt | 308 → https://staging.localhost:39389/lien-he?x=1 |
 | header | trang HTML: CSP, HSTS ≥ 180 ngày, XFO, nosniff, Referrer-Policy… | đạt | HSTS: max-age=31536000; includeSubDomains |
 | header | API: nosniff, HSTS, JSON | đạt | HTTP 401 |
 | cookie | đăng nhập qua https: cookie phiên __Host-, Secure, HttpOnly, SameSite | đạt | __Host-xc_session |
-| ZAP | ZAP 2.17.0 quét baseline qua https (spider + passive) | đạt | site: https://staging.localhost:42357 · 8 loại cảnh báo · exit 0 |
+| ZAP | ZAP 2.17.0 quét baseline qua https (spider + passive) | đạt | site: https://staging.localhost:39389 · 6 loại cảnh báo · exit 0 |
 | ZAP | zap-gate: không còn cảnh báo Medium+ ngoài allowlist | đạt | ZAP: 0 cảnh báo Medium trở lên trong 1 báo cáo |
 
 Báo cáo ZAP đầy đủ: [staging-zap-baseline.json](staging-zap-baseline.json).

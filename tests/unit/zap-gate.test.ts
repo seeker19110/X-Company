@@ -1,5 +1,6 @@
 // SEC-WEB-001, SEC-WEB-004: cổng DAST (scripts/zap-gate.mjs) — ngưỡng Medium, allowlist có lý do, báo cáo rỗng/hỏng = thất bại.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,8 +20,8 @@ interface Violation {
 }
 const gate = gateMod as {
   MIN_RISK: number;
-  parseAllowlist: (t: string) => Set<string>;
-  violations: (r: unknown, allowed?: Set<string>) => Violation[];
+  parseAllowlist: (t: string) => Map<string, RegExp[] | null>;
+  violations: (r: unknown, allowed?: Set<string> | Map<string, RegExp[] | null>) => Violation[];
 };
 const GATE = path.resolve("scripts/zap-gate.mjs");
 const alert = (pluginid: string, riskcode: string, name = `rule ${pluginid}`): Alert => ({
@@ -62,13 +63,59 @@ describe("zap-gate violations", () => {
 describe("zap-gate parseAllowlist", () => {
   test("mục cần pluginid + reason", () => {
     const ok = gate.parseAllowlist(JSON.stringify({ allow: [{ pluginid: "10038", reason: "CSP ở proxy" }] }));
-    assert.deepEqual([...ok], ["10038"]);
+    assert.deepEqual([...ok.keys()], ["10038"]);
+    assert.equal(ok.get("10038"), null);
     for (const bad of [{ allow: [{ pluginid: "10038" }] }, { allow: [{ pluginid: "1", reason: " " }] }, {}])
       assert.throws(() => gate.parseAllowlist(JSON.stringify(bad)));
   });
 
+  test("paths phải là mảng regex neo ^…$ không rỗng", () => {
+    const m = gate.parseAllowlist(
+      JSON.stringify({ allow: [{ pluginid: "10202", reason: "r", paths: ["^/app/login$"] }] }),
+    );
+    assert.ok(m.get("10202")![0]!.test("/app/login"));
+    for (const paths of [[], ["/app/login"], ["^/app/login"], "^/a$", [1]])
+      assert.throws(() =>
+        gate.parseAllowlist(JSON.stringify({ allow: [{ pluginid: "10202", reason: "r", paths }] })),
+      );
+  });
+
   test("allowlist của repo hợp lệ", () => {
-    assert.ok(gate.parseAllowlist(JSON.stringify({ allow: [] })) instanceof Set);
+    assert.ok(gate.parseAllowlist(JSON.stringify({ allow: [] })) instanceof Map);
+    assert.ok(gate.parseAllowlist(readFileSync("security/zap/allowlist.json", "utf8")) instanceof Map);
+  });
+});
+
+describe("zap-gate allowlist theo đường dẫn (D-047)", () => {
+  const scoped = gate.parseAllowlist(
+    JSON.stringify({ allow: [{ pluginid: "10202", reason: "r", paths: ["^/app/login$", "^/lien-he$"] }] }),
+  );
+  const at = (...uris: string[]) => ({
+    ...alert("10202", "2"),
+    instances: uris.map((uri) => ({ uri, method: "GET" })),
+  });
+  test("mọi vị trí trong phạm vi → miễn", () => {
+    const r = report(at("https://s.localhost:1/app/login", "https://s.localhost:1/lien-he?x=1"));
+    assert.deepEqual(ids(gate.violations(r, scoped)), []);
+  });
+  test("một vị trí ngoài phạm vi, không có vị trí, hoặc URI hỏng → vẫn đỏ", () => {
+    assert.deepEqual(
+      ids(
+        gate.violations(
+          report(at("https://s.localhost:1/app/login", "https://s.localhost:1/app/khac")),
+          scoped,
+        ),
+      ),
+      ["10202"],
+    );
+    assert.deepEqual(ids(gate.violations(report(at("https://s.localhost:1/app/login/x")), scoped)), [
+      "10202",
+    ]);
+    assert.deepEqual(ids(gate.violations(report(at()), scoped)), ["10202"]);
+    assert.deepEqual(ids(gate.violations(report(at("không phải url")), scoped)), ["10202"]);
+  });
+  test("pluginid khác không được miễn nhờ mục có paths", () => {
+    assert.deepEqual(ids(gate.violations(report(alert("40012", "3")), scoped)), ["40012"]);
   });
 });
 

@@ -106,7 +106,7 @@ export function ConfirmBody({
   }
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form method="post" onSubmit={submit} noValidate>
       <h2 id={`${uid}-t`}>{request.title}</h2>
       <p id={`${uid}-d`}>
         {request.object && <strong>{request.object}</strong>}

@@ -1,4 +1,12 @@
 {
   "$comment": "Ngoại lệ có duyệt cho cổng ZAP (scripts/zap-gate.mjs): mỗi mục {pluginid, reason, approvedBy, date}. Rỗng = mọi cảnh báo mức Medium trở lên làm job đỏ. Thêm mục = nêu lý do trong PR.",
-  "allow": []
+  "allow": [
+    {
+      "pluginid": "10202",
+      "paths": ["^/app/login$", "^/lien-he$"],
+      "reason": "Absence of Anti-CSRF Tokens trên form đăng nhập và form liên hệ: form có method=post chỉ để không lộ dữ liệu lên URL khi JS chưa chạy; gửi gốc về chính trang, không handler nào đổi trạng thái. Gửi thật là fetch tới /api/app/auth/login và /api/public/inquiries — server kiểm Origin (tests/http, dast:probes nhóm CSRF). Form khác (đường dẫn khác) vẫn làm cổng đỏ.",
+      "approvedBy": "D-047 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
+      "date": "2026-10-19"
+    }
+  ]
 }

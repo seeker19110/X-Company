@@ -2,8 +2,9 @@
 // những chuỗi `decodeURIComponent` ném lỗi — đường dẫn hợp lệ (kể cả slug tiếng Việt) tuyệt đối không được bị chuyển đi.
 import assert from "node:assert/strict";
 import { randomBytes, randomInt } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
-import nextConfig, { API_HSTS, MALFORMED_PATH_RE } from "../../next.config.ts";
+import nextConfig, { API_HSTS, MALFORMED_PATH_RE, STATIC_SOURCES } from "../../next.config.ts";
 import { securityHeaders } from "../../proxy.ts";
 
 const re = new RegExp(`^${MALFORMED_PATH_RE}$`, "su");
@@ -110,5 +111,26 @@ describe("MALFORMED_PATH_RE", () => {
     assert.equal(get("x-content-type-options"), "nosniff");
     assert.equal(get("strict-transport-security"), API_HSTS);
     assert.equal(securityHeaders("n", { dev: false, https: true })["strict-transport-security"], API_HSTS);
+  });
+
+  test("tệp tĩnh proxy.ts bỏ qua cũng có nosniff + HSTS; danh sách khớp matcher của proxy.ts", async () => {
+    const h = (await nextConfig.headers?.()) ?? [];
+    for (const source of STATIC_SOURCES) {
+      const blk = h.find((x) => x.source === source);
+      assert.ok(blk, `thiếu khối header cho ${source}`);
+      const get = (k: string) => blk.headers.find((x) => x.key.toLowerCase() === k)?.value;
+      assert.equal(get("x-content-type-options"), "nosniff", source);
+      assert.equal(get("strict-transport-security"), API_HSTS, source);
+    }
+    const matcher = readFileSync("proxy.ts", "utf8").match(/source: "\/\(\(\?!([^)]*)\)\.\*\)"/)?.[1];
+    assert.ok(matcher, "không đọc được matcher của proxy.ts");
+    const excluded = matcher.split("|").filter((x) => x !== "api");
+    const covered = STATIC_SOURCES.map((s: string) =>
+      s
+        .slice(1)
+        .replace(/\/:path\*$/, "")
+        .replace(/^icons$/, "icons/"),
+    );
+    assert.deepEqual([...excluded].sort(), [...covered].sort());
   });
 });

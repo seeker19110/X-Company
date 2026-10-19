@@ -342,3 +342,10 @@
 - Chọn: bootstrap-sha = 1c2a28e (commit mở đầu X-Company) + bump-minor-pre-major: bản đầu 0.2.0, changelog chỉ commit của dự án
 - Lý do (tiêu chí chất lượng cuối): Đúng: changelog chỉ phản ánh thay đổi của sản phẩm; GO-NO-GO đang NO-GO nên 0.x đúng ngữ nghĩa SemVer (1.0.0 = API ổn định, sẵn production); bootstrap-sha chỉ áp cho bản đầu nên không cần gỡ; tránh đụng tag v2.0.0 cũ của khung (không xoá tag)
 - Đường lùi: Bỏ bootstrap-sha/bump-minor-pre-major khỏi release-please-config.json; muốn 1.0.0 thì commit có footer 'Release-As: 1.0.0'
+
+### D-047 · 2026-10-19T13:02:17+00:00 · ZAP 10202 (Absence of Anti-CSRF Tokens, Medium) trên /app/login và /lien-he sau khi form chuyển method=post (để chặn lộ mật khẩu/email lên URL khi chưa hydrate — ZAP 10024 qua https)
+
+- Phương án: (1) Giữ form GET (bỏ method=post): hết 10202 nhưng mật khẩu nằm trên URL khi bấm gửi trước khi JS chạy · (2) method=post + thêm ô ẩn csrf_token giả để ZAP nhận: token không được kiểm ở đâu (gửi gốc không có handler) — an ninh giả · (3) method=post + allowlist zap-gate cho 10202 GIỚI HẠN theo đường dẫn (^/app/login$, ^/lien-he$), mở rộng zap-gate để mục allowlist có paths; form khác vẫn đỏ
+- Chọn: method=post + allowlist zap-gate cho 10202 GIỚI HẠN theo đường dẫn (^/app/login$, ^/lien-he$), mở rộng zap-gate để mục allowlist có paths; form khác vẫn đỏ
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chặn lỗ thật (dữ liệu nhạy cảm lên URL); 10202 ở hai trang này là dương tính giả — gửi gốc của form về chính trang, không handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (+ header CSRF khi đã đăng nhập, tests/http). Allowlist theo đường dẫn giữ cổng chặt cho mọi form khác.
+- Đường lùi: Xoá mục 10202 trong security/zap/allowlist.json (cổng đỏ lại) hoặc bỏ method=post
