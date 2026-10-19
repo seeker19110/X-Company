@@ -205,7 +205,8 @@ function scenarios(sh: Shared): Scenario[] {
       scenario: "enqueue topic không có handler → worker thật đẩy vào DLQ",
       inject: async () => {
         await withTx((tx) => enqueue(tx, null, "drill.khong-co-handler", { x: 1 }), sh.admin);
-        const s = await runOnce({ pool: sh.admin, maxAttempts: 1 });
+        // now() của DB có micro giây, worker so với giờ JS (mili giây): đẩy giờ worker tới 1 s để việc vừa enqueue luôn đến hạn.
+        const s = await runOnce({ pool: sh.admin, maxAttempts: 1, now: () => new Date(Date.now() + 1_000) });
         if (s.dead < 1) throw new Error("worker không đẩy việc vào DLQ");
       },
       clear: async () => void (await sh.admin.query("DELETE FROM outbox_event WHERE topic LIKE 'drill.%'")),
