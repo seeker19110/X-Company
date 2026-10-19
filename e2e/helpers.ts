@@ -70,3 +70,19 @@ export async function expectNoHorizontalScroll(page: Page) {
     client,
   );
 }
+
+/** SEC-WEB-004: mọi trang mở trong test không được có vi phạm CSP (style/script bị chặn = giao diện hỏng âm thầm).
+ * Gọi một lần ở đầu mỗi file spec (hook của Playwright đăng ký theo file). */
+export function failOnCspViolation() {
+  const seen = new WeakMap<Page, string[]>();
+  test.beforeEach(async ({ page }) => {
+    const errs: string[] = [];
+    seen.set(page, errs);
+    page.on("console", (m) => {
+      if (m.type() === "error" && /Content Security Policy/i.test(m.text())) errs.push(m.text());
+    });
+  });
+  test.afterEach(async ({ page }) => {
+    expect(seen.get(page) ?? [], "vi phạm CSP trên trang").toEqual([]);
+  });
+}

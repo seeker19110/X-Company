@@ -14,6 +14,9 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
     assert.match(h["content-security-policy"]!, /object-src 'none'/);
     assert.match(h["content-security-policy"]!, /base-uri 'none'(;|$)/);
     assert.ok(!/script-src[^;]*unsafe-inline/.test(h["content-security-policy"]!));
+    // ZAP 10055: style cũng không 'unsafe-inline' — <style> của Next mang nonce.
+    assert.match(h["content-security-policy"]!, /style-src 'self' 'nonce-abc'(;|$)/);
+    assert.ok(!/unsafe-inline/.test(h["content-security-policy"]!));
     assert.equal(h["x-content-type-options"], "nosniff");
     assert.ok(h["strict-transport-security"]);
     assert.equal(securityHeaders("x", { dev: false, https: false })["strict-transport-security"], undefined);

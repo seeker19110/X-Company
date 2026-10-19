@@ -81,6 +81,10 @@
   flex-wrap: wrap;
   align-items: center;
 }
+/* Nút hành động dưới thẻ — thay style inline để CSP không cần 'unsafe-inline' cho style. */
+.row-actions {
+  margin-top: 0.5rem;
+}
 .list {
   list-style: none;
   padding: 0;

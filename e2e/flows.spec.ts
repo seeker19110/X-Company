@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { expectAccessible, login, logout } from "./helpers";
+import { failOnCspViolation, expectAccessible, login, logout } from "./helpers";
+
+failOnCspViolation();
 
 test.describe("website công khai (AT01)", () => {
   test("trang chủ, dịch vụ hiển thị nội dung đã duyệt; bản nháp 404; tiếp cận được @smoke", async ({
