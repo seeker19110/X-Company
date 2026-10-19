@@ -4,7 +4,7 @@
 // Kiểm bằng client TLS XÁC MINH chứng chỉ (tin đúng CA gốc của Caddy, không tắt kiểm): bắt tay TLS 1.3, SAN đúng tên, từ chối
 // tên lạ và TLS ≤ 1.1, http → https 308, header bảo mật + HSTS + cookie phiên `__Host-`/Secure qua https thật; rồi OWASP ZAP
 // 2.17.0 (Java, không docker) quét baseline (spider + passive) qua https → scripts/zap-gate.mjs (đỏ khi còn Medium+).
-// Kiểm cú pháp Caddyfile mẫu cho tên miền thật (ops/caddy/Caddyfile). Ghi docs/security/staging-tls-report.{md,json}.
+// Kiểm cú pháp Caddyfile mẫu cho tên miền thật (ops/caddy/Caddyfile). Báo cáo docs/security/staging-tls-report.{md,json} ghi ra thư mục tạm (vào repo khi XC_REPORT_DIR=. / reports:refresh).
 // Nhãn bằng chứng: faithful-fixture — máy dev, CA nội bộ, KHÔNG phải staging/production thật với chứng chỉ ACME công khai.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -16,7 +16,15 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { checkSecurityHeaders, checkSessionCookie } from "./lib/dast-probes.mjs";
-import { environmentInfo, err, formatFiles, gitCommit, out, prepare } from "./lib/prod-harness.mjs";
+import {
+  environmentInfo,
+  err,
+  formatFiles,
+  gitCommit,
+  out,
+  prepare,
+  reportFile,
+} from "./lib/prod-harness.mjs";
 import { TOOLS, installedPath } from "./tools/install-tool.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -464,9 +472,8 @@ async function main() {
         gate.status === 0,
         (gate.stdout + gate.stderr).trim().split("\n").slice(-3).join(" "),
       );
-      mkdirSync(path.join(ROOT, "docs/security"), { recursive: true });
       writeFileSync(
-        path.join(ROOT, "docs/security/staging-zap-baseline.json"),
+        reportFile("docs/security/staging-zap-baseline.json"),
         `${JSON.stringify(zapReport, null, 2)}\n`,
       );
     }
@@ -514,19 +521,18 @@ async function main() {
     ...NOT_PROVEN.map((n) => `- ${n}`),
     "",
   ].join("\n");
-  writeFileSync(path.join(ROOT, "docs/security/staging-tls-report.md"), md);
-  writeFileSync(
-    path.join(ROOT, "docs/security/staging-tls-report.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
-  );
-  const files = ["docs/security/staging-tls-report.md", "docs/security/staging-tls-report.json"];
-  if (zapReport !== null) files.push("docs/security/staging-zap-baseline.json");
+  const reportMd = reportFile("docs/security/staging-tls-report.md");
+  const reportJson = reportFile("docs/security/staging-tls-report.json");
+  writeFileSync(reportMd, md);
+  writeFileSync(reportJson, `${JSON.stringify(report, null, 2)}\n`);
+  const files = [reportMd, reportJson];
+  if (zapReport !== null) files.push(reportFile("docs/security/staging-zap-baseline.json"));
   formatFiles(files);
   if (!ok) {
-    err("staging:drill ĐỎ — xem docs/security/staging-tls-report.md");
+    err(`staging:drill ĐỎ — xem ${reportMd}`);
     process.exit(1);
   }
-  out("staging:drill: PASS — docs/security/staging-tls-report.md");
+  out(`staging:drill: PASS — ${reportMd}`);
   process.exit(0);
 }
 

@@ -334,6 +334,8 @@ jobs:
       - name: Cài Chromium đúng phiên bản Playwright
         run: npx --no-install playwright install --with-deps chromium
       - name: DAST cục bộ (header, cookie, XSS, CSRF, open redirect, rò lỗi, đường dẫn lộ, giới hạn tần suất, BOLA)
+        env:
+          XC_REPORT_DIR: . # báo cáo ghi vào repo để upload artifact ở bước sau (mặc định ra thư mục tạm)
         run: npm run -s dast:probes
       - name: Lưu báo cáo DAST
         if: always()
@@ -379,6 +381,8 @@ jobs:
       - name: Cài Prometheus/promtool/Alertmanager/amtool (ghim sha256)
         run: node scripts/tools/install-tool.mjs install prometheus promtool alertmanager amtool
       - name: Diễn tập giám sát end-to-end
+        env:
+          XC_REPORT_DIR: . # báo cáo ghi vào repo để upload artifact ở bước sau (mặc định ra thư mục tạm)
         run: npm run -s ops:stack:drill
       - name: Lưu báo cáo diễn tập
         if: always()
@@ -425,6 +429,8 @@ jobs:
       - name: Cài Caddy (ghim sha512) và ZAP (ghim sha256)
         run: node scripts/tools/install-tool.mjs install caddy zap
       - name: Staging TLS — Caddy + kiểm TLS/header/cookie + ZAP baseline qua https
+        env:
+          XC_REPORT_DIR: . # báo cáo ghi vào repo để upload artifact ở bước sau (mặc định ra thư mục tạm)
         run: npm run -s staging:drill
       - name: Lưu báo cáo staging TLS
         if: always()
