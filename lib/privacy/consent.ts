@@ -7,11 +7,13 @@ import { t } from "../i18n/index.ts";
 
 export type SubjectType = "inquiry" | "job_application" | "employee";
 export const CHANNEL_WEB_FORM = "web_form";
+/** Đồng ý RIÊNG (tách khỏi đồng ý xử lý hồ sơ) để giữ hồ sơ ứng viên không trúng tuyển trong "kho nhân tài" (D-030). */
+export const PURPOSE_TALENT_POOL = "talent_pool";
 
 /** Mục đích dựa trên đồng ý của từng loại chủ thể (employee: xử lý theo hợp đồng lao động, không dựa trên đồng ý). */
 export const CONSENT_PURPOSES: Record<SubjectType, readonly string[]> = {
   inquiry: ["inquiry_contact"],
-  job_application: ["job_application"],
+  job_application: ["job_application", PURPOSE_TALENT_POOL],
   employee: [],
 };
 
@@ -19,6 +21,7 @@ export const CONSENT_PURPOSES: Record<SubjectType, readonly string[]> = {
 const CONSENT_TEXT: Record<string, string> = {
   inquiry_contact: t("msg.privacy.consent.inquiryContact"),
   job_application: t("msg.privacy.consent.jobApplication"),
+  [PURPOSE_TALENT_POOL]: t("msg.privacy.consent.talentPool"),
 };
 
 export function consentSnapshotHash(purposeId: string, policyVersion: string): string {
@@ -101,7 +104,10 @@ export async function activePurposes(
   return rows.filter((r) => r.event === "grant");
 }
 
-/** Rút đồng ý: thêm dòng 'withdraw' MỚI (cùng phiên bản của lần cấp mới nhất). Trả danh sách mục đích đã rút. */
+/**
+ * Rút đồng ý: thêm dòng 'withdraw' MỚI (cùng phiên bản của lần cấp mới nhất). Trả danh sách mục đích đã rút.
+ * `only` giới hạn các mục đích cần rút (vd chỉ "kho nhân tài"); bỏ trống = rút mọi đồng ý đang hiệu lực.
+ */
 export async function withdrawConsent(
   tx: Queryable,
   companyId: string,
@@ -109,8 +115,11 @@ export async function withdrawConsent(
   subjectId: string,
   now: Date,
   channel = "dsar",
+  only?: readonly string[],
 ): Promise<string[]> {
-  const active = await activePurposes(tx, subjectType, subjectId);
+  const active = (await activePurposes(tx, subjectType, subjectId)).filter(
+    (a) => only === undefined || only.includes(a.purpose_id),
+  );
   for (const a of active)
     await tx.query(
       `INSERT INTO consent_record (company_id, subject_type, subject_id, purpose_id, policy_version, event, granted_at,

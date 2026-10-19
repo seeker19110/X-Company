@@ -12,6 +12,7 @@ import { verifyAuditChain } from "../audit/index.ts";
 import { env } from "../nen/env.ts";
 import { log } from "../nen/log.ts";
 import { MS_PER_HOUR, SECONDS_PER_HOUR, msToSeconds, secondsToMs } from "../nen/units.ts";
+import { dsarAnyOverdueSql } from "../privacy/deadlines.ts";
 import type { AlertNotification, AlertSink } from "./sinks.ts";
 import type { AlertRule, SignalName } from "./rules.ts";
 
@@ -334,9 +335,10 @@ export class AlertEngine {
           [nowDate, p.stale_seconds ?? 300],
         );
       case "dsar_overdue":
+        // Quá hạn thực hiện (theo loại + gia hạn) HOẶC quá hạn phản hồi "đã nhận" — cùng điều kiện với lib/privacy (D-029).
         return this.db(
           rule,
-          "SELECT count(*)::int AS n FROM data_subject_request WHERE status IN ('received', 'in_progress') AND due_at < $1",
+          "SELECT count(*)::int AS n FROM data_subject_request WHERE " + dsarAnyOverdueSql("$1"),
           [nowDate],
         );
       case "period_close_overdue":

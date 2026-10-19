@@ -470,7 +470,10 @@
       "canNeuCanCuTuChoi2": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "subjectRefHint": "Thông báo kiểm tra đầu vào: ô nhập tham chiếu chủ thể phải là mã hồ sơ, không nhập thông tin liên hệ.",
       "cannotStartInState": "Lỗi 409 INVALID_STATE khi bắt đầu xử lý yêu cầu quyền dữ liệu không ở trạng thái 'received'; {status} = mã trạng thái.",
-      "requestClosed": "Lỗi 409 INVALID_STATE khi thao tác trên yêu cầu quyền dữ liệu đã hoàn tất/từ chối; {status} = mã trạng thái."
+      "requestClosed": "Lỗi 409 INVALID_STATE khi thao tác trên yêu cầu quyền dữ liệu đã hoàn tất/từ chối; {status} = mã trạng thái.",
+      "canLyDoGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy: gia hạn yêu cầu quyền dữ liệu thiếu lý do.",
+      "daGiaHanMotLan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_ALREADY_USED 409); miền privacy: gia hạn lần hai bị từ chối.",
+      "quaHanKhongGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_TOO_LATE 409); miền privacy: gia hạn sau khi đã quá hạn."
     },
     "work": {
       "banKhongCoQuyenDeXuat": "Thông báo lỗi nghiệp vụ trả client (AppError FORBIDDEN 403); miền work. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -571,7 +574,8 @@
       "retainedByLaw": "Lý do hạn chế xử lý khi hồ sơ nhân viên phải giữ theo luật; {categories} = danh mục giữ, ngăn cách bằng dấu chấm phẩy.",
       "consent": {
         "inquiryContact": "Văn bản đồng ý hiển thị cho người gửi biểu mẫu liên hệ; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
-        "jobApplication": "Văn bản đồng ý hiển thị cho ứng viên; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách."
+        "jobApplication": "Văn bản đồng ý hiển thị cho ứng viên; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
+        "talentPool": "Văn bản đồng ý RIÊNG, không tích sẵn, cho việc giữ hồ sơ ứng viên không trúng tuyển trong kho nhân tài (băm vào ui_snapshot_hash)."
       },
       "retained": {
         "laborRecords": {
@@ -590,7 +594,8 @@
           "category": "Tên danh mục nhật ký kiểm toán được giữ lại khi xử lý yêu cầu xoá.",
           "reason": "Căn cứ hiển thị cho chủ thể vì sao nhật ký kiểm toán được giữ lại."
         }
-      }
+      },
+      "stopObjectRequest": "Lý do mặc định của lệnh hạn chế xử lý khi chủ thể phản đối xử lý mà yêu cầu không có ghi chú."
     }
   }
 }

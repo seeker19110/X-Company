@@ -87,7 +87,7 @@ Mối đe doạ và bảng OWASP Top 10:2025: [docs/THREAT-MODEL.md](docs/THREAT
 ## 6. Dữ liệu & pháp lý (§12)
 - Dữ liệu cá nhân: có — cơ bản (hồ sơ nhân viên, ứng viên, khách liên hệ) và **nhạy cảm** (định vị).
 - Tiền thật: không (bảng công xuất cho hệ lương khác).
-- Luật: Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15 (hiệu lực 01/01/2026); NĐ 356/2025/NĐ-CP (thay NĐ 13/2023); Bộ luật Lao động Điều 107 (làm thêm giờ) — nguồn ở §20 kế hoạch, kiểm 2026-10-18; cần HR + pháp chế xác nhận trước vận hành.
+- Luật: Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15 (hiệu lực 01/01/2026); NĐ 356/2025/NĐ-CP (thay NĐ 13/2023 từ 2026-01-01; nguồn mức B); Bộ luật Lao động Điều 107 (làm thêm giờ) — nguồn ở §20 kế hoạch, kiểm 2026-10-18; cần HR + pháp chế xác nhận trước vận hành.
 - DPIA: bắt buộc trước khi bật thu GPS/ảnh — [docs/DPIA.md](docs/DPIA.md) (bản nháp, **chờ pháp chế duyệt**; việc của chủ dự án + pháp chế). Khung pháp lý đầy đủ ở mục 10.
 - Phân loại dữ liệu cá nhân (BASE-SEC-013): sổ đầy đủ ở [docs/privacy/data-map.yaml](docs/privacy/data-map.yaml) và [docs/compliance/data-inventory.csv](docs/compliance/data-inventory.csv) — cơ bản (họ tên, email, SĐT, ngày vào/nghỉ, hồ sơ công tác, liên hệ khách, ứng viên) · nhạy cảm (định vị chấm công) · bí mật (băm mật khẩu, khoá ký). Cột chứa dữ liệu cá nhân phải khai trong sổ; script `npm run -s check:docs` đối chiếu với `migrations/*.sql`.
 

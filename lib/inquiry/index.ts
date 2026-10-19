@@ -11,7 +11,12 @@ import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
 import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
-import { CHANNEL_WEB_FORM, isProcessingBlocked, recordConsent } from "../privacy/consent.ts";
+import {
+  CHANNEL_WEB_FORM,
+  isProcessingBlocked,
+  PURPOSE_TALENT_POOL,
+  recordConsent,
+} from "../privacy/consent.ts";
 import { t } from "../i18n/index.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
@@ -31,6 +36,8 @@ export const ApplicationInput = z.object({
   phone: z.string().trim().regex(phoneRe).nullish(),
   cover_letter: z.string().max(8000).nullish(),
   consent: z.literal(true, { error: t("validation.inquiry.consent") }),
+  // Đồng ý RIÊNG "kho nhân tài" (D-030): không bắt buộc, mặc định false — không tích sẵn, không gộp với `consent`.
+  talent_pool: z.boolean().optional().default(false),
   website: z.string().max(200).optional().default(""),
   elapsed_ms: z.number().int().nonnegative().optional(),
 });
@@ -273,13 +280,23 @@ async function insertApplication(
       channel: CHANNEL_WEB_FORM,
       at: now,
     });
+    if (input.talent_pool)
+      await recordConsent(tx, {
+        companyId,
+        subjectType: "job_application",
+        subjectId: rows[0].id,
+        purposeId: PURPOSE_TALENT_POOL,
+        policyVersion: CONSENT_NOTICE_VERSION,
+        channel: CHANNEL_WEB_FORM,
+        at: now,
+      });
     await appendAudit(tx, {
       actorUserId: null,
       companyId,
       action: "application.create",
       objectType: "job_application",
       objectId: rows[0].id,
-      after: { code },
+      after: { code, talent_pool: input.talent_pool },
       requestId: meta.requestId ?? null,
     });
     await enqueue(tx, companyId, "application.received", { applicationId: rows[0]!.id, code });

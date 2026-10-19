@@ -250,3 +250,11 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: không thêm phụ thuộc, không nới hàng rào; CBC không xác thực nhưng toàn vẹn được bảo vệ bằng sha256 kiểm trước khi giải mã.
 - Đường lùi: Chuyển sang age/AES-GCM khi có công cụ chuẩn trên máy chủ
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Dùng KMS/age và lưu sao lưu off-site; Prometheus/Alertmanager thật
+
+### D-035 · 2026-10-19T02:50:23+00:00 · Chi tiết còn mở của T-044: gia hạn DSAR, xoá liên hệ nhân viên nghỉ việc, hồ sơ ứng viên đã trúng tuyển?
+
+- Phương án: (1) Gia hạn một lần +15 ngày (theo khoản 5, khoản 2-4 chưa xác minh) và từ chối gia hạn khi đã quá hạn; xoá SĐT/email nhân viên ngay sau ngày chấm dứt, ẩn danh họ tên sau 10 năm; hồ sơ ứng viên trúng tuyển không đụng tới (chờ liên kết với nhân viên) · (2) +7 ngày, gia hạn hồi tố có cờ, chờ 30 ngày trước khi xoá liên hệ
+- Chọn: Gia hạn một lần +15 ngày (theo khoản 5, khoản 2-4 chưa xác minh) và từ chối gia hạn khi đã quá hạn; xoá SĐT/email nhân viên ngay sau ngày chấm dứt, ẩn danh họ tên sau 10 năm; hồ sơ ứng viên trúng tuyển không đụng tới (chờ liên kết với nhân viên)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: bám đúng chữ luật đã đọc được, đơn giản; phần chưa chắc ghi rõ là giả định.
+- Đường lùi: Đổi cấu hình số ngày; thêm migration liên kết ứng viên-nhân viên
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HR chốt thời gian chờ xoá liên hệ nhân viên nghỉ việc (lương cuối); luật sư xác nhận số ngày gia hạn

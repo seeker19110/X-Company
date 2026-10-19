@@ -96,15 +96,44 @@ export const SERVER_SPEC = {
       .default("true")
       .transform((v) => v === "true"),
   ),
+  // D-030 (nguồn: Luật 91/2025/QH15 Điều 3.3 "phù hợp mục đích", Điều 14.1 xoá khi hết mục đích — mức A; số cụ thể là lựa chọn
+  // thận trọng của chủ dự án uỷ quyền cho phiên chính, CHƯA có xác nhận pháp chế).
+  // Liên hệ khách: 24 tháng kể từ khi tạo rồi ẩn danh.
   RETENTION_INQUIRY_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(730)),
+  // Ứng viên đang xử lý mà quá lâu chưa chốt kết quả (lưới an toàn; không phải mốc của ứng viên đã chốt): ẩn danh sau ngần ấy ngày.
   RETENTION_APPLICATION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(365)),
+  // Ứng viên KHÔNG trúng tuyển: ẩn danh sau 30 ngày kể từ khi chốt kết quả (Luật 91/2025 Điều 25.1c: xoá thông tin ứng viên khi
+  // không tuyển, trừ thoả thuận khác — mức A), trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực.
+  RETENTION_APPLICATION_DECIDED_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
+  // Có đồng ý "kho nhân tài" còn hiệu lực: giữ 12 tháng kể từ khi chốt kết quả (đồng ý rút được bất kỳ lúc nào → quay về 30 ngày).
+  RETENTION_TALENT_POOL_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(365)),
+  // Nhân viên đã chấm dứt hợp đồng: sau ngần ấy ngày kể từ ngày chấm dứt, xoá phần liên hệ (SĐT, email) không phải giữ theo luật
+  // (Luật 91/2025 Điều 25.2c: xoá/huỷ khi chấm dứt hợp đồng trừ luật khác — mức A). 0 = ngay sau ngày chấm dứt.
+  RETENTION_EMPLOYEE_TERMINATED_DAYS: field(z.coerce.number().int().min(0).max(36_500).default(0)),
+  // Hồ sơ lao động, chấm công, lương, chứng từ: giữ 10 năm (Luật Kế toán 2015 Điều 41.5b, sửa bởi Luật 56/2024 — mức B; bảng lương
+  // thuộc nhóm 5 hay 10 năm CHƯA xác minh nên chọn 10). Hết hạn → họ tên nhân viên được ẩn danh (dòng công/lương không xoá được).
+  RETENTION_TIMESHEET_YEARS: field(z.coerce.number().int().min(1).max(100).default(10)),
+  // Hồ sơ vi phạm dữ liệu: giữ tối thiểu 5 năm sau khắc phục (NĐ 356/2025 Điều 29.1c — mức B). Chưa có bảng hồ sơ vi phạm trong
+  // CSDL (nằm ở quy trình docs/ops/runbooks/data-breach.md); hằng này để job/bảng tương lai và kiểm tài liệu bám theo.
+  RETENTION_BREACH_RECORD_YEARS: field(z.coerce.number().int().min(1).max(100).default(5)),
   RETENTION_SESSION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
   RETENTION_LOGIN_ATTEMPT_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(90)),
   RETENTION_OUTBOX_DONE_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
-  // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007), tính bằng ngày lịch kể từ lúc nhận. Mặc định 30 ngày là
-  // GIẢ ĐỊNH thận trọng — pháp chế xác minh số ngày theo NĐ 356/2025 (rút đồng ý/xoá có thể ngắn hơn, vd 72 giờ).
-  DSAR_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007; D-029) THEO LOẠI yêu cầu — NĐ 356/2025/NĐ-CP Điều 5 (nguồn mức B:
+  // bản sao thương mại, chưa đối chiếu Công báo). Ngày ở ba biến DSAR_DAYS_* là ngày LỊCH kể từ lúc nhận (GIẢ ĐỊNH: văn bản
+  // không nói ngày làm việc); riêng hạn phản hồi đã nhận tính theo ngày LÀM VIỆC (bỏ T7, CN; ngày lễ chưa loại — H02).
+  // Đường lùi D-029: đặt cả ba biến về cùng một số để quay lại hạn chung. Thay biến cũ DSAR_DAYS (một số chung = 30).
+  DSAR_RESPOND_WORKDAYS: field(z.coerce.number().int().min(1).max(30).default(2)),
+  // access (xem) · rectify (chỉnh sửa) · export (cung cấp): 10 ngày (Điều 5 khoản 3).
+  DSAR_DAYS_ACCESS: field(z.coerce.number().int().min(1).max(365).default(10)),
+  // withdraw_consent (rút đồng ý) · restrict (hạn chế) · object (phản đối): 15 ngày (Điều 5 khoản 2).
+  DSAR_DAYS_RESTRICT: field(z.coerce.number().int().min(1).max(365).default(15)),
+  // delete (xoá): 20 ngày (Điều 5 khoản 4).
+  DSAR_DAYS_DELETE: field(z.coerce.number().int().min(1).max(365).default(20)),
+  // Gia hạn tối đa MỘT lần kèm lý do. Số ngày gia hạn của khoản 2-4 CHƯA XÁC MINH (chỉ khoản 5 nêu ≤ 15 ngày) →
+  // GIẢ ĐỊNH 15 ngày, luật sư đối chiếu rồi đổi biến này.
+  DSAR_EXTEND_DAYS: field(z.coerce.number().int().min(1).max(365).default(15)),
   // Cảnh báo vận hành cục bộ (T-046): bộ đánh giá chạy trong tiến trình worker khi ALERTS_ENABLED=true (mặc định tắt).
   ALERTS_ENABLED: field(
     z

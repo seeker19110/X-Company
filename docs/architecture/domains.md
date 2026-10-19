@@ -14,11 +14,11 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |
-| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `request-schema.pure.ts`, `routes.ts`, `scope.ts` | chấm công; `compute.ts` là lõi thuần; `request-schema.pure.ts` = schema form dùng chung client+server |
+| `attendance` | `index.ts`, `approvals.ts`, `compute.ts`, `period.ts`, `request-routes.ts`, `request-schema.pure.ts`, `routes.ts`, `scope.ts`, `labor-rules.ts` | chấm công; `compute.ts` và `labor-rules.ts` (trần OT, hệ số lương, nghỉ — cấu hình có ngày hiệu lực) là lõi thuần; `request-schema.pure.ts` = schema form dùng chung client+server |
 | `work` | `index.ts`, `tasks.ts`, `progress.ts`, `routes.ts` | dự án/công việc; `progress-compute.ts` là lõi thuần                      |
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
 | `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
-| `privacy` | `index.ts`, `consent.ts`, `routes.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`) |
+| `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029) |
 | `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
@@ -43,4 +43,4 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 ## Mô-đun thuần (ARC-MOD-003)
 
 Không import `lib/db`, `pg`, `node:http(s)`, `next/*` (ESLint `no-restricted-imports`, `eslint.config.mjs`):
-`lib/attendance/compute.ts`, `lib/work/progress-compute.ts`, `lib/authz/index.ts`, `lib/offline/queue.ts`, mọi `lib/**/*.pure.ts` và `lib/**/pure/**`.
+`lib/attendance/compute.ts`, `lib/attendance/labor-rules.ts`, `lib/work/progress-compute.ts`, `lib/authz/index.ts`, `lib/offline/queue.ts`, mọi `lib/**/*.pure.ts` và `lib/**/pure/**`.

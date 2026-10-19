@@ -72,6 +72,10 @@ Trạng thái: Approved for implementation (D-006)
 - S-AT-06 (AT05): nhân viên đã bị thu hồi quyền đồng bộ hàng chờ → 403, sự kiện không áp dụng.
 - S-AT-07 (AT06): kỳ đã khoá, sự kiện muộn → `needs_review`, xuất phiên bản 1 không đổi checksum.
 - S-AT-08 (AT07): đơn OT 5 giờ ngày thường → 422 `OT_LIMIT_DAY`; người tạo tự duyệt → 409 `SELF_APPROVAL`.
+- S-AT-10 (RK-001, D-031): trần OT theo luật — OT ≤ 50% giờ bình thường/ngày (4 giờ), tổng ≤ 12 giờ/ngày, ≤ 40 giờ/tháng, ≤ 200 giờ/năm (300 giờ chỉ khi cờ ngành); đúng trần ok, vượt 1 phút → vi phạm kèm mã; kiểm đồng thời, đã duyệt + đề nghị cộng dồn (`tests/unit/labor-rules.test.ts`).
+- S-AT-11 (D-031): hệ số trả lương số nguyên %: thường 100, đêm 130, OT 150/200/300, OT đêm = OT + 30 + 20.
+- S-AT-12 (D-031): cảnh báo (không chặn) nghỉ giữa ca 30' (ca đêm 45', chỉ ca ≥ 6 giờ), nghỉ ≥ 12 giờ giữa hai ca, nghỉ tuần ≥ 24 giờ liên tục.
+- S-AT-13 (D-007, D-031): quy tắc có ngày hiệu lực, tra theo ngày nghiệp vụ; kỳ cũ giữ bản cũ.
 - S-AT-09: QR hết hạn 75 s → 422 `QR_EXPIRED`; chữ ký sai → 422 `QR_INVALID`.
 - Ca biên: ca không có sự kiện → `ABSENT` (không phải 0 giờ có mặt mà là trạng thái riêng); `device_time` tương lai > 5' → `needs_review`; DST không có ở VN nhưng mã dùng instant UTC nên đúng với múi giờ có DST.
 
@@ -90,6 +94,10 @@ Mỗi tiêu chí `AC-<MIỀN>-NN` ánh xạ 1-1 tới một kịch bản `S-*` �
 | AC-AT-07 | lỗi | Given kỳ đã khoá, When sự kiện muộn, Then `needs_review`, xuất phiên bản 1 không đổi checksum | S-AT-07 |
 | AC-AT-08 | lỗi | Given đơn OT 5 giờ ngày thường Then 422 `OT_LIMIT_DAY`; người tạo tự duyệt Then 409 `SELF_APPROVAL` | S-AT-08 |
 | AC-AT-09 | lỗi | Given QR hết hạn 75 s Then 422 `QR_EXPIRED`; chữ ký sai Then 422 `QR_INVALID` | S-AT-09 |
+| AC-AT-10 | biên | Given OT đã duyệt + đề nghị đúng 4 giờ/ngày, 40 giờ/tháng, 200 giờ/năm Then ok; vượt 1 phút Then vi phạm `OT_LIMIT_*` (năm 300 giờ chỉ khi cờ ngành bật) | S-AT-10 |
+| AC-AT-11 | chuẩn | Given giờ thường/đêm/OT ngày thường, nghỉ tuần, lễ Then hệ số 100/130/150/200/300 và OT đêm cộng 30 + 20 (số nguyên %) | S-AT-11 |
+| AC-AT-12 | biên | Given nghỉ giữa ca 29' (đêm 44'), hai ca cách 11 giờ 59, 7 ngày liền không nghỉ Then cảnh báo không chặn; đúng ngưỡng Then không cảnh báo | S-AT-12 |
+| AC-AT-13 | biên | Given hai phiên bản quy tắc, Then ngày trước hiệu lực dùng bản cũ, đúng ngày hiệu lực dùng bản mới | S-AT-13 |
 
 ## Ca biên
 

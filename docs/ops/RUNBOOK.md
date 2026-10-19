@@ -186,7 +186,7 @@ Bộ đánh giá `lib/ops/alerts.ts` chạy trong tiến trình worker khi `ALER
 | `XCLocalAuditChainBroken` | page | chuỗi audit không hợp lệ | mục "Chuỗi audit hỏng" bên dưới |
 
 #### DSAR quá hạn
-Liệt kê: `psql "$DATABASE_URL" -c "select id, kind, status, received_at, due_at from data_subject_request where status in ('received','in_progress') and due_at < now() order by due_at"`. Xử lý qua API `/api/app/privacy/requests/[id]/[action]` (chưa có màn hình quản trị); không tự sửa `due_at`. Quá hạn pháp lý → báo DPO/chủ dự án và ghi vào timeline sự cố.
+Liệt kê: `psql "$DATABASE_URL" -c "select id, kind, status, received_at, due_at, respond_due_at, responded_at from data_subject_request where (status in ('received','in_progress') and due_at < now()) or (responded_at is null and respond_due_at < now()) order by due_at"` (quá hạn thực hiện HOẶC quá hạn phản hồi "đã nhận" 2 ngày làm việc — D-029). Xử lý qua API `/api/app/privacy/requests/[id]/[action]` (`respond`, `extend` một lần kèm lý do khi chưa quá hạn, `complete`, `reject`; chưa có màn hình quản trị); không tự sửa `due_at`. Quá hạn pháp lý → báo DPO/chủ dự án và ghi vào timeline sự cố.
 
 #### Khoá kỳ công quá hạn
 Liệt kê: `psql "$DATABASE_URL" -c "select code, status, end_date from attendance_period where status <> 'locked' and end_date < current_date - 7 order by end_date"`. Nhắc người phụ trách (HR) đi tiếp luồng open → employee_review → manager_confirmed → hr_closed → locked; chỉ HR được khoá.

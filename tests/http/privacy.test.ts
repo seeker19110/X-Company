@@ -187,4 +187,46 @@ describe("API quyền chủ thể dữ liệu (T-040)", () => {
     assert.equal(row.name, "[đã ẩn danh]");
     assert.equal(row.status, "processing_stopped");
   });
+
+  test("api5-bfla POST /api/app/privacy/requests/[id]/[action] — API trả hạn theo loại; respond/extend: thiếu lý do 422, gia hạn lần hai 409, không phải HR 403", async () => {
+    const r3 = await submitInquiry(
+      db.app,
+      companyId,
+      InquiryInput.parse({
+        submission_id: randomUUID(),
+        name: "Khách Hạn",
+        email: "khach.han@example.test",
+        message: "Cần báo giá",
+        consent: true,
+        elapsed_ms: 9000,
+      }),
+      { ip: "10.5.5.7" },
+    );
+    const c = await (await create(hr, body("delete", r3.code))).json();
+    const rq = c.request;
+    const ms = (a: string, b: string) => Date.parse(a) - Date.parse(b);
+    assert.equal(ms(rq.due_at, rq.received_at), 20 * 86_400_000, "xoá = 20 ngày");
+    assert.equal(typeof rq.respond_due_at, "string", "có hạn phản hồi");
+    assert.equal(rq.responded_at, null);
+    assert.equal((await act(emp, rq.id, "respond")).status, 403);
+    assert.equal((await act(emp, rq.id, "extend", { reason: "x" })).status, 403);
+    const resp = await act(hr, rq.id, "respond");
+    assert.equal(resp.status, 200);
+    assert.equal(typeof (await resp.json()).request.responded_at, "string");
+    assert.equal((await act(hr, rq.id, "extend", {})).status, 422, "thiếu lý do");
+    const ext = await act(hr, rq.id, "extend", { reason: "Cần xác minh danh tính chủ thể" });
+    assert.equal(ext.status, 200);
+    const extended = (await ext.json()).request;
+    assert.equal(ms(extended.due_at, rq.due_at), 15 * 86_400_000);
+    assert.equal(extended.extension_days, 15);
+    const second = await act(hr, rq.id, "extend", { reason: "Lần hai" });
+    assert.equal(second.status, 409);
+    assert.equal((await second.json()).error.code, "EXTENSION_ALREADY_USED");
+    assert.equal((await act(hr2, rq.id, "extend", { reason: "Công ty khác" })).status, 404);
+    const listed = (await (await getRequests(req("GET", BASE, { cookie: hr.cookie }))).json()).items.find(
+      (x: { id: string }) => x.id === rq.id,
+    );
+    assert.equal(listed.respond_overdue, false);
+    assert.equal(listed.overdue, false);
+  });
 });
