@@ -258,3 +258,10 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: bám đúng chữ luật đã đọc được, đơn giản; phần chưa chắc ghi rõ là giả định.
 - Đường lùi: Đổi cấu hình số ngày; thêm migration liên kết ứng viên-nhân viên
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HR chốt thời gian chờ xoá liên hệ nhân viên nghỉ việc (lương cuối); luật sư xác nhận số ngày gia hạn
+
+### D-036 · 2026-10-19T03:55:18+00:00 · Đường dẫn mã hoá % hỏng làm Next trả 500 không có header bảo mật (DAST phát hiện): sửa thế nào mà không phình JS?
+
+- Phương án: (1) Rewrite beforeFiles trong next.config.ts đưa về 404, test thuộc tính trên 40.000 chuỗi; thêm headers() cho nosniff/HSTS ở /api; pool DB giữ ở globalThis (hết nhân đôi kết nối) · (2) pages/400.tsx (làm JS tĩnh lên 336,9 KB > ngân sách 230) hoặc route handler 400 riêng (thêm route vào check:routes/openapi/authz)
+- Chọn: Rewrite beforeFiles trong next.config.ts đưa về 404, test thuộc tính trên 40.000 chuỗi; thêm headers() cho nosniff/HSTS ở /api; pool DB giữ ở globalThis (hết nhân đôi kết nối)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: sửa lỗi thật mà không nới ngân sách JS; chỉ cấu hình nên dễ gỡ khi Next vá; có test hồi quy.
+- Đường lùi: Gỡ rewrite khi bản Next vá lỗi DecodeError

@@ -55,6 +55,8 @@
     "build:tokens": "node scripts/build-tokens.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "lighthouse": "scripts/with-test-db.sh scripts/lighthouse.sh",
+    "dast": "scripts/with-test-db.sh node scripts/dast-baseline.mjs",
+    "perf:load": "scripts/with-test-db.sh node scripts/perf-load.mjs",
     "check:perf-budget": "node scripts/check-perf-budget.mjs",
     "check:alerts": "node scripts/check-alerts.mjs",
     "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
