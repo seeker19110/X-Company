@@ -24,7 +24,7 @@ export interface PendingItem {
 }
 
 /** Số dòng mỗi lần lấy (keyset theo created_at, id). Lọc quyền chạy SAU SQL nên phải lấy tiếp tới khi đủ/hết, không cắt cứng. */
-const BATCH = 500;
+const BATCH = 500; // khớp `LIMIT 500` trong PENDING_APPROVALS_SQL
 
 /**
  * Truy vấn lõi hàng chờ duyệt — xuất ra để test EXPLAIN (DB-PERF-001). $2/$3 = con trỏ keyset (created_at, id) của dòng cuối
@@ -44,7 +44,7 @@ export const PENDING_APPROVALS_SQL = `SELECT 'leave' AS type, r.id, r.employee_i
          a.new_at, NULL::timestamptz, a.new_kind, a.created_at, a.created_at::text, a.created_by_user_id
        FROM attendance_adjustment a JOIN employee e ON e.id = a.employee_id
        WHERE a.company_id = $1 AND a.status = 'pending' AND ($2::timestamptz IS NULL OR (a.created_at, a.id) > ($2::timestamptz, $3::uuid))
-     ORDER BY created_at, id LIMIT ${BATCH}`;
+     ORDER BY created_at, id LIMIT 500`; // 500 = BATCH (viết thẳng: không nội suy vào SQL)
 
 interface PendingRow {
   type: ApprovalType;
