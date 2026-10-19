@@ -10,7 +10,8 @@ export function securityHeaders(
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${opts.dev ? " 'unsafe-eval'" : ""}`,
-    "style-src 'self' 'unsafe-inline'",
+    // Không 'unsafe-inline' (ZAP 10055): <style> của Next mang nonce; thuộc tính style={…} không dùng — đổi sang class.
+    `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",

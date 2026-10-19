@@ -1,5 +1,14 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { expectAccessible, expectNoHorizontalScroll, login, logout, seed } from "./helpers";
+import {
+  failOnCspViolation,
+  expectAccessible,
+  expectNoHorizontalScroll,
+  login,
+  logout,
+  seed,
+} from "./helpers";
+
+failOnCspViolation();
 
 // Mọi trang/màn (UX-A11Y-001, STD-A11Y-002, UX-RESP-001): axe WCAG 2.2 AA 0 vi phạm + không cuộn ngang ở 320 CSS px.
 // Luồng chỉ bằng bàn phím (UX-A11Y-003): Tab/Enter/Escape, không click.

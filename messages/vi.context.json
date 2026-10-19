@@ -592,5 +592,10 @@
         }
       }
     }
+  },
+  "notFound": {
+    "title": "Tiêu đề trang 404 khi đường dẫn không tồn tại.",
+    "body": "Câu giải thích dưới tiêu đề trang 404.",
+    "home": "Liên kết từ trang 404 về trang chủ website."
   }
 }
