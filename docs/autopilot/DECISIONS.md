@@ -342,3 +342,10 @@
 - Chọn: bootstrap-sha = 1c2a28e (commit mở đầu X-Company) + bump-minor-pre-major: bản đầu 0.2.0, changelog chỉ commit của dự án
 - Lý do (tiêu chí chất lượng cuối): Đúng: changelog chỉ phản ánh thay đổi của sản phẩm; GO-NO-GO đang NO-GO nên 0.x đúng ngữ nghĩa SemVer (1.0.0 = API ổn định, sẵn production); bootstrap-sha chỉ áp cho bản đầu nên không cần gỡ; tránh đụng tag v2.0.0 cũ của khung (không xoá tag)
 - Đường lùi: Bỏ bootstrap-sha/bump-minor-pre-major khỏi release-please-config.json; muốn 1.0.0 thì commit có footer 'Release-As: 1.0.0'
+
+### D-048 · 2026-10-19T21:11:02+00:00 · Duyệt kế hoạch sửa audit 2026-10-19 (6 đợt, AUDIT-REPORT §5)
+
+- Phương án: (1) Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa · (2) Chờ người duyệt
+- Chọn: Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa
+- Lý do (tiêu chí chất lượng cuối): Đúng/an toàn trước: DATA/XFEAT/CODE 🟠 có tái hiện hoặc đọc mã; mục chạm auth/migration vẫn do người merge
+- Đường lùi: Đóng PR đợt chưa merge
