@@ -18,6 +18,7 @@ export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:e2e-qr-key-0123456789abcdef0123456
 # Khoá mã hoá dữ liệu lúc lưu (T-048): bắt buộc ở production → sinh ngẫu nhiên mỗi lần chạy (CSDL e2e là tạm; không literal khoá).
 export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-e2e1:$(openssl rand -base64 32)}"
 export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
+export TRUST_PROXY="${TRUST_PROXY:-0}" # production bắt buộc khai tường minh; harness không có proxy
 export FILE_STORAGE_DIR="$(mktemp -d)"
 if [ "${E2E_SKIP_BUILD:-0}" != "1" ]; then npm run -s build >/dev/null; fi
 exec npx --no-install playwright test "$@"

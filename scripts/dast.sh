@@ -22,6 +22,7 @@ export SESSION_SECRET="${SESSION_SECRET:-dast-session-secret-0123456789abcdef-xy
 export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:dast-qr-key-0123456789abcdef0123456789abcdef}"
 export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-dast1:$(openssl rand -base64 32)}"
 export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
+export TRUST_PROXY="${TRUST_PROXY:-0}" # production bắt buộc khai tường minh; harness không có proxy
 FILE_STORAGE_DIR="$(mktemp -d)"
 export FILE_STORAGE_DIR
 if [ "${DAST_SKIP_BUILD:-0}" != "1" ]; then npm run -s build >/dev/null; fi

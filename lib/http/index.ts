@@ -20,12 +20,14 @@ import {
   runWithLogContext,
 } from "../nen/log.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
+import { readCapped } from "./body.ts";
 import { guarded, type GuardOptions } from "./idempotency.ts";
 import { kb, msToSeconds } from "../nen/units.ts";
 import { normalizeNfc } from "../nen/text.ts";
 import { observeRequest } from "./metrics.ts";
 import { t } from "../i18n/index.ts";
 
+export { readCapped, readFormCapped } from "./body.ts";
 export type { GuardOptions } from "./idempotency.ts";
 
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -326,11 +328,7 @@ export async function authorize(
 }
 
 export async function readJson(req: Request, maxBytes = kb(64)): Promise<unknown> {
-  const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
-  const text = await req.text();
-  if (Buffer.byteLength(text) > maxBytes)
-    throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
+  const text = new TextDecoder().decode(await readCapped(req, maxBytes));
   try {
     return text !== "" ? normalizeNfc(JSON.parse(text)) : {}; // NFC ở biên: một ký tự Việt = một dạng lưu
   } catch {
