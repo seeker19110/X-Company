@@ -328,3 +328,10 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: không đụng thêm guard bất biến của chấm công; không nới hàng rào; sha256 + chữ ký GPG (OpenBao) kiểm trước khi chạy.
 - Đường lùi: Provider env; bỏ adapters/ và bước cài tool trong CI
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HSM/PKCS#11 hoặc cloud KMS auto-unseal; cột key_id riêng khi có nhu cầu truy vấn theo khoá
+
+### D-045 · 2026-10-19T08:37:22+00:00 · Hai lệnh kiểm workflow (WF-CI-004, SEC-SUPPLY-009) đỏ vì pr-steward.yml của khung 3.6.0 dùng issue_comment/quyền write
+
+- Phương án: (1) Loại pr-steward.yml khỏi hai lệnh kiểm (khung tự quản, tự có cổng comment OWNER/COLLABORATOR/MEMBER) · (2) Sửa pr-steward.yml cho khớp luật dự án (lệch khung, mất ở lần nâng khung kế) · (3) Gỡ pr-steward.yml
+- Chọn: Loại pr-steward.yml khỏi hai lệnh kiểm (khung tự quản, tự có cổng comment OWNER/COLLABORATOR/MEMBER)
+- Lý do (tiêu chí chất lượng cuối): Tệp do khung cung cấp và chủ dự án đã merge (#23); luật vẫn áp cho mọi workflow khác; không nới cho tệp dự án tự viết
+- Đường lùi: Bỏ biến F khỏi hai lệnh kiểm

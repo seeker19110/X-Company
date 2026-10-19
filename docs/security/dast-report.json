@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
   "date": "2026-10-19",
-  "commit": "ee5badc0d08dfd98f9c088772ef4bea2384392bb",
+  "commit": "e9c178b9965f3d51cbe54f1c3a999ab16fb6c421+dirty",
   "env": {
     "node": "v22.22.0",
     "next": "16.4.2",
@@ -33,61 +33,61 @@
           "name": "HTML /",
           "ok": true,
           "errors": [],
-          "evidence": "GET / → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET / → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /dich-vu",
           "ok": true,
           "errors": [],
-          "evidence": "GET /dich-vu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /dich-vu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /lien-he",
           "ok": true,
           "errors": [],
-          "evidence": "GET /lien-he → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /lien-he → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /gioi-thieu",
           "ok": true,
           "errors": [],
-          "evidence": "GET /gioi-thieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /gioi-thieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /tin-tuc",
           "ok": true,
           "errors": [],
-          "evidence": "GET /tin-tuc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /tin-tuc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /dich-vu/tu-van-thiet-ke",
           "ok": true,
           "errors": [],
-          "evidence": "GET /dich-vu/tu-van-thiet-ke → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /dich-vu/tu-van-thiet-ke → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /dich-vu/dast-markdown-doc",
           "ok": true,
           "errors": [],
-          "evidence": "GET /dich-vu/dast-markdown-doc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /dich-vu/dast-markdown-doc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /chinh-sach-du-lieu",
           "ok": true,
           "errors": [],
-          "evidence": "GET /chinh-sach-du-lieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /chinh-sach-du-lieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "HTML /khong-co-trang-nay",
           "ok": true,
           "errors": [],
-          "evidence": "GET /khong-co-trang-nay → 404 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()] <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+          "evidence": "GET /khong-co-trang-nay → 404 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()] <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
         },
         {
           "name": "HTML /app/login",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/login → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+          "evidence": "GET /app/login → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
         },
         {
           "name": "nonce CSP đổi mỗi request",
@@ -99,37 +99,37 @@
           "name": "HTML nội bộ /app/today",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/today (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/today (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "HTML nội bộ /app/tasks",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/tasks (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/tasks (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "HTML nội bộ /app/attendance",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/attendance (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/attendance (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "HTML nội bộ /app/approvals",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/approvals (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/approvals (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "HTML nội bộ /app/dashboard",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/dashboard (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/dashboard (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "HTML nội bộ /app/me",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/me (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+          "evidence": "GET /app/me (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
         },
         {
           "name": "redirect chưa đăng nhập vẫn không cache",
@@ -165,13 +165,13 @@
           "name": "HTTPS: / có HSTS + CSP + còn lại",
           "ok": true,
           "errors": [],
-          "evidence": "GET / (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
+          "evidence": "GET / (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
         },
         {
           "name": "HTTPS: /app/login có HSTS",
           "ok": true,
           "errors": [],
-          "evidence": "GET /app/login (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' 'unsaf…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
+          "evidence": "GET /app/login (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
         },
         {
           "name": "HTTPS: API có HSTS",
@@ -307,7 +307,7 @@
           "name": "tiền điều kiện: trang CMS độc đã xuất bản và có nội dung render",
           "ok": true,
           "errors": [],
-          "evidence": "GET /dich-vu/dast-markdown-doc → 200 — thân 18893 B"
+          "evidence": "GET /dich-vu/dast-markdown-doc → 200 — thân 17151 B"
         },
         {
           "name": "CMS markdown độc (script/img/svg/iframe/javascript:/data:/entity/tab/autolink/bảng/code) + tiêu đề/tóm tắt/SEO/canonical",
@@ -385,7 +385,7 @@
           "name": "DOM thật: 404 phản chiếu đường dẫn",
           "ok": true,
           "errors": [],
-          "evidence": "Chromium mở /dich-vu/%22%3E%3Cimg%20data-mk%3D%22MK-… → 404; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+          "evidence": "Chromium mở /dich-vu/%22%3E%3Cimg%20data-mk%3D%22MK-… → 404; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 1 liên kết trong nội dung"
         },
         {
           "name": "DOM thật: phản chiếu ở /app/login",
@@ -637,7 +637,7 @@
           "name": "API: UUID không tồn tại",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/9bfef1ee-7d06-4b4d-a22e-70cdbc114055 → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+          "evidence": "GET /api/app/files/7918347c-9f53-4b61-a287-be1526c5fdb8 → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
         },
         {
           "name": "API: id kiểu SQL injection",
@@ -649,7 +649,7 @@
           "name": "API: hành động việc không tồn tại",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/hack → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy\",\"insta…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/hack → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy\",\"insta…"
         },
         {
           "name": "API: chưa đăng nhập",
@@ -821,7 +821,7 @@
           "name": "tiền điều kiện: nv sở hữu việc, tệp và bình luận",
           "ok": true,
           "errors": [],
-          "evidence": "việc 153d55b0…, tệp d8fcd0f4…, bình luận → 201"
+          "evidence": "việc d3dd419d…, tệp 949c020a…, bình luận → 201"
         },
         {
           "name": "đối chứng: chủ việc đọc được bình luận của mình",
@@ -833,13 +833,13 @@
           "name": "BOLA: nv2 tải tệp của nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/d8fcd0f4-7f4d-4ab1-821f-ec53d229f541 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/files/949c020a-e1df-4d1d-a140-3eb1a488d071 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "BOLA: nv2 đọc bình luận của việc nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/comments?object_type=task&object_id=153d55b0-e389-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/comments?object_type=task&object_id=d3dd419d-ba8b-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "BOLA: nv2 bình luận lên việc của nv",
@@ -857,31 +857,31 @@
           "name": "BOLA: nv2 start việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 submit việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/submit → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/submit → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 accept việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/accept → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/accept → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 cancel việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/cancel → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/cancel → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: danh sách việc của nv2 không chứa việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/tasks (nv2) → 0 mục, không có 153d55b0…"
+          "evidence": "GET /api/app/tasks (nv2) → 0 mục, không có d3dd419d…"
         },
         {
           "name": "BOLA: tham số/header user_id không đổi danh tính (mass assignment danh tính)",
@@ -893,19 +893,19 @@
           "name": "tenant: người dùng công ty khác tải tệp",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/d8fcd0f4-7f4d-4ab1-821f-ec53d229f541 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+          "evidence": "GET /api/app/files/949c020a-e1df-4d1d-a140-3eb1a488d071 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
         },
         {
           "name": "tenant: đọc bình luận việc công ty khác",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/comments?object_type=task&object_id=153d55b0-e389-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/comments?object_type=task&object_id=d3dd419d-ba8b-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "tenant: đổi trạng thái việc công ty khác",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BFLA/BOLA: nv2 (đồng cấp) duyệt đơn OT của nv → bị từ chối",
@@ -959,7 +959,7 @@
           "name": "BFLA: nv hiển thị QR địa điểm → bị từ chối",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/attendance/qr/8430909c-bb66-41c4-ba4d-666… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy địa điể…"
+          "evidence": "GET /api/app/attendance/qr/1d5f5feb-4a52-47b4-a0e0-d9e… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy địa điể…"
         },
         {
           "name": "không phiên → 401 trên 18 route /api/app/*",
@@ -1015,13 +1015,13 @@
           "name": "API ghi theo người dùng: > 60/phút → 429 + Retry-After",
           "ok": true,
           "errors": [],
-          "evidence": "62 request song song; lần bị chặn → 429 [retry-after: 10] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn thao tác quá…"
+          "evidence": "62 request song song; lần bị chặn → 429 [retry-after: 22] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn thao tác quá…"
         },
         {
           "name": "Idempotency-Key: tạo → phát lại nguyên văn; tái dùng khoá khác thân → 422; thiếu khoá → 400; song song cùng khoá → 1 lần chạy thật",
           "ok": true,
           "errors": [],
-          "evidence": "201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,201,409,409,409,409"
+          "evidence": "201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,409,201,409,409,409"
         }
       ]
     }
