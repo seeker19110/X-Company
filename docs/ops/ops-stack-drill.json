@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
-  "startedAt": "2026-10-19T11:57:06.719Z",
-  "commit": "f52b8548786a97669336c796007d7b2a4fbe10af+dirty",
+  "startedAt": "2026-10-19T12:19:51.504Z",
+  "commit": "bfbbd695b55cc014120db05a710d97487379e387+dirty",
   "environment": {
     "node": "v22.22.0",
     "next": "16.4.2",
@@ -21,28 +21,28 @@
       "label": "rule hợp lệ",
       "cmd": "promtool check rules ops/prometheus/alerts.yml",
       "ok": true,
-      "ms": 50,
+      "ms": 37,
       "output": "Checking /home/user/X-Company/ops/prometheus/alerts.yml\n  SUCCESS: 4 rules found"
     },
     {
       "label": "unit test rule (đồng hồ giả)",
       "cmd": "promtool test rules ops/prometheus/alerts.test.yml",
       "ok": true,
-      "ms": 1283,
+      "ms": 1254,
       "output": "SUCCESS"
     },
     {
       "label": "cấu hình Prometheus mẫu",
       "cmd": "promtool check config --syntax-only ops/prometheus/prometheus.yml",
       "ok": true,
-      "ms": 38,
+      "ms": 33,
       "output": "Checking /home/user/X-Company/ops/prometheus/prometheus.yml\n SUCCESS: /home/user/X-Company/ops/prometheus/prometheus.yml is valid prometheus config file syntax"
     },
     {
       "label": "cấu hình Alertmanager mẫu",
       "cmd": "amtool check-config ops/alertmanager/alertmanager.yml",
       "ok": true,
-      "ms": 13,
+      "ms": 12,
       "output": "Found:\n - global config\n - route\n - 1 inhibit rules\n - 2 receivers\n - 0 templates"
     },
     {
@@ -62,7 +62,7 @@
     {
       "name": "Prometheus scrape /api/metrics có bearer",
       "ok": true,
-      "detail": "up == 1 sau 5333 ms"
+      "detail": "up == 1 sau 5590 ms"
     },
     {
       "name": "metric HTTP của app vào TSDB",
@@ -97,12 +97,12 @@
     {
       "name": "dừng app → firing tới webhook",
       "ok": true,
-      "detail": "XCDrillTargetDown sau 2032 ms"
+      "detail": "XCDrillTargetDown sau 2160 ms"
     },
     {
       "name": "bật lại app → resolved tới webhook",
       "ok": true,
-      "detail": "sau 914 ms"
+      "detail": "sau 73 ms"
     },
     {
       "name": "rule SLO thật không bắn khi lưu lượng sạch",

@@ -6,6 +6,7 @@ const config = [
     ignores: [
       ".xtemplates/**",
       ".claude/worktrees/**", // worktree tạm của agent — không thuộc mã nguồn
+      ".tools/**", // công cụ vận hành tải về (install-tool.mjs, gitignore) — gồm thư mục home của ZAP có JS bên thứ ba
       ".next/**",
       "node_modules/**",
       "coverage/**",

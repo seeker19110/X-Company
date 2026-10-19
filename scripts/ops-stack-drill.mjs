@@ -121,6 +121,9 @@ export function sloQueries(markdown) {
   return qs;
 }
 
+/** Ô bảng markdown: escape `\\` trước rồi mới `|` (escape `|` một mình để lọt `\\|`), gộp dòng. */
+export const mdCell = (v) => String(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
+
 /** Tên alert trong tệp rule. */
 export function alertNames(rulesYml) {
   return [...rulesYml.matchAll(/^\s*- alert:\s*(\S+)\s*$/gm)].map((m) => m[1]);
@@ -202,6 +205,15 @@ function startDaemon(bin, args, label) {
 }
 function stopDaemons() {
   for (const c of procs) c.kill("SIGTERM");
+}
+/** Dừng và CHỜ tiến trình thoát (Alertmanager/Prometheus còn ghi vào thư mục dữ liệu khi nhận SIGTERM) — rồi mới xoá thư mục tạm. */
+async function stopDaemonsAndWait(timeoutMs = 15_000) {
+  const live = [...procs].filter((c) => c.exitCode === null && c.signalCode === null);
+  const exited = live.map((c) => new Promise((r) => c.once("exit", r)));
+  for (const c of live) c.kill("SIGTERM");
+  const timer = sleep(timeoutMs).then(() => live.forEach((c) => c.kill("SIGKILL")));
+  await Promise.race([Promise.all(exited), timer]);
+  await Promise.all(exited);
 }
 process.on("exit", stopDaemons);
 
@@ -361,10 +373,10 @@ async function main() {
     );
     const slo = sloQueries(readFileSync(path.join(ROOT, "docs/ops/SLO.md"), "utf8"));
     const sloBad = [];
+    // Chạy bằng `promtool query instant` (công cụ chính chủ): exit ≠ 0 khi PromQL sai cú pháp/không thực thi được.
     for (const q of slo) {
-      const r = await fetch(`${promBase}/api/v1/query?query=${encodeURIComponent(q)}`);
-      const b = await r.json().catch(() => ({}));
-      if (!r.ok || b.status !== "success") sloBad.push(`${q} → ${b.error ?? r.status}`);
+      const r = spawnSync(bins.promtool, ["query", "instant", promBase, q], { encoding: "utf8" });
+      if (r.status !== 0) sloBad.push(`${q} → ${(r.stderr || r.stdout || "").trim().slice(0, 200)}`);
     }
     step(
       "truy vấn SLI trong docs/ops/SLO.md chạy được",
@@ -418,9 +430,9 @@ async function main() {
   } catch (e) {
     step("end-to-end chạy hết", false, String(e?.message ?? e).slice(0, 1500));
   } finally {
-    stopDaemons();
+    await stopDaemonsAndWait();
     hook.close();
-    rmSync(work, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true, maxRetries: 3 });
   }
 
   const ok = checks.every((c) => c.ok) && steps.length > 0 && steps.every((s) => s.ok);
@@ -458,9 +470,7 @@ async function main() {
     "",
     "| Bước | Kết quả | Chi tiết |",
     "| --- | --- | --- |",
-    ...steps.map(
-      (s) => `| ${s.name} | ${s.ok ? "đạt" : "ĐỎ"} | ${s.detail.replace(/\|/g, "\\|").replace(/\n/g, " ")} |`,
-    ),
+    ...steps.map((s) => `| ${s.name} | ${s.ok ? "đạt" : "ĐỎ"} | ${mdCell(s.detail)} |`),
     "",
     "## Không chứng minh",
     "",

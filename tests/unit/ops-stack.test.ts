@@ -118,6 +118,14 @@ describe("ops-stack-drill: độ phủ test rule (OPS-SLO-006)", () => {
   });
 });
 
+describe("ops-stack-drill: ô bảng báo cáo", () => {
+  test("mdCell escape \\ trước |, gộp dòng — chuỗi `a\\|b` không phá cột", () => {
+    assert.equal(drill.mdCell("a|b\nc"), "a\\|b c");
+    assert.equal(drill.mdCell("a\\|b"), "a\\\\\\|b");
+    assert.equal(drill.mdCell(3), "3");
+  });
+});
+
 describe("install-tool: bảng ghim Prometheus/Alertmanager", () => {
   const tools = TOOLS as Record<
     string,
