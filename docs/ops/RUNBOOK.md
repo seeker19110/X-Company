@@ -134,6 +134,15 @@ psql "$MIGRATE_DATABASE_URL" -c 'delete from session'
 3. Sau ≥ 5 phút (QR cũ hết TTL; bản chờ ngoại tuyến quá hạn QR thì vào `needs_review`) bỏ kid cũ: `QR_SIGNING_KEYS="k2026b:<khoá-mới>"` → restart.
 4. **Nếu khoá bị lộ**: bỏ kid lộ ngay (bước 3 không chờ), chấp nhận QR đang hiển thị mất hiệu lực; rà `attendance_event` có `qr_nonce` trong khoảng lộ (mục "Lộ bí mật").
 
+### `DATA_ENCRYPTION_KEYS` / `DATA_INDEX_KEY` — mã hoá dữ liệu lúc lưu (T-048)
+Chi tiết, phạm vi và cảnh báo mất khoá: [../security/encryption-at-rest.md](../security/encryption-at-rest.md). **Mất mọi khoá = mất dữ liệu đã mã hoá** — sao lưu khoá riêng, tách khỏi sao lưu CSDL.
+1. Sinh khoá: `openssl rand -base64 32`. Thêm khoá MỚI lên ĐẦU: `DATA_ENCRYPTION_KEYS="d2:<khoá-mới>,d1:<khoá-cũ>"` → restart.
+2. Chạy `npm run -s crypto:rotate` (cột PII + bọc lại khoá tệp; idempotent, theo lô, chạy lại được). Xong khi mọi dòng `còn khoá cũ 0`, exit 0.
+3. Chỉ sau đó mới bỏ khoá cũ khỏi cấu hình → restart. Kiểm: `npm run -s crypto:rotate` vẫn xanh (không `KEY_UNKNOWN`).
+4. Nghi lộ khoá: làm bước 1–3 NGAY (không chờ), rồi coi dữ liệu mã hoá bằng khoá lộ trong các bản sao lưu cũ là đã lộ → [data-breach.md](runbooks/data-breach.md). `DATA_INDEX_KEY` đổi → `npm run -s crypto:backfill -- --reindex`.
+5. Dữ liệu cũ chưa mã hoá: `npm run -s crypto:backfill` (kiểm số dòng), sau khi đọc kiểm xong mới `-- --scrub` (xoá bản rõ — mất đường lùi "bản trước đọc cột rõ").
+6. Lùi bản ứng dụng: schema mới chạy được với bản trước (cột mới cho phép NULL); dòng ghi bởi bản mới có cột bản rõ NULL — không hạ bản khi đã có dữ liệu mới nếu chưa có công cụ giải mã ngược.
+
 ### Mật khẩu DB
 Hai role đăng nhập tách vai trò: role ứng dụng (thành viên `xc_app_rw`, dùng trong `DATABASE_URL`) và role migration owner (`MIGRATE_DATABASE_URL`). Tên role đăng nhập: `<chủ dự án điền>`.
 ```bash
@@ -152,6 +161,7 @@ Nguyên tắc: **thu hồi trước, điều tra sau**; xoá commit không đủ
 |---|---|---|
 | `SESSION_SECRET` | mục 2 (xoay + `delete from session`) | log truy cập; `audit_event` hành động ghi trong khoảng lộ |
 | `QR_SIGNING_KEYS` | mục 2 (bỏ kid lộ ngay) | `attendance_event` có `qr_nonce` trong khoảng lộ: `source='qr'` bất thường, `needs_review` |
+| `DATA_ENCRYPTION_KEYS` / `DATA_INDEX_KEY` | mục 2 (thêm khoá mới lên đầu + `crypto:rotate`, rồi bỏ khoá lộ) | truy cập kho bí mật; bản sao lưu CSDL tạo trong khoảng lộ coi như lộ dữ liệu mã hoá bằng khoá đó |
 | Mật khẩu role ứng dụng | `alter role … password` (mục 2) + restart | log kết nối PostgreSQL (`log_connections`) và `pg_stat_activity` nếu bật |
 | Mật khẩu role migration | `alter role … password`; kiểm không có migration lạ: `select * from schema_migrations` | tệp migration đã áp có checksum khớp repo |
 | Token GitHub (PAT, token Actions, `GITLEAKS_LICENSE`) | thu hồi ở GitHub Settings → Developer settings / Secrets → tạo lại | GitHub audit log, lịch sử workflow |

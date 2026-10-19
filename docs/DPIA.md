@@ -32,7 +32,7 @@ Chi tiết từng cột: [privacy/data-map.yaml](privacy/data-map.yaml), [compli
 | An ninh hệ thống | IP, user agent, email đăng nhập | người dùng | tự động | lợi ích chính đáng (pháp chế xác nhận khi chạy thật) |
 
 **Dữ liệu sinh trắc / ảnh khuôn mặt: KHÔNG thu** (D-032). Đã kiểm mã ngày 2026-10-19: không có mã chụp ảnh/camera/nhận diện khuôn mặt; hạng mục chấm công chỉ có `source` ∈ {qr, gps, kiosk}; mô-đun tệp (`lib/files`) chỉ nhận tài liệu đính kèm theo đối tượng nghiệp vụ, không dùng cho ảnh chấm công. Ràng buộc nằm ở thiết kế (SPEC-attendance: GPS chỉ là tín hiệu đối soát, QR là chính) và ở việc không có luồng thu; **chưa có rào kỹ thuật chủ động chặn** nếu sau này có người thêm.
-**GPS — phát hiện cần xử lý trước khi bật:** giao diện hiện **không** gọi định vị (không có `navigator.geolocation`), nhưng API `POST` chấm công **chấp nhận và lưu** `geo` (`geo_lat`, `geo_lng`) từ bất kỳ client nào mà không kiểm cờ/đồng ý riêng ở server. Chưa có dữ liệu thật nên chưa có thu thập thực tế; **trước khi bật GPS cần thêm cổng ở server** (cờ cấu hình + bản ghi đồng ý riêng `consent_record`) — việc kỹ thuật tiếp theo, ghi ở mục 9.
+**GPS — cổng server đã có (T-051, 2026-10-19):** giao diện không gọi định vị; API chấm công chỉ **nhận và lưu** toạ độ khi (1) cờ `GEO_CAPTURE_ENABLED=true` (mặc định TẮT) **và** (2) nhân viên có bản ghi đồng ý RIÊNG `geo_attendance` còn hiệu lực trong `consent_record` (rút đồng ý hoặc bị hạn chế xử lý → dừng thu ngay ở lần gửi kế tiếp). Ngược lại server **bỏ toạ độ** (không lưu, không báo lỗi với client cũ, phản hồi `geo_stored: false`) và audit ghi `geoDropped` = `flag_off|no_consent` — audit không bao giờ chứa toạ độ. Toạ độ được lưu thì **mã hoá AES-256-GCM** (`attendance_event.geo_enc`, [encryption-at-rest](security/encryption-at-rest.md)). Test: `tests/db/geo-consent.test.ts`, `tests/http/attendance-events.test.ts` (S-AT-14..17). **Cách bật (việc của người, sau DPIA nộp + xác nhận HR/pháp chế):** đặt `GEO_CAPTURE_ENABLED=true`, đặt khoá `DATA_ENCRYPTION_KEYS`/`DATA_INDEX_KEY`, có luồng thông báo + xin đồng ý riêng cho nhân viên (hiện CHƯA có giao diện/route tự phục vụ cấp đồng ý — chỉ có tầng ghi `recordConsent`; rút đồng ý đi qua yêu cầu DSAR `withdraw_consent`).
 
 ## 2. Luồng dữ liệu và bên nhận
 Sơ đồ DFD và ranh giới tin cậy: [THREAT-MODEL.md](THREAT-MODEL.md) mục 2. Bên nhận: SMTP giao dịch và Web Push (khi có, D-005; dữ liệu tối thiểu), hệ lương/kế toán nhận CSV bảng công (thủ công). **Không chuyển dữ liệu ra nước ngoài theo thiết kế**; nhà cung cấp hạ tầng/SMTP ở nước ngoài cần hồ sơ riêng — `<chủ dự án điền khi chọn nhà cung cấp>`.
@@ -77,14 +77,15 @@ Hạn chế đã biết: dòng chấm công/lương không xoá được (cấm 
 | Mật khẩu Argon2id, phiên băm, CSRF, giới hạn đăng nhập | `tests/http/auth.test.ts` |
 | Nhật ký kiểm toán chỉ thêm, chuỗi băm | `tests/db/audit.test.ts` |
 | Role DB tối thiểu quyền | `tests/db/migrate.test.ts` |
-| Mã hoá at-rest, sao lưu mã hoá | chưa có — phụ thuộc hạ tầng `<chủ dự án điền>` |
+| Mã hoá at-rest tầng ứng dụng (SĐT, lý do nghỉ, toạ độ GPS, tệp tải lên) | [security/encryption-at-rest.md](security/encryption-at-rest.md); `tests/db/encryption.test.ts` (faithful-fixture, khoá env — KMS/HSM + mã hoá volume là việc hạ tầng thật) |
+| Sao lưu mã hoá (openssl) | T-045: `scripts/backup.sh`, `tests/db/backup-restore.test.ts` |
 | Quy trình sự cố và thông báo vi phạm | [ops/runbooks/data-breach.md](ops/runbooks/data-breach.md) (nháp, chưa diễn tập) |
 
 ## 6. Đánh giá rủi ro cho chủ thể
 | ID | Rủi ro | Khả năng | Mức nghiêm trọng | Biện pháp | Còn lại |
 |---|---|---|---|---|---|
 | DP-01 | lộ vị trí/hồ sơ nhân sự do truy cập trái phép | TB | Cao | T6, T11, T12 ([THREAT-MODEL.md](THREAT-MODEL.md)) | thấp nếu test đủ |
-| DP-02 | dùng vị trí ngoài mục đích đối soát công; API nhận `geo` không cổng | TB | Cao | GPS tắt mặc định ở giao diện; chỉ HR theo quyền | **mở**: cần cổng server (cờ + đồng ý riêng) trước khi bật; chính sách nội bộ `<HR>` |
+| DP-02 | dùng vị trí ngoài mục đích đối soát công | TB | Cao | cổng server: cờ `GEO_CAPTURE_ENABLED` tắt mặc định + đồng ý riêng còn hiệu lực, ngược lại bỏ toạ độ (T-051); toạ độ lưu mã hoá; chỉ HR theo quyền | mở: giao diện xin/rút đồng ý, chính sách nội bộ `<HR>`, xác nhận pháp chế trước khi bật |
 | DP-03 | giữ dữ liệu quá hạn | TB | TB | job lưu giữ theo D-030, test DB từng nhánh | mở: sao lưu, dòng công/lương sau 10 năm, `app_user` |
 | DP-04 | không đáp ứng quyền chủ thể đúng hạn | TB | TB | hạn theo loại + phản hồi 2 ngày làm việc + cảnh báo quá hạn | thấp nếu HR theo dõi; số ngày gia hạn là giả định |
 | DP-05 | thu sinh trắc/ảnh khuôn mặt ngoài ý định | Thấp | Cao | không có luồng thu (đã kiểm mã 2026-10-19) | chưa có rào kỹ thuật chủ động |
@@ -106,5 +107,5 @@ Hạn chế đã biết: dòng chấm công/lương không xoá được (cấm 
 3. Luật sư/kế toán xác nhận 5 hay 10 năm cho bảng lương/chấm công (Luật Kế toán 2015 sửa bởi 56/2024) và thời hạn hồ sơ nhân sự; Luật Lưu trữ 2024.
 4. HR chốt nội quy ca/OT/nghỉ (mặc định theo luật, RK-001) và soạn thông báo xử lý dữ liệu cho nhân viên.
 5. Chỉ định người phụ trách bảo vệ dữ liệu; điền thông tin pháp nhân.
-6. **Trước khi bật GPS:** nhân viên được thông báo biện pháp giám sát + đồng ý riêng; kỹ thuật bổ sung cổng server cho `geo`; xác nhận HR/pháp chế (kế hoạch §12).
-7. Hạ tầng: mã hoá at-rest và sao lưu mã hoá, quy trình xoá khỏi sao lưu, nhà cung cấp SMTP/hạ tầng ở nước ngoài (nếu có).
+6. **Trước khi bật GPS:** nhân viên được thông báo biện pháp giám sát + đồng ý riêng; cổng server cho `geo` ĐÃ CÓ (T-051) — cần thêm giao diện xin đồng ý riêng; xác nhận HR/pháp chế (kế hoạch §12).
+7. Hạ tầng: KMS/HSM giữ khoá dữ liệu tách khỏi máy chủ ứng dụng/CSDL, mã hoá đĩa/volume Postgres, giữ khoá sao lưu riêng, quy trình xoá khỏi sao lưu, nhà cung cấp SMTP/hạ tầng ở nước ngoài (nếu có).

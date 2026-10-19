@@ -24,6 +24,8 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "worker": "tsx scripts/worker.ts",
     "retention:run": "tsx scripts/retention.ts",
+    "crypto:rotate": "tsx scripts/crypto-rotate.ts",
+    "crypto:backfill": "tsx scripts/crypto-backfill.ts",
     "audit:verify": "tsx scripts/verify-audit-chain.ts",
     "check:repo-docs": "node scripts/check-repo-docs.mjs",
     "check:docs": "node scripts/check-docs.mjs",

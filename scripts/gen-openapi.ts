@@ -179,6 +179,7 @@ const SCHEMAS: Record<string, Json> = {
     review_reason: nullable({ type: "string" }),
     server_received_at: dateTime,
     shift_assignment_id: nullable(uuid),
+    geo_stored: { type: "boolean" },
   }),
   QrResult: obj({
     token: { type: "string" },
@@ -448,7 +449,7 @@ export const REGISTRY: Registry = {
       tag: "Chấm công",
       summary: "Ghi một sự kiện chấm công",
       description:
-        "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`.",
+        "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`. Toạ độ `geo` chỉ được lưu (mã hoá) khi cờ `GEO_CAPTURE_ENABLED` bật VÀ nhân viên có đồng ý riêng `geo_attendance` còn hiệu lực; ngược lại server bỏ toạ độ, không báo lỗi, và trả `geo_stored: false`.",
       permission: "`attendance.write_own`: chính chủ, còn làm việc.",
       idempotency: "handler",
       body: { kind: "json", schema: "AttendanceEventRequest" },

@@ -310,6 +310,27 @@ describe("sự kiện chấm công (T-012)", () => {
     );
   });
 
+  test("S-AT-14 (T-051): client cũ gửi geo khi cờ GPS tắt → 201, không lỗi, geo_stored=false, không lưu toạ độ", async () => {
+    const saved = process.env.GEO_CAPTURE_ENABLED;
+    delete process.env.GEO_CAPTURE_ENABLED;
+    try {
+      const geo = { lat: 21.0285, lng: 105.8542, accuracy_m: 9, captured_at: iso() };
+      const res = await send(s, { kind: "out", device_time: iso(), source: "gps", geo });
+      assert.equal(res.status, 201);
+      const body = await res.json();
+      assert.equal(body.geo_stored, false);
+      const row = await db.admin.query(
+        "SELECT geo_lat, geo_lng, geo_enc FROM attendance_event WHERE id = $1",
+        [body.event_id],
+      );
+      assert.deepEqual(row.rows[0], { geo_lat: null, geo_lng: null, geo_enc: null });
+      const none = await (await send(s, { kind: "out", device_time: iso(), source: "gps" })).json();
+      assert.equal(none.geo_stored, false);
+    } finally {
+      if (saved !== undefined) process.env.GEO_CAPTURE_ENABLED = saved;
+    }
+  });
+
   test("sự kiện gốc không sửa/xoá được; chỉ đổi trạng thái xác minh", async () => {
     const r = await (await send(s, { kind: "out", device_time: iso(), source: "gps" })).json();
     await assert.rejects(

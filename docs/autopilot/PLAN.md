@@ -114,8 +114,9 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-045` Lát 9 — sao lưu và khôi phục thử cục bộ: backup pg_dump có checksum + giữ N bản, diễn tập khôi phục vào CSDL tạm, đối chiếu số dòng và chuỗi audit, đo RPO/RTO thật (OPS-DR-*, DB-BACKUP-*) — Gate: `npm run -s test:file -- tests/db/backup-restore.test.ts`
 - [x] `T-046` Lát 9 — giám sát và cảnh báo chạy được cục bộ: luật cảnh báo từ SLO, bộ đánh giá trên /api/metrics + DB, bài thử kích hoạt cảnh báo tới kênh đích (OPS-OBS-*, OPS-SLO-*) — Gate: `npm run -s test:file -- tests/unit/alerts-drill.test.ts && npm run -s check:alerts`
 - [x] `T-047` Lát 9 — DAST cục bộ không cần docker: bộ probe tự viết chạy trên bản build production (header, cookie, XSS phản chiếu, CSRF, open redirect, rò lỗi, đường dẫn lộ) + job CI (SEC-WEB-004) — Gate: `npm run -s dast`
-- [ ] `T-048` Lát 9 — mã hoá dữ liệu lúc lưu: cột PII nhạy cảm và tệp tải lên mã hoá AES-256-GCM tầng ứng dụng, khoá từ env có key id và xoay khoá, migration có đường lùi, COMMENT ON COLUMN đánh dấu PII (BASE-SEC-013, DB-SEC-*) — Gate: `npm run -s test:file -- tests/db/encryption.test.ts`
+- [x] `T-048` Lát 9 — mã hoá dữ liệu lúc lưu: cột PII nhạy cảm và tệp tải lên mã hoá AES-256-GCM tầng ứng dụng, khoá từ env có key id và xoay khoá, migration có đường lùi, COMMENT ON COLUMN đánh dấu PII (BASE-SEC-013, DB-SEC-*) — Gate: `npm run -s test:file -- tests/db/encryption.test.ts`
 - [x] `T-049` Lát 9 — đo hiệu năng dưới tải cục bộ: bộ tải tự viết trên bản build + Postgres cục bộ, p50/p95/p99, ngân sách, báo cáo 5 trường (QA-PERF-*, PRF-WEB-*) — Gate: `npm run -s perf:load`
+- [x] `T-051` Lát 9 — cổng GPS ở server: API chấm công chỉ nhận/lưu toạ độ khi cờ bật VÀ có đồng ý riêng còn hiệu lực của nhân viên, ngược lại bỏ toạ độ (D-032; DPIA mục 1, 6, 9; CMP-PRIV-*) — Gate: `npm run -s test:file -- tests/http/attendance-events.test.ts tests/db/geo-consent.test.ts`
 - [ ] `T-050` Lát 9 — chốt: cập nhật GO-NO-GO, PROGRESS, blueprint theo bằng chứng thật; nhãn bằng chứng trung thực (faithful-fixture, không phải production) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
 
 ## Phụ thuộc ngoài

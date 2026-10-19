@@ -10,11 +10,13 @@ interface Field<T extends z.ZodType> {
   secret?: boolean;
   /** Bắt buộc ở lúc khởi động (thiếu = thoát ≠ 0). */
   required?: boolean;
+  /** Bắt buộc chỉ khi NODE_ENV=production (dev/test có giá trị thử cố định ở nơi dùng) — fail-closed ở production. */
+  requiredInProduction?: boolean;
 }
 
 const field = <T extends z.ZodType>(
   schema: T,
-  o: { secret?: boolean; required?: boolean } = {},
+  o: { secret?: boolean; required?: boolean; requiredInProduction?: boolean } = {},
 ): Field<T> => ({
   schema,
   ...o,
@@ -31,6 +33,29 @@ function validQrKeys(raw: string): boolean {
     parts.every((p) => {
       const i = p.indexOf(":");
       return i > 0 && bytes(p.slice(i + 1).trim()) >= MIN_SECRET_BYTES;
+    })
+  );
+}
+
+/** Khoá 32 byte mã hoá base64/base64url (44 ký tự có đệm `=` hoặc 43 không đệm). */
+const KEY_B64 = /^[A-Za-z0-9+/_-]{43}={0,1}$/;
+const validKey32 = (v: string) => KEY_B64.test(v) && Buffer.from(v, "base64").length === 32;
+
+/**
+ * "id:khoá,id:khoá" — mỗi khoá đúng 32 byte (base64), id dạng [A-Za-z0-9_-]{1,32} và không trùng. Khoá ĐẦU là khoá hiện
+ * hành (mã hoá); các khoá sau chỉ để giải mã (xoay khoá không cần dừng hệ thống). lib/crypto parse lại.
+ */
+function validDataKeys(raw: string): boolean {
+  const parts = raw.split(",").map((p) => p.trim());
+  const ids = new Set<string>();
+  return (
+    parts.length > 0 &&
+    parts.every((p) => {
+      const i = p.indexOf(":");
+      const id = p.slice(0, i);
+      if (i <= 0 || !/^[A-Za-z0-9_-]{1,32}$/.test(id) || ids.has(id)) return false;
+      ids.add(id);
+      return validKey32(p.slice(i + 1));
     })
   );
 }
@@ -70,6 +95,30 @@ export const SERVER_SPEC = {
       .string()
       .refine(validQrKeys, { error: `phải dạng kid:khoá[,kid:khoá] với khoá ≥ ${MIN_SECRET_BYTES} byte` }),
     { required: true, secret: true },
+  ),
+  // Mã hoá dữ liệu lúc lưu (T-048, BASE-SEC-013, DB-SEC-009): khoá dữ liệu (AES-256-GCM, xoay được) và khoá chỉ mục mù
+  // (HMAC-SHA256) — hai khoá RIÊNG, đều bí mật; KHÔNG nằm trong CSDL. Thiếu ở production → khởi động thất bại; dev/test dùng
+  // khoá thử dẫn xuất lúc chạy (lib/crypto, không trùng khoá thật). Sinh khoá: `openssl rand -base64 32`.
+  DATA_ENCRYPTION_KEYS: field(
+    z
+      .string()
+      .refine(validDataKeys, {
+        error: "phải dạng id:khoá[,id:khoá] với khoá là 32 byte base64, id không trùng",
+      })
+      .optional(),
+    { secret: true, requiredInProduction: true },
+  ),
+  DATA_INDEX_KEY: field(z.string().refine(validKey32, { error: "phải là khoá 32 byte base64" }).optional(), {
+    secret: true,
+    requiredInProduction: true,
+  }),
+  // Cổng thu toạ độ GPS ở server (T-051, D-032): mặc định TẮT; BẬT mới có thể nhận toạ độ — và chỉ của nhân viên có đồng ý
+  // riêng còn hiệu lực (purpose geo_attendance). Bật trên dữ liệu thật chỉ sau DPIA + xác nhận HR/pháp chế (docs/DPIA.md).
+  GEO_CAPTURE_ENABLED: field(
+    z
+      .enum(["true", "false"], { error: "phải là true|false" })
+      .default("false")
+      .transform((v) => v === "true"),
   ),
   TRUST_PROXY_HOPS: field(z.coerce.number().int().min(0).max(10).optional()),
   TRUST_PROXY: field(z.enum(["0", "1"]).optional()),
@@ -202,6 +251,8 @@ function parseOne(
   const f = spec[name]!;
   const raw = rawOf(source, name);
   if (raw === undefined && f.required) return { ok: false, issue: { name, message: "thiếu (bắt buộc)" } };
+  if (raw === undefined && f.requiredInProduction && source.NODE_ENV === "production")
+    return { ok: false, issue: { name, message: "thiếu (bắt buộc ở production)" } };
   const r = f.schema.safeParse(raw);
   if (r.success) return { ok: true, value: r.data };
   // Chỉ lấy `message` do ta/zod soạn (không chứa giá trị nhập); gộp thành một chuỗi ngắn.

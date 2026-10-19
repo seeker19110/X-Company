@@ -1,8 +1,8 @@
 ---
 title: THREAT-MODEL — X-Company
 kind: threat-model
-version: 2
-updated: 2026-10-18
+version: 3
+updated: 2026-10-19
 owner: seeker19110
 review: <chủ dự án/người phụ trách bảo mật duyệt — chưa duyệt>
 ---
@@ -116,9 +116,10 @@ Quyết định ∈ mitigate / eliminate / transfer / accept. Bằng chứng: t�
 | T17 | Tampering | Sửa migration đã áp | 1 | 3 | TB | eliminate | runner migration so checksum, append-only | `tests/db/migrate.test.ts` (có) | đã giảm |
 | T18 | DoS / Disclosure | Lỗi không lường (A10): fail-open, lộ stack | 2 | 2 | TB | mitigate | `AppError(code, http)` thống nhất, không lộ stack ra client, mặc định từ chối | `tests/unit/app-error.test.ts` (có) | một phần |
 | T19 | Info disclosure | Lộ/mất bản sao lưu | 1 | 3 | TB | mitigate | mã hoá bản sao lưu, quyền tối thiểu, diễn tập restore | `docs/ops/runbooks/restore-db.md` (có; chưa diễn tập) | mở |
-| T20 | Spoofing | Vị trí GPS giả ở thiết bị | 3 | 1 | TB | accept | chỉ là tín hiệu đối soát; GPS tắt mặc định tới khi có DPIA | xem mục 6 | chấp nhận (chờ chủ dự án xác nhận) |
+| T20 | Spoofing | Vị trí GPS giả ở thiết bị | 3 | 1 | TB | accept | chỉ là tín hiệu đối soát; cổng server T-051: cờ `GEO_CAPTURE_ENABLED` tắt mặc định + đồng ý riêng còn hiệu lực, ngược lại bỏ toạ độ | xem mục 6 | chấp nhận (chờ chủ dự án xác nhận) |
 | T21 | Info disclosure | Thu hồi quyền khi thiết bị đang mất mạng hoàn toàn | 2 | 2 | TB | accept | giảm dữ liệu cache, kiểm lại khi kết nối | xem mục 6 | chấp nhận (chờ chủ dự án xác nhận) |
 | T22 | Tampering | Tệp độc hại qua form liên hệ/ứng tuyển công khai | 2 | 2 | TB | eliminate | P0 không nhận tệp từ người lạ (D-013); tệp nội bộ dò loại theo nội dung, giới hạn kích thước, lưu ngoài web root, không thực thi | `tests/http/files.test.ts` (có: .pdf giả → 415) | đã giảm (P0) |
+| T23 | Info disclosure | Lộ PII nhạy cảm (SĐT, lý do nghỉ, toạ độ GPS, tệp tải lên) qua dump/bản sao CSDL, đĩa hoặc người có quyền đọc bảng | 2 | 3 | Cao | mitigate | mã hoá AES-256-GCM tầng ứng dụng, AAD gắn bảng.cột+id dòng (chống tráo), khoá ngoài CSDL (`DATA_ENCRYPTION_KEYS`), xoay khoá không dừng hệ thống, chỉ mục mù HMAC cho tìm kiếm, audit không chứa lý do nghỉ/toạ độ; production thiếu khoá → khởi động thất bại | `tests/db/encryption.test.ts` (có, faithful-fixture); [encryption-at-rest.md](security/encryption-at-rest.md) | mở (KMS/HSM + mã hoá volume là hạ tầng thật) |
 
 ## 5. OWASP Top 10:2025 → biện pháp
 Tên nhóm theo <https://top10.owasp.org/2025> (đối chiếu lại khi rà định kỳ).
@@ -128,7 +129,7 @@ Tên nhóm theo <https://top10.owasp.org/2025> (đối chiếu lại khi rà đ�
 | A01:2025 Broken Access Control | `can()` ở server mọi route, mặc định từ chối, phạm vi theo công ty/phòng ban/self, tải tệp qua route kiểm quyền, SoD R5, ràng buộc khoá ngoại có `company_id` | T6, T11 |
 | A02:2025 Security Misconfiguration | CSP/header ở `proxy.ts`, role DB không owner, cổng DB không ra Internet, `NEXT_TELEMETRY_DISABLED=1`, cấu hình qua biến môi trường, cổng CI | T12, T16 |
 | A03:2025 Software Supply Chain Failures | lockfile + `npm ci`, ghim phiên bản/SHA action, Dependabot, `dep-audit` (quét phụ thuộc production), bảng phụ thuộc ở `docs/RISKS.md`, VULN-SLA | T15 |
-| A04:2025 Cryptographic Failures | Argon2id, phiên băm SHA-256, HMAC-SHA256 cho QR (xoay khoá có `kid`), TLS, mã hoá bản sao lưu; không tự chế mật mã | T1, T2, T19 |
+| A04:2025 Cryptographic Failures | Argon2id, phiên băm SHA-256, HMAC-SHA256 cho QR (xoay khoá có `kid`), TLS, mã hoá bản sao lưu, AES-256-GCM tầng ứng dụng cho cột PII nhạy cảm + tệp (`lib/crypto`, xoay khoá có `keyId`); không tự chế mật mã (chỉ `node:crypto`) | T1, T2, T19, T23 |
 | A05:2025 Injection | SQL tham số hoá, zod ở biên, Markdown không HTML thô + CSP nonce, `javascript:` bị loại, không `eval`/shell từ đầu vào | T8, T14 |
 | A06:2025 Insecure Design | threat model này, kịch bản S-* và ca biên trong spec, idempotency, kỳ công bất biến, quy tắc ⚙ là cấu hình có ngày hiệu lực | T3, T4 |
 | A07:2025 Authentication Failures | Argon2id, giới hạn đăng nhập, phiên trượt 12 giờ/tuyệt đối 7 ngày, TOTP cho `sysadmin`/`hr`/`executive` (trước pilot), thu hồi tức thì | T1, T13 |

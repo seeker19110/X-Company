@@ -3,12 +3,16 @@
 // Mọi tiến trình con (next start) bị dừng khi xong — kể cả khi lỗi hoặc nhận SIGINT/SIGTERM.
 // Nhãn bằng chứng: máy dev, Postgres tạm, dữ liệu seed — KHÔNG phải production hay thực địa (faithful-fixture).
 import { spawn, spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+// Khoá chung cho mọi lần khởi động lại trong một lần chạy (dữ liệu đã mã hoá phải đọc được sau khi khởi động lại).
+const DATA_KEY = randomBytes(32).toString("base64");
+const DATA_INDEX_KEY = randomBytes(32).toString("base64");
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const NEXT_BIN = path.join(ROOT, "node_modules", "next", "dist", "bin", "next");
 export const out = (s) => process.stdout.write(`${s}\n`);
@@ -93,6 +97,9 @@ export function prepare({ prefix, extraSeeds = [], build = true }) {
       APP_ORIGIN: origin,
       SESSION_SECRET: `${prefix.toLowerCase()}-session-secret-0123456789abcdef-xyz`,
       QR_SIGNING_KEYS: `k1:${prefix.toLowerCase()}-qr-key-0123456789abcdef0123456789abcdef`,
+      // Khoá mã hoá dữ liệu lúc lưu (T-048) bắt buộc ở production: sinh ngẫu nhiên mỗi lần chạy (CSDL của harness là tạm).
+      DATA_ENCRYPTION_KEYS: `h1:${DATA_KEY}`,
+      DATA_INDEX_KEY,
       FILE_STORAGE_DIR: storage,
       NODE_ENV: "production",
       ...extraEnv,

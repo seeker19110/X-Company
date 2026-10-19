@@ -13,7 +13,7 @@ status: PASS — faithful-fixture, máy dev (sinh bằng `npm run -s dast`; khô
 | Mục | Giá trị |
 |---|---|
 | Ngày (UTC) | 2026-10-19 |
-| Commit | `df4afda70349dcf7a663e49372fd6f7680851617+dirty` |
+| Commit | `b37fef3c2943a109027f6a5e337eba8d71f8a3ea+dirty` |
 | Môi trường | máy dev: Linux 6.18.44-fc-v139 x64; 4 x Intel(R) Xeon(R) Processor @ 2.10GHz; 16 GiB RAM; Node v22.22.0; Next 16.4.2; psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) |
 | Đích | `next start` bản build production, 127.0.0.1:3200 (http) + instance thứ hai 3201 với `APP_ORIGIN=https://…` để kiểm HSTS/Secure/__Host- (TLS không chấm dứt ở Node — mô phỏng proxy TLS) |
 | Cấu hình đặc biệt | `TRUST_PROXY_HOPS=1` (mỗi nhóm probe dùng X-Forwarded-For riêng để không giành bộ đếm giới hạn); `METRICS_TOKEN` ngẫu nhiên đặt để kiểm 401 |
@@ -167,9 +167,9 @@ Tham chiếu: BASE-ERR-003, SEC-WEB-002, SEC-WEB-014, ASVS V16
 | API: offset âm | PASS | GET /api/app/tasks?offset=-1 → 400 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/validation","title":"Yêu cầu không hợp lệ","status":400,"detail":"offset phải là … |
 | API: limit vượt trần | PASS | GET /api/app/tasks?limit=1000000 → 400 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/validation","title":"Yêu cầu không hợp lệ","status":400,"detail":"limit phải là s… |
 | API: id không phải UUID | PASS | GET /api/app/files/not-a-uuid → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
-| API: UUID không tồn tại | PASS | GET /api/app/files/44d85a87-6734-4adf-bfdd-0b7be0bda9c8 → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
+| API: UUID không tồn tại | PASS | GET /api/app/files/04a6438f-0e0d-493c-b6ed-45dce06e207c → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
 | API: id kiểu SQL injection | PASS | GET /api/app/files/'%3B%20DROP%20TABLE%20app_user%3B-- → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
-| API: hành động việc không tồn tại | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/hack → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy","insta… |
+| API: hành động việc không tồn tại | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/hack → 404 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy","insta… |
 | API: chưa đăng nhập | PASS | GET /api/app/me → 401 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/unauthenticated","title":"Chưa đăng nhập","status":401,"detail":"Vui lòng đăng nh… |
 | API: cookie hỏng | PASS | GET /api/app/me → 401 [content-type: application/problem+json; charset=utf-8] {"type":"/problems/unauthenticated","title":"Chưa đăng nhập","status":401,"detail":"Vui lòng đăng nh… |
 | API: phương thức không hỗ trợ (DELETE /api/app/me) | PASS | DELETE /api/app/me → 405 |
@@ -209,21 +209,21 @@ Tham chiếu: STD-SEC-004, OWASP API1 (BOLA), OWASP API5 (BFLA), ASVS V8
 
 | Kiểm tra | Kết quả | Bằng chứng (rút gọn, đã che bí mật) |
 |---|---|---|
-| tiền điều kiện: nv sở hữu việc, tệp và bình luận | PASS | việc 41c899c9…, tệp c187f27d…, bình luận → 201 |
+| tiền điều kiện: nv sở hữu việc, tệp và bình luận | PASS | việc 5af05be8…, tệp a6e89a23…, bình luận → 201 |
 | đối chứng: chủ việc đọc được bình luận của mình | PASS | GET /api/app/comments (nv) → 200 |
-| BOLA: nv2 tải tệp của nv | PASS | GET /api/app/files/c187f27d-a202-4568-a0a6-f864b57598e3 → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
-| BOLA: nv2 đọc bình luận của việc nv | PASS | GET /api/app/comments?object_type=task&object_id=41c899c9-2b4f-4… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
+| BOLA: nv2 tải tệp của nv | PASS | GET /api/app/files/a6e89a23-1503-4fa0-baa0-a92994f8c001 → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
+| BOLA: nv2 đọc bình luận của việc nv | PASS | GET /api/app/comments?object_type=task&object_id=5af05be8-1292-4… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
 | BOLA: nv2 bình luận lên việc của nv | PASS | POST /api/app/comments → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
 | BOLA: nv2 đính kèm tệp vào việc của nv | PASS | POST /api/app/files → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
-| BOLA: nv2 start việc của nv | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/start → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
-| BOLA: nv2 submit việc của nv | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/submit → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
-| BOLA: nv2 accept việc của nv | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/accept → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
-| BOLA: nv2 cancel việc của nv | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/cancel → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
-| BOLA: danh sách việc của nv2 không chứa việc của nv | PASS | GET /api/app/tasks (nv2) → 0 mục, không có 41c899c9… |
+| BOLA: nv2 start việc của nv | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/start → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
+| BOLA: nv2 submit việc của nv | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/submit → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
+| BOLA: nv2 accept việc của nv | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/accept → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
+| BOLA: nv2 cancel việc của nv | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/cancel → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
+| BOLA: danh sách việc của nv2 không chứa việc của nv | PASS | GET /api/app/tasks (nv2) → 0 mục, không có 5af05be8… |
 | BOLA: tham số/header user_id không đổi danh tính (mass assignment danh tính) | PASS | GET /api/app/me?user_id=<nv> (phiên nv2) → user_id của nv2 |
-| tenant: người dùng công ty khác tải tệp | PASS | GET /api/app/files/c187f27d-a202-4568-a0a6-f864b57598e3 → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
-| tenant: đọc bình luận việc công ty khác | PASS | GET /api/app/comments?object_type=task&object_id=41c899c9-2b4f-4… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
-| tenant: đổi trạng thái việc công ty khác | PASS | POST /api/app/tasks/41c899c9-2b4f-42c0-9059-b598a8de65f2/start → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
+| tenant: người dùng công ty khác tải tệp | PASS | GET /api/app/files/a6e89a23-1503-4fa0-baa0-a92994f8c001 → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy tệp","i… |
+| tenant: đọc bình luận việc công ty khác | PASS | GET /api/app/comments?object_type=task&object_id=5af05be8-1292-4… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy đối tượ… |
+| tenant: đổi trạng thái việc công ty khác | PASS | POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/start → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy công vi… |
 | BFLA/BOLA: nv2 (đồng cấp) duyệt đơn OT của nv → bị từ chối | PASS | POST /api/app/approvals/ot/<id>/approve → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
 | BFLA/BOLA: nv (tự duyệt đơn của mình) duyệt đơn OT của nv → bị từ chối | PASS | POST /api/app/approvals/ot/<id>/approve → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
 | BFLA: nv (nhân viên) đọc liên hệ khách → bị từ chối | PASS | GET /api/app/inquiries → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
@@ -232,7 +232,7 @@ Tham chiếu: STD-SEC-004, OWASP API1 (BOLA), OWASP API5 (BFLA), ASVS V8
 | BFLA: nv tạo yêu cầu DSAR → bị từ chối | PASS | POST /api/app/privacy/requests → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
 | BFLA: sales đọc hồ sơ ứng tuyển (tách quyền ứng viên) → bị từ chối | PASS | GET /api/app/applications → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
 | BFLA: hr đọc liên hệ khách → bị từ chối | PASS | GET /api/app/inquiries → 403 {"type":"/problems/forbidden","title":"Không có quyền","status":403,"detail":"Bạn không có quyền thự… |
-| BFLA: nv hiển thị QR địa điểm → bị từ chối | PASS | GET /api/app/attendance/qr/9cda185f-5e06-45b3-a21d-982… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy địa điể… |
+| BFLA: nv hiển thị QR địa điểm → bị từ chối | PASS | GET /api/app/attendance/qr/b10f4cc8-01f0-40fd-8f1f-56b… → 404 {"type":"/problems/not-found","title":"Không tìm thấy","status":404,"detail":"Không tìm thấy địa điể… |
 | không phiên → 401 trên 18 route /api/app/* | PASS | GET×9 + POST×9 không cookie → 401 |
 
 ## DAST-H — Giới hạn tần suất (429 + Retry-After) và Idempotency-Key: PASS
@@ -247,8 +247,8 @@ Tham chiếu: SEC-WEB-012, BE-REL-006, BE-API-008, ARC-INT-001, ASVS V2
 | đăng nhập sai: > 5 lần/15 phút/(email, IP) → 429 + Retry-After | PASS | 401,401,401,401,401,429,429,429 ; lần bị chặn → 429 [retry-after: 900] {"type":"/problems/rate-limited","title":"Quá nhiều yêu cầu","status":429,"detail":"Đăng nhập sai qu… |
 | khoá đăng nhập giữ: mật khẩu ĐÚNG từ cùng (email, IP) vẫn 429 | PASS | POST login (đúng mật khẩu, đang bị khoá) → 429 [retry-after: 900] {"type":"/problems/rate-limited","title":"Quá nhiều yêu cầu","status":429,"detail":"Đăng nhập sai qu… |
 | khoá theo (email, IP): chủ tài khoản từ IP khác không bị khoá lây | PASS | IP khác → 200 |
-| API ghi theo người dùng: > 60/phút → 429 + Retry-After | PASS | 62 request song song; lần bị chặn → 429 [retry-after: 2] {"type":"/problems/rate-limited","title":"Quá nhiều yêu cầu","status":429,"detail":"Bạn thao tác quá… |
-| Idempotency-Key: tạo → phát lại nguyên văn; tái dùng khoá khác thân → 422; thiếu khoá → 400; song song cùng khoá → 1 lần chạy thật | PASS | 201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 201,409,409,409,409,409 |
+| API ghi theo người dùng: > 60/phút → 429 + Retry-After | PASS | 62 request song song; lần bị chặn → 429 [retry-after: 24] {"type":"/problems/rate-limited","title":"Quá nhiều yêu cầu","status":429,"detail":"Bạn thao tác quá… |
+| Idempotency-Key: tạo → phát lại nguyên văn; tái dùng khoá khác thân → 422; thiếu khoá → 400; song song cùng khoá → 1 lần chạy thật | PASS | 201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,409,201,409,409,409 |
 
 ## Không chứng minh
 

@@ -4,6 +4,7 @@
 // chỉ mã nghiệp vụ/đếm/danh mục). Quyền `privacy.manage` kiểm ở route (lib/privacy/routes.ts); hàm ở đây tin người gọi.
 import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
+import { revealText } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { getStorage } from "../files/storage.ts";
 import { AppError } from "../nen/app-error.ts";
@@ -532,13 +533,23 @@ export async function exportSubject(
   const one = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows[0] ?? null;
   const many = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows;
   const c = actor.companyId;
+  // SĐT lưu dạng mã hoá (T-048): giải mã cho chính chủ thể; không đưa id dòng/bản mã/chỉ mục vào bản xuất.
+  const reveal = (table: string, row: Record<string, unknown> | null) => {
+    if (row === null) return null;
+    const [r] = revealText(table, "phone", [row]);
+    delete r!.id;
+    return r!;
+  };
   let data: Record<string, unknown>;
   if (type === "inquiry") {
     data = {
-      inquiry: await one(
-        `SELECT code, name, email, phone, message, service_slug, source, status, consent_at, consent_notice_version,
+      inquiry: reveal(
+        "inquiry",
+        await one(
+          `SELECT id, code, name, email, phone, phone_enc, message, service_slug, source, status, consent_at, consent_notice_version,
                 created_at, anonymized_at FROM inquiry WHERE company_id = $1 AND id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       history: await many(
         "SELECT from_status, to_status, note, at FROM inquiry_history WHERE company_id = $1 AND inquiry_id = $2 ORDER BY id",
@@ -548,21 +559,27 @@ export async function exportSubject(
     };
   } else if (type === "job_application") {
     data = {
-      application: await one(
-        `SELECT a.code, a.name, a.email, a.phone, a.cover_letter, a.status, a.consent_at, a.consent_notice_version,
+      application: reveal(
+        "job_application",
+        await one(
+          `SELECT a.id, a.code, a.name, a.email, a.phone, a.phone_enc, a.cover_letter, a.status, a.consent_at, a.consent_notice_version,
                 a.created_at, a.anonymized_at, p.slug AS job_slug
            FROM job_application a LEFT JOIN cms_page p ON p.company_id = a.company_id AND p.id = a.job_page_id
           WHERE a.company_id = $1 AND a.id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       consents: await listConsents(tx, type, sid),
     };
   } else {
     data = {
-      employee: await one(
-        `SELECT code, full_name, work_email, phone, hired_on, terminated_on, created_at
+      employee: reveal(
+        "employee",
+        await one(
+          `SELECT id, code, full_name, work_email, phone, phone_enc, hired_on, terminated_on, created_at
            FROM employee WHERE company_id = $1 AND id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       employment_history: await many(
         `SELECT title, department_id, valid_from, valid_to FROM employment_history

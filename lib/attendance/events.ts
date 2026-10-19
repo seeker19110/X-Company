@@ -1,10 +1,13 @@
 // Ghi sự kiện chấm công (SPEC-attendance I1–I4, C6, QR, AT04/AT05). Sự kiện gốc chỉ thêm; mọi nghi vấn lưu
 // `needs_review` kèm lý do để điều tra thay vì bỏ — trừ QR sai chữ ký/hết hạn khi trực tuyến (422, không lưu).
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { appendAudit, canonicalJson } from "../audit/index.ts";
+import { sealGeo } from "../crypto/columns.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { env } from "../nen/env.ts";
+import { hasActiveConsent, PURPOSE_GEO_ATTENDANCE } from "../privacy/consent.ts";
 import { addDays, localDateOf, shiftBounds } from "./compute.ts";
 import { policyAt, type AttendancePolicy } from "./policy.ts";
 import { qrExpired, verifyQrSignature } from "./qr.ts";
@@ -32,7 +35,21 @@ export interface EventResult {
   reviewReason: string | null;
   serverReceivedAt: Date;
   shiftAssignmentId: string | null;
+  /** Toạ độ GPS đã được lưu (mã hoá) cho sự kiện này; false = client không gửi hoặc cổng GPS ở server đã bỏ toạ độ. */
+  geoStored: boolean;
   replayed: boolean;
+}
+
+/** Lý do cổng GPS bỏ toạ độ (ghi vào audit, KHÔNG kèm toạ độ). */
+export type GeoDropReason = "flag_off" | "no_consent";
+
+/**
+ * Cổng GPS ở server (T-051, D-032): chỉ nhận toạ độ khi cờ GEO_CAPTURE_ENABLED BẬT **và** nhân viên có đồng ý riêng
+ * `geo_attendance` còn hiệu lực (rút đồng ý/bị hạn chế xử lý → dừng ngay). Ngược lại bỏ toạ độ, không lỗi (client cũ vẫn chấm công được).
+ */
+export async function geoGate(db: Queryable, employeeId: string): Promise<GeoDropReason | null> {
+  if (!env("GEO_CAPTURE_ENABLED")) return "flag_off";
+  return (await hasActiveConsent(db, "employee", employeeId, PURPOSE_GEO_ATTENDANCE)) ? null : "no_consent";
 }
 
 export interface EventActor {
@@ -127,8 +144,10 @@ async function replayOrConflict(
     review_reason: string | null;
     server_received_at: Date;
     shift_assignment_id: string | null;
+    geo_stored: boolean;
   }>(
-    `SELECT id, request_hash, status, review_reason, server_received_at, shift_assignment_id
+    `SELECT id, request_hash, status, review_reason, server_received_at, shift_assignment_id,
+            (geo_enc IS NOT NULL OR geo_lat IS NOT NULL) AS geo_stored
      FROM attendance_event WHERE employee_id = $1 AND idempotency_key = $2`,
     [actor.employeeId, idempotencyKey],
   );
@@ -142,6 +161,7 @@ async function replayOrConflict(
       reviewReason: p0.review_reason,
       serverReceivedAt: p0.server_received_at,
       shiftAssignmentId: p0.shift_assignment_id,
+      geoStored: p0.geo_stored,
       replayed: true,
     },
   };
@@ -224,14 +244,27 @@ export async function recordEvent(
 
     const status = reasons.length > 0 ? "needs_review" : "accepted";
     const reviewReason = reasons.length > 0 ? reasons.join(",") : null;
+    // Cổng GPS: toạ độ chỉ được lưu khi cờ bật + có đồng ý riêng còn hiệu lực; lưu thì MÃ HOÁ (id dòng sinh trước vì AAD gắn id).
+    const eventId = randomUUID();
+    const geoDrop = input.geo ? await geoGate(tx, actor.employeeId) : null;
+    const geoEnc =
+      input.geo && geoDrop === null
+        ? sealGeo(eventId, {
+            lat: input.geo.lat,
+            lng: input.geo.lng,
+            accuracy_m: input.geo.accuracyM,
+            captured_at: input.geo.capturedAt.toISOString(),
+          })
+        : null;
     const { rows } = await tx.query<{ id: string; server_received_at: Date }>(
-      `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
-         server_received_at, source, queued, device, worksite_id, shift_assignment_id, policy_id, geo_lat, geo_lng,
-         geo_accuracy_m, geo_captured_at, qr_nonce, status, review_reason)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+      `INSERT INTO attendance_event (id, company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+         server_received_at, source, queued, device, worksite_id, shift_assignment_id, policy_id, geo_enc, qr_nonce,
+         status, review_reason)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        ON CONFLICT (employee_id, idempotency_key) DO NOTHING
        RETURNING id, server_received_at`,
       [
+        eventId,
         actor.companyId,
         actor.employeeId,
         input.idempotencyKey,
@@ -245,10 +278,7 @@ export async function recordEvent(
         worksiteId,
         assignment?.id ?? null,
         policy.id,
-        input.geo?.lat ?? null,
-        input.geo?.lng ?? null,
-        input.geo?.accuracyM ?? null,
-        input.geo?.capturedAt ?? null,
+        geoEnc,
         qrNonce,
         status,
         reviewReason,
@@ -267,7 +297,14 @@ export async function recordEvent(
       action: "attendance.event",
       objectType: "attendance_event",
       objectId: ev.id,
-      after: { kind: input.kind, status, reviewReason, queued: !!input.queued },
+      // Không bao giờ ghi toạ độ vào audit; chỉ ghi việc cổng GPS đã bỏ toạ độ và vì sao.
+      after: {
+        kind: input.kind,
+        status,
+        reviewReason,
+        queued: !!input.queued,
+        ...(input.geo ? { geoStored: geoEnc !== null, geoDropped: geoDrop } : {}),
+      },
       requestId: actor.requestId ?? null,
     });
     return {
@@ -277,6 +314,7 @@ export async function recordEvent(
         reviewReason,
         serverReceivedAt: ev.server_received_at,
         shiftAssignmentId: assignment?.id ?? null,
+        geoStored: geoEnc !== null,
         replayed: false,
       },
     } as const;

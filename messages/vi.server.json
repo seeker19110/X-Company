@@ -396,7 +396,8 @@
       "consent": {
         "inquiryContact": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
         "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng",
-        "talentPool": "Tôi đồng ý để X-Company giữ hồ sơ ứng tuyển của tôi trong kho nhân tài tối đa 12 tháng kể từ khi có kết quả tuyển dụng, để liên hệ khi có vị trí phù hợp. Tôi có thể rút đồng ý bất kỳ lúc nào."
+        "talentPool": "Tôi đồng ý để X-Company giữ hồ sơ ứng tuyển của tôi trong kho nhân tài tối đa 12 tháng kể từ khi có kết quả tuyển dụng, để liên hệ khi có vị trí phù hợp. Tôi có thể rút đồng ý bất kỳ lúc nào.",
+        "geoAttendance": "Tôi đồng ý để X-Company ghi vị trí GPS của thiết bị tại thời điểm tôi chấm công, chỉ nhằm đối chiếu địa điểm làm việc. Tôi biết đây là biện pháp giám sát chấm công, có thể không đồng ý hoặc rút đồng ý bất kỳ lúc nào mà vẫn chấm công được bằng cách khác (mã QR)."
       },
       "retained": {
         "laborRecords": {

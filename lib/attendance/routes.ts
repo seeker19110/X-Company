@@ -86,6 +86,7 @@ export function eventResponseBody(r: Awaited<ReturnType<typeof recordEvent>>) {
     review_reason: r.reviewReason,
     server_received_at: r.serverReceivedAt.toISOString(),
     shift_assignment_id: r.shiftAssignmentId,
+    geo_stored: r.geoStored,
   };
 }
 

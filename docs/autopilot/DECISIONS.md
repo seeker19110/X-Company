@@ -265,3 +265,18 @@
 - Chọn: Rewrite beforeFiles trong next.config.ts đưa về 404, test thuộc tính trên 40.000 chuỗi; thêm headers() cho nosniff/HSTS ở /api; pool DB giữ ở globalThis (hết nhân đôi kết nối)
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: sửa lỗi thật mà không nới ngân sách JS; chỉ cấu hình nên dễ gỡ khi Next vá; có test hồi quy.
 - Đường lùi: Gỡ rewrite khi bản Next vá lỗi DecodeError
+
+### D-037 · 2026-10-19T04:51:15+00:00 · Mã hoá lúc lưu (T-048): chiến lược chuyển tiếp và phạm vi cột?
+
+- Phương án: (1) Ghi chỉ cột mã hoá AES-256-GCM (AAD bảng.cột+id), đọc ưu tiên cột mã hoá, backfill và scrub tách riêng, bước contract (bỏ cột rõ) để lát sau; mã hoá SĐT (3 bảng), lý do nghỉ phép, toạ độ GPS; blind index cho SĐT; tệp tải lên mã hoá bằng khoá riêng mỗi tệp bọc khoá chủ; xoay khoá không dừng hệ thống · (2) Ghi cả cột rõ lẫn mã hoá cho an toàn lùi; mã hoá toàn bộ cột kể cả email đăng nhập/tên
+- Chọn: Ghi chỉ cột mã hoá AES-256-GCM (AAD bảng.cột+id), đọc ưu tiên cột mã hoá, backfill và scrub tách riêng, bước contract (bỏ cột rõ) để lát sau; mã hoá SĐT (3 bảng), lý do nghỉ phép, toạ độ GPS; blind index cho SĐT; tệp tải lên mã hoá bằng khoá riêng mỗi tệp bọc khoá chủ; xoay khoá không dừng hệ thống
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+2: bản rõ không nằm trong dump sau khi scrub; đường lùi vẫn đủ nhờ cột mới nullable và scrub tách riêng; email/tên là khoá đăng nhập/JOIN nên mã hoá phá chức năng.
+- Đường lùi: Chạy lại backfill ngược hoặc bỏ cột enc; mã cũ vẫn chạy trên schema mới
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): KMS/HSM giữ khoá chủ, tách quyền khoá khỏi DB, mã hoá volume máy chủ; xoay khoá diễn tập trên staging
+
+### D-038 · 2026-10-19T04:51:15+00:00 · Cổng GPS server (T-051) và việc sửa guard bất biến của attendance_event?
+
+- Phương án: (1) Chỉ lưu toạ độ khi GEO_CAPTURE_ENABLED bật VÀ có đồng ý riêng geo_attendance còn hiệu lực; ngược lại bỏ toạ độ im lặng với client cũ và audit không chứa toạ độ; guard chấm công chỉ mở ngoại lệ hẹp: chuyển bản rõ sang bản mã/mã hoá lại, không cho xoá bản mã · (2) Từ chối 422 khi thiếu đồng ý; hoặc để role migration chạy xoay khoá
+- Chọn: Chỉ lưu toạ độ khi GEO_CAPTURE_ENABLED bật VÀ có đồng ý riêng geo_attendance còn hiệu lực; ngược lại bỏ toạ độ im lặng với client cũ và audit không chứa toạ độ; guard chấm công chỉ mở ngoại lệ hẹp: chuyển bản rõ sang bản mã/mã hoá lại, không cho xoá bản mã
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: client cũ không vỡ, không thu dữ liệu nhạy cảm khi thiếu cơ sở; ngoại lệ guard hẹp, có test; rủi ro 'đổi geo_enc mà DB không kiểm plaintext' ghi nhận, giảm bằng audit khi xoay khoá.
+- Đường lùi: Siết guard về chỉ role migration; hoặc đổi sang 422

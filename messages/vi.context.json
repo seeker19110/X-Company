@@ -575,7 +575,8 @@
       "consent": {
         "inquiryContact": "Văn bản đồng ý hiển thị cho người gửi biểu mẫu liên hệ; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
         "jobApplication": "Văn bản đồng ý hiển thị cho ứng viên; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
-        "talentPool": "Văn bản đồng ý RIÊNG, không tích sẵn, cho việc giữ hồ sơ ứng viên không trúng tuyển trong kho nhân tài (băm vào ui_snapshot_hash)."
+        "talentPool": "Văn bản đồng ý RIÊNG, không tích sẵn, cho việc giữ hồ sơ ứng viên không trúng tuyển trong kho nhân tài (băm vào ui_snapshot_hash).",
+        "geoAttendance": "Văn bản đồng ý RIÊNG của nhân viên cho việc ghi vị trí GPS khi chấm công (băm vào ui_snapshot_hash; đổi chữ phải đổi phiên bản chính sách)."
       },
       "retained": {
         "laborRecords": {

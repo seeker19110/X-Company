@@ -1,5 +1,6 @@
 // Route: POST /api/public/inquiries, POST /api/public/applications (công khai);
 // GET /api/app/inquiries (sales), GET /api/app/applications (hr) — S-WEB-05 tách quyền ứng viên.
+import { revealText } from "../crypto/columns.ts";
 import { getPool } from "../db/index.ts";
 import { authorize, clientIp, json, publicRoute, readJson, withActor } from "../http/index.ts";
 import { siteCompanyId } from "../site/index.ts";
@@ -27,20 +28,20 @@ export const listInquiries = withActor(async (ctx) => {
   await authorize(ctx, "inquiry.manage", { companyId: ctx.actor.companyId }, { type: "inquiry" });
   const page = parsePage(new URL(ctx.req.url).searchParams);
   const { rows } = await getPool().query(
-    `SELECT id, code, name, email, phone, message, service_slug, status, assignee_user_id, due_at, suspected_spam, created_at
+    `SELECT id, code, name, email, phone, phone_enc, message, service_slug, status, assignee_user_id, due_at, suspected_spam, created_at
      FROM inquiry WHERE company_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [ctx.actor.companyId, fetchLimit(page), page.offset],
   );
-  return json(toPage(rows, page));
+  return json(toPage(revealText("inquiry", "phone", rows), page));
 });
 
 export const listApplications = withActor(async (ctx) => {
   await authorize(ctx, "application.read", { companyId: ctx.actor.companyId }, { type: "job_application" });
   const page = parsePage(new URL(ctx.req.url).searchParams);
   const { rows } = await getPool().query(
-    `SELECT id, code, job_page_id, name, email, phone, status, suspected_spam, created_at
+    `SELECT id, code, job_page_id, name, email, phone, phone_enc, status, suspected_spam, created_at
      FROM job_application WHERE company_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [ctx.actor.companyId, fetchLimit(page), page.offset],
   );
-  return json(toPage(rows, page));
+  return json(toPage(revealText("job_application", "phone", rows), page));
 });

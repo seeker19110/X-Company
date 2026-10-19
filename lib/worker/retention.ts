@@ -119,8 +119,10 @@ type AnonTable = "inquiry" | "job_application";
 
 // email giữ giá trị giả hợp lệ vì CHECK (inquiry: email hoặc phone) và NOT NULL (job_application).
 const ANON_SETS: Record<AnonTable, string> = {
-  inquiry: "name = $3, email = $4, phone = NULL, message = $3, ip_hash = NULL",
-  job_application: "name = $3, email = $4, phone = NULL, cover_letter = NULL, ip_hash = NULL",
+  inquiry:
+    "name = $3, email = $4, phone = NULL, phone_enc = NULL, phone_bidx = NULL, message = $3, ip_hash = NULL",
+  job_application:
+    "name = $3, email = $4, phone = NULL, phone_enc = NULL, phone_bidx = NULL, cover_letter = NULL, ip_hash = NULL",
 };
 
 /**
@@ -186,8 +188,9 @@ const APPLICATION_STALE_WHERE = "status IN ('new', 'screening', 'interview', 'of
 async function clearEmployeeContacts(pool: pg.Pool, cutoff: string, before: Date): Promise<number> {
   return inTx(pool, async (tx) => {
     const r = await tx.query<{ company_id: string }>(
-      `UPDATE employee SET phone = NULL, work_email = NULL
-        WHERE terminated_on IS NOT NULL AND terminated_on < $1::date AND (phone IS NOT NULL OR work_email IS NOT NULL)
+      `UPDATE employee SET phone = NULL, phone_enc = NULL, phone_bidx = NULL, work_email = NULL
+        WHERE terminated_on IS NOT NULL AND terminated_on < $1::date
+          AND (phone IS NOT NULL OR phone_enc IS NOT NULL OR work_email IS NOT NULL)
         RETURNING company_id`,
       [cutoff],
     );
@@ -203,7 +206,7 @@ async function clearEmployeeContacts(pool: pg.Pool, cutoff: string, before: Date
 async function anonymizeEmployees(pool: pg.Pool, cutoff: string, now: Date, before: Date): Promise<number> {
   return inTx(pool, async (tx) => {
     const r = await tx.query<{ company_id: string }>(
-      `UPDATE employee SET full_name = $3, work_email = NULL, phone = NULL, anonymized_at = $2
+      `UPDATE employee SET full_name = $3, work_email = NULL, phone = NULL, phone_enc = NULL, phone_bidx = NULL, anonymized_at = $2
         WHERE terminated_on IS NOT NULL AND terminated_on < $1::date AND anonymized_at IS NULL
         RETURNING company_id`,
       [cutoff, now, ANON_NAME],

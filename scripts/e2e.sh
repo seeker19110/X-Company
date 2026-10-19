@@ -15,6 +15,9 @@ SITE_COMPANY_ID="$(node -e "process.stdout.write(require('./e2e/.seed.json').com
 export APP_ORIGIN="http://localhost:3100"
 export SESSION_SECRET="${SESSION_SECRET:-e2e-session-secret-0123456789abcdef-xyz}"
 export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:e2e-qr-key-0123456789abcdef0123456789abcdef}"
+# Khoá mã hoá dữ liệu lúc lưu (T-048): bắt buộc ở production → sinh ngẫu nhiên mỗi lần chạy (CSDL e2e là tạm; không literal khoá).
+export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-e2e1:$(openssl rand -base64 32)}"
+export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
 export FILE_STORAGE_DIR="$(mktemp -d)"
 if [ "${E2E_SKIP_BUILD:-0}" != "1" ]; then npm run -s build >/dev/null; fi
 exec npx --no-install playwright test "$@"
