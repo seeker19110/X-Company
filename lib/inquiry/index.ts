@@ -370,8 +370,9 @@ export async function updateInquiry(
     objectType: "inquiry",
     objectId: inquiryId,
     before: cur,
-    after: { status: change.status, assignee },
-    reason: change.note ?? null,
+    after: { status: change.status, assignee, hasNote: typeof change.note === "string" },
+    // Ghi chú tự do có thể chứa SĐT/họ tên: audit chỉ thêm nên KHÔNG chép nội dung (chỉ cờ hasNote); nội dung ở inquiry_history.note, xoá được theo yêu cầu.
+    reason: null,
     requestId: actor.requestId ?? null,
   });
   if (assignee && assignee !== cur.assignee_user_id)

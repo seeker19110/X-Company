@@ -925,5 +925,31 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       const v = await verifyAuditChain(db.admin);
       assert.equal(v.ok, true);
     });
+
+    test("AUD-DATA-001: ghi chú tự do của người xử lý không lọt vào audit_event.reason (còn lại sau khi xoá)", async () => {
+      const a = await newInquiry();
+      const marker = `gọi ông B 09${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
+      await withTx((tx) =>
+        updateInquiry(tx, { userId: salesId, companyId }, a.id, {
+          status: "assigned",
+          assigneeUserId: salesId,
+          note: marker,
+        }),
+      );
+      const req = await handle(a.code, "inquiry", "delete");
+      await complete(req.id);
+      const leaked = await q("SELECT action FROM audit_event WHERE reason LIKE $1 OR after::text LIKE $1", [
+        `%${marker}%`,
+      ]);
+      assert.deepEqual(leaked, [], "audit_event không được giữ nội dung ghi chú tự do");
+      const hist = await q(
+        "SELECT note FROM inquiry_history WHERE inquiry_id = $1 AND actor_user_id IS NOT NULL AND to_status <> 'processing_stopped'",
+        [a.id],
+      );
+      assert.ok(
+        hist.every((h) => h.note === null),
+        "ghi chú trong lịch sử bị xoá",
+      );
+    });
   });
 });
