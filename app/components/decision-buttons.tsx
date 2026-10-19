@@ -41,7 +41,7 @@ export function DecisionButtons({ type, id, subject }: { type: string; id: strin
   }
 
   return (
-    <div className="row" style={{ marginTop: "0.5rem" }}>
+    <div className="row row-actions">
       <button className="btn btn-primary" disabled={busy} aria-busy={busy} onClick={() => decide("approve")}>
         {t("approvals.approve")}
       </button>

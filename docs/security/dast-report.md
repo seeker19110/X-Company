@@ -1,14 +1,14 @@
 ---
 title: Báo cáo DAST cục bộ — X-Company
 updated: 2026-10-19
-status: PASS — faithful-fixture, máy dev (sinh bằng `npm run -s dast`; không sửa tay)
+status: PASS — faithful-fixture, máy dev (sinh bằng `npm run -s dast:probes`; không sửa tay)
 ---
 
 # Báo cáo DAST cục bộ (T-047, SEC-WEB-004)
 
 > **Nhãn bằng chứng: faithful-fixture.** Bộ probe tự viết (Node thuần + Chromium của Playwright) tấn công bản build production
 > (`next start`) trên máy dev với Postgres tạm và dữ liệu seed. **Không phải** quét hạ tầng production/staging thật, **không phải** ZAP,
-> và không thay pentest. Sinh lại: `npm run -s dast`.
+> và không thay pentest. Sinh lại: `npm run -s dast:probes`.
 
 | Mục | Giá trị |
 |---|---|

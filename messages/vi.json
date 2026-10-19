@@ -24,5 +24,10 @@
     "submit": "Đăng nhập",
     "submitting": "Đang đăng nhập…",
     "failed": "Đăng nhập không thành công"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "body": "Trang bạn tìm không tồn tại hoặc đã được chuyển đi.",
+    "home": "Về trang chủ"
   }
 }

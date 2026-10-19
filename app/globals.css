@@ -40,3 +40,18 @@ a {
 [aria-invalid="true"] {
   border-color: var(--danger);
 }
+/* Trang 404 gốc (app/not-found.tsx) chỉ có globals.css — site.css/app.css nạp theo layout con. */
+.not-found {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+.not-found a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--brand);
+  border-radius: 0.375rem;
+  text-decoration: none;
+}

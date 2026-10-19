@@ -25,7 +25,7 @@
 | 12 | Hiệu năng đạt ngưỡng, đo | PASS | faithful-fixture | `perf:load` 7/7 kịch bản trong ngân sách SLO (p95 23–130 ms), Lighthouse cục bộ 97–99 điểm, LCP 1,6–2,3 s; JS tĩnh 225,9/230 KB. Không phải số thực địa (xem 2b) |
 | 13 | Tiếp cận: 0 vi phạm axe WCAG 2.2 AA | PASS | real-path | E2E quét mọi trang công khai + 9 màn nội bộ ở 320 px, 0 vi phạm |
 | 14 | Release notes + CHANGELOG | PASS (SHOULD) | real-path | `CHANGELOG.md`, release-please |
-| 15 | DAST | PASS (SHOULD) | faithful-fixture | `npm run -s dast` 9/9 nhóm, 155 kiểm tra (XSS có Chromium thật); 4 lỗi thật đã sửa; không phải ZAP |
+| 15 | DAST | PASS (SHOULD) | faithful-fixture | `npm run -s dast:probes` 9/9 nhóm, 155 kiểm tra (XSS có Chromium thật); 4 lỗi thật đã sửa; không phải ZAP |
 | 16 | Mã hoá dữ liệu lúc lưu | PASS (SHOULD) | faithful-fixture | AES-256-GCM cột nhạy cảm + tệp tải lên, xoay khoá, `pg_dump` không chứa bản rõ; khoá chủ ở env, chưa KMS/HSM |
 | 18 | Đề xuất "Khi chạy thật" đã được chủ dự án quyết | FAIL | — | `docs/autopilot/DECISIONS.md` D-016, D-018, D-020, D-027, D-029…D-038 có mục "Khi chạy thật" chờ chủ dự án |
 

@@ -28,13 +28,17 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: false,
-  // Proxy (proxy.ts) không chạy cho /api (tránh đệm thân request tải tệp 20 MB) nên header tối thiểu cho API đặt ở đây
-  // (DAST: JSON thiếu nosniff + HSTS). CSP/X-Frame-Options không cần cho JSON.
+  // proxy.ts bỏ qua /api (JSON, header riêng ở lib/http; tránh đệm thân request tải tệp 20 MB) nên header cho API đặt ở đây:
+  // CSP chặt cho cả 404 của /api (ZAP 10038), nosniff + HSTS (DAST). `:path*` khớp cả chính `/api`.
   async headers() {
     return [
       {
         source: "/api/:path*",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Strict-Transport-Security", value: API_HSTS },
         ],

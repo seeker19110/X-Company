@@ -540,7 +540,7 @@ export function renderReport(meta, groups) {
   L.push("title: Báo cáo DAST cục bộ — X-Company");
   L.push(`updated: ${meta.date}`);
   L.push(
-    `status: ${fails === 0 ? "PASS" : "FAIL"} — faithful-fixture, máy dev (sinh bằng \`npm run -s dast\`; không sửa tay)`,
+    `status: ${fails === 0 ? "PASS" : "FAIL"} — faithful-fixture, máy dev (sinh bằng \`npm run -s dast:probes\`; không sửa tay)`,
   );
   L.push("---");
   L.push("");
@@ -552,7 +552,7 @@ export function renderReport(meta, groups) {
   L.push(
     "> (`next start`) trên máy dev với Postgres tạm và dữ liệu seed. **Không phải** quét hạ tầng production/staging thật, **không phải** ZAP,",
   );
-  L.push("> và không thay pentest. Sinh lại: `npm run -s dast`.");
+  L.push("> và không thay pentest. Sinh lại: `npm run -s dast:probes`.");
   L.push("");
   L.push("| Mục | Giá trị |");
   L.push("|---|---|");

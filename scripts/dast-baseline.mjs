@@ -1,5 +1,5 @@
 // dast-baseline.mjs — DAST cục bộ không cần docker (T-047, SEC-WEB-004): bộ probe tự viết tấn công THẬT bản build production
-// (`next start`) + Postgres tạm + dữ liệu seed. Gọi qua `npm run -s dast` (bọc bởi scripts/with-test-db.sh).
+// (`next start`) + Postgres tạm + dữ liệu seed. Gọi qua `npm run -s dast:probes` (bọc bởi scripts/with-test-db.sh).
 // Ghi docs/security/dast-report.md + docs/security/dast-report.json (sinh lại được); exit 1 khi có nhóm FAIL.
 // Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/staging/thực địa.
 import { randomBytes, randomUUID } from "node:crypto";

@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { login } from "./helpers";
+import { failOnCspViolation, login } from "./helpers";
+
+failOnCspViolation();
 
 // STD-PRIV-004: quyền chủ thể là luồng có E2E — truy cập, xoá, rút đồng ý. Khách gửi form công khai; HR (người phụ trách)
 // đăng nhập, ghi yêu cầu nhận qua kênh liên hệ rồi xử lý. Chưa có giao diện HR (T-032) → HR gọi API với phiên đã đăng nhập.

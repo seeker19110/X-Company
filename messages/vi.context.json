@@ -598,5 +598,10 @@
       },
       "stopObjectRequest": "Lý do mặc định của lệnh hạn chế xử lý khi chủ thể phản đối xử lý mà yêu cầu không có ghi chú."
     }
+  },
+  "notFound": {
+    "title": "Tiêu đề trang 404 khi đường dẫn không tồn tại.",
+    "body": "Câu giải thích dưới tiêu đề trang 404.",
+    "home": "Liên kết từ trang 404 về trang chủ website."
   }
 }
