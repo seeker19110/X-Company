@@ -478,6 +478,7 @@
     "rum": {
       "khongTimThay": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền rum, khi cờ RUM_ENABLED tắt. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "trangKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền rum, đường dẫn trang không chuẩn hoá được. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "guiQuaNhieu": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền rum, beacon gửi quá nhiều. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "tenChiSoTrung": "Lỗi theo trường trong phản hồi 400 của beacon RUM: một chỉ số xuất hiện hai lần trong cùng một beacon (máy đọc, không tới người dùng cuối).",
       "giaTriVuotTran": "Lỗi theo trường trong phản hồi 400 của beacon RUM: giá trị chỉ số vượt trần cho phép; {max} là trần (máy đọc, không tới người dùng cuối)."
     },

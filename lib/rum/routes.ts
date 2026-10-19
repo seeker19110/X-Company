@@ -15,7 +15,14 @@ export const postRum = publicRoute(async ({ req }) => {
   // Cờ tắt → như không tồn tại (không lộ endpoint, không ghi gì, không tính tần suất).
   if (!env("RUM_ENABLED")) throw new AppError("NOT_FOUND", 404, t("err.rum.khongTimThay"));
   assertSameOrigin(req);
-  await checkRate(getPool(), "rum", clientIp(req), new Date(), RUM_RATE_LIMIT);
+  try {
+    await checkRate(getPool(), "rum", clientIp(req), new Date(), RUM_RATE_LIMIT);
+  } catch (err) {
+    // Giữ mã 429 + retryAfter của checkRate, thay thông điệp (checkRate dùng chuỗi của biểu mẫu liên hệ).
+    if (err instanceof AppError && err.code === "RATE_LIMITED")
+      throw new AppError("RATE_LIMITED", 429, t("err.rum.guiQuaNhieu"), err.details);
+    throw err;
+  }
   const input = RumInput.parse(await readJson(req, RUM_BODY_MAX_BYTES));
   const page = pageLabel(input.page);
   if (page === null) throw new AppError("VALIDATION", 400, t("err.rum.trangKhongHopLe"));

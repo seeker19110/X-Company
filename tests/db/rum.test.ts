@@ -204,6 +204,14 @@ describe("POST /api/public/rum", () => {
     assert.ok(!rate.includes("203.0.113.77"));
   });
 
+  test("received_at được làm thô theo phút khi lưu (không lưu giây/mili giây)", async () => {
+    assert.equal((await post(beacon())).status, 204);
+    const { rows } = await db.admin.query(
+      "SELECT count(*)::int AS n FROM rum_sample WHERE received_at <> date_trunc('minute', received_at)",
+    );
+    assert.equal(rows[0].n, 0);
+  });
+
   test("nav vắng → NULL; trang công khai → /[...slug]; một câu lệnh ghi cả năm chỉ số", async () => {
     const all = ["LCP", "INP", "CLS", "FCP", "TTFB"].map((name) => ({ name, value: 1 }));
     assert.equal((await post({ page: "/gioi-thieu", metrics: all })).status, 204);
@@ -280,7 +288,9 @@ describe("POST /api/public/rum", () => {
     for (let i = 0; i < RUM_RATE_LIMIT.max; i++) assert.equal((await post(beacon(), { ip })).status, 204);
     const r = await post(beacon(), { ip });
     assert.equal(r.status, 429);
-    assert.equal((await problem(r)).code, "RATE_LIMITED");
+    const body = (await r.json()) as { code: string; message: string };
+    assert.equal(body.code, "RATE_LIMITED");
+    assert.equal(body.message, "Gửi quá nhiều lần, vui lòng thử lại sau", "thông điệp riêng của RUM");
     const retry = Number(r.headers.get("retry-after"));
     assert.ok(
       Number.isInteger(retry) && retry >= 1 && retry <= RUM_RATE_LIMIT.windowMs / 1000,
@@ -357,12 +367,48 @@ describe("POST /api/public/rum", () => {
       assert.equal(exp[0].p75, 4750, "đối chiếu với SQL gốc");
     });
 
-    test("bảng rỗng → mảng rỗng; lỗi truy vấn → null; quá hạn → null", async () => {
+    test("bảng rỗng → mảng rỗng; không kết nối được/lỗi truy vấn → null", async () => {
       assert.deepEqual(await readRumP75(db.app, 2000, NOW), []);
-      const failing = { query: () => Promise.reject(new Error("boom")) };
+      const noConn = { connect: () => Promise.reject(new Error("boom")) };
+      assert.equal(await readRumP75(noConn as never, 2000), null);
+      const failing = {
+        connect: () =>
+          Promise.resolve({
+            query: (sql: string) =>
+              /^SELECT\s+page/.test(sql) ? Promise.reject(new Error("x")) : Promise.resolve({}),
+            release: () => undefined,
+          }),
+      };
       assert.equal(await readRumP75(failing as never, 2000), null);
-      const hanging = { query: () => new Promise(() => undefined) };
-      assert.equal(await readRumP75(hanging as never, 20), null);
+    });
+
+    test("quá hạn: máy chủ CSDL HUỶ truy vấn (statement_timeout cục bộ), trả null, kết nối trở lại pool", async () => {
+      // Giữ khoá độc quyền trên bảng ở kết nối khác → SELECT của readRumP75 bị chặn chờ khoá.
+      const blocker = await db.admin.connect();
+      try {
+        await blocker.query("BEGIN");
+        await blocker.query("LOCK TABLE rum_sample IN ACCESS EXCLUSIVE MODE");
+        const t0 = Date.now();
+        assert.equal(await readRumP75(db.app, 300, NOW), null);
+        assert.ok(Date.now() - t0 < 3000, "không treo chờ khoá");
+        // Khoá vẫn còn giữ: nếu truy vấn chỉ bị bỏ chờ (không huỷ) thì nó còn "active/chờ khoá" trong pg_stat_activity.
+        const { rows } = await db.admin.query(
+          "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database() AND state = 'active' AND query LIKE '%FROM rum_sample%' AND pid <> pg_backend_pid()",
+        );
+        assert.equal(rows[0].n, 0, "truy vấn đã bị huỷ ở máy chủ");
+      } finally {
+        await blocker.query("ROLLBACK");
+        blocker.release();
+      }
+      // statement_timeout là SET LOCAL: không rò sang kết nối dùng lại.
+      const c = await db.app.connect();
+      try {
+        const r = await c.query("SHOW statement_timeout");
+        assert.notEqual(r.rows[0].statement_timeout, "300ms");
+      } finally {
+        c.release();
+      }
+      assert.deepEqual(await readRumP75(db.app, 2000, NOW), [], "đọc lại bình thường sau khi hết khoá");
     });
 
     test("renderMetrics: giây cho chỉ số thời gian, điểm cho CLS, HELP/TYPE, thoát nhãn; vắng khi RUM tắt", () => {

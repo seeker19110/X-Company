@@ -1,110 +1,108 @@
 "use client";
 
 import { useEffect } from "react";
+import { clsSessionWindow, slowestInteractionMs, type ShiftEntry } from "@/lib/rum/vitals.pure";
 import { reportClientError } from "./client-log";
 
-// RUM web-vitals tự làm (T-056, D-042): không phụ thuộc, không bên thứ ba, không cookie/định danh. MỘT beacon cho mỗi lần tải
-// trang (lúc ẩn trang), gửi về /api/public/rum. Chỉ gửi pathname của lần tải đó (server chuẩn hoá thành nhãn trang có số giá trị
-// bị chặn, không lưu id/slug). Chỉ số: LCP, INP (xấp xỉ: thời lượng lớn nhất của tương tác), CLS (tổng), FCP, TTFB.
+// RUM web-vitals tự làm (T-056, D-042): không phụ thuộc, không bên thứ ba, không cookie/định danh. MỘT beacon cho mỗi TÀI LIỆU
+// (lần tải trang), gửi về /api/public/rum lúc ẩn trang. Cài đặt ở cấp module: điều hướng client giữa các layout làm component
+// mount/unmount nhưng module sống cùng tài liệu, nên chỉ lần mount đầu cài observer và `page` là pathname LÚC TẢI tài liệu
+// (số đo LCP/FCP/TTFB thuộc tài liệu đó; mount sau không gán chúng cho đường dẫn mới). Server chuẩn hoá `page` thành nhãn.
 const ENDPOINT = "/api/public/rum";
 /** Trần phía client khớp trần phía server (lib/rum RUM_MAX_TIME_MS / RUM_MAX_CLS): vượt thì cắt, không để cả beacon bị từ chối. */
 const MAX_TIME_MS = 120_000;
 const MAX_CLS = 10;
-const INP_DURATION_THRESHOLD_MS = 40;
+/** Ngưỡng nhỏ nhất Event Timing cho phép: lượt xem chỉ có tương tác nhanh vẫn có INP đúng. */
+const EVENT_DURATION_THRESHOLD_MS = 16;
 
 type Name = "LCP" | "INP" | "CLS" | "FCP" | "TTFB";
-interface Sample {
-  name: Name;
-  value: number;
-}
-interface LayoutShiftEntry extends PerformanceEntry {
-  value: number;
-  hadRecentInput: boolean;
-}
-interface EventTimingEntry extends PerformanceEntry {
-  interactionId?: number;
-}
 interface NavTimingEntry extends PerformanceEntry {
   responseStart: number;
   type?: string;
 }
 
-/** Quan sát một loại entry (buffered); trình duyệt không hỗ trợ → null (bỏ qua chỉ số đó, không lỗi). */
-function observe(type: string, onEntries: (entries: PerformanceEntry[]) => void): PerformanceObserver | null {
+let installed = false;
+
+/** Quan sát một loại entry (buffered); không hỗ trợ → null (bỏ qua chỉ số đó). Trả cặp observer/callback để flush bằng takeRecords. */
+function observe(type: string, cb: (entries: PerformanceEntry[]) => void) {
   try {
     if (!PerformanceObserver.supportedEntryTypes?.includes(type)) return null;
-    const po = new PerformanceObserver((list) => onEntries(list.getEntries()));
-    // durationThreshold chỉ có nghĩa với type 'event' (INP); các type khác bỏ qua.
+    const po = new PerformanceObserver((list) => cb(list.getEntries()));
     po.observe({
       type,
       buffered: true,
-      durationThreshold: INP_DURATION_THRESHOLD_MS,
+      durationThreshold: EVENT_DURATION_THRESHOLD_MS,
     } as PerformanceObserverInit);
-    return po;
+    return { po, cb };
   } catch (e) {
     reportClientError(`RUM ${type}`, e);
     return null;
   }
 }
 
+function install(): void {
+  if (typeof PerformanceObserver === "undefined" || typeof navigator.sendBeacon !== "function") return;
+  const page = location.pathname;
+  const v: Partial<Record<Name, number>> = {};
+  const shifts: ShiftEntry[] = [];
+  let nav: string | undefined;
+  let sent = false;
+  const interaction = (es: PerformanceEntry[]) => {
+    const ms = slowestInteractionMs(es);
+    if (ms !== undefined) v.INP = Math.max(v.INP ?? 0, ms);
+  };
+
+  const observers = [
+    observe("largest-contentful-paint", (es) => {
+      v.LCP = es[es.length - 1]?.startTime;
+    }),
+    observe("layout-shift", (es) => {
+      shifts.push(...(es as unknown as ShiftEntry[]));
+      v.CLS = clsSessionWindow(shifts);
+    }),
+    observe("event", interaction),
+    observe("first-input", interaction),
+    observe("paint", (es) => {
+      for (const e of es) if (e.name === "first-contentful-paint") v.FCP = e.startTime;
+    }),
+    observe("navigation", (es) => {
+      const e = es[0] as NavTimingEntry | undefined;
+      v.TTFB = e?.responseStart;
+      nav = e?.type;
+    }),
+  ];
+
+  const flush = () => {
+    if (sent) return;
+    for (const o of observers) if (o) o.cb(o.po.takeRecords()); // phần chưa giao cho callback
+    const metrics: { name: Name; value: number }[] = [];
+    for (const name of Object.keys(v) as Name[]) {
+      const x = v[name];
+      if (x === undefined || !Number.isFinite(x) || x < 0) continue;
+      metrics.push({
+        name,
+        value: name === "CLS" ? Math.min(x, MAX_CLS) : Math.min(Math.round(x), MAX_TIME_MS),
+      });
+    }
+    if (metrics.length === 0) return; // chưa có số đo: lần ẩn trang sau còn gửi được
+    sent = true;
+    const body = JSON.stringify({ page, nav, metrics });
+    // sendBeacon trả false khi trình duyệt không xếp được hàng gửi: báo, không thử lại.
+    if (!navigator.sendBeacon(ENDPOINT, new Blob([body], { type: "application/json" })))
+      reportClientError("RUM beacon", "sendBeacon false");
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+  addEventListener("pagehide", flush);
+}
+
 export function RumBeacon() {
   useEffect(() => {
-    if (typeof PerformanceObserver === "undefined" || typeof navigator.sendBeacon !== "function") return;
-    const page = location.pathname;
-    const v: Partial<Record<Name, number>> = {};
-    let nav: string | undefined;
-    let sent = false;
-
-    const observers = [
-      observe("largest-contentful-paint", (es) => {
-        v.LCP = es[es.length - 1]?.startTime;
-      }),
-      observe("layout-shift", (es) => {
-        for (const e of es as LayoutShiftEntry[]) if (!e.hadRecentInput) v.CLS = (v.CLS ?? 0) + e.value;
-      }),
-      observe("event", (es) => {
-        for (const e of es as EventTimingEntry[])
-          if ((e.interactionId ?? 0) > 0) v.INP = Math.max(v.INP ?? 0, e.duration);
-      }),
-      observe("paint", (es) => {
-        for (const e of es) if (e.name === "first-contentful-paint") v.FCP = e.startTime;
-      }),
-      observe("navigation", (es) => {
-        const e = es[0] as NavTimingEntry | undefined;
-        v.TTFB = e?.responseStart;
-        nav = e?.type;
-      }),
-    ];
-
-    const flush = () => {
-      if (sent) return;
-      sent = true;
-      for (const po of observers) po?.takeRecords(); // phần chưa giao cho callback (không ném)
-      const metrics: Sample[] = [];
-      for (const name of Object.keys(v) as Name[]) {
-        const x = v[name];
-        if (x === undefined || !Number.isFinite(x) || x < 0) continue;
-        metrics.push({
-          name,
-          value: name === "CLS" ? Math.min(x, MAX_CLS) : Math.min(Math.round(x), MAX_TIME_MS),
-        });
-      }
-      if (metrics.length === 0) return;
-      const body = JSON.stringify({ page, nav, metrics });
-      // sendBeacon trả false khi trình duyệt không xếp được hàng gửi (vd quá cỡ hàng đợi): báo, không thử lại.
-      if (!navigator.sendBeacon(ENDPOINT, new Blob([body], { type: "application/json" })))
-        reportClientError("RUM beacon", "sendBeacon false");
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") flush();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    addEventListener("pagehide", flush);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      removeEventListener("pagehide", flush);
-      for (const po of observers) po?.disconnect();
-    };
+    if (installed) return;
+    installed = true;
+    install();
+    // Không dọn khi unmount: cài đặt sống tới khi tài liệu bị bỏ (điều hướng client chỉ đổi component, không đổi tài liệu).
   }, []);
   return null;
 }

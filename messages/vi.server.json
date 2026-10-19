@@ -299,6 +299,7 @@
     "rum": {
       "khongTimThay": "Không tìm thấy",
       "trangKhongHopLe": "Đường dẫn trang không hợp lệ",
+      "guiQuaNhieu": "Gửi quá nhiều lần, vui lòng thử lại sau",
       "tenChiSoTrung": "Tên chỉ số bị trùng trong cùng một beacon",
       "giaTriVuotTran": "Giá trị vượt trần {max}"
     },

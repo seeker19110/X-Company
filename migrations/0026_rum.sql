@@ -6,7 +6,8 @@
 
 CREATE TABLE rum_sample (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  received_at timestamptz NOT NULL DEFAULT now(),
+  -- Làm thô theo PHÚT khi lưu: không cần độ chính xác giây (gộp p75 theo cửa sổ 24 giờ), giảm khả năng đối chiếu với log nơi khác.
+  received_at timestamptz NOT NULL DEFAULT date_trunc('minute', now()),
   page text NOT NULL CHECK (length(page) <= 64 AND page LIKE '/%'),
   metric text NOT NULL CHECK (metric IN ('LCP', 'INP', 'CLS', 'FCP', 'TTFB')),
   -- Chỉ số thời gian (LCP/INP/FCP/TTFB): mili giây, số nguyên, tối đa 2 phút.

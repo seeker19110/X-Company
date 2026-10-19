@@ -93,20 +93,25 @@ export interface RumP75Row {
 
 /**
  * p75 theo (trang, chỉ số) trên RUM_WINDOW_MS gần nhất, chỉ nhóm có ≥ RUM_MIN_SAMPLES mẫu. Lỗi/quá hạn → null
- * (metric vắng mặt thay vì báo số sai) — cùng khuôn readOutboxDead.
+ * (metric vắng mặt thay vì báo số sai). Quá hạn được máy chủ CSDL HUỶ truy vấn thật: giao dịch riêng có
+ * `SET LOCAL statement_timeout` = timeoutMs (không chỉ bỏ chờ ở phía ứng dụng, để truy vấn chậm không chồng chất).
  */
 export async function readRumP75(
-  pool: Pick<pg.Pool, "query">,
+  pool: Pick<pg.Pool, "connect">,
   timeoutMs: number = RUM_QUERY_TIMEOUT_MS,
   now: Date = new Date(),
 ): Promise<RumP75Row[] | null> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), timeoutMs);
-  });
   const since = new Date(now.getTime() - RUM_WINDOW_MS);
-  const q = pool
-    .query<{ page: string; metric: RumMetric; p75: number; n: number }>(
+  let c: pg.PoolClient | undefined;
+  let broken: Error | undefined; // ROLLBACK thất bại: kết nối không còn dùng lại được, release(err) loại nó khỏi pool
+  try {
+    c = await pool.connect();
+    await c.query("BEGIN");
+    // set_config(..., true) = SET LOCAL (hết hiệu lực khi kết thúc giao dịch), đơn vị mili giây, tham số hoá.
+    await c.query("SELECT set_config('statement_timeout', $1, true)", [
+      String(Math.max(1, Math.floor(timeoutMs))),
+    ]);
+    const r = await c.query<{ page: string; metric: RumMetric; p75: number; n: number }>(
       `SELECT page, metric,
               percentile_cont(0.75) WITHIN GROUP (ORDER BY COALESCE(value_ms, cls_milli_n)) AS p75,
               count(*)::int AS n
@@ -116,23 +121,23 @@ export async function readRumP75(
        HAVING count(*) >= $2
         ORDER BY page, metric`,
       [since, RUM_MIN_SAMPLES, now],
-    )
-    .then(
-      (r): RumP75Row[] =>
-        r.rows.map((x) => ({
-          page: x.page,
-          metric: x.metric,
-          p75: x.metric === "CLS" ? x.p75 / CLS_SCALE : x.p75,
-          n: x.n,
-        })),
-      (err: unknown) => {
-        log.warn("metrics: không đọc được rum_web_vitals_p75", { err });
-        return null;
-      },
     );
-  try {
-    return await Promise.race([q, timeout]);
+    await c.query("COMMIT");
+    return r.rows.map((x) => ({
+      page: x.page,
+      metric: x.metric,
+      p75: x.metric === "CLS" ? x.p75 / CLS_SCALE : x.p75,
+      n: x.n,
+    }));
+  } catch (err) {
+    log.warn("metrics: không đọc được rum_web_vitals_p75", { err });
+    if (c)
+      await c.query("ROLLBACK").catch((e: unknown) => {
+        broken = e instanceof Error ? e : new Error(String(e));
+        log.warn("rollback RUM thất bại", { err: e });
+      });
+    return null;
   } finally {
-    clearTimeout(timer);
+    c?.release(broken);
   }
 }
