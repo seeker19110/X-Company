@@ -197,6 +197,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(
-    "check:alerts: OK (chỉ kiểm cấu trúc; chưa chạy trên Prometheus thật; luật cục bộ đã có runbook + dòng thử kích hoạt)",
+    "check:alerts: OK (chỉ kiểm cấu trúc — chạy trên Prometheus thật: npm run -s ops:stack:drill; luật cục bộ đã có runbook + dòng thử kích hoạt)",
   );
 }

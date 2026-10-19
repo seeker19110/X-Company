@@ -63,6 +63,7 @@
     "check:perf-budget": "node scripts/check-perf-budget.mjs",
     "check:alerts": "node scripts/check-alerts.mjs",
     "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
+    "ops:stack:drill": "scripts/with-test-db.sh node scripts/ops-stack-drill.mjs",
     "backup": "scripts/backup.sh",
     "backup:drill": "scripts/restore-drill.sh",
     "kms:drill": "scripts/with-test-db.sh scripts/kms-dev.sh run -- tsx scripts/kms-rotation-drill.ts",

@@ -71,6 +71,9 @@
           },
           {
             "context": "dast"
+          },
+          {
+            "context": "ops-stack"
           }
         ]
       }

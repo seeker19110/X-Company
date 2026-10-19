@@ -345,3 +345,48 @@ jobs:
             docs/security/dast-report.json
           retention-days: 30
           if-no-files-found: ignore
+
+  ops-stack:
+    name: ops-stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # OPS-SLO-006, OPS-OBS-*: Prometheus + Alertmanager THẬT (ghim sha256) — promtool check/test rules, scrape /api/metrics của bản
+    # build production, rule diễn tập → Alertmanager → webhook cục bộ (firing rồi resolved). faithful-fixture, không phải production.
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cài Prometheus/promtool/Alertmanager/amtool (ghim sha256)
+        run: node scripts/tools/install-tool.mjs install prometheus promtool alertmanager amtool
+      - name: Diễn tập giám sát end-to-end
+        run: npm run -s ops:stack:drill
+      - name: Lưu báo cáo diễn tập
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ops-stack-drill
+          path: |
+            docs/ops/ops-stack-drill.md
+            docs/ops/ops-stack-drill.json
+          retention-days: 30
+          if-no-files-found: ignore

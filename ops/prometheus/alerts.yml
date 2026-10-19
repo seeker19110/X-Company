@@ -1,6 +1,8 @@
-# Rule cảnh báo MẪU (OPS-SLO-001, OPS-OBS-003, BE-JOB-004). CHƯA chạy trên Prometheus thật (chưa có hạ tầng giám sát);
-# cấu trúc được kiểm bằng `npm run -s check:alerts` (scripts/check-alerts.mjs). Khi có Prometheus: `promtool check rules ops/prometheus/alerts.yml`.
+# Rule cảnh báo (OPS-SLO-001, OPS-OBS-003, BE-JOB-004). Kiểm bằng công cụ chính chủ trong `npm run -s ops:stack:drill` (T-054):
+# `promtool check rules` + `promtool test rules ops/prometheus/alerts.test.yml` (ca bắn/không bắn của từng rule), và nạp vào
+# Prometheus thật cục bộ (health=ok). Cấu trúc/nhãn kiểm thêm bằng `npm run -s check:alerts` (scripts/check-alerts.mjs).
 # Metric nguồn: lib/http/metrics.ts (`/api/metrics`). SLO ở docs/ops/SLO.md. Mọi rule có severity, owner, runbook_url.
+# Cấu hình triển khai mẫu: ops/prometheus/prometheus.yml, ops/alertmanager/alertmanager.yml.
 groups:
   - name: x-company-slo-burn
     rules:

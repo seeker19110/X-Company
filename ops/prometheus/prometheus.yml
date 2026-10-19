@@ -1,0 +1,24 @@
+# Cấu hình Prometheus MẪU cho môi trường thật (T-054, D-041). Bí mật không nằm trong tệp: token đọc /api/metrics ở
+# credentials_file (giá trị = METRICS_TOKEN của app). Đổi `targets` sang máy chủ app thật. Kiểm cú pháp trong
+# `npm run -s ops:stack:drill` (`promtool check config --syntax-only`); drill chạy thật một bản sinh từ cùng cấu trúc.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["127.0.0.1:9093"]
+
+scrape_configs:
+  - job_name: x-company
+    metrics_path: /api/metrics
+    scheme: http
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token
+    static_configs:
+      - targets: ["127.0.0.1:3000"]
