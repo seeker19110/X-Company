@@ -7,7 +7,7 @@ import { t } from "../i18n/index.ts";
  * Đọc body theo luồng có TRẦN byte: request chunked không có Content-Length cũng bị cắt ngay khi vượt trần (không nạp hết vào RAM
  * rồi mới kiểm). Content-Length khai lớn hơn trần → từ chối trước khi đọc.
  */
-export async function readCapped(req: Request, maxBytes: number): Promise<Uint8Array> {
+export async function readCapped(req: Request, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
   const tooLarge = () => new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
   const declared = Number(req.headers.get("content-length") ?? "0");
   if (declared > maxBytes) throw tooLarge();
@@ -16,7 +16,14 @@ export async function readCapped(req: Request, maxBytes: number): Promise<Uint8A
   const parts: Uint8Array[] = [];
   let total = 0;
   for (;;) {
-    const { done, value } = await reader.read();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch {
+      // client ngắt giữa chừng: lỗi do phía gửi (400), không phải lỗi máy chủ (500 + log mỗi lần mất mạng khi upload)
+      throw new AppError("BAD_REQUEST", 400, t("err.http.thanRequestBiNgat"));
+    }
+    const { done, value } = chunk;
     if (done) break;
     total += value.byteLength;
     if (total > maxBytes) {
@@ -33,7 +40,7 @@ export async function readCapped(req: Request, maxBytes: number): Promise<Uint8A
 export async function readFormCapped(req: Request, maxBytes: number): Promise<FormData> {
   const data = await readCapped(req, maxBytes);
   try {
-    return await new Response(Buffer.from(data), {
+    return await new Response(data, {
       headers: { "content-type": req.headers.get("content-type") ?? "" },
     }).formData();
   } catch {

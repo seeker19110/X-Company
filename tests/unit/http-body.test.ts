@@ -58,4 +58,39 @@ describe("body có trần khi đọc", () => {
     await assert.rejects(requestHash(req), isTooLarge);
     assert.ok(pulled() <= mb(21) + 4 * CHUNK);
   });
+  test("luồng bị ngắt giữa chừng → 400 BAD_REQUEST, không phải lỗi 500", async () => {
+    let n = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (n++ === 0) ctrl.enqueue(new Uint8Array(kb(100)));
+        else ctrl.error(new TypeError("terminated"));
+      },
+    });
+    const req = new Request("http://x.test/", {
+      method: "POST",
+      body: stream,
+      headers: { "content-type": "multipart/form-data; boundary=zz" },
+      // @ts-expect-error — Node/undici: body stream cần duplex
+      duplex: "half",
+    });
+    await assert.rejects(
+      readFormCapped(req, mb(20)),
+      (e: unknown) => e instanceof AppError && e.code === "BAD_REQUEST" && e.status === 400,
+    );
+  });
+  test("multipart sai định dạng → 400 BAD_FORM", async () => {
+    const req = new Request("http://x.test/", {
+      method: "POST",
+      body: "khong-phai-multipart",
+      headers: { "content-type": "multipart/form-data; boundary=zz" },
+    });
+    await assert.rejects(
+      readFormCapped(req, mb(1)),
+      (e: unknown) => e instanceof AppError && e.code === "BAD_FORM" && e.status === 400,
+    );
+  });
+  test("Content-Length khai nhỏ nhưng body thật lớn → vẫn 413", async () => {
+    const { req } = chunked(mb(8), { "content-length": "10" });
+    await assert.rejects(readCapped(req, mb(1)), isTooLarge);
+  });
 });
