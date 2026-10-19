@@ -421,8 +421,8 @@ describe("nghỉ phép & OT (T-013)", () => {
       const items = await pendingApprovals(db.app, lead);
       const it = items.find((x) => x.id === id);
       assert.ok(it, "đơn nằm trong hộp duyệt của trưởng nhóm");
-      assert.match(it.summary, new RegExp(formatDate("2026-12-01").replace(/\//g, "\\/")));
-      assert.match(it.summary, new RegExp(formatDate("2026-12-03").replace(/\//g, "\\/")));
+      assert.ok(it.summary.includes(formatDate("2026-12-01")), it.summary);
+      assert.ok(it.summary.includes(formatDate("2026-12-03")), it.summary);
       await db.admin.query("UPDATE leave_request SET status = 'cancelled' WHERE id = $1", [id]);
     });
 
