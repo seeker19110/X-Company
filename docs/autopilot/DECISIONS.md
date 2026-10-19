@@ -335,3 +335,10 @@
 - Chọn: Loại pr-steward.yml khỏi hai lệnh kiểm (khung tự quản, tự có cổng comment OWNER/COLLABORATOR/MEMBER)
 - Lý do (tiêu chí chất lượng cuối): Tệp do khung cung cấp và chủ dự án đã merge (#23); luật vẫn áp cho mọi workflow khác; không nới cho tệp dự án tự viết
 - Đường lùi: Bỏ biến F khỏi hai lệnh kiểm
+
+### D-046 · 2026-10-19T11:21:07+00:00 · Mốc và số phiên bản cho bản phát hành đầu của X-Company (Release PR #25 đề xuất 1.0.0 với changelog lẫn lịch sử khung X-Templates, repo đã có tag v2.0.0 của khung)
+
+- Phương án: (1) Giữ nguyên: phát hành 1.0.0, changelog gồm cả commit của khung · (2) bootstrap-sha = 1c2a28e (commit mở đầu X-Company) + bump-minor-pre-major: bản đầu 0.2.0, changelog chỉ commit của dự án · (3) last-release-sha = 1c2a28e (áp mọi lần phát hành, phải gỡ sau)
+- Chọn: bootstrap-sha = 1c2a28e (commit mở đầu X-Company) + bump-minor-pre-major: bản đầu 0.2.0, changelog chỉ commit của dự án
+- Lý do (tiêu chí chất lượng cuối): Đúng: changelog chỉ phản ánh thay đổi của sản phẩm; GO-NO-GO đang NO-GO nên 0.x đúng ngữ nghĩa SemVer (1.0.0 = API ổn định, sẵn production); bootstrap-sha chỉ áp cho bản đầu nên không cần gỡ; tránh đụng tag v2.0.0 cũ của khung (không xoá tag)
+- Đường lùi: Bỏ bootstrap-sha/bump-minor-pre-major khỏi release-please-config.json; muốn 1.0.0 thì commit có footer 'Release-As: 1.0.0'
