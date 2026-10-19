@@ -4,7 +4,7 @@
     {
       "pluginid": "10202",
       "paths": ["^/app/login$", "^/lien-he$"],
-      "reason": "Absence of Anti-CSRF Tokens trên form đăng nhập và form liên hệ: form có method=post chỉ để không lộ dữ liệu lên URL khi JS chưa chạy; gửi gốc về chính trang, không handler nào đổi trạng thái. Gửi thật là fetch tới /api/app/auth/login và /api/public/inquiries — server kiểm Origin (tests/http, dast:probes nhóm CSRF). Form khác (đường dẫn khác) vẫn làm cổng đỏ.",
+      "reason": "Absence of Anti-CSRF Tokens trên form đăng nhập và form liên hệ: form có method=post chỉ để không lộ dữ liệu lên URL khi JS chưa chạy; gửi gốc về chính trang, không handler nào đổi trạng thái (không server action, không route POST ngoài app/api). Gửi thật là fetch: /api/app/auth/login kiểm Origin (assertSameOrigin); /api/public/inquiries là endpoint công khai không phiên nên CSRF không có gì để lợi dụng (giới hạn tần suất theo IP). Form ở đường dẫn khác vẫn làm cổng đỏ.",
       "approvedBy": "D-047 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
       "date": "2026-10-19"
     }

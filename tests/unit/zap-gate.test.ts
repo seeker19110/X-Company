@@ -74,10 +74,20 @@ describe("zap-gate parseAllowlist", () => {
       JSON.stringify({ allow: [{ pluginid: "10202", reason: "r", paths: ["^/app/login$"] }] }),
     );
     assert.ok(m.get("10202")![0]!.test("/app/login"));
-    for (const paths of [[], ["/app/login"], ["^/app/login"], "^/a$", [1]])
+    for (const paths of [[], ["/app/login"], ["^/app/login"], "^/a$", [1], ["^/a$|.*$"]])
       assert.throws(() =>
         gate.parseAllowlist(JSON.stringify({ allow: [{ pluginid: "10202", reason: "r", paths }] })),
       );
+  });
+
+  test("pluginid trùng → lỗi (không âm thầm ghi đè)", () => {
+    const dup = {
+      allow: [
+        { pluginid: "1", reason: "a" },
+        { pluginid: "1", reason: "b", paths: ["^/x$"] },
+      ],
+    };
+    assert.throws(() => gate.parseAllowlist(JSON.stringify(dup)), /trùng/);
   });
 
   test("allowlist của repo hợp lệ", () => {

@@ -349,3 +349,4 @@
 - Chọn: method=post + allowlist zap-gate cho 10202 GIỚI HẠN theo đường dẫn (^/app/login$, ^/lien-he$), mở rộng zap-gate để mục allowlist có paths; form khác vẫn đỏ
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chặn lỗ thật (dữ liệu nhạy cảm lên URL); 10202 ở hai trang này là dương tính giả — gửi gốc của form về chính trang, không handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (+ header CSRF khi đã đăng nhập, tests/http). Allowlist theo đường dẫn giữ cổng chặt cho mọi form khác.
 - Đường lùi: Xoá mục 10202 trong security/zap/allowlist.json (cổng đỏ lại) hoặc bỏ method=post
+- Đính chính (review PR #33): chỉ `/api/app/auth/login` kiểm Origin; `/api/public/inquiries` không kiểm Origin — là endpoint công khai không phiên nên CSRF không áp dụng (giới hạn tần suất theo IP). Kết luận dương tính giả không đổi.

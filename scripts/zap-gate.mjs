@@ -30,6 +30,11 @@ export function parseAllowlist(text) {
         !e.paths.every((x) => typeof x === "string" && x.startsWith("^") && x.endsWith("$")))
     )
       throw new Error(`paths phải là mảng regex neo ^…$ không rỗng: ${JSON.stringify(e)}`);
+    if (e.paths?.some((x) => x.includes("|")))
+      throw new Error(
+        `paths không dùng "|" (mỗi đường dẫn một mục, tránh "^/a$|.*$" khớp mọi thứ): ${e.pluginid}`,
+      );
+    if (out.has(e.pluginid)) throw new Error(`pluginid trùng trong allowlist: ${e.pluginid}`);
     out.set(e.pluginid, e.paths === undefined ? null : e.paths.map((x) => new RegExp(x)));
   }
   return out;

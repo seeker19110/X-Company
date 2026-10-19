@@ -28,6 +28,7 @@ const NOT_PROVEN = [
   "Chứng chỉ do CA nội bộ của Caddy cấp (`tls internal`), không phải ACME/Let's Encrypt công khai; trình duyệt người dùng thật không tin CA này. Tên miền thật + ACME: cấu hình mẫu ops/caddy/Caddyfile (chỉ kiểm cú pháp).",
   "Một máy dev: Caddy và app cùng máy qua 127.0.0.1; không có CDN/WAF/cân bằng tải, không đo độ trễ mạng thật.",
   "ZAP chỉ quét baseline (spider + passive, giới hạn thời gian); quét chủ động có ở job CI `dast` (http). Không phải pentest.",
+  "ZAP (Java) không xác minh CA của Caddy khi quét — phần TLS được chứng minh bằng client Node có xác minh chứng chỉ, không bằng ZAP.",
   "TLS: kiểm phiên bản giao thức, chuỗi chứng chỉ, SAN; không chấm điểm bộ mã hoá kiểu SSL Labs, không kiểm OCSP stapling/CT.",
 ];
 
@@ -68,7 +69,7 @@ export function renderZapPlan({ target, reportDir, spiderMinutes = 2 }) {
     "jobs:",
     "  - type: passiveScan-config",
     "    parameters:",
-    "      maxAlertsPerRule: 10",
+    "      maxAlertsPerRule: 100",
     "  - type: spider",
     "    parameters:",
     "      context: staging",
@@ -92,6 +93,9 @@ export function sanIncludes(subjectaltname, host) {
     .map((s) => s.trim())
     .some((s) => s === `DNS:${host}`);
 }
+
+/** Thông điệp lỗi OpenSSL có chứa TLS alert do máy chủ gửi (vd `tlsv1 alert protocol version`, `SSL alert number 70`). */
+export const isServerAlert = (msg) => /\balert (?:number \d+|[a-z][a-z ]*)/i.test(String(msg));
 
 /** Ô bảng markdown: escape `\` trước rồi `|`, gộp dòng. */
 export const mdCell = (v) => String(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
@@ -254,6 +258,7 @@ async function main() {
     XDG_CONFIG_HOME: path.join(work, "config"),
   };
   let zapReport = null;
+  let app = null;
   try {
     // Mẫu triển khai thật: cú pháp hợp lệ (biến môi trường giả lập tên miền/email).
     const v = spawnSync(caddy, ["validate", "--config", SAMPLE_CADDYFILE, "--adapter", "caddyfile"], {
@@ -276,7 +281,7 @@ async function main() {
     const [httpPort, httpsPort] = [await freePort(), await freePort()];
     const origin = `https://${HOST}:${httpsPort}`;
     const h = prepare({ prefix: "STAGING" });
-    await h.start(APP_PORT, { TRUST_PROXY_HOPS: "1" }, origin);
+    app = await h.start(APP_PORT, { TRUST_PROXY_HOPS: "1" }, origin);
     const caddyfile = path.join(work, "Caddyfile");
     writeFileSync(caddyfile, renderDrillCaddyfile({ httpPort, httpsPort, appPort: APP_PORT }));
     const cd = startDaemon(
@@ -319,23 +324,34 @@ async function main() {
       sanIncludes(home.tls.san, HOST),
       home.tls.san ?? "(không có SAN)",
     );
+    // Từ chối phải đến từ MÁY CHỦ (TLS alert trong thông điệp OpenSSL), không phải client tự hỏng (EPROTO chung chung).
     const wrongName = await tlsRequest({ port: httpsPort, ca, servername: "khac.localhost" }).then(
-      (r) => `HTTP ${r.status}`,
-      (e) => `từ chối: ${e.code ?? e.message}`,
+      (r) => `chấp nhận: HTTP ${r.status}`,
+      (e) => `từ chối: ${e.message}`,
     );
-    step("TLS", "tên lạ không được phục vụ chứng chỉ hợp lệ", wrongName.startsWith("từ chối"), wrongName);
+    step(
+      "TLS",
+      "tên lạ: máy chủ từ chối bằng TLS alert",
+      wrongName.startsWith("từ chối") && isServerAlert(wrongName),
+      wrongName,
+    );
     const old = await tlsRequest({
       port: httpsPort,
       ca,
       tls: { minVersion: "TLSv1", maxVersion: "TLSv1.1", ciphers: "DEFAULT@SECLEVEL=0" },
     }).then(
       (r) => `chấp nhận (${r.tls.protocol})`,
-      (e) => `từ chối: ${e.code ?? e.message}`,
+      (e) => `từ chối: ${e.message}`,
     );
-    step("TLS", "máy chủ từ chối TLS ≤ 1.1", old.startsWith("từ chối"), old);
+    step(
+      "TLS",
+      "máy chủ từ chối TLS ≤ 1.1 (alert protocol version)",
+      old.startsWith("từ chối") && /alert protocol version/i.test(old),
+      old,
+    );
     const tls12 = await tlsRequest({ port: httpsPort, ca, tls: { maxVersion: "TLSv1.2" } }).then(
       (r) => `${r.tls.protocol} · ${r.tls.cipher}`,
-      (e) => `lỗi: ${e.code ?? e.message}`,
+      (e) => `lỗi: ${e.message}`,
     );
     step(
       "TLS",
@@ -457,6 +473,7 @@ async function main() {
   } catch (e) {
     step("drill", "chạy hết", false, String(e?.message ?? e).slice(0, 1500));
   } finally {
+    app?.stop();
     await stopDaemonsAndWait();
     rmSync(work, { recursive: true, force: true, maxRetries: 3 });
   }

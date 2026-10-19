@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
-  "startedAt": "2026-10-19T13:03:12.041Z",
-  "commit": "df88317946a38a14bb0b0cdc5d9ab727c6e0571d+dirty",
+  "startedAt": "2026-10-19T13:21:34.929Z",
+  "commit": "269755ba1dbaf9f7d94a608b2d48478b5d9a204c+dirty",
   "environment": {
     "node": "v22.22.0",
     "next": "16.4.2",
@@ -42,15 +42,15 @@
     },
     {
       "group": "TLS",
-      "name": "tên lạ không được phục vụ chứng chỉ hợp lệ",
+      "name": "tên lạ: máy chủ từ chối bằng TLS alert",
       "ok": true,
-      "detail": "từ chối: EPROTO"
+      "detail": "từ chối: write EPROTO C01C4C5A567F0000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:../deps/openssl/openssl/ssl/record/rec_layer_s3.c:916:SSL alert number 80\n"
     },
     {
       "group": "TLS",
-      "name": "máy chủ từ chối TLS ≤ 1.1",
+      "name": "máy chủ từ chối TLS ≤ 1.1 (alert protocol version)",
       "ok": true,
-      "detail": "từ chối: EPROTO"
+      "detail": "từ chối: write EPROTO C01C4C5A567F0000:error:0A00042E:SSL routines:ssl3_read_bytes:tlsv1 alert protocol version:../deps/openssl/openssl/ssl/record/rec_layer_s3.c:916:SSL alert number 70\n"
     },
     {
       "group": "TLS",
@@ -62,7 +62,7 @@
       "group": "HTTP",
       "name": "http chuyển hướng 308 sang https giữ nguyên đường dẫn",
       "ok": true,
-      "detail": "308 → https://staging.localhost:39389/lien-he?x=1"
+      "detail": "308 → https://staging.localhost:42273/lien-he?x=1"
     },
     {
       "group": "header",
@@ -86,7 +86,7 @@
       "group": "ZAP",
       "name": "ZAP 2.17.0 quét baseline qua https (spider + passive)",
       "ok": true,
-      "detail": "site: https://staging.localhost:39389 · 6 loại cảnh báo · exit 0"
+      "detail": "site: https://staging.localhost:42273 · 6 loại cảnh báo · exit 0"
     },
     {
       "group": "ZAP",
@@ -100,6 +100,7 @@
     "Chứng chỉ do CA nội bộ của Caddy cấp (`tls internal`), không phải ACME/Let's Encrypt công khai; trình duyệt người dùng thật không tin CA này. Tên miền thật + ACME: cấu hình mẫu ops/caddy/Caddyfile (chỉ kiểm cú pháp).",
     "Một máy dev: Caddy và app cùng máy qua 127.0.0.1; không có CDN/WAF/cân bằng tải, không đo độ trễ mạng thật.",
     "ZAP chỉ quét baseline (spider + passive, giới hạn thời gian); quét chủ động có ở job CI `dast` (http). Không phải pentest.",
+    "ZAP (Java) không xác minh CA của Caddy khi quét — phần TLS được chứng minh bằng client Node có xác minh chứng chỉ, không bằng ZAP.",
     "TLS: kiểm phiên bản giao thức, chuỗi chứng chỉ, SAN; không chấm điểm bộ mã hoá kiểu SSL Labs, không kiểm OCSP stapling/CT."
   ]
 }

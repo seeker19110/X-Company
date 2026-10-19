@@ -40,6 +40,19 @@ describe("staging-drill: cấu hình sinh ra (T-055)", () => {
     assert.equal(drill.sanIncludes(undefined, "staging.localhost"), false);
   });
 
+  test("isServerAlert: chỉ nhận thông điệp có TLS alert từ máy chủ", () => {
+    assert.equal(
+      drill.isServerAlert(
+        "C0:...:SSL routines:ssl3_read_bytes:tlsv1 alert protocol version:...SSL alert number 70",
+      ),
+      true,
+    );
+    assert.equal(drill.isServerAlert("tlsv1 unrecognized name"), false);
+    assert.equal(drill.isServerAlert("SSL alert number 112"), true);
+    assert.equal(drill.isServerAlert("write EPROTO"), false);
+    assert.equal(drill.isServerAlert("wrong version number"), false);
+  });
+
   test("mdCell: escape \\ trước |", () => {
     assert.equal(drill.mdCell("a\\|b\nc"), "a\\\\\\|b c");
   });
