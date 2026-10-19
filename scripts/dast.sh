@@ -20,6 +20,8 @@ SITE_COMPANY_ID="$(node -e "process.stdout.write(require('./e2e/.seed.json').com
 export APP_ORIGIN="http://localhost:$PORT"
 export SESSION_SECRET="${SESSION_SECRET:-dast-session-secret-0123456789abcdef-xyz}"
 export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:dast-qr-key-0123456789abcdef0123456789abcdef}"
+export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-dast1:$(openssl rand -base64 32)}"
+export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
 FILE_STORAGE_DIR="$(mktemp -d)"
 export FILE_STORAGE_DIR
 if [ "${DAST_SKIP_BUILD:-0}" != "1" ]; then npm run -s build >/dev/null; fi
