@@ -10,6 +10,7 @@ const METRICS = new Set([
   "http_server_request_duration_seconds_bucket",
   "http_server_request_duration_seconds_sum",
   "outbox_dead_total",
+  "rum_web_vitals_p75",
 ]);
 const PROMQL_WORDS = new Set([
   "sum",
@@ -23,7 +24,7 @@ const PROMQL_WORDS = new Set([
   "on",
   "ignoring",
 ]);
-const LABELS = new Set(["http_request_method", "http_route", "http_response_status_code", "le"]);
+const LABELS = new Set(["http_request_method", "http_route", "http_response_status_code", "le", "metric"]);
 
 /** Parser tối giản cho đúng dạng tệp này (alert → labels/annotations, giá trị một dòng hoặc khối `|`). */
 export function parseRules(text) {

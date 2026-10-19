@@ -6,6 +6,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type pg from "pg";
 import { log } from "../nen/log.ts";
+import { msToSeconds } from "../nen/units.ts";
 
 export const DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10] as const;
 export const MAX_SERIES = 1_000;
@@ -37,6 +38,7 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "/api/metrics",
   "/api/public/applications",
   "/api/public/inquiries",
+  "/api/public/rum",
   "/api/readyz",
 ];
 
@@ -125,7 +127,24 @@ export function observeRequest(method: string, pathname: string, status: number,
 
 const esc = (v: string): string => v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 
-export function renderMetrics(outboxDead: number | null): string {
+/** Một dòng p75 RUM (cùng hình với lib/rum RumP75Row; khai lại để http không import miền rum). p75: ms với chỉ số thời gian, điểm với CLS. */
+export interface RumP75Line {
+  page: string;
+  metric: string;
+  p75: number;
+  n: number;
+}
+
+export interface RenderOptions {
+  /** Có (kể cả `null`) → in HELP/TYPE của rum_web_vitals_*; mảng → in mẫu. Vắng = RUM tắt, không in gì. */
+  rum?: readonly RumP75Line[] | null;
+}
+
+const rumLabels = (r: RumP75Line): string => `page="${esc(r.page)}",metric="${esc(r.metric)}"`;
+/** Chỉ số thời gian xuất bằng GIÂY (đơn vị cơ sở Prometheus); CLS là điểm không đơn vị. */
+const rumValue = (r: RumP75Line): number => (r.metric === "CLS" ? r.p75 : msToSeconds(r.p75));
+
+export function renderMetrics(outboxDead: number | null, opts: RenderOptions = {}): string {
   const out: string[] = [];
   out.push(
     // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
@@ -154,6 +173,21 @@ export function renderMetrics(outboxDead: number | null): string {
     "# TYPE outbox_dead_total gauge",
   );
   if (outboxDead !== null) out.push(`outbox_dead_total ${outboxDead}`);
+  if (opts.rum !== undefined) {
+    out.push(
+      // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
+      "# HELP rum_web_vitals_p75 p75 chỉ số web thực địa 24 giờ gần nhất theo trang (LCP/INP/FCP/TTFB: giây; CLS: điểm); chỉ nhóm đủ mẫu.",
+      "# TYPE rum_web_vitals_p75 gauge",
+    );
+    const rows = opts.rum ?? [];
+    for (const r of rows) out.push(`rum_web_vitals_p75{${rumLabels(r)}} ${rumValue(r)}`);
+    out.push(
+      // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
+      "# HELP rum_web_vitals_samples Số mẫu RUM trong cửa sổ 24 giờ của từng nhóm (trang, chỉ số) đã tính p75.",
+      "# TYPE rum_web_vitals_samples gauge",
+    );
+    for (const r of rows) out.push(`rum_web_vitals_samples{${rumLabels(r)}} ${r.n}`);
+  }
   return out.join("\n") + "\n";
 }
 

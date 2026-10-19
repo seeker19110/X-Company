@@ -33,6 +33,7 @@ const CFG: RetentionConfig = {
   loginAttemptDays: 90,
   outboxDoneDays: 30,
   idempotencyHours: 24,
+  rumDays: 30,
 };
 
 describe("cấu hình retention (env)", () => {
@@ -304,6 +305,43 @@ describe("retention", () => {
     assert.equal(cols.rowCount, 1, "T-028 phải có cột created_at để retention dọn được");
     const rep = await runRetention({ config: CFG, now: NOW, pool: db.app });
     assert.equal(typeof rep.idempotencyDeleted, "number");
+  });
+
+  test("RUM (T-056): rum_sample quá RETENTION_RUM_DAYS và public_rate_event quá 1 ngày bị xoá; còn hạn thì giữ; audit chỉ đếm", async () => {
+    const sample = (at: Date) =>
+      db.admin.query(
+        "INSERT INTO rum_sample (received_at, page, metric, value_ms) VALUES ($1, '/', 'LCP', 1200)",
+        [at],
+      );
+    await sample(daysAgo(31)); // xoá
+    await sample(daysAgo(30)); // đúng ngưỡng: giữ (chỉ < ngưỡng)
+    await sample(daysAgo(1));
+    const rate = (at: Date) =>
+      db.admin.query("INSERT INTO public_rate_event (bucket, key_hash, at) VALUES ('rum', 'k', $1)", [at]);
+    await rate(daysAgo(2)); // xoá
+    await rate(daysAgo(1)); // đúng ngưỡng: giữ
+    await rate(daysAgo(0, 1));
+
+    const rep = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.deepEqual([rep.rumSampleDeleted, rep.rateEventDeleted], [1, 1]);
+    assert.equal((await one("SELECT count(*)::int AS n FROM rum_sample")).n, 2);
+    assert.equal((await one("SELECT count(*)::int AS n FROM public_rate_event")).n, 2);
+    const audit = await one(
+      "SELECT after FROM audit_event WHERE object_type = 'rum_sample' AND action = 'retention.purge' ORDER BY id DESC LIMIT 1",
+    );
+    assert.equal(audit.after.count, 1);
+    assert.deepEqual(
+      Object.keys(audit.after).sort(),
+      ["count", "olderThan"],
+      "không PII, không giá trị số đo",
+    );
+
+    // Chạy lại: idempotent, không còn gì để xoá.
+    const again = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.deepEqual([again.rumSampleDeleted, again.rateEventDeleted], [0, 0]);
+    // Cấu hình rumDays rút ngắn → dòng 1 ngày tuổi cũng bị xoá (không dính mốc cố định 30).
+    const short = await runRetention({ config: { ...CFG, rumDays: 1 }, now: NOW, pool: db.app });
+    assert.equal(short.rumSampleDeleted, 1);
   });
 
   test("RETENTION_ENABLED=false: không đụng bản ghi quá hạn nào", async () => {

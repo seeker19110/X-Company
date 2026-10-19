@@ -1,7 +1,7 @@
 ---
 title: Ngân sách hiệu năng — X-Company
 updated: 2026-10-18
-status: hiệu lực — số đo lab/build; CWV thực địa (RUM) chưa có
+status: hiệu lực — số đo lab/build; RUM tự làm đã có (T-056, cờ `RUM_ENABLED` tắt mặc định) nhưng chưa có số thực địa
 ---
 
 # Ngân sách hiệu năng (FE-PERF-002, FE-PERF-004, XC-PERF-003, XC-GREEN-001/002, PRF-WEB-005)
@@ -28,7 +28,7 @@ URL đo Lighthouse: `/`, `/dich-vu`, `/lien-he` (công khai), chạy trên `next
 Nâng ngưỡng = sửa `perf-budget.json`/`lighthouserc.json` trong PR kèm lý do (đo trước/sau); không nâng chỉ để cổng xanh. Test cổng (`tests/unit/perf-budget.test.ts`) chứng minh: thêm 200 KB JS → đỏ.
 
 ## Chưa làm / giới hạn
-- Không có RUM/CrUX: CWV p75 thực địa và INP thật chưa đo được trước khi có người dùng production (PRF-WEB-005 cần ≥ 5 URL ở p75).
+- RUM tự làm đã có (T-056, D-042: beacon `app/components/rum-beacon.tsx` → `/api/public/rum` → `rum_web_vitals_p75` + 3 luật `XCRum*`), nhưng chưa có số p75 thực địa: cần bật `RUM_ENABLED` và có người dùng production (PRF-WEB-005 cần ≥ 5 URL ở p75; nhãn trang hiện gộp theo `/`, `/app/<phân hệ>`, `/[...slug]`). CrUX chưa dùng. Beacon gắn ở layout `(public)`, layout `(secure)` và trang đăng nhập (không ở root layout: client component ở root làm tổng JS static +3,4 KB, vượt trần 230 KB). Không tách mobile/desktop (FE-PERF-001) — chưa có chiều đó trong mẫu.
 - Lighthouse CI là job `lighthouse`; đưa vào required check của ruleset (`.github/rulesets/main.json`) là bước import ruleset của chủ dự án.
 - Ngân sách kích thước image container (XC-GREEN-002) và thời gian/số job CI mỗi PR chưa có — dự án chưa build image container.
 

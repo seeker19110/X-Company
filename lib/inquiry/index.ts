@@ -47,15 +47,19 @@ export function hashIp(ip: string): string {
   return createHmac("sha256", sessionSecret()).update(`ip:${ip}`).digest("hex").slice(0, 32);
 }
 
-/** Ghi một lần gửi và từ chối khi vượt RATE_LIMIT trong cửa sổ (giao dịch riêng — lần gửi bị chặn vẫn được tính). */
+/**
+ * Ghi một lần gửi và từ chối khi vượt `limit` (mặc định RATE_LIMIT) trong cửa sổ (giao dịch riêng — lần gửi bị chặn vẫn được tính).
+ * Mỗi `bucket` đếm riêng; nhóm cần ngưỡng khác (vd RUM) truyền `limit` của mình.
+ */
 export async function checkRate(
   pool: pg.Pool,
   bucket: string,
   ip: string,
   now: Date = new Date(),
+  limit: { max: number; windowMs: number } = RATE_LIMIT,
 ): Promise<void> {
   const key = hashIp(ip);
-  const since = new Date(now.getTime() - RATE_LIMIT.windowMs);
+  const since = new Date(now.getTime() - limit.windowMs);
   // Đếm và ghi dưới cùng một khoá theo (bucket, IP): request song song không vượt giới hạn (review PR #8 #7).
   const r = await withTx(async (tx) => {
     await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('rate:' || $1 || '|' || $2, 0))", [
@@ -73,9 +77,9 @@ export async function checkRate(
     ]);
     return rows[0]!;
   }, pool);
-  if (r.n >= RATE_LIMIT.max) {
+  if (r.n >= limit.max) {
     const oldest = r.oldest?.getTime() ?? now.getTime();
-    const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + RATE_LIMIT.windowMs - now.getTime())));
+    const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + limit.windowMs - now.getTime())));
     throw new AppError("RATE_LIMITED", 429, t("err.inquiry.banGuiQuaNhieuLanVui"), { retryAfter });
   }
 }

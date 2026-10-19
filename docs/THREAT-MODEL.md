@@ -1,7 +1,7 @@
 ---
 title: THREAT-MODEL — X-Company
 kind: threat-model
-version: 3
+version: 4
 updated: 2026-10-19
 owner: seeker19110
 review: <chủ dự án/người phụ trách bảo mật duyệt — chưa duyệt>
@@ -120,6 +120,7 @@ Quyết định ∈ mitigate / eliminate / transfer / accept. Bằng chứng: t�
 | T21 | Info disclosure | Thu hồi quyền khi thiết bị đang mất mạng hoàn toàn | 2 | 2 | TB | accept | giảm dữ liệu cache, kiểm lại khi kết nối | xem mục 6 | chấp nhận (chờ chủ dự án xác nhận) |
 | T22 | Tampering | Tệp độc hại qua form liên hệ/ứng tuyển công khai | 2 | 2 | TB | eliminate | P0 không nhận tệp từ người lạ (D-013); tệp nội bộ dò loại theo nội dung, giới hạn kích thước, lưu ngoài web root, không thực thi | `tests/http/files.test.ts` (có: .pdf giả → 415) | đã giảm (P0) |
 | T23 | Info disclosure | Lộ PII nhạy cảm (SĐT, lý do nghỉ, toạ độ GPS, tệp tải lên) qua dump/bản sao CSDL, đĩa hoặc người có quyền đọc bảng | 2 | 3 | Cao | mitigate | mã hoá AES-256-GCM tầng ứng dụng, AAD gắn bảng.cột+id dòng (chống tráo), khoá ngoài CSDL (`DATA_ENCRYPTION_KEYS`), xoay khoá không dừng hệ thống, chỉ mục mù HMAC cho tìm kiếm, audit không chứa lý do nghỉ/toạ độ; production thiếu khoá → khởi động thất bại | `tests/db/encryption.test.ts` (có, faithful-fixture); [encryption-at-rest.md](security/encryption-at-rest.md) | mở (KMS/HSM + mã hoá volume là hạ tầng thật) |
+| T24 | DoS / Tampering | Endpoint RUM công khai `POST /api/public/rum` bị bơm số đo giả, làm đầy bảng hoặc nổ số chuỗi nhãn Prometheus | 3 | 1 | TB | mitigate | cờ `RUM_ENABLED` tắt mặc định (404); cùng nguồn (`Origin`/`Sec-Fetch-Site`); ≤ 2 KiB; giới hạn tần suất nhóm riêng `rum` theo IP băm (60/10 phút); zod chặn khoảng giá trị + tên chỉ số duy nhất; `page` chuẩn hoá thành tập nhãn bị chặn (không id/slug/query); CHECK ở DB; retention `RETENTION_RUM_DAYS`=30 và dọn `public_rate_event` 1 ngày; p75 chỉ tính nhóm ≥ 5 mẫu. Không lưu IP/user agent/mã người dùng. Còn lại: kẻ dùng nhiều IP vẫn làm lệch p75 → cảnh báo `ticket` giả (không ảnh hưởng nghiệp vụ, không có quyết định tự động) | `tests/db/rum.test.ts` (có); `tests/unit/rum-page.test.ts` (có) | một phần |
 
 ## 5. OWASP Top 10:2025 → biện pháp
 Tên nhóm theo <https://top10.owasp.org/2025> (đối chiếu lại khi rà định kỳ).

@@ -2,7 +2,7 @@
 // Liên hệ quá 24 tháng → ẩn danh PII (giữ bản ghi + mã để thống kê). Ứng viên KHÔNG trúng tuyển → ẩn danh sau 30 ngày kể từ
 // khi chốt kết quả, trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực (khi đó 12 tháng); ứng viên chưa chốt quá lâu → lưới an
 // toàn. Nhân viên đã chấm dứt hợp đồng → xoá liên hệ không phải giữ; hết 10 năm → ẩn danh họ tên (chấm công/lương giữ 10 năm).
-// Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ → xoá.
+// Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ, rum_sample quá hạn (T-056), public_rate_event quá 1 ngày → xoá.
 // Mỗi nhóm một giao dịch + một bản ghi audit (chỉ đếm, không PII). Tắt: RETENTION_ENABLED=false (đường lùi D-016).
 import type pg from "pg";
 import { appendAudit } from "../audit/index.ts";
@@ -32,6 +32,8 @@ export interface RetentionConfig {
   loginAttemptDays: number;
   outboxDoneDays: number;
   idempotencyHours: number;
+  /** Mẫu RUM (rum_sample): ngày kể từ lúc nhận. */
+  rumDays: number;
 }
 
 export function retentionConfig(source?: Record<string, string | undefined>): RetentionConfig {
@@ -48,6 +50,7 @@ export function retentionConfig(source?: Record<string, string | undefined>): Re
     loginAttemptDays: env("RETENTION_LOGIN_ATTEMPT_DAYS", source),
     outboxDoneDays: env("RETENTION_OUTBOX_DONE_DAYS", source),
     idempotencyHours: env("RETENTION_IDEMPOTENCY_HOURS", source),
+    rumDays: env("RETENTION_RUM_DAYS", source),
   };
 }
 
@@ -62,6 +65,8 @@ export interface RetentionReport {
   loginAttemptDeleted: number;
   outboxDoneDeleted: number;
   idempotencyDeleted: number;
+  rumSampleDeleted: number;
+  rateEventDeleted: number;
 }
 
 // i18n-ignore: giá trị dữ liệu ổn định ghi vào cột tên sau ẩn danh (so khớp/kiểm bằng truy vấn), không đổi theo ngôn ngữ
@@ -78,6 +83,8 @@ export function yearsAgo(now: Date, years: number): Date {
 }
 const DAY = MS_PER_DAY;
 const HOUR = 3_600_000;
+/** public_rate_event chỉ cần cửa sổ giới hạn tần suất (≤ 10 phút); giữ 1 ngày cho điều tra rồi xoá (trước đây tăng mãi). */
+const RATE_EVENT_DAYS = 1;
 
 async function audited(
   tx: Tx,
@@ -275,6 +282,8 @@ export async function runRetention(
     loginAttemptDeleted: 0,
     outboxDoneDeleted: 0,
     idempotencyDeleted: 0,
+    rumSampleDeleted: 0,
+    rateEventDeleted: 0,
   };
   if (!cfg.enabled) return report;
   const inquiryBefore = ago(now, cfg.inquiryDays * DAY);
@@ -323,5 +332,19 @@ export async function runRetention(
   );
   report.outboxDoneDeleted = await purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY));
   report.idempotencyDeleted = await purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR));
+  report.rumSampleDeleted = await purge(
+    pool,
+    "rum_sample",
+    "retention.purge",
+    "received_at < $1",
+    ago(now, cfg.rumDays * DAY),
+  );
+  report.rateEventDeleted = await purge(
+    pool,
+    "public_rate_event",
+    "retention.purge",
+    "at < $1",
+    ago(now, RATE_EVENT_DAYS * DAY),
+  );
   return report;
 }

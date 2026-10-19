@@ -296,6 +296,12 @@
       "daGiaHanMotLan": "Yêu cầu này đã gia hạn một lần; luật chỉ cho gia hạn tối đa một lần",
       "quaHanKhongGiaHan": "Yêu cầu đã quá hạn xử lý nên không gia hạn được; hãy hoàn tất hoặc từ chối và nêu căn cứ"
     },
+    "rum": {
+      "khongTimThay": "Không tìm thấy",
+      "trangKhongHopLe": "Đường dẫn trang không hợp lệ",
+      "tenChiSoTrung": "Tên chỉ số bị trùng trong cùng một beacon",
+      "giaTriVuotTran": "Giá trị vượt trần {max}"
+    },
     "work": {
       "banKhongCoQuyenDeXuat": "Bạn không có quyền đề xuất baseline",
       "canLyDoDeXuatBaseline": "Cần lý do đề xuất baseline",
