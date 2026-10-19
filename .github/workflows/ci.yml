@@ -390,3 +390,50 @@ jobs:
             docs/ops/ops-stack-drill.json
           retention-days: 30
           if-no-files-found: ignore
+
+  staging-tls:
+    name: staging-tls
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # SEC-WEB-001/004, BASE-SEC-004, PRF-WEB-009 (một phần): staging có TLS cục bộ — Caddy `tls internal` → bản build production;
+    # kiểm TLS có xác minh chứng chỉ, http→https, header/cookie qua https, ZAP 2.17.0 (Java) baseline qua https + zap-gate.
+    # faithful-fixture: CA nội bộ, không phải staging/production thật.
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cài Caddy (ghim sha512) và ZAP (ghim sha256)
+        run: node scripts/tools/install-tool.mjs install caddy zap
+      - name: Staging TLS — Caddy + kiểm TLS/header/cookie + ZAP baseline qua https
+        run: npm run -s staging:drill
+      - name: Lưu báo cáo staging TLS
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: staging-tls-report
+          path: |
+            docs/security/staging-tls-report.md
+            docs/security/staging-tls-report.json
+            docs/security/staging-zap-baseline.json
+          retention-days: 30
+          if-no-files-found: ignore
