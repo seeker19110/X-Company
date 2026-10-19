@@ -14,6 +14,6 @@
 - Công cụ vận hành ghim hash ở `scripts/tools/install-tool.mjs` (OpenBao, restic, Prometheus, Alertmanager, Caddy, ZAP)
 
 ## Bàn giao phiên
-- Nhánh làm việc `claude/amazing-bohr-8fw50g`: `main` `5f01b0f` + PR #33 (`a0d24c2`) + commit docs T-050 (chưa push để không lẫn vào PR ngoại lệ cứng)
+- Nhánh làm việc `claude/amazing-bohr-8fw50g`: `main` `5f01b0f` + PR #33 (chờ người merge) + commit docs T-050 (chưa push để không lẫn vào PR ngoại lệ cứng)
 - Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` · `npm run -s ops:stack:drill` · `npm run -s staging:drill` · e2e cần `PW_CHROMIUM_PATH` khi máy chưa có Chromium đúng bản Playwright
 - Đang chặn: không · Câu hỏi cần người: merge #33; xác nhận pháp chế; hạ tầng production
