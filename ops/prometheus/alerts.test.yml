@@ -1,0 +1,123 @@
+# Unit test cho ops/prometheus/alerts.yml bằng `promtool test rules` (T-054, OPS-SLO-006): mỗi rule có ca BẮN và ca KHÔNG BẮN
+# trên chuỗi tổng hợp với đồng hồ giả (không cần chờ thời gian thật). Chạy: npm run -s ops:stack:drill (hoặc
+# `.tools/bin/promtool test rules ops/prometheus/alerts.test.yml`). Chuỗi đếm dạng 'a+bxN' = bắt đầu a, tăng b mỗi bước N lần.
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Khả dụng: 10/110 ≈ 9% 5xx > 14,4 × 0,1% → FastBurn bắn (cả SlowBurn vì 9% > 0,6%); lưu lượng sạch → im lặng.
+  - name: availability burn — 9% lỗi 5xx
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="200"}'
+        values: "0+100x480"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="500"}'
+        values: "0+10x480"
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: XCAvailabilityFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách khả dụng nhanh (14,4x trong 1h và 5m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      # `for: 2m`: vượt ngưỡng từ phút 1 (điểm rate đầu tiên) → phút 2 còn pending, chưa bắn.
+      - eval_time: 2m
+        alertname: XCAvailabilityFastBurn
+        exp_alerts: []
+
+  - name: availability burn — 1% lỗi 5xx chỉ bắn SlowBurn
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="200"}'
+        values: "0+99x480"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="503"}'
+        values: "0+1x480"
+    alert_rule_test:
+      - eval_time: 7h
+        alertname: XCAvailabilitySlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách khả dụng chậm (6x trong 6h và 30m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      - eval_time: 7h
+        alertname: XCAvailabilityFastBurn
+        exp_alerts: []
+
+  - name: availability — lưu lượng sạch không bắn
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="200"}'
+        values: "0+100x480"
+    alert_rule_test:
+      - eval_time: 7h
+        alertname: XCAvailabilityFastBurn
+        exp_alerts: []
+      - eval_time: 7h
+        alertname: XCAvailabilitySlowBurn
+        exp_alerts: []
+
+  # Độ trễ ghi chấm công: 50% yêu cầu > 1 s (vượt 6 × 5%) → bắn; 99% ≤ 1 s → im lặng; route khác chậm → không tính.
+  - name: attendance latency — 50% chậm hơn 1 s
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{http_route="/api/app/attendance/events",le="1"}'
+        values: "0+50x120"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/attendance/events",http_response_status_code="201"}'
+        values: "0+100x120"
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: XCAttendanceLatencyFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách độ trễ ghi chấm công (6x trong 1h và 5m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+
+  - name: attendance latency — nhanh, hoặc chậm ở route khác
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{http_route="/api/app/attendance/events",le="1"}'
+        values: "0+99x120"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/attendance/events",http_response_status_code="201"}'
+        values: "0+100x120"
+      - series: 'http_server_request_duration_seconds_bucket{http_route="/api/app/me",le="1"}'
+        values: "0+0x120"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="200"}'
+        values: "0+100x120"
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: XCAttendanceLatencyFastBurn
+        exp_alerts: []
+
+  # DLQ: gauge > 0 liên tục 15 phút mới bắn; về 0 thì hết; vắng gauge thì không bắn.
+  - name: outbox DLQ
+    interval: 1m
+    input_series:
+      - series: "outbox_dead_total"
+        values: "0x4 2x20 0x10"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: XCOutboxDeadLetter
+        exp_alerts: []
+      - eval_time: 21m
+        alertname: XCOutboxDeadLetter
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+            exp_annotations:
+              summary: "Có việc outbox ở DLQ (status=dead) quá 15 phút"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#dlq--redrive"
+      - eval_time: 30m
+        alertname: XCOutboxDeadLetter
+        exp_alerts: []

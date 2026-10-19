@@ -1,0 +1,28 @@
+# Cấu hình Alertmanager MẪU (T-054, D-041). Kênh trực: webhook — URL (có thể chứa khoá) đọc từ url_file, không nằm trong
+# repo. severity=page tới kênh trực có người; ticket gom chậm hơn. Kiểm bằng `amtool check-config` trong ops:stack:drill.
+route:
+  receiver: on-call
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="ticket"']
+      receiver: tickets
+      repeat_interval: 24h
+
+receivers:
+  - name: on-call
+    webhook_configs:
+      - url_file: /etc/alertmanager/oncall_webhook_url
+        send_resolved: true
+  - name: tickets
+    webhook_configs:
+      - url_file: /etc/alertmanager/ticket_webhook_url
+        send_resolved: true
+
+inhibit_rules:
+  # Đang có page cho cùng alertname thì không gửi thêm ticket trùng.
+  - source_matchers: ['severity="page"']
+    target_matchers: ['severity="ticket"']
+    equal: ["alertname"]

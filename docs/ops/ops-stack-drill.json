@@ -1,0 +1,119 @@
+{
+  "label": "faithful-fixture",
+  "startedAt": "2026-10-19T11:41:50.188Z",
+  "commit": "fd182eccbaf92015f7a61d7a8d7c9124c55e3fd0+dirty",
+  "environment": {
+    "node": "v22.22.0",
+    "next": "16.4.2",
+    "os": "Linux 6.18.44-fc-v139 x64",
+    "cpus": "4 x Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "memGiB": 16,
+    "psql": "psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"
+  },
+  "tools": {
+    "prometheus": "3.14.0",
+    "promtool": "3.14.0",
+    "alertmanager": "0.34.1",
+    "amtool": "0.34.1"
+  },
+  "checks": [
+    {
+      "label": "rule hợp lệ",
+      "cmd": "promtool check rules ops/prometheus/alerts.yml",
+      "ok": true,
+      "ms": 38,
+      "output": "Checking /home/user/X-Company/ops/prometheus/alerts.yml\n  SUCCESS: 4 rules found"
+    },
+    {
+      "label": "unit test rule (đồng hồ giả)",
+      "cmd": "promtool test rules ops/prometheus/alerts.test.yml",
+      "ok": true,
+      "ms": 928,
+      "output": "SUCCESS"
+    },
+    {
+      "label": "cấu hình Prometheus mẫu",
+      "cmd": "promtool check config --syntax-only ops/prometheus/prometheus.yml",
+      "ok": true,
+      "ms": 36,
+      "output": "Checking /home/user/X-Company/ops/prometheus/prometheus.yml\n SUCCESS: /home/user/X-Company/ops/prometheus/prometheus.yml is valid prometheus config file syntax"
+    },
+    {
+      "label": "cấu hình Alertmanager mẫu",
+      "cmd": "amtool check-config ops/alertmanager/alertmanager.yml",
+      "ok": true,
+      "ms": 15,
+      "output": "Found:\n - global config\n - route\n - 1 inhibit rules\n - 2 receivers\n - 0 templates"
+    }
+  ],
+  "steps": [
+    {
+      "name": "/api/metrics từ chối khi thiếu bearer",
+      "ok": true,
+      "detail": "HTTP 401"
+    },
+    {
+      "name": "Prometheus scrape /api/metrics có bearer",
+      "ok": true,
+      "detail": "up == 1 sau 5333 ms"
+    },
+    {
+      "name": "metric HTTP của app vào TSDB",
+      "ok": true,
+      "detail": "sum(http_server_request_duration_seconds_count) = 40"
+    },
+    {
+      "name": "gauge outbox_dead_total có mặt",
+      "ok": true,
+      "detail": "giá trị 0"
+    },
+    {
+      "name": "rule thật nạp, health=ok",
+      "ok": true,
+      "detail": "XCOutboxDeadLetter:ok, XCAvailabilityFastBurn:ok, XCAvailabilitySlowBurn:ok, XCAttendanceLatencyFastBurn:ok"
+    },
+    {
+      "name": "truy vấn SLI trong docs/ops/SLO.md chạy được",
+      "ok": true,
+      "detail": "2 truy vấn status=success"
+    },
+    {
+      "name": "Prometheus nối Alertmanager",
+      "ok": true,
+      "detail": "1 Alertmanager hoạt động"
+    },
+    {
+      "name": "nền khoẻ: không thông báo nào",
+      "ok": true,
+      "detail": "0 thông báo trong lúc app chạy bình thường"
+    },
+    {
+      "name": "dừng app → firing tới webhook",
+      "ok": true,
+      "detail": "XCDrillTargetDown sau 2186 ms"
+    },
+    {
+      "name": "bật lại app → resolved tới webhook",
+      "ok": true,
+      "detail": "sau 120 ms"
+    },
+    {
+      "name": "rule SLO thật không bắn khi lưu lượng sạch",
+      "ok": true,
+      "detail": "0 cảnh báo"
+    },
+    {
+      "name": "payload webhook đúng định dạng v4",
+      "ok": true,
+      "detail": "2 thông báo, 0 hỏng"
+    }
+  ],
+  "verdict": "PASS",
+  "notProven": [
+    "Không phải hạ tầng production: một máy dev, Prometheus/Alertmanager một bản (không HA, không lưu trữ dài hạn, không remote-write).",
+    "Kênh nhận là webhook HTTP cục bộ do drill dựng; chưa gửi tới kênh trực có người (Slack/điện thoại/email) — cần URL thật trong url_file.",
+    "Rule SLO thật được kiểm bằng `promtool test rules` trên chuỗi tổng hợp với đồng hồ giả; end-to-end thời gian thật chỉ chạy rule diễn tập `up == 0` (cửa sổ burn-rate 1h–6h không chờ được trong một lần chạy).",
+    "Cấu hình mẫu ops/ chỉ kiểm cú pháp (`--syntax-only`, amtool); đường dẫn credentials_file/url_file trên máy thật chưa tồn tại.",
+    "Không TLS giữa Prometheus và app (scrape http trên 127.0.0.1); production nên scrape qua mạng nội bộ hoặc TLS."
+  ]
+}

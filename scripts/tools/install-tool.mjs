@@ -67,6 +67,103 @@ export const TOOLS = {
     },
     versionProbe: { args: ["version"], expect: /restic 0\.19\.1 / },
   },
+  // Prometheus và Alertmanager: một tệp phát hành chứa hai nhị phân → hai mục dùng chung tệp, khác `member` (T-054).
+  prometheus: {
+    version: "3.14.0",
+    license: "Apache-2.0",
+    bin: "prometheus",
+    verified: "2026-10-19",
+    release: "https://github.com/prometheus/prometheus/releases/tag/v3.14.0",
+    base: "https://github.com/prometheus/prometheus/releases/download/v3.14.0",
+    checksums: "sha256sums.txt",
+    platforms: {
+      "linux-x64": {
+        archive: "prometheus-3.14.0.linux-amd64.tar.gz",
+        sha256: "f665c6da19eb7ba399c915d30c7d9793c9b417bf8a749b504bc470678631478d",
+        kind: "tar.gz",
+        member: "prometheus-3.14.0.linux-amd64/prometheus",
+      },
+      "linux-arm64": {
+        archive: "prometheus-3.14.0.linux-arm64.tar.gz",
+        sha256: "077f3781ab7245dc04c9a3c9b78ba120fc8e41aa0dc97489b0af67247e50ba83",
+        kind: "tar.gz",
+        member: "prometheus-3.14.0.linux-arm64/prometheus",
+      },
+    },
+    versionProbe: { args: ["--version"], expect: /prometheus, version 3\.14\.0 / },
+  },
+  promtool: {
+    version: "3.14.0",
+    license: "Apache-2.0",
+    bin: "promtool",
+    verified: "2026-10-19",
+    release: "https://github.com/prometheus/prometheus/releases/tag/v3.14.0",
+    base: "https://github.com/prometheus/prometheus/releases/download/v3.14.0",
+    checksums: "sha256sums.txt",
+    platforms: {
+      "linux-x64": {
+        archive: "prometheus-3.14.0.linux-amd64.tar.gz",
+        sha256: "f665c6da19eb7ba399c915d30c7d9793c9b417bf8a749b504bc470678631478d",
+        kind: "tar.gz",
+        member: "prometheus-3.14.0.linux-amd64/promtool",
+      },
+      "linux-arm64": {
+        archive: "prometheus-3.14.0.linux-arm64.tar.gz",
+        sha256: "077f3781ab7245dc04c9a3c9b78ba120fc8e41aa0dc97489b0af67247e50ba83",
+        kind: "tar.gz",
+        member: "prometheus-3.14.0.linux-arm64/promtool",
+      },
+    },
+    versionProbe: { args: ["--version"], expect: /promtool, version 3\.14\.0 / },
+  },
+  alertmanager: {
+    version: "0.34.1",
+    license: "Apache-2.0",
+    bin: "alertmanager",
+    verified: "2026-10-19",
+    release: "https://github.com/prometheus/alertmanager/releases/tag/v0.34.1",
+    base: "https://github.com/prometheus/alertmanager/releases/download/v0.34.1",
+    checksums: "sha256sums.txt",
+    platforms: {
+      "linux-x64": {
+        archive: "alertmanager-0.34.1.linux-amd64.tar.gz",
+        sha256: "265b9d1e55ef0d5306a436018af6d2b686c2ce051f03d968f7464ecb1372a7e8",
+        kind: "tar.gz",
+        member: "alertmanager-0.34.1.linux-amd64/alertmanager",
+      },
+      "linux-arm64": {
+        archive: "alertmanager-0.34.1.linux-arm64.tar.gz",
+        sha256: "d98d6cbaf52151c7e76e24355fec88b11cebcb9875d4cdd8b76ddce7a7e5535c",
+        kind: "tar.gz",
+        member: "alertmanager-0.34.1.linux-arm64/alertmanager",
+      },
+    },
+    versionProbe: { args: ["--version"], expect: /alertmanager, version 0\.34\.1 / },
+  },
+  amtool: {
+    version: "0.34.1",
+    license: "Apache-2.0",
+    bin: "amtool",
+    verified: "2026-10-19",
+    release: "https://github.com/prometheus/alertmanager/releases/tag/v0.34.1",
+    base: "https://github.com/prometheus/alertmanager/releases/download/v0.34.1",
+    checksums: "sha256sums.txt",
+    platforms: {
+      "linux-x64": {
+        archive: "alertmanager-0.34.1.linux-amd64.tar.gz",
+        sha256: "265b9d1e55ef0d5306a436018af6d2b686c2ce051f03d968f7464ecb1372a7e8",
+        kind: "tar.gz",
+        member: "alertmanager-0.34.1.linux-amd64/amtool",
+      },
+      "linux-arm64": {
+        archive: "alertmanager-0.34.1.linux-arm64.tar.gz",
+        sha256: "d98d6cbaf52151c7e76e24355fec88b11cebcb9875d4cdd8b76ddce7a7e5535c",
+        kind: "tar.gz",
+        member: "alertmanager-0.34.1.linux-arm64/amtool",
+      },
+    },
+    versionProbe: { args: ["--version"], expect: /amtool, version 0\.34\.1 / },
+  },
 };
 
 const log = (m) => process.stderr.write(`install-tool: ${m}\n`);

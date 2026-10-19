@@ -60,7 +60,7 @@ Burn rate đa cửa sổ (Google SRE Workbook): cảnh báo chỉ bắn khi cả
 | `XCAttendanceLatencyFastBurn` | tỷ lệ chậm > 6 × 0,05 trong 1h **và** 5m, giữ 5m | ticket | seeker19110 |
 | `XCOutboxDeadLetter` | `outbox_dead_total > 0` giữ 15m (BE-JOB-004) | ticket | seeker19110 |
 
-Mỗi rule có `severity`, `owner`, `runbook_url` (→ [RUNBOOK.md](RUNBOOK.md) mục 4 và "DLQ / redrive"); `npm run -s check:alerts` chặn rule thiếu các trường này. Chưa nối Prometheus/Alertmanager thật: việc của chủ dự án khi có hạ tầng giám sát.
+Mỗi rule có `severity`, `owner`, `runbook_url` (→ [RUNBOOK.md](RUNBOOK.md) mục 4 và "DLQ / redrive"); `npm run -s check:alerts` chặn rule thiếu các trường này. Đã chạy trên Prometheus/Alertmanager thật cục bộ (`npm run -s ops:stack:drill`, T-054; job CI `ops-stack`): `promtool check/test rules`, scrape `/api/metrics`, truy vấn SLI ở trên chạy được, cảnh báo tới webhook. Cấu hình triển khai mẫu: `ops/prometheus/prometheus.yml`, `ops/alertmanager/alertmanager.yml`. Hạ tầng giám sát production và kênh trực có người: việc của chủ dự án.
 
 ## Cảnh báo cục bộ đã chạy thử (T-046 — faithful-fixture)
 Vì chưa có Prometheus/Alertmanager, `lib/ops/alerts.ts` đánh giá các luật suy từ SLO ở [alerts.json](alerts.json) trên số liệu thật của ứng dụng (văn bản `/api/metrics`, truy vấn DB, probe readiness, manifest sao lưu) và gửi tới tệp JSON-lines, log sự kiện `ops.alert`, webhook tuỳ chọn; chạy trong worker khi `ALERTS_ENABLED=true` (mặc định tắt). Đánh giá burn-rate đa cửa sổ bằng lịch sử scrape trong bộ nhớ (cửa sổ dài hơn thời gian tiến trình chạy thì dùng toàn bộ lịch sử có sẵn — giống `rate()` khi mới có ít dữ liệu).
