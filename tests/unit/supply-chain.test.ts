@@ -12,7 +12,7 @@ import { render } from "../../scripts/gen-third-party-notices.mjs";
 // @ts-expect-error -- script .mjs thuần JS
 import { licenseCoverage, problems } from "../../scripts/check-sbom.mjs";
 // @ts-expect-error -- script .mjs thuần JS
-import { checkWiring } from "../../scripts/check-supply-wiring.mjs";
+import { checkReleaseManifest, checkWiring } from "../../scripts/check-supply-wiring.mjs";
 import { findInterpolations } from "../../scripts/check-sql-interpolation.ts";
 
 const POLICY_TEXT = `allow:
@@ -167,6 +167,21 @@ describe("THIRD_PARTY_NOTICES, SBOM, wiring", () => {
   test("wiring: repo thật đạt; thiếu tệp → đỏ", () => {
     assert.deepEqual(checkWiring(), []);
     assert.ok((checkWiring(() => "") as string[]).length > 10);
+  });
+  test("wiring: manifest release-please nhận mọi SemVer khớp package.json, không ghim 0.1.0", () => {
+    const real = (f: string) => readFileSync(f, "utf8");
+    const with2 = (m: string, v: string) => (f: string) =>
+      f.endsWith(".release-please-manifest.json")
+        ? m
+        : f === "package.json"
+          ? JSON.stringify({ version: v })
+          : real(f);
+    assert.deepEqual(checkReleaseManifest(with2('{".":"1.0.0"}', "1.0.0")), []);
+    assert.deepEqual(checkReleaseManifest(with2('{".":"2.1.0-rc.1"}', "2.1.0-rc.1")), []);
+    assert.match((checkReleaseManifest(with2('{".":"1.0.0"}', "0.1.0")) as string[])[0]!, /khác manifest/);
+    assert.match((checkReleaseManifest(with2('{".":"v1"}', "v1")) as string[])[0]!, /SemVer/);
+    assert.match((checkReleaseManifest(with2("{}", "1.0.0")) as string[])[0]!, /SemVer/);
+    assert.match((checkReleaseManifest(with2("", "1.0.0")) as string[])[0]!, /JSON/);
   });
   test("wiring: security-events: write ở cấp workflow bị bắt; chuỗi dài nhiều dòng trống không treo (ReDoS)", () => {
     const real = (f: string) => readFileSync(f, "utf8");
