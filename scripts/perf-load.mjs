@@ -1,16 +1,24 @@
 // perf-load.mjs — đo hiệu năng dưới tải CỤC BỘ (T-049, QA-PERF-002/006/010, XC-PERF-004, PRF-WEB-005): bộ tải tự viết trên
 // node:http keep-alive đánh vào bản build production (`next start`, cổng riêng) + Postgres tạm + dữ liệu seed.
-// Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Ghi docs/perf/load-report-<ngày>.md + .json;
+// Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Báo cáo docs/perf/load-report-<ngày>.md + .json ghi ra thư mục tạm (vào repo khi XC_REPORT_DIR=. / npm run -s reports:refresh);
 // exit 1 khi một kịch bản vượt ngân sách. Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/thực địa.
 // Chỉ nhắm localhost (QA-PERF-007): BASE_URL không có ở đây, bộ tải không bao giờ gửi tới host ngoài máy này.
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import pg from "pg";
 import { login, makeAgent, request, writeHeaders } from "./lib/http-client.mjs";
-import { environmentInfo, err, formatFiles, gitCommit, out, prepare } from "./lib/prod-harness.mjs";
+import {
+  environmentInfo,
+  err,
+  formatFiles,
+  gitCommit,
+  out,
+  prepare,
+  reportFile,
+} from "./lib/prod-harness.mjs";
 import { evaluateBudget, maxOf, renderLoadReport, summarize } from "./lib/perf-stats.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -443,21 +451,22 @@ async function main() {
       notProven: NOT_PROVEN,
     };
     const lh = lighthouseSection();
-    mkdirSync(path.join(ROOT, "docs/perf"), { recursive: true });
     const md = renderLoadReport(meta, rows, {
       lighthouse:
         lh ??
         "Chưa có kết quả: chạy `npm run -s lighthouse` trước `perf:load` (cần Chromium của Playwright và `npx` tải được @lhci/cli@0.15.1).",
     });
-    writeFileSync(path.join(ROOT, `docs/perf/load-report-${date}.md`), md);
+    const reportMd = reportFile(`docs/perf/load-report-${date}.md`);
+    const reportJson = reportFile(`docs/perf/load-report-${date}.json`);
+    writeFileSync(reportMd, md);
     const failedRows = rows.filter((r) => r.violations.length > 0);
     writeFileSync(
-      path.join(ROOT, `docs/perf/load-report-${date}.json`),
+      reportJson,
       `${JSON.stringify({ label: "faithful-fixture", qa_perf_006: { commit: meta.commit, environment: meta.env, device_network: meta.device, load: meta.load, date }, dbConnectionsMax: dbMax, dbConnectionBudget: DB_CONN_BUDGET, scenarios: rows.map((r) => ({ name: r.name, connections: r.connections, budget: r.budget, summary: r.summary, dbConnMax: r.dbConnMax, violations: r.violations })), notProven: NOT_PROVEN }, null, 2)}\n`,
     );
-    formatFiles([`docs/perf/load-report-${date}.md`, `docs/perf/load-report-${date}.json`]);
+    formatFiles([reportMd, reportJson]);
     out(
-      `perf:load: ${rows.length - failedRows.length}/${rows.length} kịch bản đạt ngân sách · báo cáo docs/perf/load-report-${date}.md`,
+      `perf:load: ${rows.length - failedRows.length}/${rows.length} kịch bản đạt ngân sách · báo cáo ${reportMd}`,
     );
     return failedRows.length === 0 && dbViol.length === 0 ? 0 : 1;
   } finally {
