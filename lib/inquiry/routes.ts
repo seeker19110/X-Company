@@ -1,6 +1,6 @@
 // Route: POST /api/public/inquiries, POST /api/public/applications (công khai);
 // GET /api/app/inquiries (sales), GET /api/app/applications (hr) — S-WEB-05 tách quyền ứng viên.
-import { revealText } from "../crypto/columns.ts";
+import { revealTextAsync } from "../crypto/columns.ts";
 import { getPool } from "../db/index.ts";
 import { authorize, clientIp, json, publicRoute, readJson, withActor } from "../http/index.ts";
 import { siteCompanyId } from "../site/index.ts";
@@ -32,7 +32,7 @@ export const listInquiries = withActor(async (ctx) => {
      FROM inquiry WHERE company_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [ctx.actor.companyId, fetchLimit(page), page.offset],
   );
-  return json(toPage(revealText("inquiry", "phone", rows), page));
+  return json(toPage(await revealTextAsync("inquiry", "phone", rows), page));
 });
 
 export const listApplications = withActor(async (ctx) => {
@@ -43,5 +43,5 @@ export const listApplications = withActor(async (ctx) => {
      FROM job_application WHERE company_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`,
     [ctx.actor.companyId, fetchLimit(page), page.offset],
   );
-  return json(toPage(revealText("job_application", "phone", rows), page));
+  return json(toPage(await revealTextAsync("job_application", "phone", rows), page));
 });

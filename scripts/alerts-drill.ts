@@ -72,6 +72,8 @@ class Harness {
   scrapeFail = false;
   readyPool: pg.Pool;
   backupFresh = true;
+  offsiteFresh = true;
+  offsiteDrillFresh = true;
   readonly logLines: string[] = [];
   readonly engine: AlertEngine;
   readonly backupDir: string;
@@ -137,6 +139,10 @@ class Harness {
     this.traffic.err += this.extra.err;
     this.traffic.attSlow += this.extra.attSlow;
     if (this.backupFresh && !this.realClock) this.writeFakeBackup();
+    // Trạng thái off-site do scripts/backup-offsite.sh / restore-offsite-drill.sh ghi (cùng định dạng, chỉ tối thiểu).
+    const stamp = JSON.stringify({ format: 1, last_success_utc: new Date(this.clock).toISOString() });
+    if (this.offsiteFresh) writeFileSync(path.join(this.backupDir, "offsite-status.json"), stamp);
+    if (this.offsiteDrillFresh) writeFileSync(path.join(this.backupDir, "offsite-drill.json"), stamp);
     this.tickNo++;
     this.last = await this.engine.evaluate();
     return this.last;
@@ -254,6 +260,22 @@ function scenarios(sh: Shared): Scenario[] {
         for (const f of readdirManifestAll(h.backupDir)) rmSync(path.join(h.backupDir, f));
         runBackupScript(sh, h.backupDir);
       },
+    },
+    {
+      rule: "XCLocalOffsiteBackupStale",
+      scenario:
+        "lần đẩy off-site (restic) ngừng thành công: đồng hồ giả chạy qua 25 giờ (2 giờ/tick); hết khi đẩy thành công lại",
+      stepMs: 7_200_000,
+      inject: async (h) => void (h.offsiteFresh = false),
+      clear: async (h) => void (h.offsiteFresh = true),
+    },
+    {
+      rule: "XCLocalOffsiteDrillStale",
+      scenario:
+        "không diễn tập khôi phục off-site: đồng hồ giả chạy qua 31 ngày (3 ngày/tick); hết khi diễn tập lại",
+      stepMs: 259_200_000,
+      inject: async (h) => void (h.offsiteDrillFresh = false),
+      clear: async (h) => void (h.offsiteDrillFresh = true),
     },
     {
       rule: "XCLocalPeriodCloseOverdue",

@@ -320,3 +320,11 @@
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chưa có pháp nhân thì chưa có bên kiểm soát hợp lệ; dựng sẵn giữ đường lùi.
 - Đường lùi: Cập nhật hồ sơ khi thành lập công ty
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Thành lập pháp nhân, xác định bên kiểm soát/xử lý, rồi nộp DPIA trong 60 ngày
+
+### D-044 · 2026-10-19T06:17:29+00:00 · Giữ khoá chủ KMS và chỗ đặt transport mạng của KMS (T-052)?
+
+- Phương án: (1) Giữ key id trong phong bì v2 (envelopeKeyId đọc được), chưa thêm cột key_id (hoãn migration vì phải sửa guard attendance_event); transport mạng đặt ở thư mục adapters/ (lib/ không chứa client mạng, test DB-TX-003 giữ nguyên); cài OpenBao/restic ghim sha256 trong job quality · (2) Thêm cột key_id sinh sẵn ngay; đặt transport trong scripts/; tách job ops-tools
+- Chọn: Giữ key id trong phong bì v2 (envelopeKeyId đọc được), chưa thêm cột key_id (hoãn migration vì phải sửa guard attendance_event); transport mạng đặt ở thư mục adapters/ (lib/ không chứa client mạng, test DB-TX-003 giữ nguyên); cài OpenBao/restic ghim sha256 trong job quality
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: không đụng thêm guard bất biến của chấm công; không nới hàng rào; sha256 + chữ ký GPG (OpenBao) kiểm trước khi chạy.
+- Đường lùi: Provider env; bỏ adapters/ và bước cài tool trong CI
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HSM/PKCS#11 hoặc cloud KMS auto-unseal; cột key_id riêng khi có nhu cầu truy vấn theo khoá

@@ -18,6 +18,7 @@ import {
   FRESH_STATE,
   alertConfig,
   backupAgeSeconds,
+  offsiteAgeSeconds,
   fileSink,
   githubSlug,
   httpTotals,
@@ -615,5 +616,39 @@ describe("với DB thật", () => {
     for (const r of rows) assert.ok(r.ok, `${r.rule}: ${JSON.stringify(r)}`);
     assert.match(formatRows(rows), /ĐẠT/);
     assert.equal(formatRows(rows).includes("ĐỎ"), false);
+  });
+});
+
+describe("tuổi bản off-site restic (T-053)", () => {
+  const now = Date.parse("2026-10-19T12:00:00Z");
+  test("đọc last_success_utc của offsite-status.json / offsite-drill.json; thiếu, hỏng, tương lai → an toàn", () => {
+    const d = mkdtempSync(path.join(tmpdir(), "xc-offsite-age-"));
+    try {
+      assert.equal(offsiteAgeSeconds(path.join(d, "khong-co"), now), BACKUP_NEVER_AGE_SECONDS);
+      assert.equal(offsiteAgeSeconds(d, now), BACKUP_NEVER_AGE_SECONDS, "chưa từng đẩy");
+      writeFileSync(path.join(d, "offsite-status.json"), "{hỏng");
+      assert.equal(offsiteAgeSeconds(d, now), BACKUP_NEVER_AGE_SECONDS, "JSON hỏng");
+      writeFileSync(
+        path.join(d, "offsite-status.json"),
+        JSON.stringify({ last_success_utc: "2026-10-19T11:00:00Z" }),
+      );
+      assert.equal(offsiteAgeSeconds(d, now), 3600);
+      writeFileSync(
+        path.join(d, "offsite-status.json"),
+        JSON.stringify({ last_success_utc: "không phải ngày" }),
+      );
+      assert.equal(offsiteAgeSeconds(d, now), BACKUP_NEVER_AGE_SECONDS);
+      writeFileSync(
+        path.join(d, "offsite-drill.json"),
+        JSON.stringify({ last_success_utc: "2026-10-20T00:00:00Z" }),
+      );
+      assert.equal(
+        offsiteAgeSeconds(d, now, "offsite-drill.json"),
+        0,
+        "đồng hồ lệch tương lai → 0, không âm",
+      );
+    } finally {
+      rmSync(d, { recursive: true, force: true });
+    }
   });
 });

@@ -74,7 +74,9 @@
       "op": "gt",
       "threshold": 0,
       "forSeconds": 300,
-      "params": { "stale_seconds": 300 }
+      "params": {
+        "stale_seconds": 300
+      }
     },
     {
       "id": "XCLocalDsarOverdue",
@@ -121,6 +123,28 @@
       "forSeconds": 0
     },
     {
+      "id": "XCLocalOffsiteBackupStale",
+      "summary": "Bản sao lưu off-site (restic) thành công gần nhất cũ hơn 25 giờ, hoặc chưa từng đẩy: mất máy = mất cả dữ liệu lẫn bản sao",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#sao-lưu-off-site-restic",
+      "signal": "offsite_age_seconds",
+      "op": "gt",
+      "threshold": 90000,
+      "forSeconds": 0
+    },
+    {
+      "id": "XCLocalOffsiteDrillStale",
+      "summary": "Diễn tập khôi phục từ kho off-site gần nhất cũ hơn 31 ngày, hoặc chưa từng diễn tập: chưa chứng minh bản off-site khôi phục được",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#sao-lưu-off-site-restic",
+      "signal": "offsite_drill_age_seconds",
+      "op": "gt",
+      "threshold": 2678400,
+      "forSeconds": 0
+    },
+    {
       "id": "XCLocalPeriodCloseOverdue",
       "summary": "Có kỳ công đã kết thúc quá 7 ngày mà chưa khoá (đồng hồ khoá kỳ)",
       "severity": "ticket",
@@ -130,7 +154,9 @@
       "op": "gt",
       "threshold": 0,
       "forSeconds": 0,
-      "params": { "grace_days": 7 }
+      "params": {
+        "grace_days": 7
+      }
     },
     {
       "id": "XCLocalAuditChainBroken",
@@ -142,7 +168,9 @@
       "op": "gte",
       "threshold": 1,
       "forSeconds": 0,
-      "params": { "min_interval_seconds": 3600 }
+      "params": {
+        "min_interval_seconds": 3600
+      }
     }
   ]
 }

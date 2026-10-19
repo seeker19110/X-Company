@@ -9,11 +9,19 @@
 //   AAD khối = "xc/file/v1|<khoá lưu>|<số khối>|<flag>" → tráo khối, đảo thứ tự, cắt cụt, tráo tệp sang khoá lưu khác đều lỗi.
 //   AAD bọc DEK = "xc/file-dek/v1|<khoá lưu>|<keyId>".
 // Tệp cũ (không có MAGIC) là bản rõ cũ: đọc được như trước (cờ phiên bản = có/không MAGIC); tệp mới luôn mã hoá.
+// Phiên bản 2 (KMS_PROVIDER=transit, T-052): MAGIC2(8) | wrappedLen(u16 BE) | wrapped(utf8, `vault:vN:…`) | khối như v1. DEK của tệp vẫn
+// sinh cục bộ theo từng tệp (IV khối là bộ đếm nên mỗi tệp cần DEK riêng) nhưng được bọc bằng khoá chủ trong KMS; mở tệp = một lời gọi
+// `decrypt` (có cache TTL ngắn). Tráo đầu tệp sang tệp khác bị phát hiện ở khối đầu (AAD khối gắn khoá lưu).
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { kb } from "../nen/units.ts";
 import { CryptoError, keyring, type Keyring } from "./index.ts";
+import { keyProvider } from "./kms.ts";
 
 export const FILE_MAGIC = Buffer.from("XCFILE\u0000\u0001", "latin1");
+export const FILE_MAGIC_V2 = Buffer.from("XCFILE\u0000\u0002", "latin1");
+const WRAPPED_MAX = 512;
+/** Số byte đầu tệp đủ chứa đầu v1 hoặc v2 lớn nhất (đọc trước khi mở khoá). */
+export const FILE_HEAD_MAX_BYTES = FILE_MAGIC.length + 2 + WRAPPED_MAX;
 export const FILE_CHUNK_BYTES = kb(64);
 const IV = 12;
 const TAG = 16;
@@ -35,7 +43,41 @@ const chunkIv = (index: number) => {
 
 /** Đầu tệp có MAGIC → tệp mã hoá (phiên bản 1). */
 export function isEncryptedFile(head: Buffer): boolean {
-  return head.length >= FILE_MAGIC.length && head.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC);
+  if (head.length < FILE_MAGIC.length) return false;
+  const m = head.subarray(0, FILE_MAGIC.length);
+  return m.equals(FILE_MAGIC) || m.equals(FILE_MAGIC_V2);
+}
+
+const isV2File = (head: Buffer): boolean =>
+  head.length >= FILE_MAGIC_V2.length && head.subarray(0, FILE_MAGIC_V2.length).equals(FILE_MAGIC_V2);
+
+const needKms = (ring: Keyring) => {
+  if (ring.kms === undefined)
+    throw new CryptoError(
+      "KEY_UNKNOWN",
+      "tệp được mã hoá bằng KMS (v2) nhưng KMS_PROVIDER không phải transit",
+    );
+  return ring.kms;
+};
+
+function buildHeaderV2(wrapped: string): Buffer {
+  const w = Buffer.from(wrapped, "utf8");
+  const len = Buffer.alloc(2);
+  len.writeUInt16BE(w.length);
+  return Buffer.concat([FILE_MAGIC_V2, len, w]);
+}
+
+/** Đầu tệp v2: độ dài + chuỗi KMS đã bọc + phiên bản khoá chủ (đọc từ chuỗi). Cần đủ byte đầu. */
+function parseHeaderV2(head: Buffer): { length: number; wrapped: string; version: number } {
+  const o = FILE_MAGIC_V2.length;
+  if (head.length < o + 2) throw new CryptoError("BAD_ENVELOPE", "đầu tệp mã hoá bị cụt");
+  const n = head.readUInt16BE(o);
+  if (n === 0 || n > WRAPPED_MAX || head.length < o + 2 + n)
+    throw new CryptoError("BAD_ENVELOPE", "đầu tệp mã hoá (KMS) bị cụt hoặc sai độ dài");
+  const wrapped = head.subarray(o + 2, o + 2 + n).toString("utf8");
+  const m = /^vault:v([1-9][0-9]{0,8}):/.exec(wrapped);
+  if (!m) throw new CryptoError("BAD_ENVELOPE", "đầu tệp mã hoá (KMS) sai định dạng chuỗi bọc");
+  return { length: o + 2 + n, wrapped, version: Number(m[1]) };
 }
 
 function buildHeader(keyId: string, wrapIv: Buffer, wrapTag: Buffer, wrapped: Buffer): Buffer {
@@ -97,16 +139,53 @@ export function rewrapHeader(
   return { header: wrapDek(h.dek, ctx, ring), oldLength: h.length, changed: true };
 }
 
+/** Mở đầu tệp v1 hoặc v2 (v2 qua KMS). `ring` phải là bộ khoá của nhà cung cấp (có `kms` nếu v2). */
+export async function openHeaderAsync(head: Buffer, ctx: FileContext, ring: Keyring): Promise<FileHeader> {
+  if (!isV2File(head)) return openHeader(head, ctx, ring);
+  const h = parseHeaderV2(head);
+  try {
+    return { keyId: `kms:${h.version}`, length: h.length, dek: await needKms(ring).unwrap(h.wrapped) };
+  } catch (err) {
+    if (err instanceof CryptoError) throw err;
+    throw new CryptoError("AUTH_FAILED", "mở khoá tệp (KMS) thất bại");
+  }
+}
+
+/**
+ * Bọc lại DEK của tệp theo khoá chủ MỚI NHẤT (xoay khoá, không đụng nội dung): v2 → `rewrap` qua KMS (DEK không hiện ra ở đây);
+ * v1 → khi có KMS thì chuyển sang v2 (mở bằng khoá env cũ, bọc bằng KMS), không có KMS thì như `rewrapHeader`.
+ * `targetVersion`: phiên bản khoá chủ mới nhất của KMS (v2 đã ở phiên bản đó thì `changed=false`).
+ */
+export async function rewrapHeaderAsync(
+  head: Buffer,
+  ctx: FileContext,
+  ring: Keyring,
+  targetVersion?: number,
+): Promise<{ header: Buffer; oldLength: number; changed: boolean }> {
+  if (isV2File(head)) {
+    const h = parseHeaderV2(head);
+    if (targetVersion !== undefined && h.version >= targetVersion)
+      return { header: head.subarray(0, h.length), oldLength: h.length, changed: false };
+    const re = await needKms(ring).rewrap(h.wrapped);
+    return { header: buildHeaderV2(re.wrapped), oldLength: h.length, changed: re.version !== h.version };
+  }
+  if (ring.kms === undefined) return rewrapHeader(head, ctx, ring);
+  const h = openHeader(head, ctx, ring);
+  const { wrapped } = await ring.kms.wrap(h.dek);
+  return { header: buildHeaderV2(wrapped), oldLength: h.length, changed: true };
+}
+
 type Source = AsyncIterable<Buffer> | Iterable<Buffer>;
 
 /** Mã hoá luồng: phát ra đầu tệp rồi từng khối đã mã hoá. Nguồn rỗng → một khối cuối rỗng. */
 export async function* encryptFileStream(
   source: Source,
   ctx: FileContext,
-  ring: Keyring = keyring(),
+  ringIn?: Keyring,
 ): AsyncGenerator<Buffer> {
+  const ring = ringIn ?? (await keyProvider().ringForWrite());
   const dek = randomBytes(DEK);
-  yield wrapDek(dek, ctx, ring);
+  yield ring.kms !== undefined ? buildHeaderV2((await ring.kms.wrap(dek)).wrapped) : wrapDek(dek, ctx, ring);
   let index = 0;
   const seal = (block: Buffer, final: boolean): Buffer => {
     const c = createCipheriv("aes-256-gcm", dek, chunkIv(index), { authTagLength: TAG });
@@ -161,15 +240,25 @@ const truncated = () => new CryptoError("AUTH_FAILED", "tệp mã hoá bị cắ
 export async function* decryptFileStream(
   source: Source,
   ctx: FileContext,
-  ring: Keyring = keyring(),
+  ringIn?: Keyring,
 ): AsyncGenerator<Buffer> {
+  const ring = ringIn ?? (await keyProvider().ringForRead([]));
   const r = new Reader(source);
-  // Đầu tệp có độ dài biến thiên (idLen): đọc phần cố định rồi phần còn lại.
-  const fixed = await r.take(FILE_MAGIC.length + 1);
-  const idLen = fixed[FILE_MAGIC.length];
-  if (fixed.length < FILE_MAGIC.length + 1 || idLen === undefined) throw truncated();
-  const rest = await r.take(idLen + IV + TAG + DEK);
-  const header = openHeader(Buffer.concat([fixed, rest]), ctx, ring);
+  // Đầu tệp có độ dài biến thiên (v1: idLen; v2: wrappedLen): đọc phần cố định rồi phần còn lại.
+  const magic = await r.take(FILE_MAGIC.length);
+  let header: FileHeader;
+  if (isV2File(magic)) {
+    const lenBuf = await r.take(2);
+    if (lenBuf.length < 2) throw truncated();
+    const rest = await r.take(lenBuf.readUInt16BE(0) <= WRAPPED_MAX ? lenBuf.readUInt16BE(0) : 0);
+    header = await openHeaderAsync(Buffer.concat([magic, lenBuf, rest]), ctx, ring);
+  } else {
+    const idLenBuf = await r.take(1);
+    const idLen = idLenBuf[0];
+    if (magic.length < FILE_MAGIC.length || idLen === undefined) throw truncated();
+    const rest = await r.take(idLen + IV + TAG + DEK);
+    header = openHeader(Buffer.concat([magic, idLenBuf, rest]), ctx, ring);
+  }
   let index = 0;
   for (;;) {
     const meta = await r.take(5);

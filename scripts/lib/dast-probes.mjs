@@ -279,11 +279,10 @@ export function analyzeHtmlForXss(html, { markers = [] } = {}) {
       const lt = before.lastIndexOf("<");
       const gt = before.lastIndexOf(">");
       // marker nằm trong một thẻ chưa đóng (lt > gt) = đã thoát khỏi ngữ cảnh text/thuộc tính ngoài ý muốn.
-      if (
-        lt > gt &&
-        !/^<[a-z]+\s[^>]*"[^"]*$/i.test(before.slice(lt)) &&
-        !/^<(title|meta)/i.test(before.slice(lt))
-      )
+      const tag = before.slice(lt);
+      const insideQuotedAttr = /^<[a-z]+\s/i.test(tag) && (tag.split('"').length - 1) % 2 === 1; // trong giá trị thuộc tính đang mở
+      const lowerTag = tag.toLowerCase();
+      if (lt > gt && !insideQuotedAttr && !lowerTag.startsWith("<title") && !lowerTag.startsWith("<meta"))
         errs.push(`marker ${m} nằm trong thẻ HTML thô`);
     }
   }

@@ -4,7 +4,7 @@ import { createHmac, randomInt, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
-import { sealText, textColumn } from "../crypto/columns.ts";
+import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { sessionSecret } from "../nen/config.ts";
@@ -160,7 +160,7 @@ async function insertInquiry(
     const spam = input.elapsed_ms !== undefined && input.elapsed_ms < MIN_FILL_MS;
     // SĐT ghi dạng mã hoá (T-048): id sinh trước vì AAD gắn id dòng; cột bản rõ để NULL.
     const newId = randomUUID();
-    const phone = sealText(textColumn("inquiry", "phone"), newId, input.phone);
+    const phone = await sealTextAsync(textColumn("inquiry", "phone"), newId, input.phone);
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO inquiry (id, company_id, code, submission_id, name, email, phone_enc, phone_bidx, message, service_slug, source, consent_at,
          consent_notice_version, status, assignee_user_id, due_at, suspected_spam, ip_hash, created_at)
@@ -257,7 +257,7 @@ async function insertApplication(
     }
     const code = await nextCode(tx, companyId, "UV", now);
     const newId = randomUUID();
-    const phone = sealText(textColumn("job_application", "phone"), newId, input.phone);
+    const phone = await sealTextAsync(textColumn("job_application", "phone"), newId, input.phone);
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO job_application (id, company_id, code, submission_id, job_page_id, name, email, phone_enc, phone_bidx, cover_letter,
          consent_at, consent_notice_version, suspected_spam, ip_hash, created_at)

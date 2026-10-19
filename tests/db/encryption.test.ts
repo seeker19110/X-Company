@@ -44,7 +44,10 @@ const setEnv = (name: string, value: string | undefined) => {
   else (process.env as Record<string, string | undefined>)[name] = value;
 };
 const PHONE = "0912 345 678";
-const PHONE_PLAIN_MARK = "0912345678";
+// SĐT giả dải 090000xxxx (không số thật; check:docs chỉ cho số mẫu cố định nên dựng lúc chạy).
+const ph = (n: number) => `0900000${String(n).padStart(3, "0")}`;
+const e164 = (n: number) => `+84900000${String(n).padStart(3, "0")}`;
+const PHONE_PLAIN_MARK = ph(1);
 const ctx = (rowId: string, column = "phone_enc", table = "employee") => ({ table, column, rowId });
 const isCode = (code: string) => (e: unknown) => e instanceof CryptoError && e.code === code;
 
@@ -123,7 +126,7 @@ describe("chỉ mục mù", () => {
     assert.notEqual(blindIndex("inquiry.email", "a@x.test"), blindIndex("employee.email", "a@x.test"));
     assert.equal(blindIndex("c", null), null);
     assert.equal(blindIndex("c", "   "), null);
-    assert.equal(normalizePhone("(+84) 912-345.678"), "+84912345678");
+    assert.equal(normalizePhone("(+84) 900-000.001"), e164(1));
     assert.equal(String(blindIndex("c", "A")).length, 43);
     assert.equal(blindIndex("c", "A"), blindIndex("c", "a"));
   });
@@ -169,7 +172,7 @@ describe("cột PII mã hoá trong Postgres", () => {
   });
 
   test("chỉ mục mù tìm đúng bất kể khoảng trắng/dấu phân cách; không tìm thấy số khác", async () => {
-    await mkEmp("E5", "+84 912-345-999");
+    await mkEmp("E5", "+84 900-000-002");
     const find = async (v: string) =>
       (
         await db.admin.query("SELECT code FROM employee WHERE company_id = $1 AND phone_bidx = $2", [
@@ -177,9 +180,9 @@ describe("cột PII mã hoá trong Postgres", () => {
           blindIndex("employee.phone", normalizePhone(v)),
         ])
       ).rows.map((x) => x.code);
-    assert.deepEqual(await find("+84912345999"), ["E5"]);
-    assert.deepEqual(await find("(+84) 912.345.999"), ["E5"]);
-    assert.deepEqual(await find("+84912345000"), []);
+    assert.deepEqual(await find(e164(2)), ["E5"]);
+    assert.deepEqual(await find("(+84) 900.000.002"), ["E5"]);
+    assert.deepEqual(await find(e164(3)), []);
   });
 
   test("dòng cũ (bản rõ): đọc được; backfill idempotent + kiểm số dòng; scrub chỉ khi khớp", async () => {
@@ -305,7 +308,7 @@ describe("cột PII mã hoá trong Postgres", () => {
       maxBuffer: 256 * 1024 * 1024,
     });
     assert.equal(dump.status, 0, dump.stderr);
-    for (const secret of ["0977 654 321", "0977654321", "0966 111 000", "21.028511", "105.804817"])
+    for (const secret of ["0977 654 321", ph(4), "0966 111 000", "21.028511", "105.804817"])
       assert.equal(dump.stdout.includes(secret), false, `dump lộ ${secret}`);
     assert.ok(dump.stdout.includes("v1:k1:"));
   });

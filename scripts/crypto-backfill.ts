@@ -2,12 +2,14 @@
 // Idempotent, theo lô. `--scrub`: xoá bản rõ sau khi giải mã thử khớp (chỉ làm sau khi đã kiểm bản mã đọc đúng — mất đường lùi
 // "bản trước đọc cột rõ"). `--reindex`: tính lại chỉ mục mù (khi đổi DATA_INDEX_KEY). Báo cáo số dòng để đối chiếu.
 import path from "node:path";
+import { registerKms } from "../adapters/register-kms.ts";
 import { backfill, rotateFiles } from "../lib/crypto/rotate.ts";
 import { closePool, getPool } from "../lib/db/index.ts";
 import { env } from "../lib/nen/env.ts";
 
 const args = new Set(process.argv.slice(2));
 try {
+  registerKms();
   const rows = await backfill(getPool(), { scrub: args.has("--scrub"), reindex: args.has("--reindex") });
   for (const r of rows)
     console.log(

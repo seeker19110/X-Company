@@ -63,7 +63,11 @@
     "check:alerts": "node scripts/check-alerts.mjs",
     "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
     "backup": "scripts/backup.sh",
-    "backup:drill": "scripts/restore-drill.sh"
+    "backup:drill": "scripts/restore-drill.sh",
+    "kms:drill": "scripts/with-test-db.sh scripts/kms-dev.sh run -- tsx scripts/kms-rotation-drill.ts",
+    "tools:install": "node scripts/tools/install-tool.mjs install",
+    "backup:offsite": "scripts/backup-offsite.sh",
+    "backup:offsite:drill": "scripts/restore-offsite-drill.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

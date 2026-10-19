@@ -100,6 +100,32 @@ Lịch: chạy `npm run -s backup` hằng ngày (cron/systemd timer — chưa c�
 Khôi phục thật (không phải diễn tập): làm theo [runbooks/restore-db.md](runbooks/restore-db.md) mục A với tệp từ `BACKUP_DIR` (giải mã trước nếu là `.dump.enc`: `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:BACKUP_PASSPHRASE -in <tệp>.dump.enc -out <tệp>.dump`; khoá nằm trong biến môi trường, KHÔNG dán lên dòng lệnh).
 Mất khoá `BACKUP_PASSPHRASE` = mất mọi bản mã hoá đã tạo; hiện khoá chưa có bản sao/escrow ngoài máy (OPS-DR-004 còn mở).
 
+### Sao lưu off-site (restic)
+Nhãn bằng chứng: **faithful-fixture** — restic 0.19.1 THẬT (ghim sha256, `node scripts/tools/install-tool.mjs install restic`), kho ở thư mục khác trên CÙNG máy dev. Công cụ: [tools.md](tools.md). Quyết định: D-040.
+```bash
+export RESTIC_REPOSITORY=/mnt/o-khac/xc-kho        # hoặc sftp:user@host:/duong/dan · s3:https://host/bucket · rest:https://host/repo
+export RESTIC_PASSWORD_FILE=/etc/xc/restic.pw      # mật khẩu kho do NGƯỜI giữ riêng (không phải máy chủ); hoặc RESTIC_PASSWORD / RESTIC_PASSWORD_COMMAND
+npm run -s backup && npm run -s backup:offsite     # restic backup → restic check (+ --read-data-subset) → forget --prune → offsite-status.json
+npm run -s backup:offsite:drill                    # restic check --read-data → restore → restore-drill.sh trên bản khôi phục → RTO off-site
+```
+- Chính sách giữ: `BACKUP_OFFSITE_KEEP_LAST|DAILY|WEEKLY|MONTHLY` (mặc định 7/7/4/6). `BACKUP_OFFSITE_CHECK_SUBSET` mặc định `10%` khi đẩy (nhanh), drill luôn đọc toàn bộ dữ liệu.
+- Exit `backup-offsite.sh`: 0 xong · 1 lỗi/`restic check` đỏ · 2 cấu hình sai hoặc thiếu mật khẩu (không bao giờ hỏi tương tác). `restore-offsite-drill.sh`: 0 khớp · 1 lệch · 2 cấu hình · 3 kho hỏng/không mở được.
+- URL kho KHÔNG được nhúng khoá/mật khẩu (script từ chối, exit 2); khoá S3/SFTP đi qua biến môi trường của nhà cung cấp hoặc ssh-agent. Log chỉ in URL đã che userinfo.
+- Bảng 3-2-1 ở `BACKUP_DIR/offsite-status.json` (`three_two_one`): `meets_321` chỉ `true` khi đích là dịch vụ ngoài (sftp/s3/rest) VÀ ≥ 2 bản trên ≥ 2 hệ thống — đích đường dẫn cục bộ luôn `false`.
+- Cảnh báo: `XCLocalOffsiteBackupStale` (25 giờ), `XCLocalOffsiteDrillStale` (31 ngày) đọc `offsite-status.json`/`offsite-drill.json` (chỉ ghi khi thành công).
+- **Mất mật khẩu kho = mất mọi bản off-site** (restic không có cửa sau). Lưu mật khẩu kho ở nơi tách khỏi máy chủ (người giữ riêng, bản sao giấy/kho bí mật khác); `restic key add` thêm khoá thứ hai cho người thứ hai.
+- Khôi phục thật: `restic restore latest --tag xc-db --target <thư mục>` rồi làm theo [runbooks/restore-db.md](runbooks/restore-db.md) với tệp khôi phục.
+- Chưa chứng minh: đích thật khác nhà cung cấp/khu vực (3-2-1 thật), lịch tự động trên máy chủ thật (cron/timer `15 3 * * *`), quyền ghi-chỉ-thêm/immutable ở đích (OPS-DR-007: restic `--append-only` qua rest-server hoặc object lock S3), khoá kho do người giữ riêng.
+
+### Vận hành KMS (OpenBao Transit) — khi `KMS_PROVIDER=transit`
+Nhãn: **faithful-fixture** (OpenBao 2.7.1 thật cục bộ qua `scripts/kms-dev.sh`; KHÔNG HSM, KHÔNG hạ tầng thật). Cấu hình mẫu production: [kms-deploy.md](kms-deploy.md); thiết kế: [../security/encryption-at-rest.md](../security/encryption-at-rest.md).
+- **Mở niêm phong (unseal)**: sau mỗi lần khởi động/khởi động lại, OpenBao ở trạng thái niêm phong → ứng dụng ghi/đọc dữ liệu mã hoá đều lỗi `KMS_UNAVAILABLE` (fail-closed, KHÔNG rơi về khoá env). Mở bằng ngưỡng khoá chia (`bao operator unseal` — nhập từng phần, mỗi người một phần; khoá KHÔNG dán lên dòng lệnh dùng chung). Dev: `scripts/kms-dev.sh unseal`.
+- **Sao lưu khoá**: (1) các phần khoá unseal + root token ban đầu: chia cho ≥ 3 người giữ riêng, ngưỡng ≥ 2; (2) dữ liệu OpenBao (raft snapshot: `bao operator raft snapshot save` — chứa khoá chủ đã mã hoá bởi barrier, vô dụng nếu thiếu khoá unseal) sao lưu CÙNG cách với CSDL nhưng tách khỏi nơi giữ khoá unseal. Thiếu một trong hai = không khôi phục được.
+- **Mất khoá/mất KMS**: dữ liệu mã hoá bằng khoá chủ đó KHÔNG đọc được (kể cả từ sao lưu CSDL). Quy trình: (a) dừng ghi (ứng dụng đã tự lỗi); (b) khôi phục raft snapshot + unseal; (c) nếu không còn snapshot/khoá unseal → dữ liệu cột mã hoá coi như mất (crypto-shredding ngoài ý muốn): khôi phục từ nguồn gốc khác (người dùng nhập lại), ghi sự cố theo [INCIDENT-RESPONSE.md](INCIDENT-RESPONSE.md). Phong bì v1 (khoá env) cũ không bị ảnh hưởng nếu còn `DATA_ENCRYPTION_KEYS`.
+- **Xoay khoá chủ**: `KMS_TRANSIT_TOKEN="$(cat ops.token)" npm run -s crypto:rotate -- --kms-rotate` (token vận hành có quyền rotate; token ứng dụng KHÔNG có). Việc: `rotate` tạo phiên bản mới → `rewrap` mọi DEK cũ (không đọc dữ liệu rõ) → `stale` phải 0 → mới được đặt `min_decryption_version` lên (thu hồi phiên bản cũ). Diễn tập + ghi thời lượng: `npm run -s kms:drill` → [../security/rotation-log.md](../security/rotation-log.md).
+- **Token ứng dụng**: policy tối thiểu `xc-app` (encrypt/decrypt/rewrap + đọc siêu dữ liệu khoá). Hết hạn/sai → `KMS_AUTH`: cấp token mới, đặt `KMS_TRANSIT_TOKEN`, khởi động lại.
+- **Chuyển env → KMS**: giữ `DATA_ENCRYPTION_KEYS` cũ, đặt `KMS_PROVIDER=transit`, chạy `npm run -s crypto:rotate` (mã hoá lại phong bì v1 bằng KMS, bọc lại khoá tệp) → `stale` 0 → mới bỏ khoá env. Đường lùi: đặt `KMS_PROVIDER=env` CHỈ đọc được dữ liệu v1; dữ liệu v2 cần KMS.
+
 ### Khôi phục sao lưu
 Xem [runbooks/restore-db.md](runbooks/restore-db.md) và [runbooks/restore-files.md](runbooks/restore-files.md). Diễn tập tự động cục bộ gần nhất: 2026-10-19, xem [restore-drills.md](restore-drills.md) (đo RTO thật trên máy dev); diễn tập do người không phải tác giả trên hạ tầng thật: chưa có.
 
@@ -192,6 +218,8 @@ Bộ đánh giá `lib/ops/alerts.ts` chạy trong tiến trình worker khi `ALER
 | `XCLocalReadyzDown` | page | readiness thất bại (DB không phản hồi / đang tắt) | `pm2 status`, `psql "$DATABASE_URL" -c 'select 1'`, `pm2 logs` |
 | `XCLocalMetricsScrapeFailed` | ticket | không scrape được `/api/metrics` (web chết hoặc `METRICS_TOKEN` sai) | `curl -H "Authorization: Bearer …" $ALERT_METRICS_URL`; kiểm `pm2 status` |
 | `XCLocalBackupStale` | ticket | bản sao lưu mới nhất cũ hơn 25 giờ hoặc chưa từng có | mục "Sao lưu và khôi phục thử cục bộ": chạy `npm run -s backup`, xem log lịch |
+| `XCLocalOffsiteBackupStale` | ticket | lần đẩy off-site restic thành công gần nhất cũ hơn 25 giờ hoặc chưa từng | mục "Sao lưu off-site (restic)": chạy `npm run -s backup && npm run -s backup:offsite`, đọc lỗi (kho hỏng → `restic check`) |
+| `XCLocalOffsiteDrillStale` | ticket | chưa diễn tập khôi phục từ kho off-site > 31 ngày | `npm run -s backup:offsite:drill` (mục "Sao lưu off-site (restic)") |
 | `XCLocalPeriodCloseOverdue` | ticket | có kỳ công kết thúc > 7 ngày chưa khoá | mục "Khoá kỳ công quá hạn" bên dưới |
 | `XCLocalAuditChainBroken` | page | chuỗi audit không hợp lệ | mục "Chuỗi audit hỏng" bên dưới |
 

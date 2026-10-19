@@ -23,6 +23,8 @@ status: faithful-fixture — thử trên bộ đánh giá cục bộ (lib/ops/al
 | XCLocalReadyzDown | page | giả lập DB lỗi: probe readiness trỏ tới cổng đóng (đường mã thật lib/nen/health) | 2 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalMetricsScrapeFailed | ticket | endpoint /api/metrics không trả lời | 2 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalBackupStale | ticket | bản sao lưu thật (backup.sh) bị lùi manifest 26 giờ; hết khi chạy backup.sh lại | 1 | 1 | có | có | có | có | có | ĐẠT |
+| XCLocalOffsiteBackupStale | ticket | lần đẩy off-site (restic) ngừng thành công: đồng hồ giả chạy qua 25 giờ (2 giờ/tick); hết khi đẩy thành công lại | 13 | 1 | có | có | có | có | có | ĐẠT |
+| XCLocalOffsiteDrillStale | ticket | không diễn tập khôi phục off-site: đồng hồ giả chạy qua 31 ngày (3 ngày/tick); hết khi diễn tập lại | 11 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalPeriodCloseOverdue | ticket | kỳ công kết thúc 30 ngày trước vẫn ở trạng thái open | 1 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalAuditChainBroken | page | sửa trái phép một bản ghi audit (tắt trigger) rồi khôi phục | 1 | 1 | có | có | có | có | có | ĐẠT |
 

@@ -4,7 +4,7 @@
 // chỉ mã nghiệp vụ/đếm/danh mục). Quyền `privacy.manage` kiểm ở route (lib/privacy/routes.ts); hàm ở đây tin người gọi.
 import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
-import { revealText } from "../crypto/columns.ts";
+import { revealTextAsync } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { getStorage } from "../files/storage.ts";
 import { AppError } from "../nen/app-error.ts";
@@ -534,16 +534,16 @@ export async function exportSubject(
   const many = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows;
   const c = actor.companyId;
   // SĐT lưu dạng mã hoá (T-048): giải mã cho chính chủ thể; không đưa id dòng/bản mã/chỉ mục vào bản xuất.
-  const reveal = (table: string, row: Record<string, unknown> | null) => {
+  const reveal = async (table: string, row: Record<string, unknown> | null) => {
     if (row === null) return null;
-    const [r] = revealText(table, "phone", [row]);
+    const [r] = await revealTextAsync(table, "phone", [row]);
     delete r!.id;
     return r!;
   };
   let data: Record<string, unknown>;
   if (type === "inquiry") {
     data = {
-      inquiry: reveal(
+      inquiry: await reveal(
         "inquiry",
         await one(
           `SELECT id, code, name, email, phone, phone_enc, message, service_slug, source, status, consent_at, consent_notice_version,
@@ -559,7 +559,7 @@ export async function exportSubject(
     };
   } else if (type === "job_application") {
     data = {
-      application: reveal(
+      application: await reveal(
         "job_application",
         await one(
           `SELECT a.id, a.code, a.name, a.email, a.phone, a.phone_enc, a.cover_letter, a.status, a.consent_at, a.consent_notice_version,
@@ -573,7 +573,7 @@ export async function exportSubject(
     };
   } else {
     data = {
-      employee: reveal(
+      employee: await reveal(
         "employee",
         await one(
           `SELECT id, code, full_name, work_email, phone, phone_enc, hired_on, terminated_on, created_at

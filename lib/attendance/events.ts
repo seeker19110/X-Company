@@ -3,7 +3,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { appendAudit, canonicalJson } from "../audit/index.ts";
-import { sealGeo } from "../crypto/columns.ts";
+import { sealGeoAsync } from "../crypto/columns.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { env } from "../nen/env.ts";
@@ -249,7 +249,7 @@ export async function recordEvent(
     const geoDrop = input.geo ? await geoGate(tx, actor.employeeId) : null;
     const geoEnc =
       input.geo && geoDrop === null
-        ? sealGeo(eventId, {
+        ? await sealGeoAsync(eventId, {
             lat: input.geo.lat,
             lng: input.geo.lng,
             accuracy_m: input.geo.accuracyM,

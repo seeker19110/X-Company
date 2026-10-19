@@ -2,7 +2,7 @@
 // Hàm nhận `tx` của giao dịch và actor (để ghi audit); kiểm quyền nằm ở lớp gọi (`can()`), không ở đây.
 import { randomUUID } from "node:crypto";
 import { appendAudit } from "../audit/index.ts";
-import { sealText, textColumn } from "../crypto/columns.ts";
+import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { t } from "../i18n/index.ts";
@@ -183,7 +183,7 @@ export async function createEmployee(
 ) {
   // Số điện thoại ghi dạng mã hoá (T-048): id sinh trước vì AAD gắn id dòng; cột bản rõ để NULL.
   const newId = randomUUID();
-  const phone = sealText(textColumn("employee", "phone"), newId, input.phone);
+  const phone = await sealTextAsync(textColumn("employee", "phone"), newId, input.phone);
   const id = await insertReturningId(
     tx,
     `INSERT INTO employee (id, company_id, code, full_name, work_email, phone_enc, phone_bidx, hired_on)

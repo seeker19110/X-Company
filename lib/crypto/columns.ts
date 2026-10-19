@@ -4,7 +4,8 @@
 //
 // Mô hình expand/contract: cột bản rõ (`plain`) giữ cho dòng cũ/bản trước; ứng dụng mới ghi cột `enc` (và `bidx` nếu cần tìm)
 // rồi để cột bản rõ NULL, đọc ưu tiên `enc`. Bước contract (bỏ cột bản rõ) là việc SAU — xem docs/security/encryption-at-rest.md.
-import { blindIndex, decryptField, encryptField, normalizePhone } from "./index.ts";
+import { blindIndex, decryptField, encryptField, normalizePhone, type Keyring } from "./index.ts";
+import { keyProvider } from "./kms.ts";
 
 export interface TextColumn {
   kind: "text";
@@ -88,21 +89,57 @@ export interface Sealed {
   bidx: string | null;
 }
 
-/** Mã hoá giá trị của cột (null → cả hai null). `rowId` phải là id dòng sẽ ghi (AAD). */
-export function sealText(c: TextColumn, rowId: string, value: string | null | undefined): Sealed {
+/**
+ * Mã hoá giá trị của cột (null → cả hai null). `rowId` phải là id dòng sẽ ghi (AAD). Đồng bộ: dùng bộ khoá env (hoặc `ring` tiêm vào);
+ * miền nghiệp vụ gọi bản `sealTextAsync` để đi qua nhà cung cấp khoá (env | KMS transit).
+ */
+export function sealText(
+  c: TextColumn,
+  rowId: string,
+  value: string | null | undefined,
+  ring?: Keyring,
+): Sealed {
   if (value === null || value === undefined) return { enc: null, bidx: null };
   return {
-    enc: encryptField({ table: c.table, column: c.enc, rowId }, value),
+    enc: encryptField({ table: c.table, column: c.enc, rowId }, value, ring),
     bidx: bidxOf(c, value),
   };
 }
 
+export async function sealTextAsync(
+  c: TextColumn,
+  rowId: string,
+  value: string | null | undefined,
+): Promise<Sealed> {
+  if (value === null || value === undefined) return { enc: null, bidx: null };
+  return sealText(c, rowId, value, await keyProvider().ringForWrite());
+}
+
 /** Đọc giá trị: ưu tiên cột mã hoá (giải mã, sai AAD → lỗi), rơi về cột bản rõ của dòng cũ. */
-export function openText(c: TextColumn, rowId: string, row: Record<string, unknown>): string | null {
+export function openText(
+  c: TextColumn,
+  rowId: string,
+  row: Record<string, unknown>,
+  ring?: Keyring,
+): string | null {
   const enc = row[c.enc];
-  if (typeof enc === "string") return decryptField({ table: c.table, column: c.enc, rowId }, enc);
+  if (typeof enc === "string") return decryptField({ table: c.table, column: c.enc, rowId }, enc, ring);
   const plain = row[c.plain];
   return typeof plain === "string" ? plain : null;
+}
+
+export async function openTextAsync(
+  c: TextColumn,
+  rowId: string,
+  row: Record<string, unknown>,
+): Promise<string | null> {
+  const enc = row[c.enc];
+  return openText(
+    c,
+    rowId,
+    row,
+    typeof enc === "string" ? await keyProvider().ringForRead([enc]) : undefined,
+  );
 }
 
 export interface GeoValue {
@@ -115,13 +152,22 @@ export interface GeoValue {
 
 const GEO_CTX = (rowId: string) => ({ table: "attendance_event", column: "geo_enc", rowId });
 
-export function sealGeo(rowId: string, g: GeoValue): string {
-  return encryptField(GEO_CTX(rowId), JSON.stringify(g));
+export function sealGeo(rowId: string, g: GeoValue, ring?: Keyring): string {
+  return encryptField(GEO_CTX(rowId), JSON.stringify(g), ring);
 }
 
-export function openGeo(rowId: string, row: Record<string, unknown>): GeoValue | null {
+export async function sealGeoAsync(rowId: string, g: GeoValue): Promise<string> {
+  return sealGeo(rowId, g, await keyProvider().ringForWrite());
+}
+
+export async function openGeoAsync(rowId: string, row: Record<string, unknown>): Promise<GeoValue | null> {
   const enc = row.geo_enc;
-  if (typeof enc === "string") return JSON.parse(decryptField(GEO_CTX(rowId), enc)) as GeoValue;
+  return openGeo(rowId, row, typeof enc === "string" ? await keyProvider().ringForRead([enc]) : undefined);
+}
+
+export function openGeo(rowId: string, row: Record<string, unknown>, ring?: Keyring): GeoValue | null {
+  const enc = row.geo_enc;
+  if (typeof enc === "string") return JSON.parse(decryptField(GEO_CTX(rowId), enc, ring)) as GeoValue;
   if (typeof row.geo_lat !== "number" || typeof row.geo_lng !== "number") return null;
   const at = row.geo_captured_at;
   return {
@@ -140,12 +186,24 @@ export function revealText<R extends Record<string, unknown>>(
   table: string,
   plain: string,
   rows: R[],
+  ring?: Keyring,
 ): Record<string, unknown>[] {
   const c = textColumn(table, plain);
   return rows.map((r) => {
     const rest: Record<string, unknown> = { ...r };
     delete rest[c.enc];
     if (c.bidx !== undefined) delete rest[c.bidx];
-    return { ...rest, [plain]: openText(c, String(r.id), r) };
+    return { ...rest, [plain]: openText(c, String(r.id), r, ring) };
   });
+}
+
+/** Như `revealText` nhưng đi qua nhà cung cấp khoá: mở mọi DEK cần dùng một lần (gộp theo chuỗi bọc) rồi giải mã đồng bộ. */
+export async function revealTextAsync<R extends Record<string, unknown>>(
+  table: string,
+  plain: string,
+  rows: R[],
+): Promise<Record<string, unknown>[]> {
+  const c = textColumn(table, plain);
+  const envs = rows.map((r) => r[c.enc]).filter((v): v is string => typeof v === "string");
+  return revealText(table, plain, rows, envs.length > 0 ? await keyProvider().ringForRead(envs) : undefined);
 }

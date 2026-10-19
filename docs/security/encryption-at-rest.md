@@ -1,6 +1,6 @@
 # Mã hoá dữ liệu lúc lưu (T-048)
 
-> Nhãn bằng chứng: **faithful-fixture** — kiểm trên Postgres tạm + hệ tệp cục bộ, khoá sinh lúc chạy test. Đây KHÔNG phải KMS/HSM, không phải production. Chủ dự án chọn "hạ tầng production: làm local": phần mật mã ứng dụng làm đầy đủ; phần cần hạ tầng thật ghi ở mục 7.
+> Nhãn bằng chứng: **faithful-fixture** — kiểm trên Postgres tạm + hệ tệp cục bộ. Mặc định (`KMS_PROVIDER=env`) khoá ở biến môi trường; từ T-052 có `KMS_PROVIDER=transit` (OpenBao Transit TỰ HOST, chạy THẬT cục bộ — mục 8). KHÔNG phải HSM phần cứng, không phải production. Chủ dự án chọn "hạ tầng production: làm local": phần mật mã ứng dụng làm đầy đủ; phần cần hạ tầng thật ghi ở mục 7.
 > Mã: `lib/crypto/` (chỉ `node:crypto`, không phụ thuộc npm mới). Test: `tests/db/encryption.test.ts`, `tests/unit/env.test.ts`.
 
 ## 1. Phạm vi — cột/tệp nào được mã hoá và vì sao
@@ -50,9 +50,19 @@ Không có cửa sau. Mất mọi khoá còn dùng được cho một `keyId` �
 
 `tests/db/encryption.test.ts` (Postgres thật): ghi → cột bản rõ NULL, `SELECT` cột enc không thấy bản rõ; giải mã đúng (Unicode/rỗng/10 KB); sai AAD/tráo dòng/cột/bảng → lỗi; xoay khoá giữ đọc được, idempotent, bỏ khoá cũ vẫn đọc; backfill idempotent + kiểm số dòng + scrub chỉ khi khớp; chỉ mục mù khớp NFC/hoa-thường/định dạng SĐT; `pg_dump` không chứa SĐT/toạ độ mẫu; COMMENT khớp hai chiều data-map ↔ DB; tệp: round-trip nhiều cỡ, tệp cũ đọc được, tráo/sửa/cắt cụt bị phát hiện, thiếu khoá → lỗi rõ, xoay khoá tệp.
 
+## 8. KMS tự host — provider `transit` (T-052, D-039)
+- **Chọn nhà cung cấp**: `KMS_PROVIDER=env` (mặc định, hành vi trên) | `transit`. Mã: `lib/crypto/kms.ts` (logic, không mạng) + `adapters/kms-transit-http.ts` (`fetch`, vì lib/ không có client mạng — DB-TX-003) + `adapters/register-kms.ts` (gọi ở `instrumentation.ts` và script). Test: `tests/db/kms-transit.test.ts` (máy chủ giả + OpenBao thật).
+- **Phong bì v2**: `v2:<phiên bản khoá chủ>:<DEK đã bọc base64url>:<iv>:<tag>:<ct>`. DEK 32 byte sinh cục bộ, bọc bằng `transit/encrypt/<khoá>`; khoá chủ (KEK) KHÔNG BAO GIỜ rời KMS. Cùng AAD với v1. Phong bì tự chứa → không có trạng thái cục bộ, nhiều bản sao ứng dụng đọc chung. Tệp: đầu tệp v2 chứa chuỗi bọc (mỗi tệp một DEK riêng vì IV khối là bộ đếm).
+- **DEK**: dùng chung cho nhiều bản ghi tới hết `KMS_DEK_TTL_S` hoặc `KMS_DEK_MAX_USES`; giải bọc được cache (TTL ngắn, gộp lời gọi đồng thời); trần `KMS_MAX_CALLS_PER_MIN`; làm mới sớm ở nền (80% TTL).
+- **Fail-closed**: KMS dừng/niêm phong → `KMS_UNAVAILABLE`; token sai → `KMS_AUTH`; vượt trần → `KMS_RATE_LIMITED`; cấu hình sai → `KMS_CONFIG` (production + transit + http không loopback bị từ chối; startup thoát 78). KHÔNG BAO GIỜ rơi về khoá env. Có timeout (`KMS_TIMEOUT_MS`) và thử lại có trần (`KMS_RETRIES`, lùi cấp số nhân; 4xx không thử lại). Trong TTL, DEK đã cache vẫn dùng được khi KMS vừa dừng (cửa sổ có chủ đích, giới hạn bằng TTL).
+- **Xoay khoá**: `npm run -s crypto:rotate -- --kms-rotate` (token vận hành): `transit/keys/<khoá>/rotate` tạo phiên bản mới, `transit/rewrap` đổi DEK cũ sang phiên bản mới — KHÔNG đọc dữ liệu rõ, bản mã dữ liệu giữ nguyên, mỗi DEK một lời gọi dù bao nhiêu dòng chung nó. Phong bì v1 cũ được mã hoá lại bằng KMS (đường chuyển env → KMS). Diễn tập + thời lượng: `npm run -s kms:drill` → [rotation-log.md](rotation-log.md).
+- **Policy**: ứng dụng chỉ encrypt/decrypt/rewrap + đọc siêu dữ liệu khoá; không rotate/xoá/xuất. Audit device của OpenBao không chứa bản rõ/DEK (test).
+- **Cột `key_id` (DB-SEC-009)**: key id nằm trong phong bì (v1: id khoá env; v2: phiên bản khoá chủ), `envelopeKeyId()` đọc không cần giải mã. Cột `*_key_id` riêng CHƯA thêm — đề xuất cột sinh `GENERATED ALWAYS AS (…) STORED` (không đổi mã ghi) cần sửa guard `attendance_event`; chờ phiên chính duyệt.
+- **Chưa chứng minh**: HSM phần cứng/auto-unseal PKCS#11/cloud KMS ([../ops/kms-deploy.md](../ops/kms-deploy.md) mục 5); `DATA_INDEX_KEY` còn ở env; diễn tập xoay trên staging/hạ tầng thật; KMS nhiều nút/HA; token ứng dụng dùng AppRole/TTL ngắn thay token tĩnh.
+
 ## 7. Việc cần NGƯỜI / hạ tầng thật (chưa chứng minh)
 
-- **KMS/HSM** giữ khoá chủ (SEC-SECRET-013, DB-SEC-009, CMP-PRIV-007): hiện khoá ở biến môi trường, nằm trong bộ nhớ tiến trình.
+- **HSM** giữ khoá chủ (SEC-SECRET-013, DB-SEC-009): đã có KMS phần mềm tự host (mục 8, `KMS_PROVIDER=transit`) nhưng khoá chủ của OpenBao vẫn bảo vệ bằng khoá chia Shamir, không phải HSM; mặc định `env` thì khoá ở biến môi trường.
 - **Tách quyền khoá khỏi DB:** quản trị DB không được đọc khoá; kho bí mật tập trung có audit đọc (SEC-SECRET-005/012).
 - **Mã hoá đĩa/volume** của máy chủ Postgres và kho tệp (lớp bổ sung, không thay lớp ứng dụng).
 - Diễn tập xoay khoá trên staging ghi thời gian vào `docs/security/rotation-log.md` (SEC-SECRET-008); khôi phục sao lưu từ tài khoản DR (OPS-DR-004).

@@ -10,13 +10,23 @@ interface Field<T extends z.ZodType> {
   secret?: boolean;
   /** Bắt buộc ở lúc khởi động (thiếu = thoát ≠ 0). */
   required?: boolean;
-  /** Bắt buộc chỉ khi NODE_ENV=production (dev/test có giá trị thử cố định ở nơi dùng) — fail-closed ở production. */
-  requiredInProduction?: boolean;
+  /**
+   * Bắt buộc chỉ khi NODE_ENV=production (dev/test có giá trị thử cố định ở nơi dùng) — fail-closed ở production.
+   * Hàm: quyết theo các biến còn lại (vd khoá env không bắt buộc khi KMS_PROVIDER=transit).
+   */
+  requiredInProduction?: boolean | ((source: Source) => boolean);
+  /** Bắt buộc khi hàm trả true (phụ thuộc biến khác, vd KMS_TRANSIT_ADDR khi KMS_PROVIDER=transit), ở mọi môi trường. */
+  requiredWhen?: (source: Source) => boolean;
 }
 
 const field = <T extends z.ZodType>(
   schema: T,
-  o: { secret?: boolean; required?: boolean; requiredInProduction?: boolean } = {},
+  o: {
+    secret?: boolean;
+    required?: boolean;
+    requiredInProduction?: boolean | ((source: Source) => boolean);
+    requiredWhen?: (source: Source) => boolean;
+  } = {},
 ): Field<T> => ({
   schema,
   ...o,
@@ -106,12 +116,47 @@ export const SERVER_SPEC = {
         error: "phải dạng id:khoá[,id:khoá] với khoá là 32 byte base64, id không trùng",
       })
       .optional(),
-    { secret: true, requiredInProduction: true },
+    // KMS_PROVIDER=transit: khoá dữ liệu nằm trong KMS (khoá env chỉ còn để ĐỌC dữ liệu v1 cũ khi chuyển đổi) → không bắt buộc.
+    { secret: true, requiredInProduction: (s) => rawOf(s, "KMS_PROVIDER") !== "transit" },
   ),
   DATA_INDEX_KEY: field(z.string().refine(validKey32, { error: "phải là khoá 32 byte base64" }).optional(), {
     secret: true,
     requiredInProduction: true,
   }),
+  // KMS tự host (T-052, D-039; SEC-SECRET-013, DB-SEC-009, CMP-PRIV-007): `env` = khoá trong biến môi trường (hành vi cũ, mặc định);
+  // `transit` = mô hình phong bì — khoá dữ liệu (DEK) sinh cục bộ, bọc bằng khoá chủ trong OpenBao/Vault Transit (khoá chủ không
+  // bao giờ rời KMS). Token KMS là bí mật; TLS tuỳ chọn qua NODE_EXTRA_CA_CERTS (CA riêng). KMS lỗi → fail-closed, không rơi về khoá env.
+  KMS_PROVIDER: field(z.enum(["env", "transit"], { error: "phải là env|transit" }).default("env")),
+  KMS_TRANSIT_ADDR: field(url(/^https?$/, "http(s) của OpenBao/Vault").optional(), {
+    requiredWhen: (s) => rawOf(s, "KMS_PROVIDER") === "transit",
+  }),
+  KMS_TRANSIT_TOKEN: field(
+    z
+      .string()
+      .refine((v) => bytes(v) >= 8, { error: "phải dài ≥ 8 byte" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "KMS_PROVIDER") === "transit" },
+  ),
+  KMS_TRANSIT_MOUNT: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/, { error: "tên mount dạng [A-Za-z0-9_-]{1,64}" })
+      .default("transit"),
+  ),
+  KMS_TRANSIT_KEY: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/, { error: "tên khoá dạng [A-Za-z0-9_-]{1,64}" })
+      .default("xc-data"),
+  ),
+  KMS_TIMEOUT_MS: field(z.coerce.number().int().min(200).max(30_000).default(3_000)),
+  KMS_RETRIES: field(z.coerce.number().int().min(0).max(5).default(2)),
+  // DEK giải bọc được giữ trong bộ nhớ tối đa ngần ấy giây (TTL ngắn: không giữ khoá lâu dài); DEK ghi hiện hành cũng đổi theo chu kỳ này.
+  KMS_DEK_TTL_S: field(z.coerce.number().int().min(1).max(3_600).default(300)),
+  // Số lần mã hoá tối đa với MỘT DEK trước khi sinh DEK mới (GCM an toàn tới ~2^32 lần/khoá; chọn thấp hơn nhiều).
+  KMS_DEK_MAX_USES: field(z.coerce.number().int().min(1).max(100_000_000).default(1_000_000)),
+  // Trần số lời gọi KMS mỗi phút (chống bão gọi khi lỗi/tấn công); vượt → từ chối (fail-closed), không rơi về khoá env.
+  KMS_MAX_CALLS_PER_MIN: field(z.coerce.number().int().min(1).max(100_000).default(600)),
   // Cổng thu toạ độ GPS ở server (T-051, D-032): mặc định TẮT; BẬT mới có thể nhận toạ độ — và chỉ của nhân viên có đồng ý
   // riêng còn hiệu lực (purpose geo_attendance). Bật trên dữ liệu thật chỉ sau DPIA + xác nhận HR/pháp chế (docs/DPIA.md).
   GEO_CAPTURE_ENABLED: field(
@@ -251,7 +296,11 @@ function parseOne(
   const f = spec[name]!;
   const raw = rawOf(source, name);
   if (raw === undefined && f.required) return { ok: false, issue: { name, message: "thiếu (bắt buộc)" } };
-  if (raw === undefined && f.requiredInProduction && source.NODE_ENV === "production")
+  if (raw === undefined && f.requiredWhen?.(source) === true)
+    return { ok: false, issue: { name, message: "thiếu (bắt buộc theo cấu hình hiện tại)" } };
+  const reqProd =
+    typeof f.requiredInProduction === "function" ? f.requiredInProduction(source) : f.requiredInProduction;
+  if (raw === undefined && reqProd === true && source.NODE_ENV === "production")
     return { ok: false, issue: { name, message: "thiếu (bắt buộc ở production)" } };
   const r = f.schema.safeParse(raw);
   if (r.success) return { ok: true, value: r.data };

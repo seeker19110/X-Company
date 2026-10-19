@@ -116,6 +116,8 @@ const LOCAL_SIGNALS = new Set([
   "readyz_down",
   "scrape_failed",
   "backup_age_seconds",
+  "offsite_age_seconds",
+  "offsite_drill_age_seconds",
   "period_close_overdue",
   "audit_chain_broken",
 ]);

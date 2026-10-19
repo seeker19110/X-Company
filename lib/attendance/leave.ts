@@ -2,7 +2,7 @@
 // duyệt ghi `taken` trong cùng giao dịch; người tạo không tự duyệt.
 import { randomUUID } from "node:crypto";
 import type { ActorContext } from "../authz/index.ts";
-import { sealText, textColumn } from "../crypto/columns.ts";
+import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { localDate } from "../nen/time.ts";
@@ -71,6 +71,7 @@ export async function requestLeave(
   if (r.endAt <= r.startAt) throw new AppError("VALIDATION", 422, t("err.attendance.thoiGianKetThucPhaiSau"));
   // Lý do nghỉ có thể lộ thông tin sức khoẻ (nhạy cảm): ghi dạng mã hoá (T-048), cột bản rõ để NULL; id sinh trước vì AAD gắn id dòng.
   const newId = randomUUID();
+  const sealedReason = await sealTextAsync(textColumn("leave_request", "reason"), newId, r.reason);
   const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO leave_request (id, company_id, employee_id, leave_type_id, start_at, end_at, minutes, reason_enc, created_by_user_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
@@ -82,7 +83,7 @@ export async function requestLeave(
       r.startAt,
       r.endAt,
       r.minutes,
-      sealText(textColumn("leave_request", "reason"), newId, r.reason).enc,
+      sealedReason.enc,
       actor.userId,
     ],
   );

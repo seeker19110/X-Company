@@ -164,6 +164,9 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     DATA_INDEX_KEY: DATA_KEY,
     METRICS_TOKEN: "metrics-leak-0123456789abcdef",
     ALERT_WEBHOOK_URL: "https://hooks.example/webhook-leak-0123456789",
+    KMS_PROVIDER: "transit",
+    KMS_TRANSIT_ADDR: "https://kms.example.test:8200",
+    KMS_TRANSIT_TOKEN: "kms-token-leak-0123456789",
     FILE_STORAGE_DIR: "/srv/files",
   };
 
@@ -184,6 +187,7 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
       "owner-pw-leak",
       "metrics-leak",
       "webhook-leak",
+      "kms-token-leak",
       DATA_KEY,
     ])
       assert.equal(dump.includes(leaked), false, `lộ ${leaked}`);
@@ -228,6 +232,31 @@ describe("khoá mã hoá dữ liệu lúc lưu (T-048) và cờ GPS (T-051)", ()
       }).DATA_ENCRYPTION_KEYS?.startsWith("k2:"),
       true,
     );
+  });
+
+  test("KMS (T-052): mặc định env; transit bắt buộc ADDR + TOKEN; production + transit không bắt buộc khoá env nhưng vẫn bắt DATA_INDEX_KEY", () => {
+    assert.equal(loadEnv({ ...GOOD }).KMS_PROVIDER, "env");
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, KMS_PROVIDER: "transit" })),
+      ["KMS_TRANSIT_ADDR", "KMS_TRANSIT_TOKEN"],
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, KMS_PROVIDER: "vault" })),
+      ["KMS_PROVIDER"],
+    );
+    const transit = { ...GOOD, KMS_PROVIDER: "transit", KMS_TRANSIT_ADDR: "https://kms.example.test:8200" };
+    const tok = ["kms", "tok", "12345678"].join("-"); // ghép lúc chạy: không có literal giống bí mật
+    assert.equal(loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok }).KMS_TRANSIT_MOUNT, "transit");
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok, NODE_ENV: "production" })),
+      ["DATA_INDEX_KEY"],
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: "ngan" })),
+      ["KMS_TRANSIT_TOKEN"],
+    );
+    for (const bad of [{ KMS_TIMEOUT_MS: "10" }, { KMS_RETRIES: "9" }, { KMS_TRANSIT_KEY: "a/b" }])
+      assert.equal(issueNames(() => loadEnv({ ...GOOD, ...bad })).length, 1);
   });
 
   test("GEO_CAPTURE_ENABLED mặc định TẮT; chỉ true|false", () => {

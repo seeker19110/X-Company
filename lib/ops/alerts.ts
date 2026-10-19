@@ -179,6 +179,25 @@ export function backupAgeSeconds(dir: string, nowMs: number): number {
   return BACKUP_NEVER_AGE_SECONDS;
 }
 
+/**
+ * Tuổi (giây) của lần đẩy off-site THÀNH CÔNG gần nhất (restic: scripts/backup-offsite.sh ghi `offsite-status.json` chỉ khi
+ * `restic check` xanh) hoặc của lần diễn tập khôi phục từ kho gần nhất (scripts/restore-offsite-drill.sh ghi `offsite-drill.json`).
+ * Thiếu/hỏng tệp → "chưa từng" (vượt mọi ngưỡng). Đây là tuổi bản restic mới nhất do chính tập lệnh ghi, không gọi restic.
+ */
+export function offsiteAgeSeconds(
+  dir: string,
+  nowMs: number,
+  file: "offsite-status.json" | "offsite-drill.json" = "offsite-status.json",
+): number {
+  try {
+    const j = JSON.parse(readFileSync(path.join(dir, file), "utf8")) as { last_success_utc?: unknown };
+    const t = Date.parse(String(j.last_success_utc));
+    return Number.isFinite(t) ? Math.max(0, msToSeconds(nowMs - t)) : BACKUP_NEVER_AGE_SECONDS;
+  } catch {
+    return BACKUP_NEVER_AGE_SECONDS;
+  }
+}
+
 interface Snapshot extends HttpTotals {
   t: number;
 }
@@ -350,6 +369,12 @@ export class AlertEngine {
         );
       case "backup_age_seconds":
         return this.deps.backupDir === undefined ? null : backupAgeSeconds(this.deps.backupDir, nowMs);
+      case "offsite_age_seconds":
+        return this.deps.backupDir === undefined ? null : offsiteAgeSeconds(this.deps.backupDir, nowMs);
+      case "offsite_drill_age_seconds":
+        return this.deps.backupDir === undefined
+          ? null
+          : offsiteAgeSeconds(this.deps.backupDir, nowMs, "offsite-drill.json");
       case "audit_chain_broken":
         return this.auditBroken(rule, nowMs);
     }

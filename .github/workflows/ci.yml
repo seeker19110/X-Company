@@ -47,6 +47,10 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y --no-install-recommends postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+      # T-052/T-053: test KMS (OpenBao) và off-site (restic) chạy nhị phân THẬT, không skip. Tải bản GHIM phiên bản + sha256 vào .tools/
+      # (scripts/tools/install-tool.mjs; sai sha256 → dừng). Không cache để không thêm action chưa ghim SHA; ~85 MB mỗi lần chạy.
+      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
+        run: node scripts/tools/install-tool.mjs install openbao restic
       # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
       - name: Typecheck và lint trước build
         run: |
