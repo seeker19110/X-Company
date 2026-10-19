@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { clsSessionWindow, slowestInteractionMs, type ShiftEntry } from "@/lib/rum/vitals.pure";
+import {
+  clsSessionWindow,
+  lastStartTime,
+  navTiming,
+  slowestInteractionMs,
+  type NavTiming,
+  type ShiftEntry,
+} from "@/lib/rum/vitals.pure";
 import { reportClientError } from "./client-log";
 
 // RUM web-vitals tự làm (T-056, D-042): không phụ thuộc, không bên thứ ba, không cookie/định danh. MỘT beacon cho mỗi TÀI LIỆU
@@ -45,7 +52,7 @@ function install(): void {
   const page = location.pathname;
   const v: Partial<Record<Name, number>> = {};
   const shifts: ShiftEntry[] = [];
-  let nav: string | undefined;
+  let nt: NavTiming = {};
   let sent = false;
   const interaction = (es: PerformanceEntry[]) => {
     const ms = slowestInteractionMs(es);
@@ -54,7 +61,7 @@ function install(): void {
 
   const observers = [
     observe("largest-contentful-paint", (es) => {
-      v.LCP = es[es.length - 1]?.startTime;
+      v.LCP = lastStartTime(es, v.LCP);
     }),
     observe("layout-shift", (es) => {
       shifts.push(...(es as unknown as ShiftEntry[]));
@@ -66,9 +73,8 @@ function install(): void {
       for (const e of es) if (e.name === "first-contentful-paint") v.FCP = e.startTime;
     }),
     observe("navigation", (es) => {
-      const e = es[0] as NavTimingEntry | undefined;
-      v.TTFB = e?.responseStart;
-      nav = e?.type;
+      nt = navTiming(es as NavTimingEntry[], nt);
+      v.TTFB = nt.ttfb;
     }),
   ];
 
@@ -86,7 +92,7 @@ function install(): void {
     }
     if (metrics.length === 0) return; // chưa có số đo: lần ẩn trang sau còn gửi được
     sent = true;
-    const body = JSON.stringify({ page, nav, metrics });
+    const body = JSON.stringify({ page, nav: nt.nav, metrics });
     // sendBeacon trả false khi trình duyệt không xếp được hàng gửi: báo, không thử lại.
     if (!navigator.sendBeacon(ENDPOINT, new Blob([body], { type: "application/json" })))
       reportClientError("RUM beacon", "sendBeacon false");

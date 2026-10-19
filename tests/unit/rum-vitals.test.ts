@@ -1,7 +1,12 @@
 // T-056: CLS theo định nghĩa Core Web Vitals (cửa sổ phiên lớn nhất) và INP xấp xỉ — hàm thuần dùng ở rum-beacon.
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { clsSessionWindow, slowestInteractionMs } from "../../lib/rum/vitals.pure.ts";
+import {
+  clsSessionWindow,
+  lastStartTime,
+  navTiming,
+  slowestInteractionMs,
+} from "../../lib/rum/vitals.pure.ts";
 
 const s = (startTime: number, value: number, hadRecentInput = false) => ({
   startTime,
@@ -56,5 +61,19 @@ describe("slowestInteractionMs", () => {
   });
   test("tương tác nhanh (< 40 ms) vẫn cho số đo (hạ ngưỡng 16 ms)", () => {
     assert.equal(slowestInteractionMs([{ duration: 16, interactionId: 1 }]), 16);
+  });
+});
+
+describe("lastStartTime / navTiming — takeRecords() rỗng không xoá giá trị đã có", () => {
+  test("LCP lấy entry cuối; mảng rỗng giữ giá trị trước (lỗi: flush gọi lại callback với [])", () => {
+    assert.equal(lastStartTime([{ startTime: 900 }, { startTime: 1500 }]), 1500);
+    assert.equal(lastStartTime([], 1500), 1500);
+    assert.equal(lastStartTime([]), undefined);
+  });
+  test("navigation: TTFB và loại điều hướng; rỗng giữ giá trị trước", () => {
+    const got = navTiming([{ responseStart: 180, type: "navigate" }], {});
+    assert.deepEqual(got, { ttfb: 180, nav: "navigate" });
+    assert.deepEqual(navTiming([], got), got);
+    assert.deepEqual(navTiming([], {}), {});
   });
 });

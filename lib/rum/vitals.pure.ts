@@ -50,3 +50,25 @@ export function slowestInteractionMs(entries: readonly InteractionEntry[]): numb
     if ((e.interactionId ?? 0) > 0 || e.entryType === "first-input") max = Math.max(max ?? 0, e.duration);
   return max;
 }
+
+/**
+ * LCP = startTime của entry CUỐI; entry rỗng (vd `takeRecords()` lúc ẩn trang sau khi mọi entry đã giao) KHÔNG được xoá giá trị
+ * đã có — trả `prev`.
+ */
+export function lastStartTime(entries: readonly { startTime: number }[], prev?: number): number | undefined {
+  const e = entries[entries.length - 1];
+  return e === undefined ? prev : e.startTime;
+}
+
+/** Navigation Timing: TTFB = responseStart, nav = loại điều hướng. Rỗng → giữ giá trị đã có (cùng lý do như `lastStartTime`). */
+export interface NavTiming {
+  ttfb?: number;
+  nav?: string;
+}
+export function navTiming(
+  entries: readonly { responseStart: number; type?: string }[],
+  prev: NavTiming,
+): NavTiming {
+  const e = entries[0];
+  return e === undefined ? prev : { ttfb: e.responseStart, nav: e.type };
+}
