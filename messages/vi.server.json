@@ -227,6 +227,7 @@
     },
     "http": {
       "duLieuQuaLon": "Dữ liệu quá lớn",
+      "thanRequestBiNgat": "Yêu cầu bị ngắt giữa chừng, hãy gửi lại",
       "banThaoTacQuaNhanhVui": "Bạn thao tác quá nhanh, vui lòng thử lại sau",
       "khoaIdempotencyKeyNayDaDung": "Khoá Idempotency-Key này đã dùng cho một yêu cầu khác",
       "yeuCauTrungKhoaDangDuoc": "Yêu cầu trùng khoá đang được xử lý, thử lại sau",

@@ -166,7 +166,11 @@ export const SERVER_SPEC = {
       .transform((v) => v === "true"),
   ),
   TRUST_PROXY_HOPS: field(z.coerce.number().int().min(0).max(10).optional()),
-  TRUST_PROXY: field(z.enum(["0", "1"]).optional()),
+  // Production phải KHAI tường minh (0 = không proxy; HOPS=N hoặc TRUST_PROXY=1 = sau proxy tin cậy): thiếu thì clientIp() là "direct" cho
+  // mọi client → khoá đăng nhập (email, IP) thành khoá theo email, kẻ lạ khoá được tài khoản bất kỳ (AUD-SEC-001).
+  TRUST_PROXY: field(z.enum(["0", "1"]).optional(), {
+    requiredInProduction: (s) => rawOf(s, "TRUST_PROXY_HOPS") === undefined,
+  }),
   FILE_STORAGE_DIR: field(z.string().optional()),
   SITE_COMPANY_ID: field(z.uuid().optional()),
   LOG_LEVEL: field(z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info")),

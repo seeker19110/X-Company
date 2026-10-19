@@ -160,6 +160,7 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     ...GOOD,
     MIGRATE_DATABASE_URL: "postgres://owner:owner-pw-leak@db:5432/xc",
     NODE_ENV: "production",
+    TRUST_PROXY: "1",
     DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
     DATA_INDEX_KEY: DATA_KEY,
     METRICS_TOKEN: "metrics-leak-0123456789abcdef",
@@ -211,7 +212,7 @@ describe("khoá mã hoá dữ liệu lúc lưu (T-048) và cờ GPS (T-051)", ()
   test("production thiếu khoá → lỗi nêu TÊN biến (fail-closed); dev/test không bắt buộc", () => {
     assert.deepEqual(
       issueNames(() => loadEnv({ ...GOOD, NODE_ENV: "production" })),
-      ["DATA_ENCRYPTION_KEYS", "DATA_INDEX_KEY"],
+      ["DATA_ENCRYPTION_KEYS", "DATA_INDEX_KEY", "TRUST_PROXY"],
     );
     assert.equal(loadEnv({ ...GOOD }).DATA_ENCRYPTION_KEYS, undefined);
   });
@@ -249,7 +250,7 @@ describe("khoá mã hoá dữ liệu lúc lưu (T-048) và cờ GPS (T-051)", ()
     assert.equal(loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok }).KMS_TRANSIT_MOUNT, "transit");
     assert.deepEqual(
       issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok, NODE_ENV: "production" })),
-      ["DATA_INDEX_KEY"],
+      ["DATA_INDEX_KEY", "TRUST_PROXY"],
     );
     assert.deepEqual(
       issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: "ngan" })),
@@ -412,5 +413,27 @@ describe("kiểm khi khởi động chạy trong tiến trình thật (BASE-CFG-
     const line = JSON.parse(r.stdout.split("\n")[0]!) as { config: Record<string, unknown> };
     assert.match(String(line.config.SESSION_SECRET), /^(\*\*\*|\[REDACTED\])$/); // che hai lớp: env + logger
     assert.equal(line.config.DATABASE_URL, "***");
+  });
+});
+
+describe("TRUST_PROXY ở production (AUD-SEC-001)", () => {
+  const prod = {
+    ...GOOD,
+    NODE_ENV: "production",
+    DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
+    DATA_INDEX_KEY: DATA_KEY,
+  };
+  test("thiếu cả TRUST_PROXY lẫn TRUST_PROXY_HOPS → lỗi nêu tên biến; dev/test không bắt buộc", () => {
+    assert.deepEqual(
+      issueNames(() => loadEnv(prod)),
+      ["TRUST_PROXY"],
+    );
+    assert.equal(loadEnv({ ...GOOD }).TRUST_PROXY, undefined);
+  });
+  test("khai tường minh: TRUST_PROXY=0, =1 hoặc HOPS (kể cả 0) đều hợp lệ", () => {
+    assert.equal(loadEnv({ ...prod, TRUST_PROXY: "0" }).TRUST_PROXY, "0");
+    assert.equal(loadEnv({ ...prod, TRUST_PROXY: "1" }).TRUST_PROXY, "1");
+    assert.equal(loadEnv({ ...prod, TRUST_PROXY_HOPS: "0" }).TRUST_PROXY_HOPS, 0);
+    assert.equal(loadEnv({ ...prod, TRUST_PROXY_HOPS: "2" }).TRUST_PROXY_HOPS, 2);
   });
 });

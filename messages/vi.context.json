@@ -406,6 +406,7 @@
     },
     "http": {
       "duLieuQuaLon": "Thông báo lỗi nghiệp vụ trả client (AppError PAYLOAD_TOO_LARGE 413); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "thanRequestBiNgat": "Thông báo lỗi trả client (AppError BAD_REQUEST 400) khi kết nối bị ngắt giữa lúc đọc nội dung yêu cầu; miền http. Ngắn, nói rõ cách sửa.",
       "banThaoTacQuaNhanhVui": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "khoaIdempotencyKeyNayDaDung": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_KEY_REUSED 422); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "yeuCauTrungKhoaDangDuoc": "Thông báo lỗi nghiệp vụ trả client (AppError IDEMPOTENCY_IN_PROGRESS 409); miền http. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
