@@ -377,4 +377,15 @@ describe("retention", () => {
       null,
     );
   });
+
+  test("AUD-DATA-002: ẩn danh nhân viên hết hạn cũng ẩn danh tài khoản liên kết (tên hiển thị + email)", async () => {
+    const u = await seedUser(companyId);
+    await db.admin.query("UPDATE employee SET terminated_on = '2010-01-01' WHERE id = $1", [u.employeeId]);
+    const rep = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.ok(rep.employeeAnonymized >= 1);
+    const a = await one("SELECT display_name, email FROM app_user WHERE id = $1", [u.userId]);
+    assert.equal(a.display_name, ANON_NAME);
+    assert.match(a.email, /@anonymized\.invalid$/);
+    assert.notEqual(a.email, ANON_EMAIL, "email phải duy nhất (app_user_email_key)");
+  });
 });
