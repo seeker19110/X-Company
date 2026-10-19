@@ -246,3 +246,44 @@ jobs:
           path: .lighthouseci/
           retention-days: 14
           if-no-files-found: ignore
+
+  dast:
+    name: dast
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # SEC-WEB-001, SEC-WEB-004: OWASP ZAP baseline + quét chủ động giới hạn thời gian trên `next start` với DB seed như e2e.
+    # Cổng: scripts/zap-gate.mjs — đỏ khi còn cảnh báo mức Medium trở lên ngoài security/zap/allowlist.json.
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Build production
+        run: npm run -s build
+      - name: DAST — ZAP baseline + quét chủ động, cổng zap-gate
+        run: DAST_SKIP_BUILD=1 npm run -s dast
+      - name: Lưu báo cáo ZAP (dữ liệu seed giả)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-report
+          path: zap-out/
+          retention-days: 7
+          if-no-files-found: ignore
