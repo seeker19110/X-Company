@@ -112,6 +112,7 @@ export function ContactFormView({
   const sending = state.kind === "sending";
   return (
     <form
+      method="post"
       onSubmit={onSubmit}
       noValidate
       aria-describedby={err ? `${base}-form-error` : undefined}

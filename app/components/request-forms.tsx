@@ -110,6 +110,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         {msg?.text}
       </p>
       <form
+        method="post"
         className="card"
         noValidate
         aria-labelledby={`${lb}-h`}
@@ -187,6 +188,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         </SubmitButton>
       </form>
       <form
+        method="post"
         className="card"
         noValidate
         aria-labelledby={`${ob}-h`}
@@ -242,6 +244,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         </p>
       </form>
       <form
+        method="post"
         className="card"
         noValidate
         aria-labelledby={`${ab}-h`}
