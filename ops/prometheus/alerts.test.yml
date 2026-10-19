@@ -25,10 +25,19 @@ tests:
             exp_annotations:
               summary: "Đốt ngân sách khả dụng nhanh (14,4x trong 1h và 5m)"
               runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
-      # `for: 2m`: vượt ngưỡng từ phút 1 (điểm rate đầu tiên) → phút 2 còn pending, chưa bắn.
+      # `for: 2m`: vượt ngưỡng từ phút 1 (điểm rate đầu tiên) → phút 2 còn pending, phút 3 bắn.
       - eval_time: 2m
         alertname: XCAvailabilityFastBurn
         exp_alerts: []
+      - eval_time: 3m
+        alertname: XCAvailabilityFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách khả dụng nhanh (14,4x trong 1h và 5m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
 
   - name: availability burn — 1% lỗi 5xx chỉ bắn SlowBurn
     interval: 1m
@@ -47,6 +56,35 @@ tests:
             exp_annotations:
               summary: "Đốt ngân sách khả dụng chậm (6x trong 6h và 30m)"
               runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      - eval_time: 7h
+        alertname: XCAvailabilityFastBurn
+        exp_alerts: []
+      # `for: 15m`: vượt ngưỡng từ phút 1 → phút 15 còn pending, phút 16 bắn.
+      - eval_time: 15m
+        alertname: XCAvailabilitySlowBurn
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: XCAvailabilitySlowBurn
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách khả dụng chậm (6x trong 6h và 30m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+
+  # 0,3% lỗi: dưới ngưỡng SlowBurn (6 × 0,1% = 0,6%) → không rule khả dụng nào bắn.
+  - name: availability — 0,3% lỗi dưới ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="200"}'
+        values: "0+997x480"
+      - series: 'http_server_request_duration_seconds_count{http_route="/api/app/me",http_response_status_code="500"}'
+        values: "0+3x480"
+    alert_rule_test:
+      - eval_time: 7h
+        alertname: XCAvailabilitySlowBurn
+        exp_alerts: []
       - eval_time: 7h
         alertname: XCAvailabilityFastBurn
         exp_alerts: []
@@ -74,6 +112,19 @@ tests:
         values: "0+100x120"
     alert_rule_test:
       - eval_time: 70m
+        alertname: XCAttendanceLatencyFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+            exp_annotations:
+              summary: "Đốt ngân sách độ trễ ghi chấm công (6x trong 1h và 5m)"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#4-cảnh-báo--playbook"
+      # `for: 5m`: vượt ngưỡng từ phút 1 → phút 5 còn pending, phút 6 bắn.
+      - eval_time: 5m
+        alertname: XCAttendanceLatencyFastBurn
+        exp_alerts: []
+      - eval_time: 6m
         alertname: XCAttendanceLatencyFastBurn
         exp_alerts:
           - exp_labels:

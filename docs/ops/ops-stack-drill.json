@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
-  "startedAt": "2026-10-19T11:41:50.188Z",
-  "commit": "fd182eccbaf92015f7a61d7a8d7c9124c55e3fd0+dirty",
+  "startedAt": "2026-10-19T11:57:06.719Z",
+  "commit": "f52b8548786a97669336c796007d7b2a4fbe10af+dirty",
   "environment": {
     "node": "v22.22.0",
     "next": "16.4.2",
@@ -21,29 +21,36 @@
       "label": "rule hợp lệ",
       "cmd": "promtool check rules ops/prometheus/alerts.yml",
       "ok": true,
-      "ms": 38,
+      "ms": 50,
       "output": "Checking /home/user/X-Company/ops/prometheus/alerts.yml\n  SUCCESS: 4 rules found"
     },
     {
       "label": "unit test rule (đồng hồ giả)",
       "cmd": "promtool test rules ops/prometheus/alerts.test.yml",
       "ok": true,
-      "ms": 928,
+      "ms": 1283,
       "output": "SUCCESS"
     },
     {
       "label": "cấu hình Prometheus mẫu",
       "cmd": "promtool check config --syntax-only ops/prometheus/prometheus.yml",
       "ok": true,
-      "ms": 36,
+      "ms": 38,
       "output": "Checking /home/user/X-Company/ops/prometheus/prometheus.yml\n SUCCESS: /home/user/X-Company/ops/prometheus/prometheus.yml is valid prometheus config file syntax"
     },
     {
       "label": "cấu hình Alertmanager mẫu",
       "cmd": "amtool check-config ops/alertmanager/alertmanager.yml",
       "ok": true,
-      "ms": 15,
+      "ms": 13,
       "output": "Found:\n - global config\n - route\n - 1 inhibit rules\n - 2 receivers\n - 0 templates"
+    },
+    {
+      "label": "mọi alert có ca bắn + ca không bắn",
+      "cmd": "ruleCoverage(alerts.yml, alerts.test.yml)",
+      "ok": true,
+      "ms": 0,
+      "output": "4 alert đủ ca"
     }
   ],
   "steps": [
@@ -90,12 +97,12 @@
     {
       "name": "dừng app → firing tới webhook",
       "ok": true,
-      "detail": "XCDrillTargetDown sau 2186 ms"
+      "detail": "XCDrillTargetDown sau 2032 ms"
     },
     {
       "name": "bật lại app → resolved tới webhook",
       "ok": true,
-      "detail": "sau 120 ms"
+      "detail": "sau 914 ms"
     },
     {
       "name": "rule SLO thật không bắn khi lưu lượng sạch",

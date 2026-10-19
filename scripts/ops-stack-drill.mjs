@@ -121,6 +121,23 @@ export function sloQueries(markdown) {
   return qs;
 }
 
+/** Tên alert trong tệp rule. */
+export function alertNames(rulesYml) {
+  return [...rulesYml.matchAll(/^\s*- alert:\s*(\S+)\s*$/gm)].map((m) => m[1]);
+}
+
+/** OPS-SLO-006 "mọi alert được thử": mỗi alert phải có ≥ 1 ca BẮN và ≥ 1 ca KHÔNG BẮN trong tệp promtool test. */
+export function ruleCoverage(rulesYml, testsYml) {
+  const fire = new Set();
+  const quiet = new Set();
+  for (const m of testsYml.matchAll(/alertname:\s*(\S+)\s*\n\s*exp_alerts:[ \t]*(\[\])?/g))
+    (m[2] === "[]" ? quiet : fire).add(m[1]);
+  return alertNames(rulesYml).flatMap((a) => [
+    ...(fire.has(a) ? [] : [`${a}: thiếu ca bắn`]),
+    ...(quiet.has(a) ? [] : [`${a}: thiếu ca không bắn`]),
+  ]);
+}
+
 /** Tóm tắt /api/v1/rules: các rule đọc từ tệp nào, health từng rule. */
 export function summarizeRules(body) {
   const rows = [];
@@ -226,6 +243,15 @@ async function main() {
     check("cấu hình Prometheus mẫu", bins.promtool, ["check", "config", "--syntax-only", SAMPLE_PROM]),
     check("cấu hình Alertmanager mẫu", bins.amtool, ["check-config", SAMPLE_AM]),
   ];
+  const rulesText = readFileSync(RULES, "utf8");
+  const gaps = ruleCoverage(rulesText, readFileSync(RULE_TESTS, "utf8"));
+  checks.push({
+    label: "mọi alert có ca bắn + ca không bắn",
+    cmd: "ruleCoverage(alerts.yml, alerts.test.yml)",
+    ok: gaps.length === 0,
+    ms: 0,
+    output: gaps.length === 0 ? `${alertNames(rulesText).length} alert đủ ca` : gaps.join("\n"),
+  });
   for (const c of checks) out(`${c.ok ? "✓" : "✗"} ${c.label}: ${c.cmd}`);
 
   // 2. End-to-end.
@@ -330,7 +356,7 @@ async function main() {
     const real = rules.filter((r) => r.file === RULES);
     step(
       "rule thật nạp, health=ok",
-      real.length === 4 && real.every((r) => r.health === "ok"),
+      real.length === alertNames(rulesText).length && real.every((r) => r.health === "ok"),
       real.map((r) => `${r.name}:${r.health}`).join(", "),
     );
     const slo = sloQueries(readFileSync(path.join(ROOT, "docs/ops/SLO.md"), "utf8"));

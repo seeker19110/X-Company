@@ -6,7 +6,7 @@ status: faithful-fixture — máy dev, KHÔNG phải hạ tầng giám sát prod
 
 # Diễn tập Prometheus + Alertmanager (T-054)
 
-Sinh bởi `npm run -s ops:stack:drill` lúc 2026-10-19T11:41:50.188Z trên commit `fd182eccbaf92015f7a61d7a8d7c9124c55e3fd0+dirty`. Kết luận: **PASS**.
+Sinh bởi `npm run -s ops:stack:drill` lúc 2026-10-19T11:57:06.719Z trên commit `f52b8548786a97669336c796007d7b2a4fbe10af+dirty`. Kết luận: **PASS**.
 
 Công cụ (ghim sha256, `scripts/tools/install-tool.mjs`): Prometheus/promtool 3.14.0 · Alertmanager/amtool 0.34.1. Node v22.22.0, Next 16.4.2, Linux 6.18.44-fc-v139 x64.
 
@@ -18,6 +18,7 @@ Công cụ (ghim sha256, `scripts/tools/install-tool.mjs`): Prometheus/promtool 
 | unit test rule (đồng hồ giả) | `promtool test rules ops/prometheus/alerts.test.yml` | đạt |
 | cấu hình Prometheus mẫu | `promtool check config --syntax-only ops/prometheus/prometheus.yml` | đạt |
 | cấu hình Alertmanager mẫu | `amtool check-config ops/alertmanager/alertmanager.yml` | đạt |
+| mọi alert có ca bắn + ca không bắn | `ruleCoverage(alerts.yml, alerts.test.yml)` | đạt |
 
 ## End-to-end (app → Prometheus → Alertmanager → webhook)
 
@@ -31,8 +32,8 @@ Công cụ (ghim sha256, `scripts/tools/install-tool.mjs`): Prometheus/promtool 
 | truy vấn SLI trong docs/ops/SLO.md chạy được | đạt | 2 truy vấn status=success |
 | Prometheus nối Alertmanager | đạt | 1 Alertmanager hoạt động |
 | nền khoẻ: không thông báo nào | đạt | 0 thông báo trong lúc app chạy bình thường |
-| dừng app → firing tới webhook | đạt | XCDrillTargetDown sau 2186 ms |
-| bật lại app → resolved tới webhook | đạt | sau 120 ms |
+| dừng app → firing tới webhook | đạt | XCDrillTargetDown sau 2032 ms |
+| bật lại app → resolved tới webhook | đạt | sau 914 ms |
 | rule SLO thật không bắn khi lưu lượng sạch | đạt | 0 cảnh báo |
 | payload webhook đúng định dạng v4 | đạt | 2 thông báo, 0 hỏng |
 

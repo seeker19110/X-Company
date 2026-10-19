@@ -89,6 +89,35 @@ describe("ops-stack-drill: truy vấn SLO", () => {
   });
 });
 
+describe("ops-stack-drill: độ phủ test rule (OPS-SLO-006)", () => {
+  const rules = "groups:\n  - rules:\n      - alert: A\n        expr: x\n      - alert: B\n        expr: y\n";
+  test("đủ ca bắn và ca không bắn → không thiếu", () => {
+    const t =
+      "- alertname: A\n  exp_alerts:\n    - exp_labels: {}\n- alertname: A\n  exp_alerts: []\n" +
+      "- alertname: B\n  exp_alerts:\n    - x\n- alertname: B\n  exp_alerts: []\n";
+    assert.deepEqual(drill.alertNames(rules), ["A", "B"]);
+    assert.deepEqual(drill.ruleCoverage(rules, t), []);
+  });
+  test("alert mới không có test, hoặc chỉ có một phía → báo thiếu", () => {
+    const t = "- alertname: A\n  exp_alerts: []\n";
+    assert.deepEqual(drill.ruleCoverage(rules, t), [
+      "A: thiếu ca bắn",
+      "B: thiếu ca bắn",
+      "B: thiếu ca không bắn",
+    ]);
+  });
+  test("tệp test thật của repo phủ đủ mọi rule thật", async () => {
+    const { readFileSync } = await import("node:fs");
+    assert.deepEqual(
+      drill.ruleCoverage(
+        readFileSync("ops/prometheus/alerts.yml", "utf8"),
+        readFileSync("ops/prometheus/alerts.test.yml", "utf8"),
+      ),
+      [],
+    );
+  });
+});
+
 describe("install-tool: bảng ghim Prometheus/Alertmanager", () => {
   const tools = TOOLS as Record<
     string,
