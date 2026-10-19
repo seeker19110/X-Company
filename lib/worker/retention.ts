@@ -212,12 +212,19 @@ async function clearEmployeeContacts(pool: pg.Pool, cutoff: string, before: Date
 /** Hết thời hạn giữ hồ sơ lao động: ẩn danh họ tên (mã nhân viên + dòng công/lương giữ nguyên, không còn gắn tên). */
 async function anonymizeEmployees(pool: pg.Pool, cutoff: string, now: Date, before: Date): Promise<number> {
   return inTx(pool, async (tx) => {
-    const r = await tx.query<{ company_id: string }>(
+    const r = await tx.query<{ id: string; company_id: string }>(
       `UPDATE employee SET full_name = $3, work_email = NULL, phone = NULL, phone_enc = NULL, phone_bidx = NULL, anonymized_at = $2
         WHERE terminated_on IS NOT NULL AND terminated_on < $1::date AND anonymized_at IS NULL
-        RETURNING company_id`,
+        RETURNING id, company_id`,
       [cutoff, now, ANON_NAME],
     );
+    // Tài khoản liên kết còn tên hiển thị/email (thường là họ tên) → ẩn danh cùng lúc; email duy nhất theo id (app_user_email_key).
+    if (r.rows.length > 0)
+      await tx.query(
+        `UPDATE app_user SET display_name = $2, email = 'da-an-danh.' || id::text || '@anonymized.invalid'
+          WHERE employee_id = ANY($1::uuid[])`,
+        [r.rows.map((x) => x.id), ANON_NAME],
+      );
     const per = new Map<string, number>();
     for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
     for (const [companyId, n] of per)

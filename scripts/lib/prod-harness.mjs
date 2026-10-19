@@ -102,6 +102,7 @@ export function prepare({ prefix, extraSeeds = [], build = true }) {
       DATA_INDEX_KEY,
       FILE_STORAGE_DIR: storage,
       NODE_ENV: "production",
+      TRUST_PROXY: "0", // production bắt buộc khai tường minh; harness không có proxy (probe có thể ghi đè bằng TRUST_PROXY_HOPS)
       ...extraEnv,
     };
     delete env.MIGRATE_DATABASE_URL;

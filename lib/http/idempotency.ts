@@ -10,6 +10,7 @@
 // UNIQUE theo idempotency_key / id bản ghi hàng chờ) nên đã idempotent theo bản ghi.
 import { createHash } from "node:crypto";
 import { getPool, withTx } from "../db/index.ts";
+import { readCapped, readFormCapped } from "./body.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
 import { mb } from "../nen/units.ts";
@@ -55,18 +56,10 @@ export function canonicalJson(v: unknown): string {
 
 /** sha256(method + route + body chuẩn hoá); multipart: băm trường + tên/nội dung tệp (biên giới multipart đổi mỗi lần gửi). */
 export async function requestHash(req: Request): Promise<string> {
-  const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > MAX_HASH_BYTES) throw new AppError("PAYLOAD_TOO_LARGE", 413, t("err.http.duLieuQuaLon"));
   const h = createHash("sha256");
   h.update(`${req.method}\n${new URL(req.url).pathname}\n`);
-  const copy = req.clone();
   if ((req.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {
-    let form: FormData;
-    try {
-      form = await copy.formData();
-    } catch {
-      throw new AppError("BAD_FORM", 400, t("err.shared.canMultipartFormData"));
-    }
+    const form = await readFormCapped(req.clone(), MAX_HASH_BYTES);
     for (const [k, v] of [...form.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
       if (typeof v === "string") h.update(`${k}=${v}\n`);
       else {
@@ -77,7 +70,7 @@ export async function requestHash(req: Request): Promise<string> {
       }
     }
   } else {
-    const text = await copy.text();
+    const text = new TextDecoder().decode(await readCapped(req.clone(), MAX_HASH_BYTES));
     let body = text;
     try {
       if (text !== "") body = canonicalJson(JSON.parse(text));
