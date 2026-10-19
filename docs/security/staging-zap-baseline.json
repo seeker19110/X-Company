@@ -1,0 +1,569 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.17.0",
+  "@generated": "Mon, 19 Oct 2026 12:34:41",
+  "created": "2026-10-19T12:34:41.965573313Z",
+  "insights": [
+    {
+      "level": "Low",
+      "reason": "Warning",
+      "site": "",
+      "key": "insight.log.error",
+      "description": "ZAP errors logged - see the zap.log file for details",
+      "statistic": "36"
+    },
+    {
+      "level": "Low",
+      "reason": "Warning",
+      "site": "",
+      "key": "insight.log.warn",
+      "description": "ZAP warnings logged - see the zap.log file for details",
+      "statistic": "3"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "",
+      "key": "insight.network.failure",
+      "description": "Percentage of network failures",
+      "statistic": "50"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.code.2xx",
+      "description": "Percentage of responses with status code 2xx",
+      "statistic": "94"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.code.3xx",
+      "description": "Percentage of responses with status code 3xx",
+      "statistic": "2"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.code.4xx",
+      "description": "Percentage of responses with status code 4xx",
+      "statistic": "2"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.application/javascript",
+      "description": "Percentage of endpoints with content type application/javascript",
+      "statistic": "34"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.application/manifest+json",
+      "description": "Percentage of endpoints with content type application/manifest+json",
+      "statistic": "3"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.application/xml",
+      "description": "Percentage of endpoints with content type application/xml",
+      "statistic": "3"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.text/css",
+      "description": "Percentage of endpoints with content type text/css",
+      "statistic": "9"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.text/html",
+      "description": "Percentage of endpoints with content type text/html",
+      "statistic": "43"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.ctype.text/plain",
+      "description": "Percentage of endpoints with content type text/plain",
+      "statistic": "3"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.method.GET",
+      "description": "Percentage of endpoints with method GET",
+      "statistic": "100"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.endpoint.total",
+      "description": "Count of total endpoints",
+      "statistic": "32"
+    },
+    {
+      "level": "Info",
+      "reason": "Informational",
+      "site": "https://staging.localhost:42357",
+      "key": "insight.response.slow",
+      "description": "Percentage of slow responses",
+      "statistic": "29"
+    }
+  ],
+  "site": [
+    {
+      "@name": "https://staging.localhost:42357",
+      "@host": "staging.localhost",
+      "@port": "42357",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "10035",
+          "alertRef": "10035-1",
+          "alert": "Strict-Transport-Security Header Not Set",
+          "name": "Strict-Transport-Security Header Not Set",
+          "riskcode": "1",
+          "confidence": "3",
+          "riskdesc": "Low (High)",
+          "desc": "<p>HTTP Strict Transport Security (HSTS) is a web security policy mechanism whereby a web server declares that complying user agents (such as a web browser) are to interact with it using only secure HTTPS connections (i.e. HTTP layered over TLS/SSL). HSTS is an IETF standards track protocol and is specified in RFC 6797.</p>",
+          "instances": [
+            {
+              "id": "10",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/1-nqmp1rl8kqt.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/1-nqmp1rl8kqt.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "8",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/1x6obpmlu1_c2.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/1x6obpmlu1_c2.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "13",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "5",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/3ea8pl6bjuixn.css",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/3ea8pl6bjuixn.css",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            },
+            {
+              "id": "3",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/3vsjfnz2-m7-9.css",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/3vsjfnz2-m7-9.css",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "5",
+          "systemic": true,
+          "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to enforce Strict-Transport-Security.</p>",
+          "otherinfo": "",
+          "reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Strict_Transport_Security_Cheat_Sheet.html</p><p>https://owasp.org/www-community/Security_Headers</p><p>https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security</p><p>https://caniuse.com/stricttransportsecurity</p><p>https://datatracker.ietf.org/doc/html/rfc6797</p>",
+          "cweid": "319",
+          "wascid": "15",
+          "sourceid": "52"
+        },
+        {
+          "pluginid": "10021",
+          "alertRef": "10021",
+          "alert": "X-Content-Type-Options Header Missing",
+          "name": "X-Content-Type-Options Header Missing",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>The Anti-MIME-Sniffing header X-Content-Type-Options was not set to 'nosniff'. This allows older versions of Internet Explorer and Chrome to perform MIME-sniffing on the response body, potentially causing the response body to be interpreted and displayed as a content type other than the declared content type. Current (early 2014) and legacy versions of Firefox will use the declared content type (if one is set), rather than performing MIME-sniffing.</p>",
+          "instances": [
+            {
+              "id": "11",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/1-nqmp1rl8kqt.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/1-nqmp1rl8kqt.js",
+              "method": "GET",
+              "param": "x-content-type-options",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+            },
+            {
+              "id": "9",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/1x6obpmlu1_c2.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/1x6obpmlu1_c2.js",
+              "method": "GET",
+              "param": "x-content-type-options",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+            },
+            {
+              "id": "14",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "method": "GET",
+              "param": "x-content-type-options",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+            },
+            {
+              "id": "6",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/3ea8pl6bjuixn.css",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/3ea8pl6bjuixn.css",
+              "method": "GET",
+              "param": "x-content-type-options",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+            },
+            {
+              "id": "4",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/3vsjfnz2-m7-9.css",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/3vsjfnz2-m7-9.css",
+              "method": "GET",
+              "param": "x-content-type-options",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": "This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.\nAt \"High\" threshold this scan rule will not alert on client or server error responses."
+            }
+          ],
+          "count": "5",
+          "systemic": true,
+          "solution": "<p>Ensure that the application/web server sets the Content-Type header appropriately, and that it sets the X-Content-Type-Options header to 'nosniff' for all web pages.</p><p>If possible, ensure that the end user uses a standards-compliant and modern web browser that does not perform MIME-sniffing at all, or that can be directed by the web application/web server to not perform MIME-sniffing.</p>",
+          "otherinfo": "<p>This issue still applies to error type pages (401, 403, 500, etc.) as those pages are often still affected by injection issues, in which case there is still concern for browsers sniffing pages away from their actual content type.</p><p>At \"High\" threshold this scan rule will not alert on client or server error responses.</p>",
+          "reference": "<p>https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/compatibility/gg622941(v=vs.85)</p><p>https://owasp.org/www-community/Security_Headers</p>",
+          "cweid": "693",
+          "wascid": "15",
+          "sourceid": "52"
+        },
+        {
+          "pluginid": "10111",
+          "alertRef": "10111",
+          "alert": "Authentication Request Identified",
+          "name": "Authentication Request Identified",
+          "riskcode": "0",
+          "confidence": "3",
+          "riskdesc": "Informational (High)",
+          "desc": "<p>The given request has been identified as an authentication request. The 'Other Info' field contains a set of key=value lines which identify any relevant fields. If the request is in a context which has an Authentication Method set to \"Auto-Detect\" then this rule will change the authentication to match the request identified.</p>",
+          "instances": [
+            {
+              "id": "41",
+              "uri": "https://staging.localhost:42357/app/login?email=zaproxy%40example.com&password=ZAP",
+              "nodeName": "https://staging.localhost:42357/app/login (email,password)",
+              "method": "GET",
+              "param": "email",
+              "attack": "",
+              "evidence": "password",
+              "otherinfo": "userParam=email\nuserValue=zaproxy@example.com\npasswordParam=password\nreferer=https://staging.localhost:42357/app/login"
+            }
+          ],
+          "count": "1",
+          "systemic": false,
+          "solution": "<p>This is an informational alert rather than a vulnerability and so there is nothing to fix.</p>",
+          "otherinfo": "<p>userParam=email</p><p>userValue=zaproxy@example.com</p><p>passwordParam=password</p><p>referer=https://staging.localhost:42357/app/login</p>",
+          "reference": "<p>https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/</p>",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "71"
+        },
+        {
+          "pluginid": "10019",
+          "alertRef": "10019-1",
+          "alert": "Content-Type Header Missing",
+          "name": "Content-Type Header Missing",
+          "riskcode": "0",
+          "confidence": "2",
+          "riskdesc": "Informational (Medium)",
+          "desc": "<p>The Content-Type header was either missing or empty.</p>",
+          "instances": [
+            {
+              "id": "2",
+              "uri": "https://staging.localhost:42357/app",
+              "nodeName": "https://staging.localhost:42357/app",
+              "method": "GET",
+              "param": "content-type",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "systemic": true,
+          "solution": "<p>Ensure each page is setting the specific and appropriate content-type value for the content being delivered.</p>",
+          "otherinfo": "",
+          "reference": "<p>https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/compatibility/gg622941(v=vs.85)</p>",
+          "cweid": "345",
+          "wascid": "12",
+          "sourceid": "18"
+        },
+        {
+          "pluginid": "10024",
+          "alertRef": "10024",
+          "alert": "Information Disclosure - Sensitive Information in URL",
+          "name": "Information Disclosure - Sensitive Information in URL",
+          "riskcode": "0",
+          "confidence": "2",
+          "riskdesc": "Informational (Medium)",
+          "desc": "<p>The request appeared to contain sensitive information leaked in the URL. This can violate PCI and most organizational compliance policies. You can configure the list of strings for this check to add or remove values specific to your environment.</p>",
+          "instances": [
+            {
+              "id": "37",
+              "uri": "https://staging.localhost:42357/app/login?email=zaproxy%40example.com&password=ZAP",
+              "nodeName": "https://staging.localhost:42357/app/login (email,password)",
+              "method": "GET",
+              "param": "email",
+              "attack": "",
+              "evidence": "zaproxy@example.com",
+              "otherinfo": "The URL contains email address(es)."
+            },
+            {
+              "id": "38",
+              "uri": "https://staging.localhost:42357/app/login?email=zaproxy%40example.com&password=ZAP",
+              "nodeName": "https://staging.localhost:42357/app/login (email,password)",
+              "method": "GET",
+              "param": "password",
+              "attack": "",
+              "evidence": "password",
+              "otherinfo": "The URL contains potentially sensitive information. The following string was found via the pattern: pass\npassword"
+            },
+            {
+              "id": "40",
+              "uri": "https://staging.localhost:42357/lien-he?consent=on&email=zaproxy%40example.com&message=Zaproxy+alias+impedit+expedita+quisquam+pariatur+exercitationem.+Nemo+rerum+eveniet+dolores+rem+quia+dignissimos.&name=ZAP&phone=9999999999&website=ZAP",
+              "nodeName": "https://staging.localhost:42357/lien-he (consent,email,message,name,phone,website)",
+              "method": "GET",
+              "param": "email",
+              "attack": "",
+              "evidence": "zaproxy@example.com",
+              "otherinfo": "The URL contains email address(es)."
+            }
+          ],
+          "count": "3",
+          "systemic": true,
+          "solution": "<p>Do not pass sensitive information in URIs.</p>",
+          "otherinfo": "<p>The URL contains email address(es).</p>",
+          "reference": "",
+          "cweid": "598",
+          "wascid": "13",
+          "sourceid": "71"
+        },
+        {
+          "pluginid": "10027",
+          "alertRef": "10027",
+          "alert": "Information Disclosure - Suspicious Comments",
+          "name": "Information Disclosure - Suspicious Comments",
+          "riskcode": "0",
+          "confidence": "1",
+          "riskdesc": "Informational (Low)",
+          "desc": "<p>The response appears to contain suspicious comments which may help an attacker.</p>",
+          "instances": [
+            {
+              "id": "35",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/0cz1d0mv5g_q7.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/0cz1d0mv5g_q7.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "from",
+              "otherinfo": "The following pattern was used: \\bFROM\\b and was detected in likely comment: \"//github.com/zloirock/core-js/blob/v3.38.1/LICENSE\",source:\"https://github.com/zloirock/core-js\"})}),nt=function(t,e){return rt[\", see evidence field for the suspicious comment/snippet."
+            },
+            {
+              "id": "30",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/2khxl0v1q4i6n.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/2khxl0v1q4i6n.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "select",
+              "otherinfo": "The following pattern was used: \\bSELECT\\b and was detected in likely comment: \"//n\":window.location.href);return{searchParams:e.searchParams,pathname:(0,v.hasBasePath)(e.pathname)?(0,g.removeBasePath)(e.path\", see evidence field for the suspicious comment/snippet."
+            },
+            {
+              "id": "25",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/2n5qeheznvl4u.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/2n5qeheznvl4u.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "query",
+              "otherinfo": "The following pattern was used: \\bQUERY\\b and was detected in likely comment: \"//\"+(c||\"\"),o&&\"/\"!==o[0]&&(o=\"/\"+o)):c||(c=\"\"),i&&\"#\"!==i[0]&&(i=\"#\"+i),s&&\"?\"!==s[0]&&(s=\"?\"+s),o=o.replace(/[?#]/g,encodeURIC\", see evidence field for the suspicious comment/snippet."
+            },
+            {
+              "id": "12",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/34goyxc2anvlg.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "query",
+              "otherinfo": "The following pattern was used: \\bQUERY\\b and was detected in likely comment: \"//nextjs.org/docs/messages/failed-to-find-server-action`);let N=s.headers.get(\"x-action-redirect\"),[F,j]=N?.split(\";\")||[];switc\", see evidence field for the suspicious comment/snippet."
+            },
+            {
+              "id": "20",
+              "uri": "https://staging.localhost:42357/_next/static/chunks/turbopack-2c3mg3r-05n1w.js",
+              "nodeName": "https://staging.localhost:42357/_next/static/chunks/turbopack-2c3mg3r-05n1w.js",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "from",
+              "otherinfo": "The following pattern was used: \\bFROM\\b and was detected in likely comment: \"///${encodeURIComponent(t??\"ROOT\")}/${e.split(\"/\").map(encodeURIComponent).join(\"/\")}`},$.q=function(e,t){y.call(this,`${e}${n}`\", see evidence field for the suspicious comment/snippet."
+            }
+          ],
+          "count": "5",
+          "systemic": false,
+          "solution": "<p>Remove all comments that return information that may help an attacker and fix any underlying problems they refer to.</p>",
+          "otherinfo": "<p>The following pattern was used: \\bFROM\\b and was detected in likely comment: \"//github.com/zloirock/core-js/blob/v3.38.1/LICENSE\",source:\"https://github.com/zloirock/core-js\"})}),nt=function(t,e){return rt[\", see evidence field for the suspicious comment/snippet.</p>",
+          "reference": "",
+          "cweid": "615",
+          "wascid": "13",
+          "sourceid": "68"
+        },
+        {
+          "pluginid": "10109",
+          "alertRef": "10109",
+          "alert": "Modern Web Application",
+          "name": "Modern Web Application",
+          "riskcode": "0",
+          "confidence": "2",
+          "riskdesc": "Informational (Medium)",
+          "desc": "<p>The application appears to be a modern web application. If you need to explore it automatically then the Ajax Spider may well be more effective than the standard one.</p>",
+          "instances": [
+            {
+              "id": "7",
+              "uri": "https://staging.localhost:42357/api",
+              "nodeName": "https://staging.localhost:42357/api",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "<script src=\"/_next/static/chunks/1-nqmp1rl8kqt.js\" async=\"\"></script>",
+              "otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
+            },
+            {
+              "id": "16",
+              "uri": "https://staging.localhost:42357/app/login",
+              "nodeName": "https://staging.localhost:42357/app/login",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "<script src=\"/_next/static/chunks/1-nqmp1rl8kqt.js\" async=\"\" nonce=\"NDMwMGFiYmItMGFhNi00MWE2LTk1ZTctMjQ4OWIyZGZiN2Nk\"></script>",
+              "otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
+            },
+            {
+              "id": "39",
+              "uri": "https://staging.localhost:42357/app/login?email=zaproxy%40example.com&password=ZAP",
+              "nodeName": "https://staging.localhost:42357/app/login (email,password)",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "<script src=\"/_next/static/chunks/1-nqmp1rl8kqt.js\" async=\"\" nonce=\"ODZlZDM4MjctZTg2Mi00Y2QyLWI4MzctMjMyYmUzZjk2NjVm\"></script>",
+              "otherinfo": "No links have been found while there are scripts, which is an indication that this is a modern web application."
+            }
+          ],
+          "count": "3",
+          "systemic": true,
+          "solution": "<p>This is an informational alert and so no changes are required.</p>",
+          "otherinfo": "<p>No links have been found while there are scripts, which is an indication that this is a modern web application.</p>",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "49"
+        },
+        {
+          "pluginid": "10015",
+          "alertRef": "10015",
+          "alert": "Re-examine Cache-control Directives",
+          "name": "Re-examine Cache-control Directives",
+          "riskcode": "0",
+          "confidence": "1",
+          "riskdesc": "Informational (Low)",
+          "desc": "<p>The cache-control header has not been set properly or is missing, allowing the browser and proxies to cache content. For static assets like css, js, or image files this might be intended, however, the resources should be reviewed to ensure that no sensitive content will be cached.</p>",
+          "instances": [
+            {
+              "id": "15",
+              "uri": "https://staging.localhost:42357/app/login",
+              "nodeName": "https://staging.localhost:42357/app/login",
+              "method": "GET",
+              "param": "cache-control",
+              "attack": "",
+              "evidence": "private, no-store",
+              "otherinfo": ""
+            },
+            {
+              "id": "36",
+              "uri": "https://staging.localhost:42357/app/login?email=zaproxy%40example.com&password=ZAP",
+              "nodeName": "https://staging.localhost:42357/app/login (email,password)",
+              "method": "GET",
+              "param": "cache-control",
+              "attack": "",
+              "evidence": "private, no-store",
+              "otherinfo": ""
+            },
+            {
+              "id": "17",
+              "uri": "https://staging.localhost:42357/manifest.webmanifest",
+              "nodeName": "https://staging.localhost:42357/manifest.webmanifest",
+              "method": "GET",
+              "param": "cache-control",
+              "attack": "",
+              "evidence": "public, max-age=0, must-revalidate",
+              "otherinfo": ""
+            },
+            {
+              "id": "1",
+              "uri": "https://staging.localhost:42357/sitemap.xml",
+              "nodeName": "https://staging.localhost:42357/sitemap.xml",
+              "method": "GET",
+              "param": "cache-control",
+              "attack": "",
+              "evidence": "public, max-age=0, must-revalidate",
+              "otherinfo": ""
+            }
+          ],
+          "count": "4",
+          "systemic": true,
+          "solution": "<p>For secure content, ensure the cache-control HTTP header is set with \"no-cache, no-store, must-revalidate\". If an asset should be cached consider setting the directives \"public, max-age, immutable\".</p>",
+          "otherinfo": "",
+          "reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#web-content-caching</p><p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control</p><p>https://grayduck.mn/2021/09/13/cache-control-recommendations/</p>",
+          "cweid": "525",
+          "wascid": "13",
+          "sourceid": "55"
+        }
+      ]
+    }
+  ],
+  "sequences": []
+}

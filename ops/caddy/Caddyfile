@@ -1,0 +1,20 @@
+# Caddyfile MẪU cho tên miền thật (T-055, D-041): Caddy chấm dứt TLS bằng chứng chỉ ACME tự động (Let's Encrypt/ZeroSSL),
+# chuyển http → https, app chạy sau proxy với TRUST_PROXY_HOPS=1 và APP_ORIGIN=https://{$SITE_DOMAIN}.
+# Biến môi trường: SITE_DOMAIN (vd app.congty.vn), ACME_EMAIL (hộp thư nhận cảnh báo hết hạn), APP_UPSTREAM (vd 127.0.0.1:3000).
+# Kiểm cú pháp trong `npm run -s staging:drill` (`caddy validate`); staging cục bộ dùng `tls internal` (scripts/staging-drill.mjs).
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	# App tự đặt header bảo mật (CSP có nonce, HSTS, XFO…) — proxy không ghi đè; chỉ bỏ dấu vết phiên bản.
+	header -Server
+	# Caddy đặt X-Forwarded-For/-Proto và mặc định KHÔNG tin giá trị client gửi lên → app tin đúng 1 hop (TRUST_PROXY_HOPS=1).
+	reverse_proxy {$APP_UPSTREAM}
+	log {
+		output stdout
+		format json
+	}
+}
