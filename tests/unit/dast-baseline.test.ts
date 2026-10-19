@@ -271,3 +271,19 @@ describe("báo cáo", () => {
     );
   });
 });
+
+describe("stripScriptElements (quét thủ tục, không regex — CodeQL js/bad-tag-filter)", () => {
+  const strip = P.stripScriptElements as (h: string) => string;
+  test("bỏ script thường, thẻ đóng có khoảng trắng/thuộc tính, chữ hoa/thường lẫn lộn", () => {
+    assert.equal(strip("a<script>x()</script>b"), "ab");
+    assert.equal(strip("a<SCRIPT src=x>x()</script >b"), "ab");
+    assert.equal(strip('a<script>x()</script foo="bar">b'), "ab");
+    assert.equal(strip("a<ScRiPt\n>x</sCrIpT\t>b"), "ab");
+  });
+  test("không nuốt thẻ khác tên bắt đầu bằng script; nhiều khối; thẻ đóng thiếu → bỏ tới hết", () => {
+    assert.equal(strip("a<scripts>b</scripts>c"), "a<scripts>b</scripts>c");
+    assert.equal(strip("1<script>a</script>2<script>b</script>3"), "123");
+    assert.equal(strip("keep<script>never closed"), "keep");
+    assert.equal(strip("không có script"), "không có script");
+  });
+});

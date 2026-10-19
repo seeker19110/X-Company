@@ -2,6 +2,22 @@
 // không theo chuyển hướng, không giải nén — cần cho probe DAST và bộ tải. Không bao giờ ghi giá trị cookie/token ra log.
 import http from "node:http";
 
+/** Probe DAST/bộ tải chỉ được nhắm máy cục bộ hoặc tên staging khai trong ALLOWED_TEST_HOSTS (QA-PERF-007): không bao giờ gửi tải/payload tới production. */
+export function assertLoopback(baseUrl) {
+  const host = new URL(baseUrl).hostname;
+  const extra = (process.env.ALLOWED_TEST_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
+  const ok =
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    extra.includes(host);
+  if (!ok) throw new Error(`từ chối: ${host} không phải máy cục bộ/staging được phép (ALLOWED_TEST_HOSTS)`);
+}
+
 export function makeAgent(maxSockets = 64) {
   return new http.Agent({ keepAlive: true, maxSockets, maxFreeSockets: maxSockets });
 }
@@ -12,6 +28,7 @@ export function makeAgent(maxSockets = 64) {
  * @returns {Promise<{status:number, headers:Record<string,string>, setCookie:string[], body:string, ms:number}>}
  */
 export function request(baseUrl, o) {
+  assertLoopback(baseUrl);
   const u = new URL(baseUrl);
   const started = performance.now();
   return new Promise((resolve, reject) => {

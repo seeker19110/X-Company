@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
   "qa_perf_006": {
-    "commit": "df4afda70349dcf7a663e49372fd6f7680851617+dirty",
+    "commit": "ee5badc0d08dfd98f9c088772ef4bea2384392bb+dirty",
     "environment": "máy dev (Linux 6.18.44-fc-v139 x64); Node v22.22.0; Next 16.4.2 `next start` bản build production; psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1); app chạy bằng role không superuser; DB_POOL_MAX=10 (mặc định)",
     "device_network": "4 x Intel(R) Xeon(R) Processor @ 2.10GHz, 16 GiB RAM; bộ phát tải cùng máy; mạng loopback 127.0.0.1 (không mô phỏng băng thông/độ trễ)",
     "load": "16 kết nối keep-alive (ghi: 8), 12 s đo + 3 s khởi động mỗi kịch bản (OT: 120 request cố định); dữ liệu seed e2e + 1500 liên hệ",
@@ -19,18 +19,18 @@
         "why": "trang SSR công khai: p95 ≤ 400 ms ở 16 kết nối trên 4 nhân dùng chung với bộ phát tải (mục tiêu LCP ≤ 2,5 s cần TTFB ≪ 1 s)."
       },
       "summary": {
-        "samples": 2183,
-        "ok": 2183,
+        "samples": 2242,
+        "ok": 2242,
         "errors": 0,
         "errorRate": 0,
-        "rps": 181.6,
-        "p50": 86,
-        "p95": 107.5,
-        "p99": 134.9,
-        "max": 160.1,
-        "avg": 87.7,
+        "rps": 186.4,
+        "p50": 83.4,
+        "p95": 110.2,
+        "p99": 126.2,
+        "max": 138.9,
+        "avg": 85.5,
         "byStatus": {
-          "200": 2183
+          "200": 2242
         }
       },
       "dbConnMax": 10,
@@ -45,18 +45,18 @@
         "why": "readyz chỉ `SELECT 1`: p95 ≤ 150 ms; sai lệch lớn nghĩa là hàng đợi pool/CPU quá tải."
       },
       "summary": {
-        "samples": 12699,
-        "ok": 12699,
+        "samples": 11313,
+        "ok": 11313,
         "errors": 0,
         "errorRate": 0,
-        "rps": 1057.5,
-        "p50": 14,
-        "p95": 23,
-        "p99": 29.1,
-        "max": 53.2,
-        "avg": 15.1,
+        "rps": 941.7,
+        "p50": 16,
+        "p95": 25.8,
+        "p99": 32.4,
+        "max": 63.4,
+        "avg": 16.9,
         "byStatus": {
-          "200": 12699
+          "200": 11313
         }
       },
       "dbConnMax": 10,
@@ -71,18 +71,18 @@
         "why": "đọc khu nội bộ (SSR hôm nay + API việc/duyệt): p95 ≤ 500 ms ở 16 kết nối."
       },
       "summary": {
-        "samples": 2645,
-        "ok": 2645,
+        "samples": 2675,
+        "ok": 2675,
         "errors": 0,
         "errorRate": 0,
-        "rps": 220,
-        "p50": 71,
-        "p95": 133.7,
-        "p99": 154.9,
-        "max": 190.9,
-        "avg": 72.3,
+        "rps": 222,
+        "p50": 69.7,
+        "p95": 134.1,
+        "p99": 159.7,
+        "max": 205.4,
+        "avg": 71.7,
         "byStatus": {
-          "200": 2645
+          "200": 2675
         }
       },
       "dbConnMax": 10,
@@ -97,18 +97,18 @@
         "why": "SLO-2 (docs/ops/SLO.md): ghi chấm công p95 < 1 s — dùng NGUYÊN ngưỡng SLO, không nới cho máy dev."
       },
       "summary": {
-        "samples": 2446,
-        "ok": 2446,
+        "samples": 2303,
+        "ok": 2303,
         "errors": 0,
         "errorRate": 0,
-        "rps": 203.5,
-        "p50": 35.9,
-        "p95": 68.8,
-        "p99": 99.4,
-        "max": 141,
-        "avg": 39.2,
+        "rps": 191.6,
+        "p50": 37.8,
+        "p95": 70.2,
+        "p99": 107,
+        "max": 160.9,
+        "avg": 41.6,
         "byStatus": {
-          "201": 2446
+          "201": 2303
         }
       },
       "dbConnMax": 10,
@@ -127,12 +127,12 @@
         "ok": 120,
         "errors": 0,
         "errorRate": 0,
-        "rps": 275,
-        "p50": 29.2,
-        "p95": 37.5,
-        "p99": 49.3,
-        "max": 52.3,
-        "avg": 28.7,
+        "rps": 246,
+        "p50": 30.2,
+        "p95": 48.9,
+        "p99": 76.3,
+        "max": 80.5,
+        "avg": 32.1,
         "byStatus": {
           "201": 120
         }
@@ -149,18 +149,18 @@
         "why": "phát lại Idempotency-Key (đọc bản ghi đã lưu): p95 ≤ 500 ms."
       },
       "summary": {
-        "samples": 5234,
-        "ok": 5234,
+        "samples": 4350,
+        "ok": 4350,
         "errors": 0,
         "errorRate": 0,
-        "rps": 435.9,
-        "p50": 17.7,
-        "p95": 24.8,
-        "p99": 31,
-        "max": 78.8,
-        "avg": 18.3,
+        "rps": 361.9,
+        "p50": 20.3,
+        "p95": 34,
+        "p99": 43.3,
+        "max": 74.9,
+        "avg": 22,
         "byStatus": {
-          "201": 5234
+          "201": 4350
         }
       },
       "dbConnMax": 8,
@@ -175,18 +175,18 @@
         "why": "danh sách phân trang (limit 50–200, offset lệch) trên ≥ 1 500 hàng: p95 ≤ 500 ms."
       },
       "summary": {
-        "samples": 4631,
-        "ok": 4631,
+        "samples": 3545,
+        "ok": 3545,
         "errors": 0,
         "errorRate": 0,
-        "rps": 385,
-        "p50": 40.8,
-        "p95": 54.7,
-        "p99": 63.1,
-        "max": 89.7,
-        "avg": 41.4,
+        "rps": 294.3,
+        "p50": 52.4,
+        "p95": 75.9,
+        "p99": 92.7,
+        "max": 128.3,
+        "avg": 54.1,
         "byStatus": {
-          "200": 4631
+          "200": 3545
         }
       },
       "dbConnMax": 10,

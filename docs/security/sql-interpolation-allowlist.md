@@ -20,5 +20,6 @@ thiếu comment hoặc tệp chưa có trong bảng. Thêm chỗ mới = thêm d
 | `lib/inquiry/index.ts` | `table` | kiểu hợp nhất `"inquiry" \| "job_application"` |
 | `lib/worker/retention.ts` | `table`, `sets`, `where`, `old` | hằng của các lời gọi nội bộ; `before`/giá trị qua `$n` |
 | `lib/privacy/index.ts` | `COLS`, `TABLE_OF[type]` | hằng danh sách cột của `data_subject_request`; bảng chủ thể theo enum SubjectType; mọi giá trị qua `$n` |
+| `lib/crypto/rotate.ts` | `table`, `column`, `enc`, `bidx` | tên bảng/cột lấy từ sổ `ENCRYPTED_COLUMNS` (hằng trong mã, tập đóng); id dòng, số lô và bản mã luôn qua `$n` |
 
 Kiểm: `npm run -s check:sql-interpolation`. CodeQL (`js/sql-injection`, suite `security-extended`) chạy ở `.github/workflows/codeql.yml`.

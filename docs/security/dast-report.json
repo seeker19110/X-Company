@@ -1,7 +1,7 @@
 {
   "label": "faithful-fixture",
   "date": "2026-10-19",
-  "commit": "b37fef3c2943a109027f6a5e337eba8d71f8a3ea+dirty",
+  "commit": "ee5badc0d08dfd98f9c088772ef4bea2384392bb",
   "env": {
     "node": "v22.22.0",
     "next": "16.4.2",
@@ -637,7 +637,7 @@
           "name": "API: UUID không tồn tại",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/04a6438f-0e0d-493c-b6ed-45dce06e207c → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+          "evidence": "GET /api/app/files/9bfef1ee-7d06-4b4d-a22e-70cdbc114055 → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
         },
         {
           "name": "API: id kiểu SQL injection",
@@ -649,7 +649,7 @@
           "name": "API: hành động việc không tồn tại",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/hack → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy\",\"insta…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/hack → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy\",\"insta…"
         },
         {
           "name": "API: chưa đăng nhập",
@@ -821,7 +821,7 @@
           "name": "tiền điều kiện: nv sở hữu việc, tệp và bình luận",
           "ok": true,
           "errors": [],
-          "evidence": "việc 5af05be8…, tệp a6e89a23…, bình luận → 201"
+          "evidence": "việc 153d55b0…, tệp d8fcd0f4…, bình luận → 201"
         },
         {
           "name": "đối chứng: chủ việc đọc được bình luận của mình",
@@ -833,13 +833,13 @@
           "name": "BOLA: nv2 tải tệp của nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/a6e89a23-1503-4fa0-baa0-a92994f8c001 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/files/d8fcd0f4-7f4d-4ab1-821f-ec53d229f541 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "BOLA: nv2 đọc bình luận của việc nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/comments?object_type=task&object_id=5af05be8-1292-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/comments?object_type=task&object_id=153d55b0-e389-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "BOLA: nv2 bình luận lên việc của nv",
@@ -857,31 +857,31 @@
           "name": "BOLA: nv2 start việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 submit việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/submit → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/submit → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 accept việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/accept → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/accept → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: nv2 cancel việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/cancel → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/cancel → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BOLA: danh sách việc của nv2 không chứa việc của nv",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/tasks (nv2) → 0 mục, không có 5af05be8…"
+          "evidence": "GET /api/app/tasks (nv2) → 0 mục, không có 153d55b0…"
         },
         {
           "name": "BOLA: tham số/header user_id không đổi danh tính (mass assignment danh tính)",
@@ -893,19 +893,19 @@
           "name": "tenant: người dùng công ty khác tải tệp",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/files/a6e89a23-1503-4fa0-baa0-a92994f8c001 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+          "evidence": "GET /api/app/files/d8fcd0f4-7f4d-4ab1-821f-ec53d229f541 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
         },
         {
           "name": "tenant: đọc bình luận việc công ty khác",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/comments?object_type=task&object_id=5af05be8-1292-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+          "evidence": "GET /api/app/comments?object_type=task&object_id=153d55b0-e389-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
         },
         {
           "name": "tenant: đổi trạng thái việc công ty khác",
           "ok": true,
           "errors": [],
-          "evidence": "POST /api/app/tasks/5af05be8-1292-4bd6-a0b0-79c4f74a05bb/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+          "evidence": "POST /api/app/tasks/153d55b0-e389-4c0f-8250-13aebca9e65d/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
         },
         {
           "name": "BFLA/BOLA: nv2 (đồng cấp) duyệt đơn OT của nv → bị từ chối",
@@ -959,7 +959,7 @@
           "name": "BFLA: nv hiển thị QR địa điểm → bị từ chối",
           "ok": true,
           "errors": [],
-          "evidence": "GET /api/app/attendance/qr/b10f4cc8-01f0-40fd-8f1f-56b… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy địa điể…"
+          "evidence": "GET /api/app/attendance/qr/8430909c-bb66-41c4-ba4d-666… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy địa điể…"
         },
         {
           "name": "không phiên → 401 trên 18 route /api/app/*",
@@ -1015,13 +1015,13 @@
           "name": "API ghi theo người dùng: > 60/phút → 429 + Retry-After",
           "ok": true,
           "errors": [],
-          "evidence": "62 request song song; lần bị chặn → 429 [retry-after: 24] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn thao tác quá…"
+          "evidence": "62 request song song; lần bị chặn → 429 [retry-after: 10] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn thao tác quá…"
         },
         {
           "name": "Idempotency-Key: tạo → phát lại nguyên văn; tái dùng khoá khác thân → 422; thiếu khoá → 400; song song cùng khoá → 1 lần chạy thật",
           "ok": true,
           "errors": [],
-          "evidence": "201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,409,201,409,409,409"
+          "evidence": "201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,201,409,409,409,409"
         }
       ]
     }

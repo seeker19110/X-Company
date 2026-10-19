@@ -4,7 +4,7 @@
 // giữa chừng rồi chạy lại tiếp được. Không bao giờ in bản rõ/khoá — báo cáo chỉ có số dòng.
 // Chạy bằng `npm run -s crypto:rotate` / `crypto:backfill` (scripts/crypto-*.ts) với role ứng dụng (DATABASE_URL).
 import { createReadStream, createWriteStream } from "node:fs";
-import { open, readdir, rename, stat, unlink } from "node:fs/promises";
+import { open, readdir, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -348,11 +348,18 @@ export async function verifyFiles(root: string, ring: Keyring = keyring()): Prom
     for (const name of await readdir(path.join(root, d))) {
       if (!STORAGE_NAME.test(name)) continue;
       const file = path.join(root, d, name);
-      if ((await stat(file)).size === 0) continue;
+      // Mở trước rồi hỏi kích thước trên chính tay cầm (không stat-rồi-mở: tránh đua tệp đổi giữa hai bước).
       const fh = await open(file, "r");
       const head = Buffer.alloc(FILE_MAGIC.length);
-      const { bytesRead } = await fh.read(head, 0, head.length, 0);
-      await fh.close();
+      let bytesRead: number;
+      let size: number;
+      try {
+        size = (await fh.stat()).size;
+        ({ bytesRead } = await fh.read(head, 0, head.length, 0));
+      } finally {
+        await fh.close();
+      }
+      if (size === 0) continue;
       if (isEncryptedFile(head.subarray(0, bytesRead)))
         await collect(decryptFileStream(createReadStream(file), { storageKey: `${d}/${name}` }, ring));
       n += 1;

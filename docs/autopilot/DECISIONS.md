@@ -280,3 +280,43 @@
 - Chọn: Chỉ lưu toạ độ khi GEO_CAPTURE_ENABLED bật VÀ có đồng ý riêng geo_attendance còn hiệu lực; ngược lại bỏ toạ độ im lặng với client cũ và audit không chứa toạ độ; guard chấm công chỉ mở ngoại lệ hẹp: chuyển bản rõ sang bản mã/mã hoá lại, không cho xoá bản mã
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: client cũ không vỡ, không thu dữ liệu nhạy cảm khi thiếu cơ sở; ngoại lệ guard hẹp, có test; rủi ro 'đổi geo_enc mà DB không kiểm plaintext' ghi nhận, giảm bằng audit khi xoay khoá.
 - Đường lùi: Siết guard về chỉ role migration; hoặc đổi sang 422
+
+### D-039 · 2026-10-19T05:25:31+00:00 · KMS/HSM tự host cho khoá mã hoá dữ liệu (startup chưa lập công ty, không có tài khoản cloud)?
+
+- Phương án: (1) OpenBao (MPL-2.0, nhánh mã nguồn mở của Vault) Transit engine tự host; lib/crypto thêm lớp provider: env (dev) | transit (OpenBao/Vault API) với khoá chủ không rời KMS, xoay khoá bằng rotate Transit, nhật ký kiểm toán; HSM thật (PKCS#11 auto-unseal) ghi là bước sau khi có phần cứng/cloud HSM · (2) HashiCorp Vault (giấy phép BSL, không phải OSI) hoặc KMS của cloud
+- Chọn: OpenBao (MPL-2.0, nhánh mã nguồn mở của Vault) Transit engine tự host; lib/crypto thêm lớp provider: env (dev) | transit (OpenBao/Vault API) với khoá chủ không rời KMS, xoay khoá bằng rotate Transit, nhật ký kiểm toán; HSM thật (PKCS#11 auto-unseal) ghi là bước sau khi có phần cứng/cloud HSM
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3 và mặc định tự host (AGENTS §5): giấy phép OSI, không cần tài khoản; giao diện Transit tương thích Vault nên đổi sang dịch vụ khác chỉ là cấu hình.
+- Đường lùi: Đặt provider=env (hành vi hiện tại)
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): HSM/Cloud KMS thật hoặc OpenBao auto-unseal bằng PKCS#11 khi có công ty và ngân sách
+
+### D-040 · 2026-10-19T05:25:32+00:00 · Sao lưu off-site 3-2-1 khi chưa có hạ tầng thuê?
+
+- Phương án: (1) restic (BSD-2) kho mã hoá + toàn vẹn + snapshot bất biến theo chính sách; đích cấu hình được: thư mục/ổ khác, SFTP, S3-tương thích (MinIO tự host hoặc nhà cung cấp sau này); script backup-offsite + restic check + diễn tập khôi phục từ kho off-site; chính sách giữ N bản · (2) Tự viết sao chép + openssl
+- Chọn: restic (BSD-2) kho mã hoá + toàn vẹn + snapshot bất biến theo chính sách; đích cấu hình được: thư mục/ổ khác, SFTP, S3-tương thích (MinIO tự host hoặc nhà cung cấp sau này); script backup-offsite + restic check + diễn tập khôi phục từ kho off-site; chính sách giữ N bản
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: công cụ chuẩn, nhiều backend, kiểm toàn vẹn sẵn; tự viết tăng rủi ro. Ổ/đích thật thuộc việc người khi có hạ tầng.
+- Đường lùi: Giữ backup.sh cục bộ (T-045)
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Đích off-site thật khác nhà cung cấp/khu vực (3-2-1) và khoá kho do người giữ riêng
+
+### D-041 · 2026-10-19T05:25:32+00:00 · Prometheus/Alertmanager, staging TLS và ZAP khi chưa có máy chủ?
+
+- Phương án: (1) Tải bản phát hành ghim phiên bản + sha256 (Prometheus, Alertmanager, promtool, Caddy, ZAP+Java) vào .tools/ (gitignore) qua script cài; chạy THẬT cục bộ: Prometheus scrape /api/metrics → rule → Alertmanager → webhook; Caddy 'tls internal' làm staging có TLS ở staging.localhost; ZAP baseline quét https; kèm tệp triển khai (compose, Caddyfile mẫu cho tên miền thật) chưa chạy được vì thiếu docker daemon/tên miền · (2) Chỉ viết cấu hình, không chạy
+- Chọn: Tải bản phát hành ghim phiên bản + sha256 (Prometheus, Alertmanager, promtool, Caddy, ZAP+Java) vào .tools/ (gitignore) qua script cài; chạy THẬT cục bộ: Prometheus scrape /api/metrics → rule → Alertmanager → webhook; Caddy 'tls internal' làm staging có TLS ở staging.localhost; ZAP baseline quét https; kèm tệp triển khai (compose, Caddyfile mẫu cho tên miền thật) chưa chạy được vì thiếu docker daemon/tên miền
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: bằng chứng chạy thật mạnh hơn cấu hình suông; mọi binary OSI, kiểm sha256.
+- Đường lùi: Xoá .tools/ và job CI tương ứng
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Tên miền thật + chứng chỉ ACME; máy chủ staging; Alertmanager gửi tới kênh trực có người
+
+### D-042 · 2026-10-19T05:25:32+00:00 · Chỉ số web thực địa (CWV p75/INP) khi chưa có người dùng thật?
+
+- Phương án: (1) Tự làm RUM: beacon web-vitals nhỏ (PerformanceObserver, không phụ thuộc, không PII) gửi về /api/public/rum có giới hạn tần suất; gộp p75 theo trang vào bảng/metric; luật cảnh báo p75; JS client giữ ≤ ngân sách; bằng chứng cục bộ = trình duyệt thật trong staging TLS; số thực địa chỉ có khi có người dùng thật · (2) Dùng dịch vụ RUM bên thứ ba
+- Chọn: Tự làm RUM: beacon web-vitals nhỏ (PerformanceObserver, không phụ thuộc, không PII) gửi về /api/public/rum có giới hạn tần suất; gộp p75 theo trang vào bảng/metric; luật cảnh báo p75; JS client giữ ≤ ngân sách; bằng chứng cục bộ = trình duyệt thật trong staging TLS; số thực địa chỉ có khi có người dùng thật
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: không gửi dữ liệu người dùng cho bên thứ ba, không phụ thuộc; chi phí JS ~1 KB trong ngân sách.
+- Đường lùi: Tắt cờ RUM và bỏ beacon
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Đo p75 trên người dùng thật sau khi có lưu lượng; có thể thêm CrUX
+
+### D-043 · 2026-10-19T05:25:32+00:00 · Hồ sơ pháp lý khi startup chưa thành lập công ty?
+
+- Phương án: (1) Ghi rõ: bên kiểm soát dữ liệu phải là pháp nhân; trước khi có pháp nhân KHÔNG xử lý dữ liệu cá nhân thật của bên thứ ba; mốc 60 ngày DPIA tính từ ngày xử lý thật đầu tiên; ưu đãi startup (Luật 91/2025 Đ.38) không áp dụng khi xử lý dữ liệu nhạy cảm (GPS) hoặc quy mô lớn → GPS tắt mặc định; mọi hạ tầng dựng sẵn để bật khi có công ty · (2) Bật xử lý thật ngay
+- Chọn: Ghi rõ: bên kiểm soát dữ liệu phải là pháp nhân; trước khi có pháp nhân KHÔNG xử lý dữ liệu cá nhân thật của bên thứ ba; mốc 60 ngày DPIA tính từ ngày xử lý thật đầu tiên; ưu đãi startup (Luật 91/2025 Đ.38) không áp dụng khi xử lý dữ liệu nhạy cảm (GPS) hoặc quy mô lớn → GPS tắt mặc định; mọi hạ tầng dựng sẵn để bật khi có công ty
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chưa có pháp nhân thì chưa có bên kiểm soát hợp lệ; dựng sẵn giữ đường lùi.
+- Đường lùi: Cập nhật hồ sơ khi thành lập công ty
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Thành lập pháp nhân, xác định bên kiểm soát/xử lý, rồi nộp DPIA trong 60 ngày

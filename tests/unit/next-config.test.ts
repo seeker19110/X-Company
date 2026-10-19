@@ -1,7 +1,7 @@
 // next.config.ts: rewrite cho đường dẫn %-mã hoá hỏng (DAST phát hiện: Next tự lưu trữ trả 500). Biểu thức phải khớp CHÍNH XÁC
 // những chuỗi `decodeURIComponent` ném lỗi — đường dẫn hợp lệ (kể cả slug tiếng Việt) tuyệt đối không được bị chuyển đi.
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { describe, test } from "node:test";
 import nextConfig, { API_HSTS, MALFORMED_PATH_RE } from "../../next.config.ts";
 import { securityHeaders } from "../../proxy.ts";
@@ -57,13 +57,13 @@ describe("MALFORMED_PATH_RE", () => {
     let mismatches = 0;
     let badSeen = 0;
     for (let i = 0; i < 40_000; i++) {
-      const n = 1 + (randomBytes(1)[0]! % 5);
+      const n = randomInt(1, 6);
       // Thiên về byte có ý nghĩa với UTF-8 (dẫn/tiếp nối/biên) để phủ các nhánh.
       const pool = [
         0x00, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec, 0xed,
         0xee, 0xef, 0xf0, 0xf1, 0xf3, 0xf4, 0xf5, 0xff,
       ];
-      const bytes = Array.from(randomBytes(n), (b) => (b % 3 === 0 ? b : pool[b % pool.length]!));
+      const bytes = Array.from(randomBytes(n), (b) => (b % 3 === 0 ? b : pool[randomInt(pool.length)]!));
       let s = pct(bytes);
       if (i % 7 === 0) s = s.slice(0, -1); // cắt dở một chuỗi %XX
       if (flagged(s) !== throwsOnDecode(s)) mismatches += 1;

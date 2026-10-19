@@ -40,6 +40,13 @@ jobs:
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
+      # pg_dump phải cùng bản chính với máy chủ Postgres 17 của service (test sao lưu/khôi phục, mã hoá, cảnh báo):
+      # bản trong image runner cũ hơn → "server version mismatch". Cài client 17 từ kho PGDG chính thức.
+      - name: Cài postgresql-client-17 (khớp máy chủ)
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
       - name: Typecheck và lint trước build
         run: |

@@ -271,7 +271,7 @@ export function analyzeHtmlForXss(html, { markers = [] } = {}) {
     }
   }
   // Payload thô lọt ra ngoài thân script: chuỗi chứa `<tag data-mk=` hay `<script …MK-` chưa bị escape.
-  const outside = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  const outside = stripScriptElements(html);
   for (const m of markers) {
     const idx = outside.indexOf(m);
     if (idx >= 0) {
@@ -587,7 +587,7 @@ export function renderReport(meta, groups) {
     for (const c of g.checks) {
       const ev = c.ok ? c.evidence : `${c.evidence}<br>LỖI: ${c.errors.join("; ")}`;
       L.push(
-        `| ${c.name} | ${c.ok ? "PASS" : "**FAIL**"} | ${ev.replace(/\|/g, "\\|").replace(/\n/g, " ")} |`,
+        `| ${c.name} | ${c.ok ? "PASS" : "**FAIL**"} | ${ev.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ")} |`,
       );
     }
     L.push("");
@@ -597,4 +597,30 @@ export function renderReport(meta, groups) {
   for (const x of meta.notProven) L.push(`- ${x}`);
   L.push("");
   return L.join("\n");
+}
+
+/**
+ * Bỏ mọi phần tử <script>…</script> bằng quét thủ tục (không regex): chịu được `</script >`, `</script foo="bar">`, chữ hoa/
+ * thường lẫn lộn, và thẻ đóng thiếu (bỏ tới hết chuỗi — an toàn: phần bị bỏ chỉ làm probe bớt nhạy, không tạo FAIL giả).
+ */
+export function stripScriptElements(html) {
+  const lower = html.toLowerCase();
+  let out = "";
+  let i = 0;
+  for (;;) {
+    const open = lower.indexOf("<script", i);
+    if (open < 0) return out + html.slice(i);
+    const after = lower.charAt(open + 7);
+    if (after !== "" && !/[\s/>]/.test(after)) {
+      out += html.slice(i, open + 7);
+      i = open + 7;
+      continue;
+    }
+    out += html.slice(i, open);
+    const close = lower.indexOf("</script", open + 7);
+    if (close < 0) return out;
+    const gt = lower.indexOf(">", close);
+    if (gt < 0) return out;
+    i = gt + 1;
+  }
 }
