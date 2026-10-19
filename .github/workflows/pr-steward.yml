@@ -4,7 +4,7 @@ name: pr-steward
 # chính kể cả khi phiên agent đã dừng, container khởi động lại hay PR do phiên khác mở. Job gọi `xt.py pr steward --apply`:
 # với MỌI PR đang mở → `pr next` (cùng luật với phiên agent: làn chuẩn cần review sạch ở đúng head — review đọc từ comment
 # `pr reviewed` đã đăng lên PR) → bật auto-merge / merge ghim head / tắt auto-merge khi cần / cập nhật nhánh tụt sau nhánh
-# đích (D-061, chỉ khi có XT_STEWARD_TOKEN). Việc cần người hoặc agent (review, sửa, ngoại lệ cứng) chỉ ghi vào bản tóm tắt.
+# đích (D-061, chỉ khi có XT_STEWARD_TOKEN); nhánh đích chưa có check bắt buộc thì không bật auto-merge (D-062). Việc cần người hoặc agent (review, sửa, ngoại lệ cứng) chỉ ghi vào bản tóm tắt.
 #
 # An toàn: không trigger `pull_request*`, job chỉ checkout NHÁNH MẶC ĐỊNH (không code của PR) và chạy `xt.py` ở đó;
 # `issue_comment` chỉ chạy khi comment mang dấu review của OWNER/COLLABORATOR/MEMBER (MEMBER: `xt.py` hỏi quyền ghi repo
