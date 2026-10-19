@@ -3190,8 +3190,8 @@ def doctor_fix(findings: List[Finding]) -> Tuple[List[str], List[Finding]]:
 # --------------------------------------------------------------------------- merge-check (ADR-0013)
 
 MERGE_FIELDS = (
-    "number,state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,labels,statusCheckRollup,files,"
-    "autoMergeRequest"
+    "number,title,author,state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,labels,statusCheckRollup,"
+    "files,autoMergeRequest"
 )
 FAST_LANE_MAX_LINES = 150  # vị từ làn nhanh, 11-autonomous-loop/stop-points-and-escalation.md
 GH_TIMEOUT = 60
@@ -3349,12 +3349,41 @@ def merge_lane_reasons(pr: Dict[str, Any], risk_paths: List[str]) -> List[str]:
     return out
 
 
-def _merge_blockers(pr: Dict[str, Any]) -> Optional[Tuple[str, List[str]]]:
-    """Trạng thái chặn merge bất kể làn, theo thứ tự: đóng → nháp → xung đột → CI → review đòi sửa → tụt sau → chưa tính."""
+# Tiêu đề PR thành subject commit squash trên nhánh chính, bỏ qua cổng commit cục bộ (D-056) — cùng luật bước CI.
+PR_TITLE_RE = re.compile(r"(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+")
+PR_TITLE_MAX = 72
+
+
+def _title_exempt(pr: Dict[str, Any], title: str) -> bool:
+    """Tiêu đề do máy đặt, không sửa được ở nguồn (review #140): PR của bot (Dependabot, Renovate — `…[bot]`) và
+    `Revert "…"` mặc định của nút Revert của GitHub."""
+    author = pr.get("author")
+    login = str(author.get("login", "")) if isinstance(author, dict) else str(author or "")
+    return login.endswith("[bot]") or title.startswith('Revert "')
+
+
+def _pr_shape_blocker(pr: Dict[str, Any]) -> Optional[Tuple[str, List[str]]]:
+    """Chặn theo chính PR, trước CI: đã đóng → nháp → tiêu đề (có trong dữ liệu) sai Conventional Commits/dài quá."""
     if pr.get("state") != "OPEN":
         return "closed", [f"PR đã {pr.get('state')}"]
     if pr.get("isDraft"):
         return "wait", ["PR nháp"]
+    title = pr.get("title")
+    if not isinstance(title, str) or (len(title) <= PR_TITLE_MAX and PR_TITLE_RE.fullmatch(title)):
+        return None
+    if _title_exempt(pr, title):
+        return None
+    return "fix", [
+        f"tiêu đề PR phải dạng `<type>(scope): mô tả`, ≤ {PR_TITLE_MAX} ký tự (thành commit squash — D-056): "
+        f"{title[:100]!r} — sửa tiêu đề (`gh pr edit {pr.get('number', '<N>')} --title …`), không cần push"
+    ]
+
+
+def _merge_blockers(pr: Dict[str, Any]) -> Optional[Tuple[str, List[str]]]:
+    """Trạng thái chặn merge bất kể làn, theo thứ tự: đóng → nháp → tiêu đề → xung đột → CI → review đòi sửa → tụt sau → chưa tính."""
+    early = _pr_shape_blocker(pr)
+    if early:
+        return early
     if pr.get("mergeable") == "CONFLICTING" or pr.get("mergeStateStatus") == "DIRTY":
         return "fix", ["xung đột với nhánh đích — merge nhánh đích vào rồi giải"]
     red, pending, green = _ci_buckets([c for c in pr.get("statusCheckRollup") or [] if isinstance(c, dict)])
@@ -3738,6 +3767,13 @@ def _pr_target(pr_arg: Optional[str]) -> Tuple[str, str]:
     return repo, str(found[0].get("number", ""))
 
 
+def _member_can_write(repo: str, assoc: object, login: object) -> Optional[str]:
+    """Trả "true" khi tác giả là MEMBER của org có quyền ghi repo (steward tin như COLLABORATOR); khác → None."""
+    if str(assoc or "").upper() == "MEMBER" and login and repo_writer(repo, str(login)):
+        return "true"
+    return None
+
+
 def _review_decision(reviews: List[Dict[str, Any]], merge_state: str) -> str:
     """Như `reviewDecision` của GraphQL: review mới nhất của mỗi người (bỏ COMMENTED; DISMISSED xoá). REST không cho biết
     ruleset/branch protection đòi review, nên `mergeable_state` BLOCKED (GitHub tính cả protection cổ điển) → cần người."""
@@ -3797,6 +3833,7 @@ def _pr_rest(pr_arg: Optional[str]) -> Dict[str, Any]:
         for s in statuses
     ]
     files = _gh_items(f"{repo}/pulls/{n}/files?per_page=100")
+    marks = _published_marks(repo, n)
     mergeable = pr.get("mergeable")  # REST: true · false · null (GitHub đang tính)
     raw_base = pr.get("base")
     base: Dict[str, Any] = raw_base if isinstance(raw_base, dict) else {}
@@ -3804,9 +3841,17 @@ def _pr_rest(pr_arg: Optional[str]) -> Dict[str, Any]:
     # Đáy của phép so khoá/ủy quyền = merge-base (diff ba chấm như danh sách file), chỉ hỏi khi có file cần so.
     gated = any(isinstance(f, dict) and _gated_file(f) for f in files)
     bottom = _merge_base(repo, str(base.get("sha", "")), sha) if gated else ""
+    raw_user = pr.get("user")
+    user: Dict[str, Any] = raw_user if isinstance(raw_user, dict) else {}
+    raw_head_repo = head.get("repo")
+    head_repo: Dict[str, Any] = raw_head_repo if isinstance(raw_head_repo, dict) else {}
     extra = {
         k: str(v)
         for k, v in (
+            ("author", user.get("login")),
+            ("authorAssociation", pr.get("author_association")),
+            ("authorCanWrite", _member_can_write(repo, pr.get("author_association"), user.get("login"))),
+            ("headRepo", head_repo.get("full_name")),
             ("repo", base_repo.get("full_name")),
             ("baseRefName", base.get("ref")),
             ("defaultBranch", base_repo.get("default_branch")),
@@ -3816,6 +3861,7 @@ def _pr_rest(pr_arg: Optional[str]) -> Dict[str, Any]:
     return {
         **extra,
         "number": pr.get("number", n),
+        **({"title": pr["title"]} if isinstance(pr.get("title"), str) else {}),
         "state": "MERGED" if pr.get("merged") else str(pr.get("state", "")).upper(),
         "isDraft": bool(pr.get("draft")),
         "mergeable": "MERGEABLE" if mergeable is True else "CONFLICTING" if mergeable is False else "UNKNOWN",
@@ -3824,6 +3870,8 @@ def _pr_rest(pr_arg: Optional[str]) -> Dict[str, Any]:
         "headRefOid": sha,
         "labels": [{"name": lb.get("name", "")} for lb in pr.get("labels") or [] if isinstance(lb, dict)],
         "statusCheckRollup": rollup,
+        # Review đã đăng lên PR (`pr reviewed`, ADR-0027) — sổ dùng chung mọi phiên và workflow pr-steward.
+        **({"xtReviews": marks} if marks else {}),
         # Auto-merge đang bật (REST `auto_merge`: object hoặc null) — `merge-gate` đỏ khi bật trên PR ngoại lệ cứng.
         **({"autoMergeRequest": pr["auto_merge"]} if pr.get("auto_merge") else {}),
         # REST cắt danh sách file ở 3000: PLAN.md/xt.yaml có thể nằm ngoài phần đã thấy → luôn người merge
@@ -4459,28 +4507,91 @@ CONTRAST_REQUIRE_ON = "primary,destructive"
 RGB = Tuple[float, float, float, float]  # r, g, b, alpha — đều 0..1
 
 
-def _css_blocks(text: str, ctx: str = "") -> List[Tuple[str, str, str]]:
-    """(ngữ cảnh at-rule, selector, thân) của mọi khối quy tắc; vào trong `@media`/`@layer`/`@supports`; thân `@theme` /
-    `@theme inline` của Tailwind v4 là khai báo token gốc (selector `:root`)."""
+CSS_NEST_MAX = 32  # độ sâu lồng tối đa được đọc (CSS thật < 5); sâu hơn bỏ qua, không đệ quy tới tràn ngăn xếp
+CSS_SELECTOR_MAX = 4096  # selector ghép dài hơn bỏ qua (`a,b{` lồng nhiều tầng nhân đôi độ dài)
+
+
+def _css_blocks(text: str, ctx: str = "", parent: str = "", depth: int = 0) -> List[Tuple[str, str, str]]:
+    """(ngữ cảnh at-rule, selector, khai báo) của mọi khối quy tắc; vào trong `@media`/`@layer`/`@supports`; thân `@theme` /
+    `@theme inline` của Tailwind v4 là khai báo token gốc (selector `:root`). CSS lồng (`:root { &.dark {…} }`,
+    `.dark { .card {…} }`): khối con mang selector đã ghép với cha, khai báo của nó không lẫn vào khối cha."""
     out: List[Tuple[str, str, str]] = []
+    if depth > CSS_NEST_MAX:
+        return out
+    for prelude, body in _css_rules(text):
+        if prelude.split(" ")[0] == "@theme" and not parent:
+            out.append((ctx, ":root", body))
+        elif prelude.startswith("@"):
+            inner = f"{ctx} {prelude}".strip()
+            if parent and _css_flat(body).strip():  # khai báo trần trong `@media` lồng thuộc selector cha
+                out.append((inner, parent, _css_flat(body)))
+            out += _css_blocks(body, inner, parent, depth + 1)
+        else:
+            sel = _css_nest(prelude, parent)
+            if len(sel) > CSS_SELECTOR_MAX:
+                continue
+            out.append((ctx, sel, _css_flat(body)))
+            out += _css_blocks(body, ctx, sel, depth + 1) if "{" in body else []
+    return out
+
+
+def _css_rules(text: str) -> List[Tuple[str, str]]:
+    """(prelude, thân) của các khối cấp ngoài cùng trong `text`."""
+    out: List[Tuple[str, str]] = []
     pos = 0
-    while True:
-        i = text.find("{", pos)
-        if i < 0:
-            return out
+    while (i := text.find("{", pos)) >= 0:
         depth, j = 1, i + 1
         while j < len(text) and depth:
             depth += {"{": 1, "}": -1}.get(text[j], 0)
             j += 1
-        prelude = text[pos:i].rsplit(";", 1)[-1].rsplit("}", 1)[-1].strip()
-        body = text[i + 1 : j - 1]
-        if prelude.split(" ")[0] == "@theme":
-            out.append((ctx, ":root", body))
-        elif prelude.startswith("@"):
-            out += _css_blocks(body, f"{ctx} {prelude}".strip())
-        else:
-            out.append((ctx, prelude, body))
+        out.append((text[pos:i].rsplit(";", 1)[-1].rsplit("}", 1)[-1].strip(), text[i + 1 : j - 1]))
         pos = j
+    return out
+
+
+def _css_flat(body: str) -> str:
+    """Thân khối bỏ các khối lồng (và selector của chúng): chỉ khai báo của chính khối."""
+    out: List[str] = []
+    pos = 0
+    while (i := body.find("{", pos)) >= 0:
+        seg = body[pos:i]
+        out.append(seg[: max(seg.rfind(";"), seg.rfind("}")) + 1])
+        depth, j = 1, i + 1
+        while j < len(body) and depth:
+            depth += {"{": 1, "}": -1}.get(body[j], 0)
+            j += 1
+        pos = j
+    return "".join(out) + body[pos:]
+
+
+def _css_nest(selector: str, parent: str) -> str:
+    """Selector lồng ghép với cha: `&` thay bằng cha, không có `&` thì là con cháu (`cha con`)."""
+    if not parent:
+        return selector
+    parts = _css_split(selector)
+    return ", ".join(c.replace("&", p) if "&" in c else f"{p} {c}" for p in _css_split(parent) for c in parts)
+
+
+def _css_split(selector: str) -> List[str]:
+    """Selector tách theo dấu phẩy cấp ngoài (không tách trong `:is(.a, .b)`, `[x='a,b']`)."""
+    out: List[str] = []
+    cur: List[str] = []
+    depth, quote = 0, ""
+    for ch in selector:
+        if quote:
+            quote = "" if ch == quote else quote
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "([":
+            depth += 1
+        elif ch in ")]":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+            continue
+        cur.append(ch)
+    return [*out, "".join(cur).strip()]
 
 
 def _theme_kind(selector: str) -> str:
@@ -5076,9 +5187,19 @@ def _print_doctor(base: Path, findings: List[Finding], fixed: List[str], fixing:
         print(f"✓ Sẵn sàng cho autopilot: {tail}")
 
 
+def pr_title_check_off(base: Path, ref: str) -> bool:
+    """`pr_title_check: off` chỉ có hiệu lực khi cả xt.yaml đã commit ở `ref` (nhánh đích) lẫn cây làm việc đều `off`:
+    PR không tự tắt được luật tiêu đề cho chính nó bằng cách sửa xt.yaml trên nhánh của nó — như `merge_autonomy`."""
+    return (
+        _committed_xt_keys(base, ref).get("pr_title_check") == "off" and _xt_keys(base).get("pr_title_check") == "off"
+    )
+
+
 def _merge_eval(pr: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
     """(quyết định, ghi chú cấu hình) của `merge-check` cho PR đã đọc — dùng chung với `merge-gate`."""
     ref = f"origin/{pr.get('baseRefName') or 'main'}"
+    if pr_title_check_off(project_dir(), ref):  # dự án không theo Conventional Commits (review #140)
+        pr = {k: v for k, v in pr.items() if k != "title"}
     autonomy, notes = merge_autonomy_level(project_dir(), ref)
     hard_auto, hard_notes = merge_hard_mode(project_dir(), ref)
     return merge_decision(pr, autonomy, merge_risk_globs(project_dir(), ref), hard_auto), notes + hard_notes
@@ -5267,6 +5388,99 @@ def _pr_next_review(
     return None
 
 
+# Sổ review dùng chung (ADR-0027): `pr reviewed` đăng kết quả lên PR dưới dạng comment có dấu máy đọc; `pr next` và
+# `pr steward` (workflow pr-steward) gộp các dấu này với sổ cục bộ. Chỉ tin comment của người có quyền ghi repo (OWNER,
+# COLLABORATOR) — người ngoài comment dấu giả không mở được merge. Dấu không mang tên model (ai_attribution).
+REVIEW_MARK_RE = re.compile(r"<!--\s*xt-review v1 head=([0-9a-f]{40}) verdict=(clean|blocking)\s*-->")
+# MEMBER không đủ: thành viên org có thể chỉ có quyền đọc repo (review #141).
+TRUSTED_ASSOCIATIONS = {"OWNER", "COLLABORATOR"}
+STANDARD_LABEL = (
+    "xt-standard-lane"  # PR từng vào làn chuẩn — nhãn bền trên GitHub thay `standard_seen` cục bộ (review #141)
+)
+TRUSTED_BOTS = {"dependabot[bot]"}  # bot cùng repo được steward xử lý như người có quyền ghi
+
+
+def review_comment_body(head: str, clean: bool) -> str:
+    """Nội dung comment `pr reviewed` đăng lên PR: một dòng cho người đọc + dấu cho máy (`pr next`, `pr steward`)."""
+    verdict = "clean" if clean else "blocking"
+    text = "sạch — không còn lỗi chặn" if clean else "còn lỗi chặn — sửa, push rồi rà lại"
+    return f"Review ở `{head[:7]}`: {text}.\n\n<!-- xt-review v1 head={head} verdict={verdict} -->"
+
+
+def _comment_login(c: Dict[str, Any]) -> str:
+    user = c.get("user")
+    return str(user.get("login") or "") if isinstance(user, dict) else ""
+
+
+def published_reviews(comments: List[Dict[str, Any]], writers: Optional[Set[str]] = None) -> List[Dict[str, Any]]:
+    """Review đã đăng trên PR, theo thứ tự thời gian: [{"head", "clean", "at"}] từ comment của người có quyền ghi —
+    OWNER/COLLABORATOR, hoặc MEMBER của org mà `writers` (đã hỏi quyền repo) xác nhận có quyền ghi."""
+    out = []
+    for c in comments:
+        m = REVIEW_MARK_RE.search(str(c.get("body") or ""))
+        assoc = str(c.get("author_association", "")).upper()
+        if m and (assoc in TRUSTED_ASSOCIATIONS or (assoc == "MEMBER" and _comment_login(c) in (writers or set()))):
+            out.append({"head": m[1], "clean": m[2] == "clean", "at": str(c.get("created_at", ""))})
+    return sorted(out, key=lambda r: r["at"])
+
+
+def _published_marks(repo: str, n: str) -> List[Dict[str, Any]]:
+    """Review đã đăng trên PR; không đọc được comment (token thiếu quyền, mạng) → [] — thiếu dấu chỉ làm PR làn chuẩn
+    chờ review (chặt hơn), không làm merge-check lỗi."""
+    try:
+        comments = _gh_items(f"{repo}/issues/{n}/comments?per_page=100")
+    except PrInputError:
+        return []
+    members = {
+        _comment_login(c)
+        for c in comments
+        if str(c.get("author_association", "")).upper() == "MEMBER" and REVIEW_MARK_RE.search(str(c.get("body") or ""))
+    }
+    return published_reviews(comments, {u for u in members if u and repo_writer(repo, u)})
+
+
+WRITE_PERMISSIONS = {"admin", "write"}  # REST `permission` (cũ): maintain tính là write, triage là read
+WRITE_ROLES = {"admin", "maintain", "write"}  # REST `role_name`
+WRITER_TTL = (
+    300.0  # giây — merge-watch hỏi 30 giây/lần: không hỏi lại quyền mỗi lượt, thu hồi quyền có hiệu lực sau ≤ 5 phút
+)
+_WRITER_CACHE: Dict[Tuple[str, str], Tuple[float, bool]] = {}
+
+
+def repo_writer(repo: str, login: str) -> bool:
+    """`login` có quyền ghi repo? Cho MEMBER của org — `author_association` không nói quyền repo (repo thuộc org: chủ
+    repo thường là MEMBER, không phải OWNER/COLLABORATOR). Không hỏi được (token thiếu quyền, mạng) → False (chặt), không
+    nhớ kết quả lỗi. Token cần đọc được quyền cộng tác viên (GITHUB_TOKEN của Actions đọc được — quyền metadata)."""
+    now, key = time.monotonic(), (repo, login)
+    hit = _WRITER_CACHE.get(key)
+    if hit and now - hit[0] < WRITER_TTL:
+        return hit[1]
+    try:
+        got = _gh_one(f"{repo}/collaborators/{urllib.parse.quote(login, safe='')}/permission")
+    except PrInputError:
+        return False
+    ok = (
+        str(got.get("permission", "")).lower() in WRITE_PERMISSIONS
+        or str(got.get("role_name", "")).lower() in WRITE_ROLES
+    )
+    _WRITER_CACHE[key] = (now, ok)
+    return ok
+
+
+def _iso_key(at: object) -> str:
+    """Khoá sắp xếp thời điểm ISO: `Z` và `+00:00` cùng dạng (sổ cục bộ ghi `+00:00`, REST trả `Z`)."""
+    return str(at).replace("Z", "+00:00")
+
+
+def with_published(rec: Dict[str, Any], marks: object) -> Dict[str, Any]:
+    """Sổ review của PR gộp review đã đăng (ADR-0027), theo thời gian — review cuối cùng quyết."""
+    pub = [r for r in marks if isinstance(r, dict)] if isinstance(marks, list) else []
+    if not pub:
+        return rec
+    local = [r for r in rec.get("reviews", []) if isinstance(r, dict)]
+    return {**rec, "reviews": sorted([*local, *pub], key=lambda r: _iso_key(r.get("at", "")))}
+
+
 def pr_next(d: Dict[str, Any], auto_merge: bool, rec: Dict[str, Any]) -> Dict[str, Any]:
     """MỘT hành động kế tiếp cho PR theo "merge theo làn" (ADR-0024 → ADR-0025), hàm thuần.
 
@@ -5361,13 +5575,152 @@ def _pr_reviewed(args: argparse.Namespace, base: Path) -> int:
     data[key] = {**rec, "reviews": reviews}
     _write_reviews(base, data)
     print(f"✓ PR #{key}: review {'sạch' if args.clean else 'còn lỗi chặn'} ở {args.head[:7]}")
+    if args.no_publish:
+        return 0
+    return _publish_review(str(args.pr), key, args.head, args.clean)
+
+
+def _publish_review(pr_arg: str, key: str, head: str, clean: bool) -> int:
+    """Đăng kết quả review lên PR (ADR-0027) để phiên khác và workflow pr-steward thấy; lỗi → exit 3 (sổ cục bộ đã ghi)."""
+    repo, _ = _pr_target(pr_arg if PR_URL_RE.search(pr_arg) else key)
+    cmd = ["gh", "api", "-X", "POST", f"{repo}/issues/{key}/comments", "-f", f"body={review_comment_body(head, clean)}"]
+    try:  # cwd = gốc dự án: `{owner}/{repo}` là repo của dự án, không phải thư mục shell đang đứng
+        r = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=GH_TIMEOUT, cwd=project_dir())
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        r = subprocess.CompletedProcess(cmd, 1, "", str(exc))
+    if r.returncode != 0:
+        print(
+            f"⚠ chưa đăng được review lên PR #{key} ({_one_line(r.stderr)}) — pr-steward không thấy review này; "
+            f"chạy lại `xt.py pr reviewed …` khi có gh, hoặc comment tay: {review_comment_body(head, clean)!r}",
+            file=sys.stderr,
+        )
+        return 3
+    print(f"✓ đã đăng review lên PR #{key} — phiên khác và pr-steward thấy kết quả này (ADR-0027)")
     return 0
+
+
+# --------------------------------------------------------------------------- pr steward (ADR-0027)
+
+
+def _steward_command(out: Dict[str, Any], repo: str) -> List[List[str]]:
+    """Lệnh gh cho hành động `pr next` mà steward tự làm; [] = chỉ báo (review, fix, defer-human, chờ…). Merge luôn ghim
+    head (REST `sha`); bật auto-merge rồi GitHub báo PR đã sẵn sàng → merge ghim head (fallback)."""
+    n, head, action = str(out["pr"]), str(out["head"]), out["action"]
+    merge = ["gh", "api", "-X", "PUT", f"{repo}/pulls/{n}/merge", "-f", "merge_method=squash", "-f", f"sha={head}"]
+    if action == "merge":
+        return [merge]
+    if action == "enable-auto-merge":
+        auto = ["gh", "pr", "merge", n, "--auto", "--squash", "--match-head-commit", head]
+        return [auto, merge] if out.get("fallback") else [auto]
+    if action == "disable-auto-merge":
+        return [["gh", "pr", "merge", n, "--disable-auto"]]
+    return []
+
+
+def _steward_run(cmds: List[List[str]]) -> str:
+    """Chạy lần lượt tới lệnh đầu tiên thành công; trả "" nếu thành công, lỗi cuối nếu không."""
+    err = "không có lệnh"
+    for cmd in cmds:
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=GH_TIMEOUT)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            err = str(exc)
+            continue
+        if r.returncode == 0:
+            return ""
+        err = _one_line(r.stderr or r.stdout)
+    return err
+
+
+def steward_untrusted(pr: Dict[str, Any]) -> str:
+    """Lý do steward KHÔNG tự xử lý PR (rỗng = được): PR từ fork, hoặc tác giả không có quyền ghi repo — người ngoài
+    mở PR tài liệu "làn nhanh" không được tự vào nhánh chính khi không ai xem (review #141)."""
+    if pr.get("headRepo") and pr.get("repo") and pr["headRepo"] != pr["repo"]:
+        return f"PR từ fork {pr['headRepo']} — người merge"
+    author, assoc = str(pr.get("author", "")), str(pr.get("authorAssociation", "")).upper()
+    if assoc in TRUSTED_ASSOCIATIONS or author in TRUSTED_BOTS or pr.get("authorCanWrite") == "true":
+        return ""
+    return f"tác giả {author or '?'} ({assoc or 'không rõ'}) không có quyền ghi repo — người merge"
+
+
+def _standard_seen(pr: Dict[str, Any]) -> bool:
+    return any(lb.get("name") == STANDARD_LABEL for lb in pr.get("labels") or [] if isinstance(lb, dict))
+
+
+def _steward_one(pr_arg: str, repo: str, base: Path, apply: bool, gh_repo: List[str]) -> Dict[str, Any]:
+    try:
+        pr = _pr_rest(pr_arg)
+    except PrInputError as exc:
+        return {"pr": pr_arg, "head": "", "action": "error", "why": str(exc), "applied": False}
+    d, _ = _merge_eval(pr)
+    rec = with_published(_pr_record(read_reviews(base), str(d["pr"])), pr.get("xtReviews"))
+    if _standard_seen(pr):  # từng vào làn chuẩn (nhãn bền): push sau đó không hạ PR về làn nhanh
+        rec = {**rec, "standard_seen": True}
+    out = {**pr_next(d, bool(pr.get("autoMergeRequest")), rec), "applied": False}
+    why_not = steward_untrusted(pr)
+    if why_not and out["action"] not in ("done", "closed", "disable-auto-merge"):
+        return {**out, "action": "defer-human", "why": why_not}
+    if apply and d["lane"] == "chuẩn" and not _standard_seen(pr):
+        n = str(d["pr"])
+        label_err = _steward_run(
+            [["gh", "api", "-X", "POST", f"{repo}/issues/{n}/labels", "-f", f"labels[]={STANDARD_LABEL}"]]
+        )
+        if label_err:  # không nhãn: push sau có thể hạ PR về làn nhanh — không bật/merge lượt này, báo đỏ ra summary
+            out["warn"] = f"không gắn được nhãn {STANDARD_LABEL}: {label_err} — lượt sau thử lại"
+            if out["action"] != "disable-auto-merge":  # tắt auto-merge (giữ PR lại) vẫn chạy
+                return out
+    cmds = [c[:3] + gh_repo + c[3:] if c[:3] == ["gh", "pr", "merge"] else c for c in _steward_command(out, repo)]
+    cmds = cmds if apply else []
+    if cmds:
+        err = _steward_run(cmds)
+        out.update(applied=not err, **({"error": err} if err else {}))
+    return out
+
+
+REPO_SLUG_RE = re.compile(r"[\w.-]+/[\w.-]+")
+
+
+def cmd_pr_steward(args: argparse.Namespace) -> int:
+    """Quản PR không cần phiên agent (ADR-0027): mọi PR mở (hoặc `--pr`) → `pr next`; `--apply` thì tự bật/tắt
+    auto-merge, merge ghim head. Việc cần người/agent (review, sửa, cập nhật nhánh) chỉ báo."""
+    if args.repo and not REPO_SLUG_RE.fullmatch(args.repo):
+        print(f"✗ --repo phải dạng owner/repo, không phải {args.repo!r}", file=sys.stderr)
+        return 2
+    repo = f"repos/{args.repo}" if args.repo else "repos/{owner}/{repo}"
+    gh_repo = ["-R", args.repo] if args.repo else []  # `gh pr merge` trên đúng repo đã đánh giá (review #141)
+    try:
+        nums = (
+            [str(args.pr)]
+            if args.pr
+            else [str(p.get("number")) for p in _gh_items(f"{repo}/pulls?state=open&per_page=100")]
+        )
+    except PrInputError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 2
+    target = (lambda n: f"https://github.com/{args.repo}/pull/{n}") if args.repo else (lambda n: n)
+    results = [_steward_one(target(n), repo, project_dir(), args.apply, gh_repo) for n in nums]
+    lines = [
+        f"#{r['pr']} {r['action']}{' ✓' if r.get('applied') else ''}{' ✗ ' + r['error'] if r.get('error') else ''}"
+        f" — {r['why']}{' ⚠ ' + r['warn'] if r.get('warn') else ''}"
+        for r in results
+    ]
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False))
+    else:
+        print("\n".join(lines) or "không có PR mở")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as fh:
+            fh.write("## pr-steward\n\n" + "".join(f"- {ln}\n" for ln in lines or ["không có PR mở"]))
+    return 1 if any(r.get("error") or r.get("warn") or r["action"] == "error" for r in results) else 0
 
 
 def cmd_pr(args: argparse.Namespace) -> int:
     base = project_dir()
     if args.pr_cmd == "reviewed":
         return _pr_reviewed(args, base)
+    if args.pr_cmd == "steward":
+        return cmd_pr_steward(args)
     try:
         pr = load_pr(args)
     except PrInputError as exc:
@@ -5380,7 +5733,8 @@ def cmd_pr(args: argparse.Namespace) -> int:
         rec = {**rec, "standard_seen": True}
         data[str(d["pr"])] = rec
         _write_reviews(base, data)
-    out = pr_next(d, bool(pr.get("autoMergeRequest")), rec)
+    rec = {**rec, "standard_seen": True} if _standard_seen(pr) else rec
+    out = pr_next(d, bool(pr.get("autoMergeRequest")), with_published(rec, pr.get("xtReviews")))
     if args.json:
         print(json.dumps(out, ensure_ascii=False))
         return 0
@@ -5932,7 +6286,9 @@ def build_parser() -> argparse.ArgumentParser:
     pnx.add_argument("--pr", help="số/URL/nhánh của PR (mặc định PR của nhánh hiện tại)")
     pnx.add_argument("--pr-json", help="đọc JSON PR từ FILE hoặc - như merge-check")
     pnx.add_argument("--json", action="store_true")
-    prv = prsub.add_parser("reviewed", help="ghi kết quả review ở commit H vào .autopilot/reviews.json")
+    prv = prsub.add_parser(
+        "reviewed", help="ghi kết quả review ở commit H vào .autopilot/reviews.json và đăng lên PR (ADR-0027)"
+    )
     prv.add_argument("--pr", required=True)
     prv.add_argument("--head", required=True, help="SHA đủ 40 ký tự của commit đã rà")
     pres = prv.add_mutually_exclusive_group(required=True)
@@ -5942,6 +6298,18 @@ def build_parser() -> argparse.ArgumentParser:
     pres.add_argument("--blocking", dest="clean", action="store_false", help="còn lỗi chặn")
     prv.add_argument("--reviewer-model", help="model đã review (vd sonnet) — bắt buộc với --clean")
     prv.add_argument("--author-model", help="model viết PR/phiên chính (vd opus) — bắt buộc với --clean")
+    prv.add_argument(
+        "--no-publish",
+        action="store_true",
+        help="chỉ ghi sổ cục bộ, không đăng kết quả lên PR (pr-steward và phiên khác sẽ không thấy — ADR-0027)",
+    )
+    pst = prsub.add_parser(
+        "steward", help="mọi PR mở → pr next; --apply tự bật auto-merge/merge ghim head (workflow pr-steward, ADR-0027)"
+    )
+    pst.add_argument("--pr", help="chỉ PR này (số/URL); mặc định mọi PR mở")
+    pst.add_argument("--repo", help="owner/repo (mặc định repo hiện tại của gh)")
+    pst.add_argument("--apply", action="store_true", help="làm thật: bật/tắt auto-merge, merge ghim head")
+    pst.add_argument("--json", action="store_true", help="in JSON danh sách kết quả")
     ppr.set_defaults(fn=cmd_pr)
     pq = sub.add_parser("merge-gate", help="required check: đỏ khi PR ngoại lệ cứng đang bật auto-merge (ADR-0023)")
     pq.add_argument("--pr", help="số/URL/nhánh của PR (mặc định PR của nhánh hiện tại)")

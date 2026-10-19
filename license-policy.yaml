@@ -12,6 +12,8 @@ allow:
   - CC0-1.0
   - BlueOak-1.0.0
   - Python-2.0
+  # PSF-2.0: giấy phép Python Software Foundation (OSI, cho phép như Python-2.0) — argparse 3 qua markdown-it 15
+  - PSF-2.0
   - Unlicense
 deny:
   - AGPL-3.0-only

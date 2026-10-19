@@ -20,6 +20,8 @@ Lỗi bất ngờ → in quyết định rỗng (fail-open về luồng); luật
 
 from __future__ import annotations
 
+import base64
+import binascii
 import contextlib
 import itertools
 import json
@@ -387,11 +389,24 @@ def _opens_body(line: str, states: List[str], m: "re.Match[str]", carried: int) 
 def _heredocs(cmd: str) -> List[Tuple[str, "re.Match[str]", List[str]]]:
     """(dòng mở, match, thân) của mọi heredoc có thể thật: bỏ `<<` trong comment/nháy đơn và trong nháy kép ngoài `$(…)`
     (không mở heredoc); giữ trong `$(…)`/backtick (`-m "$(cat <<'EOF'`). Không thấy dấu kết → thân là phần còn lại."""
-    out: List[Tuple[str, "re.Match[str]", List[str]]] = []
     lines = cmd.split("\n")
+    return [(lines[o], m, lines[a:b]) for o, m, a, b in _heredoc_spans(lines)]
+
+
+def literal_bodies_masked(cmd: str) -> str:
+    """Dòng lệnh bỏ thân heredoc có dấu kết trong nháy (`<<'EOF'`): bash không thay `` `…` ``/`$(…)` trong thân đó —
+    code span trong message commit (`-m "$(cat <<'EOF'` ↵ ``chặn `rm -rf ~` `` ↵ `EOF`) là chữ, không phải lệnh."""
+    lines = cmd.split("\n")
+    drop = {j for _, m, a, b in _heredoc_spans(lines) if m.group(1) for j in range(a, b)}  # giữ dòng dấu kết
+    return "\n".join(line for j, line in enumerate(lines) if j not in drop)
+
+
+def _heredoc_spans(lines: List[str]) -> List[Tuple[int, "re.Match[str]", int, int]]:
+    """(chỉ số dòng mở, match, đầu thân, cuối thân) — xem `_heredocs`."""
+    out: List[Tuple[int, "re.Match[str]", int, int]] = []
     q, i, carried = "", 0, 0
     while i < len(lines):
-        line, i = lines[i], i + 1
+        line, opener, i = lines[i], i, i + 1
         states, q = _quote_states(line, q)
         for m in HEREDOC_RE.finditer(line):
             if states[m.start()] in ("#", "'") or (
@@ -400,7 +415,7 @@ def _heredocs(cmd: str) -> List[Tuple[str, "re.Match[str]", List[str]]]:
                 continue
             # không thấy dấu kết: như bash, thân là phần còn lại (`bash <<E` ↵ `rm -rf ~` vẫn chạy)
             end = next((j for j in range(i, len(lines)) if lines[j].strip() == m.group(2)), len(lines))
-            out.append((line, m, lines[i:end]))
+            out.append((opener, m, i, end))
             i = end + 1
         run = _dq_run_start(states, len(states))
         carried = _subst_depth(line[run:], carried if run == 0 else 0) if q == '"' else 0
@@ -1433,6 +1448,9 @@ def _mcp_auto_merge(tool_input: Dict[str, object], root: str) -> Tuple[str, str]
 
 
 def mcp_decision(tool_name: str, tool_input: Dict[str, object], root: str) -> Tuple[str, str]:
+    hit = mcp_attribution(tool_name, tool_input, root)
+    if hit:
+        return "deny", hit
     if not MCP_MERGE_RE.fullmatch(tool_name):
         return "", ""
     if "disable" in tool_name:  # tắt auto-merge: LOOP-STOP-005 đòi khi chạm ngoại lệ cứng — không chặn
@@ -2540,17 +2558,59 @@ def _patch_targets(args: List[str]) -> List[str]:
     return pos[:1] + _flag_values(args, ("-o", "--output"))
 
 
+# `w f`, `1w f`, `$w f`, `/a/!w f`, `s/a/b/w f`, `s|a|b|w f`: lệnh `w` của sed (sau địa chỉ/cờ của `s`) ghi file
+SED_WRITE_RE = re.compile(r"(?:^|[0-9]|[^\w\s][gpIiMme0-9]*)[ \t]*w[ \t]+([^;\n}]+)")
+AWK_WRITE_RE = re.compile(r">>?[ \t]*\"([^\"\n]+)\"")  # `print > "f"` trong chương trình awk
+
+
+def _sed_scripts(args: List[str]) -> List[str]:
+    """Script của sed: giá trị `-e`/`--expression`, không có thì đối số vị trí đầu."""
+    exprs = _flag_values(args, ("-e", "--expression"))
+    return exprs or _positionals(args, ("-f", "--file", "-l", "--line-length"))[:1]
+
+
+def _sed_writes(args: List[str]) -> List[str]:
+    return [m.group(1).strip() for sc in _sed_scripts(args) for m in SED_WRITE_RE.finditer(sc)]
+
+
+def _awk_targets(args: List[str]) -> List[str]:
+    """awk: `-i inplace` sửa tại chỗ các file đầu vào; `print > "f"` trong chương trình ghi f."""
+    pos = _positionals(args, ("-f", "-v", "-F", "-i", "--include", "--file", "--assign", "--field-separator"))
+    prog = [] if _flag_values(args, ("-f", "--file")) else pos[:1]
+    out = [m.group(1) for p in prog for m in AWK_WRITE_RE.finditer(p)]
+    inplace = "inplace" in _flag_values(args, ("-i", "--include"))
+    return out + (pos[len(prog) :] if inplace else [])
+
+
+def _tar_dest(args: List[str]) -> List[str]:
+    """Thư mục giải nén của `tar -x … -C d` (tạo/liệt kê lưu trữ với `-C` chỉ đọc thư mục đó)."""
+    short = "".join(a[1:] for a in args if a[:1] == "-" and a[1:2] != "-") + (
+        args[0] if args and args[0][:1] != "-" else ""
+    )
+    extract = "x" in short or any(a in ("--extract", "--get") for a in args)
+    return _flag_values(args, ("-C", "--directory")) if extract else []
+
+
 FILE_WRITERS: Dict[str, Callable[[List[str]], List[str]]] = {
     "curl": _curl_outputs,
     "wget": _wget_outputs,
     "rsync": _rsync_dest,
     "patch": _patch_targets,
+    "sort": lambda a: _flag_values(a, ("-o", "--output")),
+    "awk": _awk_targets,
+    "gawk": _awk_targets,
+    "tar": _tar_dest,
+    "unzip": lambda a: _flag_values(a, ("-d",)),
+    "split": lambda a: _positionals(a, ("-l", "-b", "-C", "-n", "-a", "-t", "--additional-suffix"))[1:2],
+    "csplit": lambda a: _flag_values(a, ("-f", "--prefix")),
 }
 
 
 def _git_file_targets(n: List[str]) -> List[str]:
-    """File mà `git checkout <rev> -- f`/`git restore -s <rev> f` ghi đè từ commit khác — chỉ xét bí mật: khôi phục file
-    cổng/hàng rào bằng git là đường lùi chuẩn, không chặn."""
+    """File mà `git checkout <rev> -- f`/`git restore -s <rev> f` ghi đè từ commit khác — chỉ xét bí mật và bằng chứng:
+    khôi phục file cổng/hàng rào bằng git là đường lùi chuẩn, không chặn."""
+    if n[:2] == ["git", "restore"] and "--staged" in n and not {"--worktree", "-W"} & set(n):
+        return []  # chỉ đổi chỉ mục, không ghi cây làm việc
     if n[:2] in (["git", "checkout"], ["git", "restore"]):
         return _positionals(n[2:], ("-s", "--source", "-b", "-B", "--orphan", "--conflict", "--pathspec-from-file"))
     return []
@@ -2576,6 +2636,8 @@ def write_targets(n: List[str], argv: List[str]) -> List[str]:
         return out + _positionals(args, ("-d", "-t", "-r", "--date", "--reference"))
     if name in FILE_WRITERS:
         return out + FILE_WRITERS[name](args)
+    if name == "sed":
+        out += _sed_writes(args)
     return out + _inplace_targets(name, args)
 
 
@@ -2672,8 +2734,9 @@ def _write_asks(n: List[str], argv: List[str], root: str, cwd: Optional[str] = N
             asks.append(CAPABILITY_WHY.format(f"ghi {target} qua Bash"))
         elif _existing_test(target, root):
             asks.append(f"sửa/xoá test ĐÃ CÓ qua Bash ({target}) — làm yếu test là nới cổng (LOOP-CI-001)")
-    secrets = [t for t in _git_file_targets(n) if _target_kind(t, root) == "secret"]
-    return asks + [f"ghi file bí mật qua Bash (git lấy từ commit khác): {t}" for t in secrets]
+    restored = [(t, _target_kind(_resolve_target(t, root, cwd), root)) for t in _git_file_targets(n)]
+    asks += [f"ghi file bí mật qua Bash (git lấy từ commit khác): {t}" for t, k in restored if k == "secret"]
+    return asks + [EVIDENCE_WHY.format(f"git {n[1]} {t}") for t, k in restored if k == "evidence"]
 
 
 def _target_kind(target: str, root: str) -> str:
@@ -2810,12 +2873,13 @@ def _commit_window(line: str, pos: int, seps: List[Tuple[int, int]]) -> str:
     return line[max(start, pos - COMMIT_LINE_MAX) : min(end, pos + COMMIT_LINE_MAX)]
 
 
-def _heredoc_bodies(cmd: str) -> List[str]:
-    """Thân heredoc thuộc pipeline có `git commit` (`git commit -F - <<E`, `-m "$(cat <<E`, `cat <<E | git commit -F -`);
-    heredoc của lệnh khác trong cùng chuỗi (`python3 - <<E …; git commit`) là dữ liệu của lệnh đó, không quét."""
+def _heredoc_bodies(cmd: str, pat: "re.Pattern[str]" = GIT_COMMIT_TEXT_RE) -> List[str]:
+    """Thân heredoc thuộc pipeline có `git commit` (`git commit -F - <<E`, `-m "$(cat <<E`, `cat <<E | git commit -F -`)
+    — hay lệnh khớp `pat` (`gh pr create --body-file - <<E`); heredoc của lệnh khác trong cùng chuỗi
+    (`python3 - <<E …; git commit`) là dữ liệu của lệnh đó, không quét."""
     out: List[str] = []
     for opener, m, body in _heredocs(join_continuations(cmd)):  # nối dòng `\` như shell (`git commit \` ↵ `-F - <<E`)
-        if GIT_COMMIT_TEXT_RE.search(_commit_window(opener, m.start(), _unquoted_seps(opener))):
+        if pat.search(_commit_window(opener, m.start(), _unquoted_seps(opener))):
             out.append("\n".join(body))
     return out
 
@@ -2834,26 +2898,86 @@ def _xt_yaml_for(d: str) -> str:
     return ""
 
 
+# `gh pr create|edit|merge` (D-057): tiêu đề/thân PR và tiêu đề/thân commit squash (`merge --subject/--body`).
+GH_PR_TEXT_RE = re.compile(r"(?<![\w-])gh\s+pr(?:\s+(?:-R|--repo)(?:\s+|=)\S+)?\s+(?:create|edit|merge)\b")
+GH_PR_TEXT_OPTS = {"-t": "m", "--title": "m", "--subject": "m", "-b": "m", "--body": "m", "-F": "F", "--body-file": "F"}
+
+
+def _gh_pr_text_args(args: List[str]) -> Optional[List[Tuple[str, str]]]:
+    """(loại, giá trị) của tiêu đề/thân trong `gh pr …` (sau `pr`, bỏ `-R/--repo x`); không phải create/edit/merge → None."""
+    rest = list(args)
+    while rest[:1] in (["-R"], ["--repo"]) or rest[:1] and rest[0].startswith("--repo="):
+        rest = rest[2:] if rest[0] in ("-R", "--repo") else rest[1:]
+    if rest[:1] not in (["create"], ["edit"], ["merge"]):
+        return None
+    out: List[Tuple[str, str]] = []
+    for i, x in enumerate(rest[1:], 1):
+        nxt = rest[i + 1] if i + 1 < len(rest) else ""
+        key, sep, val = x.partition("=")
+        if x in GH_PR_TEXT_OPTS:
+            out.append((GH_PR_TEXT_OPTS[x], nxt))
+        elif sep and key in GH_PR_TEXT_OPTS:
+            out.append((GH_PR_TEXT_OPTS[key], val))
+        elif x[:2] in ("-t", "-b", "-F") and len(x) > 2:  # `-tfeat: x` (pflag)
+            out.append((GH_PR_TEXT_OPTS[x[:2]], x[2:]))
+    return out
+
+
+def _attribution_target(
+    argv: List[str], here: Optional[str], root: str
+) -> Optional[Tuple[str, List[Tuple[str, str]], str]]:
+    """(thư mục, cặp (loại, giá trị), loại lệnh) khi argv là `git commit` hoặc `gh pr create|edit|merge`; không → None."""
+    n = normalize(argv)
+    if n[:2] == ["git", "commit"]:
+        return _git_dir(argv, here) or root, _commit_msg_args(n[2:]), "commit"
+    pairs = _gh_pr_text_args(n[2:]) if n[:2] == ["gh", "pr"] else None
+    return (here or root, pairs, "pr") if pairs is not None else None
+
+
 def ai_attribution(cmd: str, commands: List[Tuple[List[str], Optional[str]]], root: str) -> str:
     """Lý do chặn khi lệnh commit vào repo cấm ghi công AI mà message chứa tên model/URL phiên; không thì rỗng.
-    Chỉ xét `git commit` qua Bash, message thấy được lúc quyết định — không thấy: `echo … | git commit -F -`, file `-F`
-    do lệnh trước trong chuỗi tạo, commit qua tool MCP/`git merge -m`/`git tag -m` (LOOP-HARNESS-027)."""
+    Xét `git commit` và `gh pr create|edit|merge` qua Bash, chữ thấy được lúc quyết định — không thấy: `echo … | git
+    commit -F -`, file `-F` do lệnh trước trong chuỗi tạo, `git merge -m`/`git tag -m` (tool MCP: `mcp_attribution`)
+    (LOOP-HARNESS-027)."""
     for argv, here in commands:
-        n = normalize(argv)
-        gdir = (_git_dir(argv, here) if n[:2] == ["git", "commit"] else None) or root
-        if n[:2] != ["git", "commit"] or not AI_ATTRIBUTION_KEY_RE.search(_read_head(_xt_yaml_for(gdir))):
+        target = _attribution_target(argv, here, root)
+        if target is None or not AI_ATTRIBUTION_KEY_RE.search(_read_head(_xt_yaml_for(target[0]))):
             continue
+        gdir, pairs, kind = target
         # `-F` tương đối tính từ thư mục git chạy (sau `-C`), như git.
-        texts = [v if k == "m" else _read_head(posixpath.join(gdir, v)) for k, v in _commit_msg_args(n[2:])]
-        hit = next(
-            (m.group(0) for t in [*texts, *_heredoc_bodies(cmd)] for m in [AI_ATTRIBUTION_RE.search(t)] if m), ""
-        )
+        texts = [v if k == "m" else _read_head(posixpath.join(gdir, v)) for k, v in pairs]
+        bodies = _heredoc_bodies(cmd, GIT_COMMIT_TEXT_RE if kind == "commit" else GH_PR_TEXT_RE)
+        hit = next((m.group(0) for t in [*texts, *bodies] for m in [AI_ATTRIBUTION_RE.search(t)] if m), "")
         if hit:
+            what = "Commit" if kind == "commit" else "PR"
             return (
-                f"Commit ghi công AI bị khung chặn (`{hit}` — xt.yaml `ai_attribution: forbid`, LOOP-HARNESS-027): bỏ "
-                "dòng tên model/URL phiên khỏi message rồi commit lại."
+                f"{what} ghi công AI bị khung chặn (`{hit}` — xt.yaml `ai_attribution: forbid`, LOOP-HARNESS-027): bỏ "
+                "dòng tên model/URL phiên khỏi message/tiêu đề/thân rồi chạy lại."
             )
     return ""
+
+
+# Tool MCP ghi chữ lên PR/lịch sử git (LOOP-HARNESS-027, D-057): tiêu đề/thân PR, message commit (kể cả commit squash
+# của merge). Khoá đọc từ `xt.yaml` của dự án (repo đích của tool là chuỗi owner/repo, không có thư mục để dò).
+MCP_TEXT_RE = re.compile(
+    r"mcp__.+__(create_pull_request|update_pull_request|create_or_update_file|push_files|delete_file|merge_pull_request)"
+)
+MCP_TEXT_KEYS = ("title", "body", "message", "commit_title", "commit_message")
+
+
+def mcp_attribution(tool_name: str, tool_input: Dict[str, object], root: str) -> str:
+    """Lý do chặn khi tool MCP ghi PR/commit mang tên model/URL phiên ở dự án `ai_attribution: forbid`; không thì rỗng.
+    URL phiên do chính máy chủ MCP gắn thêm sau khi hook cho qua thì guard không thấy — CI/review là lớp sau."""
+    if not MCP_TEXT_RE.fullmatch(tool_name) or not AI_ATTRIBUTION_KEY_RE.search(_read_head(_xt_yaml_for(root))):
+        return ""
+    texts = [v for v in (tool_input.get(k) for k in MCP_TEXT_KEYS) if isinstance(v, str)]
+    hit = next((m.group(0) for t in texts for m in [AI_ATTRIBUTION_RE.search(t)] if m), "")
+    if not hit:
+        return ""
+    return (
+        f"Ghi công AI qua {tool_name} bị khung chặn (`{hit}` — xt.yaml `ai_attribution: forbid`, LOOP-HARNESS-027): "
+        "bỏ dòng tên model/URL phiên khỏi tiêu đề/thân/message rồi gọi lại."
+    )
 
 
 def _track_exports(res: Dict[str, object], argv: List[str], n: List[str]) -> Tuple[str, ...]:
@@ -3097,11 +3221,23 @@ def _eval_scripts(tokens: List[str]) -> List[str]:
     return [" ".join(n[1:]) for c in split_commands(tokens) for n in [normalize(c)] if n[:1] == ["eval"] and n[1:]]
 
 
+def _cat_heredoc_bodies(script: str) -> List[str]:
+    """`bash -c "$(cat <<'E'` ↵ … ↵ `E` ↵ `)"`, `eval "$(cat <<E …)"`: chuỗi lệnh là thân heredoc mà `cat` in ra."""
+    out: List[str] = []
+    for inner in _dollar_scripts(script):
+        for opener, m, body in _heredocs(inner):
+            if normalize(tokenize(opener[: m.start()]))[:1] == ["cat"]:
+                out.append("\n".join(body))
+    return out
+
+
 def _nested_scripts(cmd: str, tokens: List[str]) -> List[str]:
     """Lệnh chạy lồng (AUD-SEC-017): `sh -c '…'`, heredoc/here-string vào shell, `echo/printf '…' | sh`, `eval '…'`,
     backtick."""
     out = [s for c in split_commands(tokens) for s in [_shell_c_script(c)] if s]
-    out += _eval_scripts(tokens) + _backtick_scripts(strip_heredocs(cmd)) + _dollar_scripts(strip_heredocs(cmd))
+    out += _eval_scripts(tokens) + _backtick_scripts(strip_heredocs(literal_bodies_masked(cmd)))
+    out += _dollar_scripts(strip_heredocs(cmd))
+    out += [b for sc in list(out) for b in _cat_heredoc_bodies(sc)]
     out += _procsub_scripts(tokens)
     out += [s for body in _expanded_heredocs(cmd) for s in _dollar_scripts(body) + _backtick_scripts(body)]
     for pipe in pipelines(tokens):
@@ -3143,14 +3279,16 @@ def _join_tokens(words: List[str]) -> str:
 
 ASSIGN_ANY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*", re.S)  # giá trị có thể nhiều dòng (`x='bash <<E …'`)
 VAR_REF_RE = re.compile(r"\$(\w+)|\$\{(\w+)\}")
+VAR_DEFAULT_RE = re.compile(r"\$\{(\w+):?[-=]([^{}$`]*)\}")  # `${y:-rm}`, `${y=rm}`: chưa gán thì lấy giá trị mặc định
 
 
 def _sub_vars(text: str, env: Dict[str, str]) -> str:
+    text = VAR_DEFAULT_RE.sub(lambda m: env.get(m.group(1), m.group(2)), text)
     return VAR_REF_RE.sub(lambda m: env.get(m.group(1) or m.group(2), m.group(0)), text)
 
 
 VAR_VALUE_MAX = 4096  # giá trị biến dài hơn không được ghi nhận (chặn nhân đôi `a="$a$a"`)
-VAR_FOR_PICKS = 64  # số từ tối đa của `for x in …` được thử làm giá trị của x (nhiều hơn → chỉ 64 từ đầu)
+VAR_FOR_PICKS = 64  # số từ KHÁC NHAU tối đa của `for x in …` được thử làm giá trị của x (nhiều hơn → chặn)
 
 
 def _record_assigns(c: List[str], env: Dict[str, str], pick: int = 0) -> None:
@@ -3158,7 +3296,8 @@ def _record_assigns(c: List[str], env: Dict[str, str], pick: int = 0) -> None:
     `pick` của danh sách."""
     c = [t for t in c if t not in SHELL_KEYWORDS] if c[0] in SHELL_KEYWORDS else c  # `then x=…`, `do x=…`, `{ x=…`
     if c[:1] == ["for"] and len(c) > 3 and c[2] == "in":
-        env[c[1]] = _sub_vars(c[3:][min(pick, len(c) - 4)], env)[:VAR_VALUE_MAX]
+        words = list(dict.fromkeys(c[3:]))  # từ trùng chỉ thử một lần (`for x in a a … a rm`)
+        env[c[1]] = _sub_vars(words[min(pick, len(words) - 1)], env)[:VAR_VALUE_MAX]
         return
     words = c[1:] if c[:1] and c[0] in DECLARE_CMDS else c
     if words and all(ASSIGN_ANY_RE.fullmatch(t) for t in words):
@@ -3172,7 +3311,7 @@ def _record_assigns(c: List[str], env: Dict[str, str], pick: int = 0) -> None:
 def _for_words(c: List[str]) -> int:
     """Số từ trong danh sách của `for x in a b c` (0 nếu không phải vòng for)."""
     c = [t for t in c if t not in SHELL_KEYWORDS] if c[:1] and c[0] in SHELL_KEYWORDS else c
-    return len(c) - 3 if c[:1] == ["for"] and len(c) > 3 and c[2] == "in" else 0
+    return len(set(c[3:])) if c[:1] == ["for"] and len(c) > 3 and c[2] == "in" else 0
 
 
 def _expand_tokens(tokens: List[str], pick: int, split: bool) -> List[str]:
@@ -3189,7 +3328,7 @@ def _expand_tokens(tokens: List[str], pick: int, split: bool) -> List[str]:
             out.append(t)
             continue
         cur.append(t)
-        sub = _sub_vars(t, env) if env else t
+        sub = _sub_vars(t, env) if env or "${" in t else t
         out += _split_words(sub) if split and VAR_REF_RE.fullmatch(t) and sub != t else [sub]
     return out
 
@@ -3207,6 +3346,111 @@ def _var_scripts(tokens: List[str]) -> List[str]:
             seen.add(script)
             out.append(script)
     return out
+
+
+# Gán từ nguồn guard tính được giá trị: `x=$(echo '…')`, `x="$(printf '…')"`, `` x=`echo …` ``, `read [-r] x <<< '…'`.
+SUBST_ASSIGN_RE = re.compile(r"(?<![\w$])([A-Za-z_]\w*)=(\"?)(?:\$\(|`)[ \t]*(echo|printf)[ \t]([^()`\n]*)[)`]\2")
+READ_HERE_RE = re.compile(
+    r"(?<![\w$-])read((?:[ \t]+-[A-Za-z]+)*)((?:[ \t]+[A-Za-z_]\w*)+)[ \t]*<<<[ \t]*('[^'\n]*'|\"[^\"\n]*\"|[^\s;&|<>]+)"
+)
+LIFT_PICKS = 4  # số giá trị thử cho một gán từ `printf '%s…' a b` (định dạng và từng đối số)
+
+
+def _subst_values(m: "re.Match[str]") -> List[str]:
+    try:
+        words = shlex.split(m.group(4))
+    except ValueError:
+        return []
+    return _echoed_scripts([m.group(3), *words])[:LIFT_PICKS] if words else []
+
+
+def _read_assign(m: "re.Match[str]") -> str:
+    names = m.group(2).split()
+    try:
+        word = (shlex.split(m.group(3)) or [""])[0]
+    except ValueError:
+        return m.group(0)
+    parts = word.split(None, len(names) - 1) if len(names) > 1 else [word]
+    vals = parts + [""] * (len(names) - len(parts))
+    return " ".join(f"{k}={shlex.quote(v)}" for k, v in zip(names, vals))
+
+
+def _lifted_scripts(cmd: str) -> List[str]:
+    """Dòng lệnh với gán từ thay lệnh `echo`/`printf` và từ `read … <<< '…'` đổi thành gán chữ nguyên văn — rồi quét lại
+    (`_var_scripts` thay biến): `x=$(echo 'rm -rf ~'); $x`, `read x <<< 'rm -rf ~'; eval "$x"` (KNOWN_GAPS 3.4.0)."""
+    base = strip_heredocs(cmd)
+    text = READ_HERE_RE.sub(_read_assign, base)
+    variants = [text]
+    for m in list(SUBST_ASSIGN_RE.finditer(text))[:LIFT_PICKS]:
+        vals = _subst_values(m)  # rỗng (shlex lỗi): giữ nguyên gán, không đoán
+        variants = [v.replace(m.group(0), f"{m.group(1)}={shlex.quote(val)}", 1) for v in variants for val in vals][
+            : LIFT_PICKS * LIFT_PICKS
+        ] or variants
+    return [v for v in dict.fromkeys(variants) if v != base]
+
+
+# Bộ giải mã: lệnh đã mã hoá đi qua nó rồi vào shell (`echo cm0g… | base64 -d | sh`). Giải được từ chữ (echo/printf) thì
+# quét lệnh thật; không thì shell chạy thứ guard không đọc được — chặn.
+DECODE_FLAGS = {"base64": {"-d", "--decode", "-D"}, "basenc": {"-d", "--decode"}, "xxd": {"-r", "-rp", "-pr"}}
+DECOMPRESSORS = {"gunzip", "zcat", "bzcat", "xzcat", "unxz", "bunzip2", "zstdcat", "unzstd"}
+DECOMPRESS_FLAGS = {"gzip", "bzip2", "xz", "zstd", "lzma", "lz4"}
+OPAQUE_EXEC_WHY = "shell chạy lệnh đã mã hoá/nén (`{}`) — guard không đọc được lệnh thật"
+
+
+def _decoder(argv: List[str]) -> str:
+    """Tên bộ giải mã nếu `argv` giải mã/giải nén stdin: `base64 -d`, `xxd -r -p`, `openssl base64 -d`, `rev`, `gzip -d`…"""
+    n = normalize(argv)
+    if not n:
+        return ""
+    name, args = n[0], n[1:]
+    flags = {f for a in args if a.startswith("-") for f in ([a] + [f"-{c}" for c in a[1:]] if a[1:2] != "-" else [a])}
+    if name in DECODE_FLAGS and flags & DECODE_FLAGS[name]:
+        return name
+    if name == "openssl" and "-d" in flags and args[:1] in (["base64"], ["enc"]):
+        return name
+    if name == "rev" or name in DECOMPRESSORS or (name in DECOMPRESS_FLAGS and flags & {"-d", "--decompress"}):
+        return name
+    return ""
+
+
+def _decode(name: str, data: str) -> Optional[str]:
+    """Giải chữ `data` như bộ giải mã `name`; None nếu không giải được trong guard (nén, sai định dạng)."""
+    try:
+        if name in ("base64", "basenc", "openssl"):
+            return base64.b64decode("".join(data.split()), validate=True).decode()
+        if name == "xxd":
+            return bytes.fromhex("".join(data.split())).decode()
+    except (binascii.Error, ValueError, UnicodeDecodeError):
+        return None
+    if name == "rev":
+        return "\n".join(line[::-1] for line in data.split("\n"))
+    return None
+
+
+def _decoded_pipes(tokens: List[str]) -> Tuple[List[str], List[str]]:
+    """(lệnh giải được, câu hỏi chặn) cho mỗi ống `… | <giải mã>… | sh`: nguồn là echo/printf chữ → giải và quét."""
+    scripts: List[str] = []
+    asks: List[str] = []
+    for pipe in pipelines(tokens):
+        for i, down in enumerate(pipe):
+            if i == 0 or not _stdin_shell(down):
+                continue
+            j = i - 1
+            chain: List[str] = []
+            while j >= 0 and _decoder(pipe[j]):
+                chain.insert(0, _decoder(pipe[j]))
+                j -= 1
+            if not chain:
+                continue
+            src = normalize(pipe[j]) if j >= 0 else []
+            text: Optional[str] = _echoed_scripts(src)[0] if src[:1] in (["echo"], ["printf"]) else None
+            for name in chain:
+                text = _decode(name, text) if text is not None else None
+            if text is not None:
+                scripts.append(text)
+            else:
+                asks.append(OPAQUE_EXEC_WHY.format(" | ".join(chain)))
+    return scripts, asks
 
 
 # Lệnh chạy phần còn lại của dòng lệnh (hoặc một chuỗi lệnh sau cờ `-c`) — tuỳ chọn mỗi lệnh khác nhau nên quét MỌI
@@ -3419,11 +3663,15 @@ def _scan_nested(
 ) -> str:
     """Quét đệ quy lệnh lồng; trả lý do deny (rỗng nếu không), thêm câu hỏi vào `asks`. Lệnh trong container không
     đụng file máy → chặn/hỏi của nó thành hỏi (ra mạng, thêm gói vẫn là việc thật)."""
+    if max([0, *(_for_words(c) for c in split_commands(tokens))]) > VAR_FOR_PICKS:
+        return f"Lệnh quá phức tạp để guard quét hết (vòng `for` hơn {VAR_FOR_PICKS} giá trị khác nhau): chia nhỏ lệnh."
     asks += _opaque_shells(tokens) + _xargs_evidence(tokens)
     host, ctr = _wrapped_scripts(tokens)
     asks += _container_asks(ctr, depth, budget)  # mọi lệnh, không cắt theo số lượng (review #82)
-    rewritten = _var_scripts(tokens) + _runner_scripts(tokens)
-    nested = _nested_scripts(cmd, tokens) + host + _exec_api_scripts(_interp_scripts(cmd, tokens))
+    decoded, opaque = _decoded_pipes(tokens)
+    asks += opaque
+    rewritten = _var_scripts(tokens) + _runner_scripts(tokens) + _lifted_scripts(cmd)
+    nested = _nested_scripts(cmd, tokens) + host + _exec_api_scripts(_interp_scripts(cmd, tokens)) + decoded
     return _scan_scripts(rewritten, root, cwd, depth, asks, 0, budget, rewrites) or _scan_scripts(
         nested, root, cwd, depth, asks, 1, budget
     )
@@ -3433,12 +3681,15 @@ def _scan_nested(
 
 INTERP_RE = re.compile(r"(python|node|perl|ruby|php|deno|bun)[0-9.]*")
 INTERP_SCRIPT_FLAGS = {"-c", "-e", "-E", "--eval", "-p", "--print", "-r"}
+PERL_E_FLAG_RE = re.compile(r"-[a-zA-DF-Z]+[eE]")  # cờ gộp `-ne`, `-pe`, `-lne`: đối số kế tiếp là script
 # Dấu hiệu script GHI/XOÁ file (đọc thì không hỏi): open(..., "w"), .write_text(, os.remove, shutil.*, fs.writeFileSync…
 WRITE_HINT_RE = re.compile(
     r"open\([^)]*,\s*(?:mode\s*=\s*)?[rbt]?['\"][rbt]?[wax+]|\.(?:write_text|write_bytes|unlink|rmdir|rename|replace|touch)\("
     r"|\b(?:os\.(?:remove|unlink|rename|replace|truncate)|shutil\.\w+|writeFile\w*|appendFile\w*|rmSync|unlinkSync"
-    r"|renameSync|copyFile\w*|File\.write|IO\.write|file_put_contents|unlink)\b"
+    r"|renameSync|copyFile\w*|File\.write|IO\.write|file_put_contents|unlink|rename|truncate)\b"
+    r"|\bopen\b[^;\n]{0,200}['\"]\+?>"  # perl `open(F, '>', …)`, `open(F, ">f")` (trần độ dài: tuyến tính)
 )
+PERL_OPEN_MODE_RE = re.compile(r"^\+?(?:>>?|<)[ \t]*")
 STR_LITERAL_RE = re.compile(r"""['"]([^'"\s]{2,})['"]""")
 GUARDED_KINDS = {"secret", "gate", "evidence", "capability"}
 
@@ -3454,7 +3705,7 @@ def _interp_scripts(cmd: str, tokens: List[str]) -> List[str]:
     for c in split_commands(tokens):
         n = normalize(c)
         if n and INTERP_RE.fullmatch(n[0]):
-            out += [n[i + 1] for i, a in enumerate(n[:-1]) if a in INTERP_SCRIPT_FLAGS]
+            out += [n[i + 1] for i, a in enumerate(n[:-1]) if a in INTERP_SCRIPT_FLAGS or PERL_E_FLAG_RE.fullmatch(a)]
     return out + _heredoc_scripts(cmd, _stdin_interp)
 
 
@@ -3536,9 +3787,10 @@ def interp_write_asks(cmd: str, tokens: List[str], root: str) -> List[str]:
     for script in _interp_scripts(cmd, tokens):
         if not WRITE_HINT_RE.search(script):
             continue
-        for lit in STR_LITERAL_RE.findall(script):
+        for raw in STR_LITERAL_RE.findall(script):
+            lit = PERL_OPEN_MODE_RE.sub("", raw)  # perl 2 đối số `open(F, ">f")`: chế độ dính vào tên file
             kind = path_kind(rel_path(lit, root), root) if ("/" in lit or "." in lit) and lit not in ("..",) else ""
-            direct = _direct_write(script, lit)
+            direct = _direct_write(script, raw) or (lit != raw and ">" in raw[: len(raw) - len(lit)])
             if direct and _is_fence(lit, root):
                 asks.append(FENCE_WHY.format(f"{lit} — script trình thông dịch"))
             elif direct and kind == "secret":  # AUD-SEC-049: dấu chặn như chuyển hướng, không chỉ hỏi
@@ -3558,6 +3810,8 @@ DIRECT_WRITE_FMT = (
     r"|(?:\bos\.(?:remove|unlink|rename|replace|truncate)|\bshutil\.\w+|writeFile\w*|appendFile\w*|unlinkSync|rmSync"
     r"|renameSync|copyFile\w*|File\.write|IO\.write|file_put_contents|\bunlink)\(\s*(?:[^)]*,\s*)?{q}"
     r"|Path\(\s*{q}\s*\)\s*\.(?:write_text|write_bytes|unlink|rename|replace|touch|open)\("
+    r"|\b(?:unlink|rename|truncate)[ \t]+(?:[^;\n)]*,[ \t]*)?{q}"  # perl/ruby/php gọi không ngoặc: `unlink ".autopilot/x"`
+    r"|\bopen[ \t]*\(?[^,;\n]*,[ \t]*['\"]\+?(?:>|>>|w|a)['\"][ \t]*,[ \t]*{q}"  # perl `open(F, '>', '…')`
 )
 
 
@@ -3668,7 +3922,9 @@ def bash_decision(
         return res
     commands = _commands_with_cwd(tokens, cwd or root)
     deny_reason = next((r for argv, here in commands if (r := _scan_command(argv, root, res, asks, here))), "")
-    deny_reason = deny_reason or (ai_attribution(cmd, commands, root) if res["commit"] else "")
+    deny_reason = deny_reason or (
+        ai_attribution(cmd, commands, root) if res["commit"] or GH_PR_TEXT_RE.search(cmd) else ""
+    )
     if deny_reason:
         res.update(decision="deny", reason=deny_reason)
         return res
@@ -3702,6 +3958,7 @@ DANGER_MARKERS = (
     "bỏ qua hook của dự án",
     "ghi file bí mật qua Bash",
     "tay bằng chứng",  # ghi/xoá tay `.autopilot/` = bằng chứng giả (ADR-0026)
+    "lệnh đã mã hoá/nén",  # `… | base64 -d | sh` từ nguồn guard không giải được
 )
 
 
@@ -3722,8 +3979,9 @@ MERGE_CMD_RE = re.compile(r"\bgh\s+(pr\b.*\bmerge|api)\b", re.S)
 
 def _failure_decision(mode: str, payload: object, cmd: object) -> Dict[str, object]:
     """Quyết định khi guard ném lỗi: fail-open về luồng (ADR-0002), trừ merge/`gh api` và tool MCP merge (payload đọc
-    được — stdin rác không phải lời gọi tool, LOOP-HARNESS-018) → hỏi."""
-    if (mode == "mcp" and isinstance(payload, dict)) or (
+    được — stdin rác không phải lời gọi tool, LOOP-HARNESS-018) → hỏi; tool MCP ghi PR/commit khác cho qua (D-057)."""
+    tool = payload.get("tool_name") if isinstance(payload, dict) else None
+    if (mode == "mcp" and isinstance(tool, str) and MCP_MERGE_RE.fullmatch(tool)) or (
         mode == "bash" and isinstance(cmd, str) and MERGE_CMD_RE.search(cmd)
     ):
         return {"decision": "ask", "reason": f"guard lỗi khi kiểm merge/ghi GitHub — {UNVERIFIED_ASK}"}
