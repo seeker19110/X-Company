@@ -37,11 +37,29 @@ export const RULES = [
   ],
   [".github/workflows/ci.yml", "check-sbom.mjs", "CMP-LIC-003: SBOM"],
   [".github/workflows/ci.yml", "name: sbom", "CMP-LIC-003: SBOM artifact"],
-  [".release-please-manifest.json", '"0.1.0"', "WF-REL-001: manifest"],
   ["release-please-config.json", '"release-type": "node"', "WF-REL-001: release-type node"],
   ["docs/ops/VULN-SLA.md", "osv-scanner", "OPS-MAINT-004: VULN-SLA nêu osv"],
   ["docs/ops/VULN-SLA.md", "SBOM", "OPS-MAINT-004: VULN-SLA nêu SBOM"],
 ];
+
+const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+
+/** Manifest release-please: có phiên bản SemVer cho gói "." và khớp package.json. Không ghim số cụ thể —
+ *  Release PR nâng số này nên ghim cứng làm mọi Release PR đỏ. */
+export function checkReleaseManifest(readFn = read) {
+  let manifest, pkg;
+  try {
+    manifest = JSON.parse(readFn(".release-please-manifest.json"));
+    pkg = JSON.parse(readFn("package.json"));
+  } catch {
+    return ["WF-REL-001: .release-please-manifest.json hoặc package.json không phải JSON hợp lệ"];
+  }
+  const v = manifest?.["."];
+  if (typeof v !== "string" || !SEMVER.test(v))
+    return [`WF-REL-001: manifest (.release-please-manifest.json thiếu phiên bản SemVer cho ".")`];
+  if (pkg?.version !== v) return [`WF-REL-001: package.json version "${pkg?.version}" khác manifest "${v}"`];
+  return [];
+}
 
 export function checkWiring(readFn = read) {
   const errs = RULES.filter(([f, s]) => !readFn(f).includes(s)).map(
@@ -51,6 +69,7 @@ export function checkWiring(readFn = read) {
   if (!/contents:\s*write/.test(rp)) errs.push("WF-REL-001: release.yml thiếu contents: write ở job");
   if (/^permissions:\s*\n\s+contents:\s*write/m.test(rp))
     errs.push("WF-REL-001: quyền write phải ở job, không ở workflow");
+  errs.push(...checkReleaseManifest(readFn));
   const cq = readFn(".github/workflows/codeql.yml");
   // Khối permissions cấp workflow = phần trước `jobs:` kể từ dòng `permissions:` (không dùng regex lồng lượng từ — ReDoS).
   const cqHead = cq.split("jobs:")[0] ?? "";

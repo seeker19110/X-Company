@@ -34,12 +34,33 @@ function field(body, label) {
   return m === null ? null : stripComments(m[1]).trim();
 }
 
-export function checkPr({ title, body, files }) {
+const RELEASE_FILES = new Set([
+  "CHANGELOG.md",
+  "package.json",
+  "package-lock.json",
+  ".release-please-manifest.json",
+]);
+
+/** Release PR do release-please sinh (WF-REL-001): đúng bot, đúng nhánh, đúng tiêu đề và chỉ đổi tệp phiên bản.
+ *  Bot không điền mẫu mô tả nên miễn các mục mô tả; mọi điều kiện phải đúng cùng lúc, lệch một là PR thường. */
+export function isReleasePr({ title, files, author, head }) {
+  return (
+    author === "github-actions[bot]" &&
+    typeof head === "string" &&
+    head.startsWith("release-please--") &&
+    /^chore\(main\): release \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(title) &&
+    files.length > 0 &&
+    files.every((f) => RELEASE_FILES.has(f))
+  );
+}
+
+export function checkPr({ title, body, files, author, head }) {
   const errors = [];
   const warnings = [];
   const b = body ?? "";
   if (!TITLE.test(title)) errors.push(`tiêu đề phải theo Conventional Commits (${TYPES}): "${title}"`);
   if ([...title].length > MAX_SUBJECT) errors.push(`tiêu đề ${[...title].length} ký tự > ${MAX_SUBJECT}`);
+  if (isReleasePr({ title, files, author, head })) return { errors, warnings };
   for (const s of REQUIRED_SECTIONS) {
     const c = section(b, s);
     if (c === null || c === "") errors.push(`thiếu hoặc để trống mục "## ${s}"`);
@@ -86,7 +107,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const files = execFileSync("git", ["diff", "--name-only", base, "HEAD"], { encoding: "utf8" })
     .split("\n")
     .filter(Boolean);
-  const { errors, warnings } = checkPr({ title: pr.title, body: pr.body ?? "", files });
+  const { errors, warnings } = checkPr({
+    title: pr.title,
+    body: pr.body ?? "",
+    files,
+    author: pr.user?.login,
+    head: pr.head?.ref,
+  });
   for (const w of warnings) console.log(`::warning::${w}`);
   for (const e of errors) console.log(`::error::${e}`);
   if (errors.length > 0) process.exit(1);

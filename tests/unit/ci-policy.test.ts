@@ -10,7 +10,13 @@ import { belowFloor, lowered } from "../../scripts/check-coverage-baseline.mjs";
 import { quickstartCommands } from "../../scripts/readme-smoke.mjs";
 
 type PrResult = { errors: string[]; warnings: string[] };
-const pr = checkPr as (x: { title: string; body: string; files: string[] }) => PrResult;
+const pr = checkPr as (x: {
+  title: string;
+  body: string;
+  files: string[];
+  author?: string;
+  head?: string;
+}) => PrResult;
 
 const BODY = `## Mô tả
 Sửa lỗi X.
@@ -77,6 +83,25 @@ describe("pr-policy (WF-REVIEW-002, STD-PROC-004, QA-STRATEGY)", () => {
       files: ["package-lock.json", "migrations/0099_x.sql"],
     }).errors;
     assert.equal(errs.length, 3, errs.join(" | "));
+  });
+
+  test("Release PR của release-please được miễn mục mô tả; lệch bot/nhánh/tiêu đề/tệp là PR thường", () => {
+    const rel = {
+      title: "chore(main): release 1.0.0",
+      body: ":robot: I have created a release",
+      files: ["CHANGELOG.md", "package.json", "package-lock.json", ".release-please-manifest.json"],
+      author: "github-actions[bot]",
+      head: "release-please--branches--main--components--x-company",
+    };
+    assert.deepEqual(pr(rel).errors, []);
+    for (const over of [
+      { author: "someone" },
+      { head: "feat/x" },
+      { title: "chore(main): cập nhật" },
+      { files: [...rel.files, "lib/a.ts"] },
+      { files: [] },
+    ])
+      assert.ok(pr({ ...rel, ...over }).errors.length > 0, JSON.stringify(over));
   });
 
   test("đổi API mà không chạm tài liệu → cảnh báo (không chặn)", () => {
