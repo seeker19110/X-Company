@@ -31,3 +31,6 @@ Nâng ngưỡng = sửa `perf-budget.json`/`lighthouserc.json` trong PR kèm lý
 - Không có RUM/CrUX: CWV p75 thực địa và INP thật chưa đo được trước khi có người dùng production (PRF-WEB-005 cần ≥ 5 URL ở p75).
 - Lighthouse CI là job `lighthouse`; đưa vào required check của ruleset (`.github/rulesets/main.json`) là bước import ruleset của chủ dự án.
 - Ngân sách kích thước image container (XC-GREEN-002) và thời gian/số job CI mỗi PR chưa có — dự án chưa build image container.
+
+## Đo tải cục bộ (T-049, faithful-fixture)
+`npm run -s perf:load` (`scripts/perf-load.mjs`, bộ tải node:http keep-alive) đánh bản build production + Postgres tạm ở cổng riêng (3300), ghi `docs/perf/load-report-<ngày>.md` + `.json` với 5 trường QA-PERF-006 (commit, môi trường, thiết bị/mạng, tải, ngày) và exit ≠ 0 khi vượt ngân sách. Ngân sách ở hằng `BUDGETS` trong script (kèm lý do; ghi chấm công/OT dùng nguyên SLO p95 < 1 s); kết nối DB ≤ 12. Số đo là máy dev, **không** phải CWV p75/INP thực địa, mạng thật hay tải đa máy — xem mục "Không chứng minh" của từng báo cáo. Kết quả `npm run lighthouse` (nếu có `.lighthouseci/`) được gộp vào cùng báo cáo.

@@ -7,6 +7,11 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { startup } = await import("./lib/nen/startup.ts");
     startup(); // kiểm cấu hình lúc khởi động: thiếu/sai → thoát ≠ 0 (BASE-CFG-002)
+    const { env } = await import("./lib/nen/env.ts");
+    if (env("NEXT_PHASE") !== "phase-production-build") {
+      const { registerKms } = await import("./adapters/register-kms.ts");
+      registerKms(); // KMS_PROVIDER=transit: kiểm cấu hình (sai → thoát 78) + đăng ký transport KMS (T-052)
+    }
     const { registerShutdown } = await import("./lib/nen/shutdown.ts");
     registerShutdown(); // SIGTERM → readiness 503, chờ request đang chạy, đóng pool, thoát 0 (ARC-RES-009)
   }

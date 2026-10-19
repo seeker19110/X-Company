@@ -26,6 +26,9 @@ const GOOD = {
   QR_SIGNING_KEYS: "k1:qr-key-0123456789abcdef0123456789abcdef",
 } as const;
 
+// Khoá thử ghép lúc chạy (không literal khoá): 32 byte base64.
+const DATA_KEY = Buffer.alloc(32, 7).toString("base64");
+
 const issueNames = (fn: () => unknown): string[] => {
   try {
     fn();
@@ -157,7 +160,13 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     ...GOOD,
     MIGRATE_DATABASE_URL: "postgres://owner:owner-pw-leak@db:5432/xc",
     NODE_ENV: "production",
+    DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
+    DATA_INDEX_KEY: DATA_KEY,
     METRICS_TOKEN: "metrics-leak-0123456789abcdef",
+    ALERT_WEBHOOK_URL: "https://hooks.example/webhook-leak-0123456789",
+    KMS_PROVIDER: "transit",
+    KMS_TRANSIT_ADDR: "https://kms.example.test:8200",
+    KMS_TRANSIT_TOKEN: "kms-token-leak-0123456789",
     FILE_STORAGE_DIR: "/srv/files",
   };
 
@@ -169,7 +178,18 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     assert.ok(secrets.length >= 4);
     for (const n of secrets) assert.equal(masked[n], "***", n);
     const dump = JSON.stringify(masked);
-    for (const leaked of ["hunter2", SECRET, "qr-key-0123", "owner-pw-leak", "metrics-leak"])
+    assert.equal(masked.DATA_ENCRYPTION_KEYS, "***");
+    assert.equal(masked.DATA_INDEX_KEY, "***");
+    for (const leaked of [
+      "hunter2",
+      SECRET,
+      "qr-key-0123",
+      "owner-pw-leak",
+      "metrics-leak",
+      "webhook-leak",
+      "kms-token-leak",
+      DATA_KEY,
+    ])
       assert.equal(dump.includes(leaked), false, `lộ ${leaked}`);
     assert.equal(masked.NODE_ENV, "production"); // không bí mật thì giữ nguyên
     assert.equal(masked.FILE_STORAGE_DIR, "/srv/files");
@@ -184,6 +204,68 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     assert.match(text, /^APP_ORIGIN=https:\/\/x-company\.example$/m);
     assert.match(text, /^SESSION_SECRET=\*\*\*$/m);
     assert.equal(text.includes(SECRET), false);
+  });
+});
+
+describe("khoá mã hoá dữ liệu lúc lưu (T-048) và cờ GPS (T-051)", () => {
+  test("production thiếu khoá → lỗi nêu TÊN biến (fail-closed); dev/test không bắt buộc", () => {
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, NODE_ENV: "production" })),
+      ["DATA_ENCRYPTION_KEYS", "DATA_INDEX_KEY"],
+    );
+    assert.equal(loadEnv({ ...GOOD }).DATA_ENCRYPTION_KEYS, undefined);
+  });
+
+  test("khoá sai định dạng/độ dài/trùng id bị từ chối, không lộ giá trị", () => {
+    for (const bad of ["k1:ngan", "khongcoid", `k1:${DATA_KEY},k1:${DATA_KEY}`, `bad id:${DATA_KEY}`]) {
+      const names = issueNames(() => loadEnv({ ...GOOD, DATA_ENCRYPTION_KEYS: bad }));
+      assert.deepEqual(names, ["DATA_ENCRYPTION_KEYS"]);
+    }
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, DATA_INDEX_KEY: "ngan" })),
+      ["DATA_INDEX_KEY"],
+    );
+    assert.equal(
+      loadEnv({
+        ...GOOD,
+        DATA_ENCRYPTION_KEYS: `k2:${DATA_KEY},k1:${DATA_KEY}`,
+      }).DATA_ENCRYPTION_KEYS?.startsWith("k2:"),
+      true,
+    );
+  });
+
+  test("KMS (T-052): mặc định env; transit bắt buộc ADDR + TOKEN; production + transit không bắt buộc khoá env nhưng vẫn bắt DATA_INDEX_KEY", () => {
+    assert.equal(loadEnv({ ...GOOD }).KMS_PROVIDER, "env");
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, KMS_PROVIDER: "transit" })),
+      ["KMS_TRANSIT_ADDR", "KMS_TRANSIT_TOKEN"],
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, KMS_PROVIDER: "vault" })),
+      ["KMS_PROVIDER"],
+    );
+    const transit = { ...GOOD, KMS_PROVIDER: "transit", KMS_TRANSIT_ADDR: "https://kms.example.test:8200" };
+    const tok = ["kms", "tok", "12345678"].join("-"); // ghép lúc chạy: không có literal giống bí mật
+    assert.equal(loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok }).KMS_TRANSIT_MOUNT, "transit");
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: tok, NODE_ENV: "production" })),
+      ["DATA_INDEX_KEY"],
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...transit, KMS_TRANSIT_TOKEN: "ngan" })),
+      ["KMS_TRANSIT_TOKEN"],
+    );
+    for (const bad of [{ KMS_TIMEOUT_MS: "10" }, { KMS_RETRIES: "9" }, { KMS_TRANSIT_KEY: "a/b" }])
+      assert.equal(issueNames(() => loadEnv({ ...GOOD, ...bad })).length, 1);
+  });
+
+  test("GEO_CAPTURE_ENABLED mặc định TẮT; chỉ true|false", () => {
+    assert.equal(loadEnv({ ...GOOD }).GEO_CAPTURE_ENABLED, false);
+    assert.equal(loadEnv({ ...GOOD, GEO_CAPTURE_ENABLED: "true" }).GEO_CAPTURE_ENABLED, true);
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...GOOD, GEO_CAPTURE_ENABLED: "1" })),
+      ["GEO_CAPTURE_ENABLED"],
+    );
   });
 });
 

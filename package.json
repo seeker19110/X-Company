@@ -24,6 +24,8 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "worker": "tsx scripts/worker.ts",
     "retention:run": "tsx scripts/retention.ts",
+    "crypto:rotate": "tsx scripts/crypto-rotate.ts",
+    "crypto:backfill": "tsx scripts/crypto-backfill.ts",
     "audit:verify": "tsx scripts/verify-audit-chain.ts",
     "check:repo-docs": "node scripts/check-repo-docs.mjs",
     "check:docs": "node scripts/check-docs.mjs",
@@ -56,8 +58,17 @@
     "check:tokens": "node scripts/check-tokens.mjs",
     "lighthouse": "scripts/with-test-db.sh scripts/lighthouse.sh",
     "dast": "scripts/with-test-db.sh scripts/dast.sh",
+    "dast:probes": "scripts/with-test-db.sh node scripts/dast-baseline.mjs",
+    "perf:load": "scripts/with-test-db.sh node scripts/perf-load.mjs",
     "check:perf-budget": "node scripts/check-perf-budget.mjs",
-    "check:alerts": "node scripts/check-alerts.mjs"
+    "check:alerts": "node scripts/check-alerts.mjs",
+    "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
+    "backup": "scripts/backup.sh",
+    "backup:drill": "scripts/restore-drill.sh",
+    "kms:drill": "scripts/with-test-db.sh scripts/kms-dev.sh run -- tsx scripts/kms-rotation-drill.ts",
+    "tools:install": "node scripts/tools/install-tool.mjs install",
+    "backup:offsite": "scripts/backup-offsite.sh",
+    "backup:offsite:drill": "scripts/restore-offsite-drill.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

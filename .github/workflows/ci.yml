@@ -40,6 +40,17 @@ jobs:
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
+      # pg_dump phải cùng bản chính với máy chủ Postgres 17 của service (test sao lưu/khôi phục, mã hoá, cảnh báo):
+      # bản trong image runner cũ hơn → "server version mismatch". Cài client 17 từ kho PGDG chính thức.
+      - name: Cài postgresql-client-17 (khớp máy chủ)
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+      # T-052/T-053: test KMS (OpenBao) và off-site (restic) chạy nhị phân THẬT, không skip. Tải bản GHIM phiên bản + sha256 vào .tools/
+      # (scripts/tools/install-tool.mjs; sai sha256 → dừng). Không cache để không thêm action chưa ghim SHA; ~85 MB mỗi lần chạy.
+      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
+        run: node scripts/tools/install-tool.mjs install openbao restic
       # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
       - name: Typecheck và lint trước build
         run: |
@@ -127,6 +138,9 @@ jobs:
           cache: npm
       - name: PostgreSQL của runner vào PATH (initdb/pg_ctl cho scripts/with-test-db.sh)
         run: echo "$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)" >> "$GITHUB_PATH"
+      # `npm test` của README gồm test KMS/off-site chạy nhị phân thật (không skip): cài bản ghim sha256 như job quality.
+      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
+        run: node scripts/tools/install-tool.mjs install openbao restic
       - name: Lệnh trong README (trích tự động, chạy nguyên văn)
         run: node scripts/readme-smoke.mjs
 
@@ -286,4 +300,48 @@ jobs:
           name: zap-report
           path: zap-out/
           retention-days: 7
+          if-no-files-found: ignore
+
+  dast-probes:
+    name: dast-probes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # SEC-WEB-004: DAST cục bộ (bộ probe tự viết + Chromium) trên bản build production với Postgres service và DB seed — faithful-fixture, không phải staging.
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cài Chromium đúng phiên bản Playwright
+        run: npx --no-install playwright install --with-deps chromium
+      - name: DAST cục bộ (header, cookie, XSS, CSRF, open redirect, rò lỗi, đường dẫn lộ, giới hạn tần suất, BOLA)
+        run: npm run -s dast:probes
+      - name: Lưu báo cáo DAST
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dast-report
+          path: |
+            docs/security/dast-report.md
+            docs/security/dast-report.json
+          retention-days: 30
           if-no-files-found: ignore

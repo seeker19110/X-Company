@@ -3697,10 +3697,10 @@ def _touches_hard_key(f: Dict[str, Any], repo: str = "", base_sha: str = "", hea
     return False
 
 
-def _gh_api(path: str, paginate: bool = False) -> List[Any]:
-    """`gh api` (REST, không GraphQL — phiên Claude Code chặn GraphQL) → danh sách giá trị JSON; `--paginate` in mỗi
-    trang một giá trị liền nhau (`[…][…]`) nên đọc lần lượt. `{owner}`/`{repo}`/`{branch}` do gh thay theo repo hiện tại."""
-    cmd = ["gh", "api", *(["--paginate"] if paginate else []), path]
+def _gh_api_once(path: str) -> List[Any]:
+    """Một lần gọi `gh api` (REST, không GraphQL — phiên Claude Code chặn GraphQL) → danh sách giá trị JSON liền nhau.
+    `{owner}`/`{repo}`/`{branch}` do gh thay theo repo hiện tại."""
+    cmd = ["gh", "api", path]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=GH_TIMEOUT)
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -3713,6 +3713,38 @@ def _gh_api(path: str, paginate: bool = False) -> List[Any]:
         out.append(val)
         rest = rest[end:].lstrip()
     return out
+
+
+GH_MAX_PAGES = 50  # trần an toàn: 50 trang × per_page, tránh vòng lặp vô hạn khi API lặp trang
+
+
+def _gh_page_len(val: Any) -> int:
+    """Số phần tử của một trang: mảng → len; object có một mảng con (check-runs/statuses) → len mảng đó."""
+    if isinstance(val, list):
+        return len(val)
+    if isinstance(val, dict):
+        arrs = [v for v in val.values() if isinstance(v, list)]
+        return max((len(a) for a in arrs), default=0)
+    return 0
+
+
+def _gh_api(path: str, paginate: bool = False) -> List[Any]:
+    """REST qua `gh api` → danh sách giá trị JSON (mỗi trang một giá trị). Phân trang TỰ LÀM bằng `page=N` trên chính
+    đường `repos/<chủ>/<repo>/…`: `gh --paginate` đi theo header Link tới `repositories/{id}/…` mà proxy của phiên Claude
+    Code từ chối (403) nên `merge-check` hỏng với PR có nhiều check/commit/tệp. Dừng khi trang ngắn hơn `per_page`
+    (mặc định 30 của GitHub, hoặc giá trị `per_page` trong `path`) hoặc rỗng."""
+    if not paginate:
+        return _gh_api_once(path)
+    m = re.search(r"[?&]per_page=(\d+)", path)
+    per_page = int(m.group(1)) if m else 30
+    sep = "&" if "?" in path else "?"
+    pages: List[Any] = []
+    for n in range(1, GH_MAX_PAGES + 1):
+        got = _gh_api_once(f"{path}{sep}page={n}")
+        pages.extend(got)
+        if not got or _gh_page_len(got[-1]) < per_page:
+            break
+    return pages
 
 
 def _gh_one(path: str) -> Dict[str, Any]:

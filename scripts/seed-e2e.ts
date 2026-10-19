@@ -4,6 +4,7 @@
 // Ghi thông tin đăng nhập ra e2e/.seed.json (gitignore).
 import { writeFileSync } from "node:fs";
 import pg from "pg";
+import { registerKms } from "../adapters/register-kms.ts";
 import { setPool, withTx } from "../lib/db/index.ts";
 import {
   assignEmployment,
@@ -23,6 +24,7 @@ import type { Role, ScopeType } from "../lib/authz/index.ts";
 const PASSWORD = "E2e-mat-khau-dai-2026!";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 setPool(pool);
+registerKms(); // KMS_PROVIDER=transit (nếu bật) cần transport trước khi seed ghi dữ liệu mã hoá
 const sys = { userId: null };
 
 type Users = Record<string, { email: string; userId: string; employeeId: string }>;

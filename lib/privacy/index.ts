@@ -1,25 +1,35 @@
-// Quyền chủ thể dữ liệu (DSAR, T-040): tiếp nhận yêu cầu (access | delete | withdraw_consent | restrict), hạn xử lý cấu hình
-// (DSAR_DAYS), xử lý từng loại, truy vấn quá hạn. Mọi ghi nằm trong giao dịch của người gọi kèm `appendAudit` (không PII:
+// Quyền chủ thể dữ liệu (DSAR, T-040/T-044): tiếp nhận yêu cầu (access | rectify | export | delete | withdraw_consent |
+// restrict | object), hạn xử lý THEO LOẠI (deadlines.ts, D-029) + hạn phản hồi "đã nhận" + gia hạn một lần, xử lý từng loại,
+// truy vấn quá hạn. Mọi ghi nằm trong giao dịch của người gọi kèm `appendAudit` (không PII:
 // chỉ mã nghiệp vụ/đếm/danh mục). Quyền `privacy.manage` kiểm ở route (lib/privacy/routes.ts); hàm ở đây tin người gọi.
 import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
+import { revealTextAsync } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { getStorage } from "../files/storage.ts";
 import { AppError } from "../nen/app-error.ts";
-import { env } from "../nen/env.ts";
 import { fetchLimit, MAX_PAGE, toPage, type Page, type PageRequest } from "../nen/pagination.ts";
 import { BUSINESS_TZ } from "../nen/time.ts";
 import { anonymizeById } from "../worker/retention.ts";
 import { activePurposes, listConsents, withdrawConsent, type SubjectType } from "./consent.ts";
 import { CATEGORY_AUDIT_LOG, CATEGORY_CONSENT_EVIDENCE, RETAINED_BY_SUBJECT } from "./retained.ts";
-import { MS_PER_DAY } from "../nen/units.ts";
+import {
+  computeDeadlines,
+  dsarAnyOverdueSql,
+  dsarExecOverdueSql,
+  dsarRespondOverdueSql,
+  dsarConfig,
+  extendedDueAt,
+  isPastDue,
+  KINDS,
+  type DsarConfig,
+  type RequestKind,
+} from "./deadlines.ts";
 import { t } from "../i18n/index.ts";
 
 export { type SubjectType } from "./consent.ts";
+export { KINDS, type RequestKind } from "./deadlines.ts";
 
-const DAY_MS = MS_PER_DAY;
-export const KINDS = ["access", "delete", "withdraw_consent", "restrict"] as const;
-export type RequestKind = (typeof KINDS)[number];
 export type RequestStatus = "received" | "in_progress" | "done" | "rejected";
 const SUBJECT_TYPES = ["inquiry", "job_application", "employee"] as const;
 
@@ -28,9 +38,6 @@ export interface PrivacyActor {
   companyId: string;
   requestId?: string | null;
 }
-
-/** Hạn xử lý (ngày) — CMP-INTL-007. Giá trị mặc định là giả định, pháp chế xác minh theo NĐ 356/2025. */
-export const dsarDays = (): number => env("DSAR_DAYS");
 
 export const CreateRequestInput = z.object({
   subject_type: z.enum(SUBJECT_TYPES),
@@ -54,6 +61,12 @@ export interface RequestRow {
   status: RequestStatus;
   received_at: Date;
   due_at: Date;
+  /** Hạn phản hồi "đã nhận"; null = yêu cầu cũ (trước T-044), không áp hạn phản hồi. */
+  respond_due_at: Date | null;
+  responded_at: Date | null;
+  extended_at: Date | null;
+  extension_days: number | null;
+  extension_reason: string | null;
   closed_at: Date | null;
   handler: string | null;
   note: string | null;
@@ -62,7 +75,7 @@ export interface RequestRow {
 }
 
 const COLS =
-  "id, company_id, subject_type, subject_ref, subject_id, kind, status, received_at, due_at, closed_at, handler, note, reject_reason, result";
+  "id, company_id, subject_type, subject_ref, subject_id, kind, status, received_at, due_at, respond_due_at, responded_at, extended_at, extension_days, extension_reason, closed_at, handler, note, reject_reason, result";
 
 const TABLE_OF = { inquiry: "inquiry", job_application: "job_application", employee: "employee" } as const;
 
@@ -91,21 +104,23 @@ async function lockRequest(tx: Queryable, companyId: string, id: string): Promis
   return rows[0];
 }
 
-/** Người phụ trách ghi nhận yêu cầu nhận qua kênh liên hệ; hạn = lúc nhận + DSAR_DAYS. */
+/** Người phụ trách ghi nhận yêu cầu nhận qua kênh liên hệ; hạn thực hiện theo loại, hạn phản hồi theo ngày làm việc. */
 export async function createRequest(
   tx: Queryable,
   actor: PrivacyActor,
   input: CreateRequestInputT,
   now: Date = new Date(),
-  days: number = dsarDays(),
+  cfg: DsarConfig = dsarConfig(),
 ): Promise<RequestRow> {
   const subjectId = await resolveSubject(tx, actor.companyId, input.subject_type, input.subject_ref);
+  const { dueAt, respondDueAt } = computeDeadlines(input.kind, now, cfg);
   let row: RequestRow;
   try {
     // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
     const r = await tx.query<RequestRow>(
-      `INSERT INTO data_subject_request (company_id, subject_type, subject_ref, subject_id, kind, received_at, due_at, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${COLS}`,
+      `INSERT INTO data_subject_request (company_id, subject_type, subject_ref, subject_id, kind, received_at, due_at, note,
+         respond_due_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ${COLS}`,
       [
         actor.companyId,
         input.subject_type,
@@ -113,8 +128,9 @@ export async function createRequest(
         subjectId,
         input.kind,
         now,
-        new Date(now.getTime() + days * DAY_MS),
+        dueAt,
         input.note ?? null,
+        respondDueAt,
       ],
     );
     row = r.rows[0]!;
@@ -123,7 +139,11 @@ export async function createRequest(
       throw new AppError("DUPLICATE_REQUEST", 409, t("err.privacy.daCoYeuCauCungLoai"));
     throw err;
   }
-  await audit(tx, actor, "privacy.request.create", row, null, { kind: row.kind, due_at: row.due_at });
+  await audit(tx, actor, "privacy.request.create", row, null, {
+    kind: row.kind,
+    due_at: row.due_at,
+    respond_due_at: row.respond_due_at,
+  });
   return row;
 }
 
@@ -149,6 +169,12 @@ async function audit(
   });
 }
 
+/** `overdue`: chưa đóng và quá hạn thực hiện; `respond_overdue`: chưa phản hồi và quá hạn phản hồi. */
+export interface Overdue {
+  overdue: boolean;
+  respond_overdue: boolean;
+}
+
 export interface ListOptions {
   status?: RequestStatus;
   overdueOnly?: boolean;
@@ -161,16 +187,16 @@ export async function listRequestsPage(
   db: Queryable,
   companyId: string,
   opts: ListOptions = {},
-): Promise<Page<RequestRow & { overdue: boolean }>> {
+): Promise<Page<RequestRow & Overdue>> {
   const now = opts.now ?? new Date();
   const page = opts.page ?? MAX_PAGE;
-  // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
-  const { rows } = await db.query<RequestRow & { overdue: boolean }>(
-    `SELECT ${COLS}, (status IN ('received', 'in_progress') AND due_at < $2) AS overdue
+  // sql-interp-allow: `COLS` và điều kiện quá hạn (deadlines.ts) là hằng nội bộ; mọi giá trị qua $n.
+  const { rows } = await db.query<RequestRow & Overdue>(
+    `SELECT ${COLS}, ${dsarExecOverdueSql("$2")} AS overdue, ${dsarRespondOverdueSql("$2")} AS respond_overdue
        FROM data_subject_request
       WHERE company_id = $1
         AND ($3::text IS NULL OR status = $3)
-        AND (NOT $4::boolean OR (status IN ('received', 'in_progress') AND due_at < $2))
+        AND (NOT $4::boolean OR ${dsarAnyOverdueSql("$2")})
       ORDER BY (status IN ('done', 'rejected')), due_at, id LIMIT $5 OFFSET $6`,
     [companyId, now, opts.status ?? null, opts.overdueOnly ?? false, fetchLimit(page), page.offset],
   );
@@ -181,11 +207,11 @@ export async function listRequests(
   db: Queryable,
   companyId: string,
   opts: ListOptions = {},
-): Promise<(RequestRow & { overdue: boolean })[]> {
+): Promise<(RequestRow & Overdue)[]> {
   return (await listRequestsPage(db, companyId, opts)).items;
 }
 
-/** Yêu cầu quá hạn chưa đóng (cho dashboard/cảnh báo — CMP-INTL-007: số quá hạn phải = 0). */
+/** Yêu cầu quá hạn thực hiện hoặc quá hạn phản hồi (cho dashboard/cảnh báo — CMP-INTL-007: số quá hạn phải = 0). */
 export const listOverdue = (db: Queryable, companyId: string, now: Date = new Date()) =>
   listRequests(db, companyId, { overdueOnly: true, now });
 
@@ -200,6 +226,67 @@ export async function startRequest(tx: Queryable, actor: PrivacyActor, id: strin
     [actor.companyId, id, actor.userId],
   );
   await audit(tx, actor, "privacy.request.start", cur, { status: cur.status }, { status: "in_progress" });
+  return rows[0]!;
+}
+
+/** Ghi nhận ĐÃ PHẢN HỒI chủ thể (xác nhận đã nhận yêu cầu). Idempotent: đã phản hồi thì trả nguyên hàng, không ghi lại. */
+export async function respondRequest(
+  tx: Queryable,
+  actor: PrivacyActor,
+  id: string,
+  now: Date = new Date(),
+): Promise<RequestRow> {
+  const cur = await lockRequest(tx, actor.companyId, id);
+  if (cur.responded_at) return cur;
+  // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
+  const { rows } = await tx.query<RequestRow>(
+    `UPDATE data_subject_request SET responded_at = $3 WHERE company_id = $1 AND id = $2 RETURNING ${COLS}`,
+    [actor.companyId, id, now],
+  );
+  await audit(tx, actor, "privacy.request.respond", cur, null, {
+    responded_at: now,
+    respond_late: cur.respond_due_at !== null && isPastDue(cur.respond_due_at, now),
+  });
+  return rows[0]!;
+}
+
+/**
+ * Gia hạn: tối đa MỘT lần, kèm lý do, khi yêu cầu còn mở và CHƯA quá hạn (hạn đã qua thì không gia hạn hồi tố).
+ * Hạn mới = hạn hiện tại + `extendDays` (GIẢ ĐỊNH 15 ngày — xem lib/nen/env.ts).
+ */
+export async function extendRequest(
+  tx: Queryable,
+  actor: PrivacyActor,
+  id: string,
+  reason: string,
+  now: Date = new Date(),
+  cfg: DsarConfig = dsarConfig(),
+): Promise<RequestRow> {
+  const why = reason.trim();
+  if (why.length < 1 || why.length > 1000)
+    throw new AppError("VALIDATION", 422, t("err.privacy.canLyDoGiaHan"));
+  const cur = await lockRequest(tx, actor.companyId, id);
+  if (cur.status !== "received" && cur.status !== "in_progress")
+    throw new AppError("INVALID_STATE", 409, t("err.privacy.requestClosed", { status: cur.status }));
+  if (cur.extended_at) throw new AppError("EXTENSION_ALREADY_USED", 409, t("err.privacy.daGiaHanMotLan"));
+  if (isPastDue(cur.due_at, now))
+    throw new AppError("EXTENSION_TOO_LATE", 409, t("err.privacy.quaHanKhongGiaHan"));
+  const dueAt = extendedDueAt(cur.due_at, cfg);
+  // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
+  const { rows } = await tx.query<RequestRow>(
+    `UPDATE data_subject_request SET due_at = $3, extended_at = $4, extension_days = $5, extension_reason = $6
+      WHERE company_id = $1 AND id = $2 RETURNING ${COLS}`,
+    [actor.companyId, id, dueAt, now, cfg.extendDays, why],
+  );
+  await audit(
+    tx,
+    actor,
+    "privacy.request.extend",
+    cur,
+    { due_at: cur.due_at },
+    { due_at: dueAt, extension_days: cfg.extendDays },
+    why,
+  );
   return rows[0]!;
 }
 
@@ -218,7 +305,8 @@ export async function rejectRequest(
     throw new AppError("INVALID_STATE", 409, t("err.privacy.requestClosed", { status: cur.status }));
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
   const { rows } = await tx.query<RequestRow>(
-    `UPDATE data_subject_request SET status = 'rejected', closed_at = $3, handler = $4, reject_reason = $5
+    `UPDATE data_subject_request SET status = 'rejected', closed_at = $3, handler = $4, reject_reason = $5,
+            responded_at = COALESCE(responded_at, $3)
       WHERE company_id = $1 AND id = $2 RETURNING ${COLS}`,
     [actor.companyId, id, now, actor.userId, why],
   );
@@ -239,12 +327,18 @@ export async function completeRequest(
   let result: Record<string, unknown>;
   switch (cur.kind) {
     case "access":
+    case "export":
       result = { delivered_via: "export" };
+      break;
+    case "rectify":
+      // Chỉnh sửa dữ liệu do người phụ trách thực hiện bằng màn hình nghiệp vụ tương ứng (có audit riêng); ở đây đóng yêu cầu.
+      result = { handled_by: "manual" };
       break;
     case "withdraw_consent":
       result = await executeWithdraw(tx, actor, cur, now);
       break;
     case "restrict":
+    case "object":
       result = await executeRestrict(tx, actor, cur);
       break;
     case "delete":
@@ -253,7 +347,8 @@ export async function completeRequest(
   }
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
   const { rows } = await tx.query<RequestRow>(
-    `UPDATE data_subject_request SET status = 'done', closed_at = $3, handler = $4, result = $5
+    `UPDATE data_subject_request SET status = 'done', closed_at = $3, handler = $4, result = $5,
+            responded_at = COALESCE(responded_at, $3)
       WHERE company_id = $1 AND id = $2 RETURNING ${COLS}`,
     [actor.companyId, id, now, actor.userId, JSON.stringify(result)],
   );
@@ -309,7 +404,14 @@ async function executeRestrict(
     `INSERT INTO processing_restriction (company_id, subject_type, subject_id, kind, reason, request_id)
      VALUES ($1, $2, $3, 'restrict', $4, $5)
      ON CONFLICT (subject_type, subject_id, kind) WHERE released_at IS NULL DO NOTHING`,
-    [actor.companyId, r.subject_type, r.subject_id, r.note ?? t("msg.privacy.stopRestrictRequest"), r.id],
+    [
+      actor.companyId,
+      r.subject_type,
+      r.subject_id,
+      r.note ??
+        (r.kind === "object" ? t("msg.privacy.stopObjectRequest") : t("msg.privacy.stopRestrictRequest")),
+      r.id,
+    ],
   );
   return { restricted: true, newly_restricted: (ins.rowCount ?? 0) > 0 };
 }
@@ -424,19 +526,30 @@ export async function exportSubject(
   now: Date = new Date(),
 ): Promise<SubjectExport> {
   const req = await lockRequest(tx, actor.companyId, id);
-  if (req.kind !== "access") throw new AppError("INVALID_STATE", 409, t("err.privacy.chiYeuCauTruyCapMoi"));
+  if (req.kind !== "access" && req.kind !== "export" && req.kind !== "rectify")
+    throw new AppError("INVALID_STATE", 409, t("err.privacy.chiYeuCauTruyCapMoi"));
   if (req.status === "rejected") throw new AppError("INVALID_STATE", 409, t("err.privacy.yeuCauDaBiTuChoi"));
   const { subject_type: type, subject_id: sid } = req;
   const one = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows[0] ?? null;
   const many = async (sql: string, params: unknown[]) => (await tx.query(sql, params)).rows;
   const c = actor.companyId;
+  // SĐT lưu dạng mã hoá (T-048): giải mã cho chính chủ thể; không đưa id dòng/bản mã/chỉ mục vào bản xuất.
+  const reveal = async (table: string, row: Record<string, unknown> | null) => {
+    if (row === null) return null;
+    const [r] = await revealTextAsync(table, "phone", [row]);
+    delete r!.id;
+    return r!;
+  };
   let data: Record<string, unknown>;
   if (type === "inquiry") {
     data = {
-      inquiry: await one(
-        `SELECT code, name, email, phone, message, service_slug, source, status, consent_at, consent_notice_version,
+      inquiry: await reveal(
+        "inquiry",
+        await one(
+          `SELECT id, code, name, email, phone, phone_enc, message, service_slug, source, status, consent_at, consent_notice_version,
                 created_at, anonymized_at FROM inquiry WHERE company_id = $1 AND id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       history: await many(
         "SELECT from_status, to_status, note, at FROM inquiry_history WHERE company_id = $1 AND inquiry_id = $2 ORDER BY id",
@@ -446,21 +559,27 @@ export async function exportSubject(
     };
   } else if (type === "job_application") {
     data = {
-      application: await one(
-        `SELECT a.code, a.name, a.email, a.phone, a.cover_letter, a.status, a.consent_at, a.consent_notice_version,
+      application: await reveal(
+        "job_application",
+        await one(
+          `SELECT a.id, a.code, a.name, a.email, a.phone, a.phone_enc, a.cover_letter, a.status, a.consent_at, a.consent_notice_version,
                 a.created_at, a.anonymized_at, p.slug AS job_slug
            FROM job_application a LEFT JOIN cms_page p ON p.company_id = a.company_id AND p.id = a.job_page_id
           WHERE a.company_id = $1 AND a.id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       consents: await listConsents(tx, type, sid),
     };
   } else {
     data = {
-      employee: await one(
-        `SELECT code, full_name, work_email, phone, hired_on, terminated_on, created_at
+      employee: await reveal(
+        "employee",
+        await one(
+          `SELECT id, code, full_name, work_email, phone, phone_enc, hired_on, terminated_on, created_at
            FROM employee WHERE company_id = $1 AND id = $2`,
-        [c, sid],
+          [c, sid],
+        ),
       ),
       employment_history: await many(
         `SELECT title, department_id, valid_from, valid_to FROM employment_history

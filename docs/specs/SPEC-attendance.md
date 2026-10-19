@@ -16,7 +16,7 @@ Trạng thái: Approved for implementation (D-006)
 > hình có ngày hiệu lực** — HR chốt ở F02 trước pilot; mã không hard-code chúng.
 
 ## Ba lớp dữ liệu (§6)
-1. **Sự kiện gốc** `attendance_event` (chỉ thêm): `id`, `idempotency_key` (duy nhất theo `employee_id`), `employee_id`, `company_id`, `kind` (`in|out|break_start|break_end`), `device_time`, `server_received_at`, `source` (`qr|gps|kiosk|manual_request`), `queued` (gửi từ hàng chờ ngoại tuyến), `worksite_id`, `shift_assignment_id` (null = chưa gán), `policy_version_id`, `geo` (lat, lng, accuracy_m, captured_at — tuỳ chọn), `qr_token_id`, `status` (`accepted|needs_review|rejected`), `review_reason`.
+1. **Sự kiện gốc** `attendance_event` (chỉ thêm): `id`, `idempotency_key` (duy nhất theo `employee_id`), `employee_id`, `company_id`, `kind` (`in|out|break_start|break_end`), `device_time`, `server_received_at`, `source` (`qr|gps|kiosk|manual_request`), `queued` (gửi từ hàng chờ ngoại tuyến), `worksite_id`, `shift_assignment_id` (null = chưa gán), `policy_version_id`, `geo_enc` (bản mã của lat, lng, accuracy_m, captured_at — chỉ lưu khi cờ GPS bật + có đồng ý riêng, xem S-AT-14..17; cột `geo_*` bản rõ chỉ còn dữ liệu cũ), `qr_token_id`, `status` (`accepted|needs_review|rejected`), `review_reason`.
 2. **Tổng hợp** `attendance_summary` theo (nhân viên, ca nghiệp vụ): tính lại được, không sửa tay.
 3. **Bảng công kỳ** `attendance_period` + `period_export` (khoá, có phiên bản).
 
@@ -72,6 +72,14 @@ Trạng thái: Approved for implementation (D-006)
 - S-AT-06 (AT05): nhân viên đã bị thu hồi quyền đồng bộ hàng chờ → 403, sự kiện không áp dụng.
 - S-AT-07 (AT06): kỳ đã khoá, sự kiện muộn → `needs_review`, xuất phiên bản 1 không đổi checksum.
 - S-AT-08 (AT07): đơn OT 5 giờ ngày thường → 422 `OT_LIMIT_DAY`; người tạo tự duyệt → 409 `SELF_APPROVAL`.
+- S-AT-10 (RK-001, D-031): trần OT theo luật — OT ≤ 50% giờ bình thường/ngày (4 giờ), tổng ≤ 12 giờ/ngày, ≤ 40 giờ/tháng, ≤ 200 giờ/năm (300 giờ chỉ khi cờ ngành); đúng trần ok, vượt 1 phút → vi phạm kèm mã; kiểm đồng thời, đã duyệt + đề nghị cộng dồn (`tests/unit/labor-rules.test.ts`).
+- S-AT-11 (D-031): hệ số trả lương số nguyên %: thường 100, đêm 130, OT 150/200/300, OT đêm = OT + 30 + 20.
+- S-AT-12 (D-031): cảnh báo (không chặn) nghỉ giữa ca 30' (ca đêm 45', chỉ ca ≥ 6 giờ), nghỉ ≥ 12 giờ giữa hai ca, nghỉ tuần ≥ 24 giờ liên tục.
+- S-AT-13 (D-007, D-031): quy tắc có ngày hiệu lực, tra theo ngày nghiệp vụ; kỳ cũ giữ bản cũ.
+- S-AT-14 (T-051, D-032): cờ `GEO_CAPTURE_ENABLED` tắt (mặc định) → toạ độ gửi lên bị bỏ (không lưu, không lỗi), phản hồi `geo_stored: false`, audit `geoDropped=flag_off` không có toạ độ.
+- S-AT-15 (T-051): cờ bật nhưng nhân viên không có đồng ý riêng `geo_attendance` còn hiệu lực → bỏ toạ độ, audit `geoDropped=no_consent`.
+- S-AT-16 (T-051): cờ bật + có đồng ý → toạ độ lưu MÃ HOÁ (`geo_enc`; cột bản rõ NULL), đọc giải mã đúng; gửi lặp giữ `geo_stored`.
+- S-AT-17 (T-051): rút đồng ý (hoặc bị hạn chế xử lý) → lần gửi kế tiếp bỏ toạ độ; cấp lại → thu lại.
 - S-AT-09: QR hết hạn 75 s → 422 `QR_EXPIRED`; chữ ký sai → 422 `QR_INVALID`.
 - Ca biên: ca không có sự kiện → `ABSENT` (không phải 0 giờ có mặt mà là trạng thái riêng); `device_time` tương lai > 5' → `needs_review`; DST không có ở VN nhưng mã dùng instant UTC nên đúng với múi giờ có DST.
 
@@ -90,6 +98,14 @@ Mỗi tiêu chí `AC-<MIỀN>-NN` ánh xạ 1-1 tới một kịch bản `S-*` �
 | AC-AT-07 | lỗi | Given kỳ đã khoá, When sự kiện muộn, Then `needs_review`, xuất phiên bản 1 không đổi checksum | S-AT-07 |
 | AC-AT-08 | lỗi | Given đơn OT 5 giờ ngày thường Then 422 `OT_LIMIT_DAY`; người tạo tự duyệt Then 409 `SELF_APPROVAL` | S-AT-08 |
 | AC-AT-09 | lỗi | Given QR hết hạn 75 s Then 422 `QR_EXPIRED`; chữ ký sai Then 422 `QR_INVALID` | S-AT-09 |
+| AC-AT-10 | biên | Given OT đã duyệt + đề nghị đúng 4 giờ/ngày, 40 giờ/tháng, 200 giờ/năm Then ok; vượt 1 phút Then vi phạm `OT_LIMIT_*` (năm 300 giờ chỉ khi cờ ngành bật) | S-AT-10 |
+| AC-AT-11 | chuẩn | Given giờ thường/đêm/OT ngày thường, nghỉ tuần, lễ Then hệ số 100/130/150/200/300 và OT đêm cộng 30 + 20 (số nguyên %) | S-AT-11 |
+| AC-AT-12 | biên | Given nghỉ giữa ca 29' (đêm 44'), hai ca cách 11 giờ 59, 7 ngày liền không nghỉ Then cảnh báo không chặn; đúng ngưỡng Then không cảnh báo | S-AT-12 |
+| AC-AT-13 | biên | Given hai phiên bản quy tắc, Then ngày trước hiệu lực dùng bản cũ, đúng ngày hiệu lực dùng bản mới | S-AT-13 |
+| AC-AT-14 | lỗi | Given cờ GPS tắt, When client gửi `geo`, Then 201, toạ độ không được lưu, `geo_stored`=false, audit không chứa toạ độ | S-AT-14 |
+| AC-AT-15 | lỗi | Given cờ bật nhưng không có đồng ý riêng còn hiệu lực, When gửi `geo`, Then bỏ toạ độ, audit `geoDropped=no_consent` | S-AT-15 |
+| AC-AT-16 | chuẩn | Given cờ bật + đồng ý riêng, When gửi `geo`, Then lưu dạng mã hoá, bản rõ NULL, đọc giải mã đúng | S-AT-16 |
+| AC-AT-17 | biên | Given đã có đồng ý rồi rút (hoặc bị hạn chế xử lý), When gửi `geo`, Then bỏ toạ độ ngay; cấp lại thì thu lại | S-AT-17 |
 
 ## Ca biên
 

@@ -7,18 +7,27 @@ import { t } from "../i18n/index.ts";
 
 export type SubjectType = "inquiry" | "job_application" | "employee";
 export const CHANNEL_WEB_FORM = "web_form";
+/** Đồng ý RIÊNG (tách khỏi đồng ý xử lý hồ sơ) để giữ hồ sơ ứng viên không trúng tuyển trong "kho nhân tài" (D-030). */
+export const PURPOSE_TALENT_POOL = "talent_pool";
+/**
+ * Đồng ý RIÊNG của nhân viên cho việc thu vị trí GPS khi chấm công (T-051, D-032; Luật 91/2025 Điều 25.3, 31.3a). Chấm công
+ * không phụ thuộc vào đồng ý này (QR vẫn dùng được). Rút đồng ý → dòng 'withdraw' mới → dừng thu ngay ở lần gửi kế tiếp.
+ */
+export const PURPOSE_GEO_ATTENDANCE = "geo_attendance";
 
-/** Mục đích dựa trên đồng ý của từng loại chủ thể (employee: xử lý theo hợp đồng lao động, không dựa trên đồng ý). */
+/** Mục đích dựa trên đồng ý của từng loại chủ thể (employee: hồ sơ lao động xử lý theo hợp đồng, KHÔNG dựa trên đồng ý — chỉ GPS chấm công cần đồng ý riêng). */
 export const CONSENT_PURPOSES: Record<SubjectType, readonly string[]> = {
   inquiry: ["inquiry_contact"],
-  job_application: ["job_application"],
-  employee: [],
+  job_application: ["job_application", PURPOSE_TALENT_POOL],
+  employee: [PURPOSE_GEO_ATTENDANCE],
 };
 
 /** Văn bản đồng ý hiển thị (tóm tắt) — băm cùng mục đích + phiên bản làm `ui_snapshot_hash`. Đổi chữ → đổi phiên bản. */
 const CONSENT_TEXT: Record<string, string> = {
   inquiry_contact: t("msg.privacy.consent.inquiryContact"),
   job_application: t("msg.privacy.consent.jobApplication"),
+  [PURPOSE_TALENT_POOL]: t("msg.privacy.consent.talentPool"),
+  [PURPOSE_GEO_ATTENDANCE]: t("msg.privacy.consent.geoAttendance"),
 };
 
 export function consentSnapshotHash(purposeId: string, policyVersion: string): string {
@@ -101,7 +110,10 @@ export async function activePurposes(
   return rows.filter((r) => r.event === "grant");
 }
 
-/** Rút đồng ý: thêm dòng 'withdraw' MỚI (cùng phiên bản của lần cấp mới nhất). Trả danh sách mục đích đã rút. */
+/**
+ * Rút đồng ý: thêm dòng 'withdraw' MỚI (cùng phiên bản của lần cấp mới nhất). Trả danh sách mục đích đã rút.
+ * `only` giới hạn các mục đích cần rút (vd chỉ "kho nhân tài"); bỏ trống = rút mọi đồng ý đang hiệu lực.
+ */
 export async function withdrawConsent(
   tx: Queryable,
   companyId: string,
@@ -109,8 +121,11 @@ export async function withdrawConsent(
   subjectId: string,
   now: Date,
   channel = "dsar",
+  only?: readonly string[],
 ): Promise<string[]> {
-  const active = await activePurposes(tx, subjectType, subjectId);
+  const active = (await activePurposes(tx, subjectType, subjectId)).filter(
+    (a) => only === undefined || only.includes(a.purpose_id),
+  );
   for (const a of active)
     await tx.query(
       `INSERT INTO consent_record (company_id, subject_type, subject_id, purpose_id, policy_version, event, granted_at,
@@ -149,4 +164,24 @@ export async function isProcessingBlocked(
     [subjectType, subjectId, purposeId],
   );
   return rows[0]!.last_event === "withdraw" || rows[0]!.restricted;
+}
+
+/**
+ * Đồng ý `purposeId` đang CÓ HIỆU LỰC và chủ thể không bị hạn chế xử lý: sự kiện mới nhất của (chủ thể, mục đích) là 'grant'.
+ * Ngược với `isProcessingBlocked`: không có bản ghi nào = KHÔNG có đồng ý (dùng cho mục đích bắt buộc có đồng ý, như GPS).
+ */
+export async function hasActiveConsent(
+  db: Queryable,
+  subjectType: SubjectType,
+  subjectId: string,
+  purposeId: string,
+): Promise<boolean> {
+  const { rows } = await db.query<{ last_event: string | null; restricted: boolean }>(
+    `SELECT (SELECT event FROM consent_record
+              WHERE subject_type = $1 AND subject_id = $2 AND purpose_id = $3 ORDER BY id DESC LIMIT 1) AS last_event,
+            EXISTS (SELECT 1 FROM processing_restriction
+                     WHERE subject_type = $1 AND subject_id = $2 AND kind = 'restrict' AND released_at IS NULL) AS restricted`,
+    [subjectType, subjectId, purposeId],
+  );
+  return rows[0]!.last_event === "grant" && !rows[0]!.restricted;
 }

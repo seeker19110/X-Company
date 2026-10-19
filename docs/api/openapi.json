@@ -175,7 +175,7 @@
         "operationId": "recordAttendanceEvent",
         "tags": ["Chấm công"],
         "summary": "Ghi một sự kiện chấm công",
-        "description": "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`.\n\nQuyền: `attendance.write_own`: chính chủ, còn làm việc.",
+        "description": "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`. Toạ độ `geo` chỉ được lưu (mã hoá) khi cờ `GEO_CAPTURE_ENABLED` bật VÀ nhân viên có đồng ý riêng `geo_attendance` còn hiệu lực; ngược lại server bỏ toạ độ, không báo lỗi, và trả `geo_stored: false`.\n\nQuyền: `attendance.write_own`: chính chủ, còn làm việc.",
         "x-permission": "`attendance.write_own`: chính chủ, còn làm việc.",
         "parameters": [{ "$ref": "#/components/parameters/IdempotencyKeyEvent" }],
         "requestBody": {
@@ -587,7 +587,7 @@
             "name": "overdue",
             "in": "query",
             "required": false,
-            "description": "`1` = chỉ yêu cầu quá hạn.",
+            "description": "`1` = chỉ yêu cầu quá hạn thực hiện hoặc quá hạn phản hồi.",
             "schema": { "type": "string", "enum": ["1"] }
           },
           { "$ref": "#/components/parameters/Limit" },
@@ -651,7 +651,7 @@
       "get": {
         "operationId": "exportPrivacyRequest",
         "tags": ["Quyền riêng tư"],
-        "summary": "Xuất dữ liệu của chủ thể cho yêu cầu truy cập",
+        "summary": "Xuất dữ liệu của chủ thể cho yêu cầu truy cập, chỉnh sửa hoặc cung cấp",
         "description": "Là GET để không lưu phản hồi chứa PII vào bảng idempotency.\n\nQuyền: `privacy.manage` (HR).",
         "x-permission": "`privacy.manage` (HR).",
         "parameters": [
@@ -687,9 +687,9 @@
       "post": {
         "operationId": "actOnPrivacyRequest",
         "tags": ["Quyền riêng tư"],
-        "summary": "Bắt đầu, hoàn tất hoặc từ chối một yêu cầu",
-        "description": "Quyền: `privacy.manage` (HR). Từ chối bắt buộc có lý do (422).",
-        "x-permission": "`privacy.manage` (HR). Từ chối bắt buộc có lý do (422).",
+        "summary": "Bắt đầu, ghi nhận phản hồi, gia hạn, hoàn tất hoặc từ chối một yêu cầu",
+        "description": "Quyền: `privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409).",
+        "x-permission": "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409).",
         "parameters": [
           {
             "name": "id",
@@ -703,7 +703,7 @@
             "in": "path",
             "required": true,
             "description": "Hành động.",
-            "schema": { "type": "string", "enum": ["start", "complete", "reject"] }
+            "schema": { "type": "string", "enum": ["start", "respond", "extend", "complete", "reject"] }
           },
           { "$ref": "#/components/parameters/IdempotencyKey" }
         ],
@@ -1232,9 +1232,17 @@
           "status": { "type": "string", "enum": ["accepted", "needs_review"] },
           "review_reason": { "type": ["string", "null"] },
           "server_received_at": { "type": "string", "format": "date-time" },
-          "shift_assignment_id": { "type": ["string", "null"], "format": "uuid" }
+          "shift_assignment_id": { "type": ["string", "null"], "format": "uuid" },
+          "geo_stored": { "type": "boolean" }
         },
-        "required": ["event_id", "status", "review_reason", "server_received_at", "shift_assignment_id"]
+        "required": [
+          "event_id",
+          "status",
+          "review_reason",
+          "server_received_at",
+          "shift_assignment_id",
+          "geo_stored"
+        ]
       },
       "QrResult": {
         "type": "object",
@@ -1371,10 +1379,20 @@
           "subject_type": { "type": "string", "enum": ["inquiry", "job_application", "employee"] },
           "subject_ref": { "type": "string" },
           "subject_id": { "type": "string", "format": "uuid" },
-          "kind": { "type": "string", "enum": ["access", "delete", "withdraw_consent", "restrict"] },
+          "kind": {
+            "type": "string",
+            "enum": ["access", "rectify", "export", "delete", "withdraw_consent", "restrict", "object"]
+          },
           "status": { "type": "string", "enum": ["received", "in_progress", "done", "rejected"] },
           "received_at": { "type": "string", "format": "date-time" },
           "due_at": { "type": "string", "format": "date-time" },
+          "respond_due_at": { "type": ["string", "null"], "format": "date-time" },
+          "responded_at": { "type": ["string", "null"], "format": "date-time" },
+          "extended_at": { "type": ["string", "null"], "format": "date-time" },
+          "extension_days": { "type": ["integer", "null"] },
+          "extension_reason": { "type": ["string", "null"] },
+          "overdue": { "type": "boolean" },
+          "respond_overdue": { "type": "boolean" },
           "closed_at": { "type": ["string", "null"], "format": "date-time" },
           "handler": { "type": ["string", "null"] },
           "note": { "type": ["string", "null"] },
@@ -1581,7 +1599,10 @@
         "properties": {
           "subject_type": { "type": "string", "enum": ["inquiry", "job_application", "employee"] },
           "subject_ref": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
-          "kind": { "type": "string", "enum": ["access", "delete", "withdraw_consent", "restrict"] },
+          "kind": {
+            "type": "string",
+            "enum": ["access", "rectify", "export", "delete", "withdraw_consent", "restrict", "object"]
+          },
           "note": { "anyOf": [{ "type": "string", "maxLength": 1000 }, { "type": "null" }] }
         },
         "required": ["subject_type", "subject_ref", "kind"]
@@ -1622,6 +1643,7 @@
           },
           "cover_letter": { "anyOf": [{ "type": "string", "maxLength": 8000 }, { "type": "null" }] },
           "consent": { "type": "boolean", "const": true },
+          "talent_pool": { "default": false, "type": "boolean" },
           "website": { "default": "", "type": "string", "maxLength": 200 },
           "elapsed_ms": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
         },

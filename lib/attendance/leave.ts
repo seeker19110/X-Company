@@ -1,6 +1,8 @@
 // Nghỉ phép (F-005, AT07): sổ biến động (số dư = tổng), đơn nghỉ trùng đơn đã duyệt bị chặn trước duyệt,
 // duyệt ghi `taken` trong cùng giao dịch; người tạo không tự duyệt.
+import { randomUUID } from "node:crypto";
 import type { ActorContext } from "../authz/index.ts";
+import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { localDate } from "../nen/time.ts";
@@ -67,22 +69,30 @@ export async function requestLeave(
     await requireOn(tx, actor, "attendance.approve", res, { type: "employee", id: employeeId });
   else await requireOn(tx, actor, "leave.request", res, { type: "employee", id: employeeId });
   if (r.endAt <= r.startAt) throw new AppError("VALIDATION", 422, t("err.attendance.thoiGianKetThucPhaiSau"));
+  // Lý do nghỉ có thể lộ thông tin sức khoẻ (nhạy cảm): ghi dạng mã hoá (T-048), cột bản rõ để NULL; id sinh trước vì AAD gắn id dòng.
+  const newId = randomUUID();
+  const sealedReason = await sealTextAsync(textColumn("leave_request", "reason"), newId, r.reason);
   const { rows } = await tx.query<{ id: string }>(
-    `INSERT INTO leave_request (company_id, employee_id, leave_type_id, start_at, end_at, minutes, reason, created_by_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+    `INSERT INTO leave_request (id, company_id, employee_id, leave_type_id, start_at, end_at, minutes, reason_enc, created_by_user_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
     [
+      newId,
       actor.companyId,
       employeeId,
       r.leaveTypeId,
       r.startAt,
       r.endAt,
       r.minutes,
-      r.reason ?? null,
+      sealedReason.enc,
       actor.userId,
     ],
   );
   const id = rows[0]!.id;
-  await auditDecision(tx, actor, "leave.request", "leave_request", id, { after: { ...r, employeeId } });
+  // Audit KHÔNG chứa lý do (nhạy cảm; audit_event là bản sao rõ) — chỉ cho biết có lý do hay không.
+  const { reason, ...audited } = r;
+  await auditDecision(tx, actor, "leave.request", "leave_request", id, {
+    after: { ...audited, employeeId, hasReason: reason !== null && reason !== undefined && reason !== "" },
+  });
   return id;
 }
 

@@ -15,7 +15,7 @@ import { ObjectRef } from "../lib/files/routes.ts";
 import { LoginBody } from "../lib/identity/routes.ts";
 import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
-import { CreateRequestInput } from "../lib/privacy/index.ts";
+import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
 import { ACTIONS as PRIVACY_ACTIONS, ActionBody, STATUSES } from "../lib/privacy/routes.ts";
 import { ACTIONS as TASK_ACTIONS, Body as TaskActionBody } from "../lib/work/routes.ts";
 import { PAGE_DEFAULT_LIMIT, PAGE_MAX_LIMIT, PAGE_MAX_OFFSET } from "../lib/nen/pagination.ts";
@@ -179,6 +179,7 @@ const SCHEMAS: Record<string, Json> = {
     review_reason: nullable({ type: "string" }),
     server_received_at: dateTime,
     shift_assignment_id: nullable(uuid),
+    geo_stored: { type: "boolean" },
   }),
   QrResult: obj({
     token: { type: "string" },
@@ -236,10 +237,17 @@ const SCHEMAS: Record<string, Json> = {
       subject_type: { type: "string", enum: ["inquiry", "job_application", "employee"] },
       subject_ref: { type: "string" },
       subject_id: uuid,
-      kind: { type: "string", enum: ["access", "delete", "withdraw_consent", "restrict"] },
+      kind: { type: "string", enum: [...PRIVACY_KINDS] },
       status: { type: "string", enum: [...STATUSES] },
       received_at: dateTime,
       due_at: dateTime,
+      respond_due_at: nullable(dateTime),
+      responded_at: nullable(dateTime),
+      extended_at: nullable(dateTime),
+      extension_days: nullable({ type: "integer" }),
+      extension_reason: nullable({ type: "string" }),
+      overdue: { type: "boolean" },
+      respond_overdue: { type: "boolean" },
       closed_at: nullable(dateTime),
       handler: nullable({ type: "string" }),
       note: nullable({ type: "string" }),
@@ -441,7 +449,7 @@ export const REGISTRY: Registry = {
       tag: "Chấm công",
       summary: "Ghi một sự kiện chấm công",
       description:
-        "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`.",
+        "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`. Toạ độ `geo` chỉ được lưu (mã hoá) khi cờ `GEO_CAPTURE_ENABLED` bật VÀ nhân viên có đồng ý riêng `geo_attendance` còn hiệu lực; ngược lại server bỏ toạ độ, không báo lỗi, và trả `geo_stored: false`.",
       permission: "`attendance.write_own`: chính chủ, còn làm việc.",
       idempotency: "handler",
       body: { kind: "json", schema: "AttendanceEventRequest" },
@@ -668,7 +676,7 @@ export const REGISTRY: Registry = {
           name: "overdue",
           in: "query",
           schema: { type: "string", enum: ["1"] },
-          description: "`1` = chỉ yêu cầu quá hạn.",
+          description: "`1` = chỉ yêu cầu quá hạn thực hiện hoặc quá hạn phản hồi.",
         },
       ],
       ok: { 200: { description: "Một trang yêu cầu.", schema: "PrivacyRequestPage" } },
@@ -691,7 +699,7 @@ export const REGISTRY: Registry = {
       source: "lib/privacy/routes.ts#getRequestExport",
       operationId: "exportPrivacyRequest",
       tag: "Quyền riêng tư",
-      summary: "Xuất dữ liệu của chủ thể cho yêu cầu truy cập",
+      summary: "Xuất dữ liệu của chủ thể cho yêu cầu truy cập, chỉnh sửa hoặc cung cấp",
       description: "Là GET để không lưu phản hồi chứa PII vào bảng idempotency.",
       permission: "`privacy.manage` (HR).",
       idempotency: "none",
@@ -712,8 +720,9 @@ export const REGISTRY: Registry = {
       source: "lib/privacy/routes.ts#postRequestAction",
       operationId: "actOnPrivacyRequest",
       tag: "Quyền riêng tư",
-      summary: "Bắt đầu, hoàn tất hoặc từ chối một yêu cầu",
-      permission: "`privacy.manage` (HR). Từ chối bắt buộc có lý do (422).",
+      summary: "Bắt đầu, ghi nhận phản hồi, gia hạn, hoàn tất hoặc từ chối một yêu cầu",
+      permission:
+        "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409).",
       idempotency: "guard",
       params: [
         idParam("Id yêu cầu."),

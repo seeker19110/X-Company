@@ -9,20 +9,25 @@ export type Tx = pg.PoolClient;
 // Trả `date` dạng chuỗi YYYY-MM-DD (ngày nghiệp vụ, không gắn múi giờ) và bigint/numeric dạng chuỗi (tránh mất số).
 pg.types.setTypeParser(pg.types.builtins.DATE, (v: string) => v);
 
-let appPool: pg.Pool | undefined;
+// Pool nằm ở globalThis (không phải biến module): Next đóng gói trang SSR và route handler thành các bundle riêng, mỗi bundle
+// một bản module này — biến module sẽ cho mỗi bundle một pool riêng và nhân đôi số kết nối DB (perf:load đo 20 thay vì ≤ 10).
+const POOL_KEY = Symbol.for("x-company.db.appPool");
+const shared = globalThis as unknown as { [POOL_KEY]?: pg.Pool };
 
-/** Pool của ứng dụng — DATABASE_URL là role ứng dụng (không owner, không BYPASSRLS). */
+/** Pool của ứng dụng — DATABASE_URL là role ứng dụng (không owner, không BYPASSRLS). Một pool cho cả tiến trình. */
 export function getPool(): pg.Pool {
-  if (appPool === undefined) {
-    appPool = new pg.Pool({
+  let pool = shared[POOL_KEY];
+  if (pool === undefined) {
+    pool = new pg.Pool({
       connectionString: env("DATABASE_URL"),
       max: env("DB_POOL_MAX"),
       options: PG_SESSION_OPTIONS,
       ...POOL_TIMEOUTS,
     });
-    guardIdleErrors(appPool, "app");
+    guardIdleErrors(pool, "app");
+    shared[POOL_KEY] = pool;
   }
-  return appPool;
+  return pool;
 }
 
 /** Tham số phiên cho mọi kết nối (pool production và test dùng chung) — đặt lúc bắt tay, không chạy query riêng. */
@@ -40,7 +45,7 @@ export const POOL_TIMEOUTS = {
 
 /** Thay pool (test). */
 export function setPool(pool: pg.Pool | undefined): void {
-  appPool = pool;
+  shared[POOL_KEY] = pool;
 }
 
 /**
@@ -55,8 +60,8 @@ export function guardIdleErrors(pool: pg.Pool, name: string): pg.Pool {
 
 /** Đóng pool ứng dụng (tắt êm); không có pool thì không làm gì. */
 export async function closePool(): Promise<void> {
-  const p = appPool;
-  appPool = undefined;
+  const p = shared[POOL_KEY];
+  shared[POOL_KEY] = undefined;
   await p?.end();
 }
 

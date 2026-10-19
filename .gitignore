@@ -37,4 +37,7 @@ Thumbs.db
 .lycheecache
 sbom.cdx.json
 .lighthouseci/
+
+# Công cụ vận hành tải về (scripts/tools/install-tool.mjs) — nhị phân ghim sha256, không commit
+.tools/
 zap-out/

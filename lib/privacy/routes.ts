@@ -1,5 +1,5 @@
 // Route nội bộ DSAR (T-040): GET/POST /api/app/privacy/requests, POST /api/app/privacy/requests/:id/:action
-// (start | complete | reject), GET /api/app/privacy/requests/:id/export (xuất dữ liệu cho yêu cầu truy cập).
+// (start | respond | extend | complete | reject), GET /api/app/privacy/requests/:id/export (xuất dữ liệu cho yêu cầu truy cập).
 // Quyền `privacy.manage` (HR) kiểm ở server; ghi nghiệp vụ bắt buộc Idempotency-Key. Xuất dữ liệu là GET (không lưu bản
 // phản hồi chứa PII vào idempotency_record).
 import { z } from "zod";
@@ -12,15 +12,17 @@ import {
   createRequest,
   CreateRequestInput,
   exportSubject,
+  extendRequest,
   listRequestsPage,
   rejectRequest,
+  respondRequest,
   startRequest,
   type PrivacyActor,
 } from "./index.ts";
 import { t } from "../i18n/index.ts";
 
 export const STATUSES = ["received", "in_progress", "done", "rejected"] as const;
-export const ACTIONS = ["start", "complete", "reject"] as const;
+export const ACTIONS = ["start", "respond", "extend", "complete", "reject"] as const;
 type Action = (typeof ACTIONS)[number];
 
 const guard = (ctx: ActorRequestContext) =>
@@ -76,7 +78,9 @@ export const postRequestAction = withActor(
     const actor = actorOf(ctx);
     const row = await withTx((tx) => {
       if (action === "start") return startRequest(tx, actor, id);
+      if (action === "respond") return respondRequest(tx, actor, id);
       if (action === "complete") return completeRequest(tx, actor, id);
+      if (action === "extend") return extendRequest(tx, actor, id, body.reason ?? "");
       if (!body.reason) throw new AppError("VALIDATION", 422, t("err.privacy.canNeuCanCuTuChoi2"));
       return rejectRequest(tx, actor, id, body.reason);
     });

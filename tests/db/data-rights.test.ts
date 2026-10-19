@@ -17,16 +17,18 @@ import {
   updateInquiry,
 } from "../../lib/inquiry/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
-import { env } from "../../lib/nen/env.ts";
+import { dsarAnyOverdueSql, dsarConfig } from "../../lib/privacy/deadlines.ts";
 import {
   completeRequest,
   createRequest,
   CreateRequestInput,
   exportSubject,
+  extendRequest,
   listOverdue,
   listRequests,
   registerSubjectFile,
   rejectRequest,
+  respondRequest,
   startRequest,
   type PrivacyActor,
   type RequestKind,
@@ -128,6 +130,34 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
   const q = async (sql: string, params: unknown[] = []) => (await db.admin.query(sql, params)).rows;
 
   describe("đồng ý (CMP-RIGHTS-001, CMP-VN-001)", () => {
+    test("kho nhân tài: đồng ý RIÊNG, mặc định không có; có tích thì ghi thêm một dòng mục đích talent_pool", async () => {
+      const mk = async (extra: Record<string, unknown>) => {
+        const input = ApplicationInput.parse({
+          submission_id: randomUUID(),
+          name: "Ứng Viên Kho",
+          email: `kho.${randomUUID().slice(0, 8)}@example.test`,
+          consent: true,
+          elapsed_ms: 15_000,
+          ...extra,
+        });
+        const r = await submitApplication(db.app, companyId, input, { ip: `10.3.0.${++ip}` });
+        const id = (await q("SELECT id FROM job_application WHERE code = $1", [r.code]))[0].id;
+        return (await q("SELECT purpose_id FROM consent_record WHERE subject_id = $1 ORDER BY id", [id])).map(
+          (x) => x.purpose_id,
+        );
+      };
+      assert.deepEqual(await mk({}), ["job_application"], "không tích sẵn");
+      assert.deepEqual(await mk({ talent_pool: false }), ["job_application"]);
+      assert.deepEqual(await mk({ talent_pool: true }), ["job_application", "talent_pool"]);
+      assert.equal(
+        ApplicationInput.safeParse({
+          ...{ submission_id: randomUUID(), name: "A", email: "a@example.test", consent: true },
+          talent_pool: "yes",
+        }).success,
+        false,
+      );
+    });
+
     test("gửi form ghi bản ghi đồng ý đủ trường cùng giao dịch (liên hệ và tuyển dụng)", async () => {
       const inq = await newInquiry();
       const app = await newApplication();
@@ -552,33 +582,47 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
   });
 
   describe("tiếp nhận và hạn xử lý (CMP-INTL-007)", () => {
-    test("DSAR_DAYS: mặc định 30, ghi đè được, giá trị sai bị từ chối nêu tên biến", () => {
+    test("cấu hình hạn theo loại: mặc định D-029, ghi đè được, giá trị sai bị từ chối nêu tên biến", () => {
       const base = {
         APP_ORIGIN: "http://x.test",
         DATABASE_URL: "postgres://u:p@localhost/db",
         SESSION_SECRET: "x".repeat(40),
         QR_SIGNING_KEYS: `k1:${"y".repeat(40)}`,
       };
-      assert.equal(env("DSAR_DAYS", base), 30);
-      assert.equal(env("DSAR_DAYS", { ...base, DSAR_DAYS: "" }), 30, "rỗng = chưa đặt");
-      assert.equal(env("DSAR_DAYS", { ...base, DSAR_DAYS: "45" }), 45);
-      assert.throws(() => env("DSAR_DAYS", { ...base, DSAR_DAYS: "0" }), /DSAR_DAYS/);
-      assert.throws(() => env("DSAR_DAYS", { ...base, DSAR_DAYS: "abc" }), /DSAR_DAYS/);
+      const d = dsarConfig(base);
+      assert.equal(d.respondWorkdays, 2);
+      assert.equal(d.extendDays, 15);
+      assert.deepEqual(d.days, {
+        access: 10,
+        rectify: 10,
+        export: 10,
+        withdraw_consent: 15,
+        restrict: 15,
+        object: 15,
+        delete: 20,
+      });
+      assert.equal(dsarConfig({ ...base, DSAR_DAYS_DELETE: "" }).days.delete, 20, "rỗng = chưa đặt");
+      assert.equal(dsarConfig({ ...base, DSAR_DAYS_DELETE: "45" }).days.delete, 45);
+      assert.equal(dsarConfig({ ...base, DSAR_DAYS_ACCESS: "7" }).days.export, 7, "ba loại cùng một biến");
+      for (const name of [
+        "DSAR_DAYS_ACCESS",
+        "DSAR_DAYS_RESTRICT",
+        "DSAR_DAYS_DELETE",
+        "DSAR_EXTEND_DAYS",
+        "DSAR_RESPOND_WORKDAYS",
+      ]) {
+        assert.throws(() => dsarConfig({ ...base, [name]: "0" }), new RegExp(name));
+        assert.throws(() => dsarConfig({ ...base, [name]: "abc" }), new RegExp(name));
+      }
     });
 
-    test("due_at = received_at + DSAR_DAYS; danh sách quá hạn chỉ gồm yêu cầu chưa đóng và đã qua hạn", async () => {
+    test("due_at theo loại (access = 10 ngày); danh sách quá hạn chỉ gồm yêu cầu chưa đóng và đã qua hạn", async () => {
       const received = new Date("2026-08-01T03:00:00Z");
       const old = await newInquiry();
       const oldReq = await withTx((tx) =>
-        createRequest(
-          tx,
-          hr,
-          { subject_type: "inquiry", subject_ref: old.code, kind: "access" },
-          received,
-          30,
-        ),
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: old.code, kind: "access" }, received),
       );
-      assert.equal(oldReq.due_at.toISOString(), "2026-08-31T03:00:00.000Z");
+      assert.equal(oldReq.due_at.toISOString(), "2026-08-11T03:00:00.000Z");
       const fresh = await newInquiry();
       await withTx((tx) =>
         createRequest(
@@ -586,7 +630,6 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
           hr,
           { subject_type: "inquiry", subject_ref: fresh.code, kind: "access" },
           new Date(),
-          30,
         ),
       );
       const closed = await newInquiry();
@@ -596,11 +639,12 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
           hr,
           { subject_type: "inquiry", subject_ref: closed.code, kind: "access" },
           received,
-          30,
         ),
       );
       await withTx((tx) => rejectRequest(tx, hr, closedReq.id, "Không xác minh được danh tính", received));
 
+      // Đã phản hồi đúng hạn: chỉ còn hạn thực hiện quyết định quá hạn (hạn phản hồi được kiểm riêng ở test bên dưới).
+      await withTx((tx) => respondRequest(tx, hr, oldReq.id, new Date("2026-08-03T00:00:00Z")));
       const now = new Date("2026-09-15T00:00:00Z");
       const overdue = await listOverdue(db.admin, companyId, now);
       assert.deepEqual(
@@ -627,6 +671,184 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
         ),
         true,
       );
+    });
+
+    test("hạn theo từng loại yêu cầu: due_at, respond_due_at (ngày làm việc) lưu đúng; mỗi loại một hạn", async () => {
+      // Thứ Sáu 2026-08-07 10:00 giờ VN: phản hồi trong 2 ngày làm việc → Thứ Ba 2026-08-11 10:00 VN (bỏ T7, CN).
+      const received = new Date("2026-08-07T03:00:00Z");
+      const expectDays = {
+        access: 10,
+        rectify: 10,
+        export: 10,
+        withdraw_consent: 15,
+        restrict: 15,
+        object: 15,
+        delete: 20,
+      } as const;
+      for (const [kind, days] of Object.entries(expectDays) as [RequestKind, number][]) {
+        const inq = await newInquiry();
+        const r = await withTx((tx) =>
+          createRequest(tx, hr, { subject_type: "inquiry", subject_ref: inq.code, kind }, received),
+        );
+        assert.equal(r.kind, kind);
+        assert.equal(
+          r.due_at.toISOString(),
+          new Date(received.getTime() + days * 86_400_000).toISOString(),
+          kind,
+        );
+        assert.equal(r.respond_due_at!.toISOString(), "2026-08-11T03:00:00.000Z", kind);
+        assert.equal(r.responded_at, null);
+        assert.equal(r.extended_at, null);
+      }
+    });
+
+    test("quá hạn đúng ngày: đúng lúc đến hạn chưa quá, +1 ms là quá; hạn phản hồi quá hạn tách khỏi hạn thực hiện", async () => {
+      const received = new Date("2026-08-07T03:00:00Z"); // Thứ Sáu
+      const inq = await newInquiry();
+      const r = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: inq.code, kind: "delete" }, received),
+      );
+      const flags = async (at: Date) => {
+        const row = (await listRequests(db.admin, companyId, { now: at })).find((x) => x.id === r.id)!;
+        return [row.overdue, row.respond_overdue];
+      };
+      const respondDue = r.respond_due_at!;
+      assert.deepEqual(await flags(respondDue), [false, false], "đúng hạn phản hồi: chưa quá");
+      assert.deepEqual(
+        await flags(new Date(respondDue.getTime() + 1)),
+        [false, true],
+        "quá hạn phản hồi 1 ms",
+      );
+      assert.equal(
+        (await listOverdue(db.admin, companyId, new Date(respondDue.getTime() + 1))).some(
+          (x) => x.id === r.id,
+        ),
+        true,
+        "listOverdue gồm cả quá hạn phản hồi",
+      );
+      // Cảnh báo lib/ops dùng cùng điều kiện SQL (luật dsar_overdue).
+      const alerted = async (at: Date) =>
+        (
+          await db.admin.query<{ n: number }>(
+            `SELECT count(*)::int AS n FROM data_subject_request WHERE id = $2 AND ${dsarAnyOverdueSql("$1")}`,
+            [at, r.id],
+          )
+        ).rows[0]!.n;
+      assert.equal(await alerted(respondDue), 0);
+      assert.equal(await alerted(new Date(respondDue.getTime() + 1)), 1);
+      // Phản hồi (idempotent): hết quá hạn phản hồi; gọi lần hai không ghi audit mới.
+      const before = (
+        await q("SELECT count(*)::int AS n FROM audit_event WHERE action = 'privacy.request.respond'")
+      )[0].n;
+      const at = new Date(respondDue.getTime() - 3_600_000);
+      const resp = await withTx((tx) => respondRequest(tx, hr, r.id, at));
+      assert.equal(resp.responded_at!.toISOString(), at.toISOString());
+      const again = await withTx((tx) => respondRequest(tx, hr, r.id, new Date()));
+      assert.equal(again.responded_at!.toISOString(), at.toISOString(), "không ghi đè lần phản hồi đầu");
+      assert.equal(
+        (await q("SELECT count(*)::int AS n FROM audit_event WHERE action = 'privacy.request.respond'"))[0].n,
+        before + 1,
+      );
+      assert.deepEqual(await flags(new Date(respondDue.getTime() + 1)), [false, false]);
+      // Hạn thực hiện (delete = 20 ngày): ranh giới đúng hạn.
+      assert.deepEqual(await flags(r.due_at), [false, false]);
+      assert.deepEqual(await flags(new Date(r.due_at.getTime() + 1)), [true, false]);
+    });
+
+    test("gia hạn: tối đa một lần kèm lý do, chỉ khi còn mở và chưa quá hạn; hạn mới = hạn cũ + số ngày cấu hình", async () => {
+      const received = new Date("2026-08-01T03:00:00Z");
+      const inq = await newInquiry();
+      const r = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: inq.code, kind: "access" }, received),
+      );
+      const early = new Date("2026-08-05T00:00:00Z");
+      await assert.rejects(
+        withTx((tx) => extendRequest(tx, hr, r.id, "   ", early)),
+        isCode("VALIDATION"),
+      );
+      const ext = await withTx((tx) => extendRequest(tx, hr, r.id, "Cần xác minh danh tính", early));
+      assert.equal(ext.due_at.toISOString(), new Date(r.due_at.getTime() + 15 * 86_400_000).toISOString());
+      assert.equal(ext.extension_days, 15);
+      assert.equal(ext.extension_reason, "Cần xác minh danh tính");
+      assert.equal(ext.extended_at!.toISOString(), early.toISOString());
+      await assert.rejects(
+        withTx((tx) => extendRequest(tx, hr, r.id, "Lần hai", early)),
+        isCode("EXTENSION_ALREADY_USED"),
+        "gia hạn lần hai bị từ chối",
+      );
+      const [row] = await q("SELECT due_at, extension_days FROM data_subject_request WHERE id = $1", [r.id]);
+      assert.equal(row.due_at.toISOString(), ext.due_at.toISOString(), "lần hai không đổi hạn");
+      const audit = await q(
+        "SELECT reason, after FROM audit_event WHERE action = 'privacy.request.extend' AND object_id = $1",
+        [r.id],
+      );
+      assert.equal(audit.length, 1);
+      assert.equal(audit[0].reason, "Cần xác minh danh tính");
+
+      // Quá hạn thì không gia hạn hồi tố; đúng lúc hạn vẫn gia hạn được.
+      const inq2 = await newInquiry();
+      const r2 = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: inq2.code, kind: "access" }, received),
+      );
+      await assert.rejects(
+        withTx((tx) => extendRequest(tx, hr, r2.id, "Muộn", new Date(r2.due_at.getTime() + 1))),
+        isCode("EXTENSION_TOO_LATE"),
+      );
+      const onTime = await withTx((tx) => extendRequest(tx, hr, r2.id, "Đúng hạn", r2.due_at));
+      assert.equal(onTime.extension_days, 15);
+      // Đã đóng thì không gia hạn.
+      const inq3 = await newInquiry();
+      const r3 = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: inq3.code, kind: "access" }, received),
+      );
+      await withTx((tx) => rejectRequest(tx, hr, r3.id, "Không xác minh được", early));
+      await assert.rejects(
+        withTx((tx) => extendRequest(tx, hr, r3.id, "Sau khi đóng", early)),
+        isCode("INVALID_STATE"),
+      );
+    });
+
+    test("hoàn tất/từ chối cũng là phản hồi; loại mới: rectify đóng thủ công, export xuất dữ liệu, object tạo hạn chế xử lý", async () => {
+      const t0 = new Date("2026-08-03T03:00:00Z");
+      const a = await newInquiry();
+      const rect = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: a.code, kind: "rectify" }, t0),
+      );
+      const done = await withTx((tx) => completeRequest(tx, hr, rect.id, t0));
+      assert.deepEqual(done.result, { handled_by: "manual" });
+      assert.equal(done.responded_at!.toISOString(), t0.toISOString());
+      const exp = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: a.code, kind: "export" }, t0),
+      );
+      const out = await withTx((tx) => exportSubject(tx, hr, exp.id));
+      assert.equal(out.request.kind, "export");
+      assert.equal((out.data.inquiry as { email: string }).email, a.email);
+      const b = await newInquiry();
+      const obj = await withTx((tx) =>
+        createRequest(tx, hr, { subject_type: "inquiry", subject_ref: b.code, kind: "object" }, t0),
+      );
+      const objDone = await withTx((tx) => completeRequest(tx, hr, obj.id, t0));
+      assert.deepEqual(objDone.result, { restricted: true, newly_restricted: true });
+      const [flag] = await q(
+        "SELECT kind FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL",
+        [(await q("SELECT id FROM inquiry WHERE code = $1", [b.code]))[0].id],
+      );
+      assert.equal(flag.kind, "restrict");
+    });
+
+    test("yêu cầu cũ (trước T-044, không có hạn phản hồi) không bị coi là quá hạn phản hồi", async () => {
+      const inq = await newInquiry();
+      await db.admin.query(
+        `INSERT INTO data_subject_request (company_id, subject_type, subject_ref, subject_id, kind, received_at, due_at)
+         VALUES ($1, 'inquiry', $2, (SELECT id FROM inquiry WHERE code = $2), 'access', '2026-01-01', '2026-01-11')`,
+        [companyId, inq.code],
+      );
+      const row = (await listRequests(db.admin, companyId, { now: new Date("2026-01-05T00:00:00Z") })).find(
+        (x) => x.subject_ref === inq.code,
+      )!;
+      assert.equal(row.respond_due_at, null);
+      assert.equal(row.respond_overdue, false);
+      assert.equal(row.overdue, false);
     });
 
     test("kiểm tra đầu vào: không nhận email/SĐT làm mã; chủ thể không tồn tại / công ty khác → 404; trùng yêu cầu mở → 409", async () => {

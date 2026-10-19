@@ -285,13 +285,16 @@
       "daCoYeuCauCungLoai": "Đã có yêu cầu cùng loại đang xử lý cho chủ thể này",
       "canNeuCanCuTuChoi": "Cần nêu căn cứ từ chối (1–1000 ký tự)",
       "khongCoDongYDangHieu": "Không có đồng ý đang hiệu lực để rút (xử lý theo căn cứ khác) — hãy từ chối yêu cầu và nêu căn cứ",
-      "chiYeuCauTruyCapMoi": "Chỉ yêu cầu truy cập mới xuất dữ liệu",
+      "chiYeuCauTruyCapMoi": "Chỉ yêu cầu truy cập, chỉnh sửa hoặc cung cấp dữ liệu mới xuất được dữ liệu",
       "yeuCauDaBiTuChoi": "Yêu cầu đã bị từ chối",
       "statusKhongHopLe": "status không hợp lệ",
       "canNeuCanCuTuChoi2": "Cần nêu căn cứ từ chối (reason)",
       "subjectRefHint": "Dùng mã hồ sơ (vd YC-20261018-0001), không dùng email/SĐT",
       "cannotStartInState": "Không bắt đầu được yêu cầu ở trạng thái {status}",
-      "requestClosed": "Yêu cầu đã đóng ({status})"
+      "requestClosed": "Yêu cầu đã đóng ({status})",
+      "canLyDoGiaHan": "Cần nêu lý do gia hạn (1–1000 ký tự)",
+      "daGiaHanMotLan": "Yêu cầu này đã gia hạn một lần; luật chỉ cho gia hạn tối đa một lần",
+      "quaHanKhongGiaHan": "Yêu cầu đã quá hạn xử lý nên không gia hạn được; hãy hoàn tất hoặc từ chối và nêu căn cứ"
     },
     "work": {
       "banKhongCoQuyenDeXuat": "Bạn không có quyền đề xuất baseline",
@@ -392,7 +395,9 @@
       "retainedByLaw": "giữ theo luật: {categories}",
       "consent": {
         "inquiryContact": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
-        "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng"
+        "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng",
+        "talentPool": "Tôi đồng ý để X-Company giữ hồ sơ ứng tuyển của tôi trong kho nhân tài tối đa 12 tháng kể từ khi có kết quả tuyển dụng, để liên hệ khi có vị trí phù hợp. Tôi có thể rút đồng ý bất kỳ lúc nào.",
+        "geoAttendance": "Tôi đồng ý để X-Company ghi vị trí GPS của thiết bị tại thời điểm tôi chấm công, chỉ nhằm đối chiếu địa điểm làm việc. Tôi biết đây là biện pháp giám sát chấm công, có thể không đồng ý hoặc rút đồng ý bất kỳ lúc nào mà vẫn chấm công được bằng cách khác (mã QR)."
       },
       "retained": {
         "laborRecords": {
@@ -411,7 +416,8 @@
           "category": "nhật ký kiểm toán",
           "reason": "Nhật ký chỉ thêm, đã che theo tên khoá; không chứa nội dung liên hệ"
         }
-      }
+      },
+      "stopObjectRequest": "yêu cầu phản đối xử lý của chủ thể"
     }
   }
 }

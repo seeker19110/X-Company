@@ -4,6 +4,7 @@ import type { ActorContext } from "../authz/index.ts";
 import { can } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
+import { LABOR_RULES_V1, otDayCapMinutes } from "./labor-rules.ts";
 import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 import { t } from "../i18n/index.ts";
@@ -16,12 +17,13 @@ export interface OtPolicy {
   maxYear: number;
 }
 
+/** Mặc định theo luật (D-031): lấy từ labor-rules.ts để một nguồn; HR đổi bằng bản ghi ot_policy có ngày hiệu lực. */
 export const DEFAULT_OT_POLICY: OtPolicy = {
   id: null,
-  maxOtDay: 240,
-  maxTotalDay: 720,
-  maxMonth: 2400,
-  maxYear: 12000,
+  maxOtDay: otDayCapMinutes(LABOR_RULES_V1, LABOR_RULES_V1.normalMinutesDay),
+  maxTotalDay: LABOR_RULES_V1.totalMaxMinutesDay,
+  maxMonth: LABOR_RULES_V1.otMaxMinutesMonth,
+  maxYear: LABOR_RULES_V1.otMaxMinutesYear,
 };
 
 export async function otPolicyAt(db: Queryable, companyId: string, date: string): Promise<OtPolicy> {

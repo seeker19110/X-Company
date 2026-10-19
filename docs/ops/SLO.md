@@ -1,7 +1,7 @@
 ---
 title: SLO / SLI — X-Company
-updated: 2026-10-18
-status: nháp — metric đã có trong ứng dụng (`/api/metrics`, T-038); chưa có Prometheus thật nên query chưa chạy thử trên dữ liệu thật
+updated: 2026-10-19
+status: nháp — metric đã có trong ứng dụng (`/api/metrics`, T-038); chưa có Prometheus thật nên PromQL chưa chạy thử; từ T-046 có bộ đánh giá cảnh báo cục bộ đã thử kích hoạt (faithful-fixture)
 ---
 
 # SLO và SLI (OPS-SLO-001)
@@ -61,3 +61,20 @@ Burn rate đa cửa sổ (Google SRE Workbook): cảnh báo chỉ bắn khi cả
 | `XCOutboxDeadLetter` | `outbox_dead_total > 0` giữ 15m (BE-JOB-004) | ticket | seeker19110 |
 
 Mỗi rule có `severity`, `owner`, `runbook_url` (→ [RUNBOOK.md](RUNBOOK.md) mục 4 và "DLQ / redrive"); `npm run -s check:alerts` chặn rule thiếu các trường này. Chưa nối Prometheus/Alertmanager thật: việc của chủ dự án khi có hạ tầng giám sát.
+
+## Cảnh báo cục bộ đã chạy thử (T-046 — faithful-fixture)
+Vì chưa có Prometheus/Alertmanager, `lib/ops/alerts.ts` đánh giá các luật suy từ SLO ở [alerts.json](alerts.json) trên số liệu thật của ứng dụng (văn bản `/api/metrics`, truy vấn DB, probe readiness, manifest sao lưu) và gửi tới tệp JSON-lines, log sự kiện `ops.alert`, webhook tuỳ chọn; chạy trong worker khi `ALERTS_ENABLED=true` (mặc định tắt). Đánh giá burn-rate đa cửa sổ bằng lịch sử scrape trong bộ nhớ (cửa sổ dài hơn thời gian tiến trình chạy thì dùng toàn bộ lịch sử có sẵn — giống `rate()` khi mới có ít dữ liệu).
+
+| Luật cục bộ | Suy từ | Mức | Đã thử kích hoạt (2026-10-19) |
+|---|---|---|---|
+| `XCLocalAvailabilityFastBurn` / `XCLocalAvailabilitySlowBurn` | SLI-1 (burn 14,4× 1h/5m; 6× 6h/30m) | page / ticket | có — firing, không lặp, resolved |
+| `XCLocalAttendanceLatencyBurn` / `XCLocalAttendanceP95Slow` | SLI-2 (burn 6× 1h/5m; p95 > 1 s) | ticket | có |
+| `XCLocalOutboxDeadLetter` / `XCLocalOutboxStale` | BE-JOB-004 / SLI-3 | ticket | có (DLQ do worker thật) |
+| `XCLocalDsarOverdue` | CMP-INTL-007 | ticket | có |
+| `XCLocalReadyzDown` / `XCLocalMetricsScrapeFailed` | sẵn sàng / mù metric | page / ticket | có (DB lỗi giả lập qua pool trỏ cổng đóng) |
+| `XCLocalBackupStale` | RPO (xem [RPO-RTO.md](RPO-RTO.md)) | ticket | có (dùng `scripts/backup.sh` thật) |
+| `XCLocalPeriodCloseOverdue` | đồng hồ khoá kỳ công | ticket | có |
+| `XCLocalAuditChainBroken` | toàn vẹn audit | page | có |
+
+Kết quả từng luật và cách thử: [alert-drills.md](alert-drills.md) (`npm run -s alerts:drill`).
+**Chưa chạy thử:** PromQL ở các mục SLI và 4 rule trong `ops/prometheus/alerts.yml` (không có Prometheus/Alertmanager thật; chỉ `npm run -s check:alerts` kiểm cấu trúc), kênh trực có người, webhook thật. SLI-3 SQL vẫn chưa có kiểm tự động riêng (luật `XCLocalOutboxStale` kiểm hàng quá hạn nhưng không tính tỷ lệ 99%).

@@ -2,13 +2,13 @@
 title: Khôi phục PostgreSQL
 updated: 2026-10-18
 last_drilled: chưa diễn tập
-status: nháp — chưa có cơ chế sao lưu thật; số liệu RPO/RTO ở ../RPO-RTO.md là đề xuất
+status: nháp — đã có sao lưu + diễn tập khôi phục cục bộ (faithful-fixture, xem ../restore-drills.md); chưa có sao lưu tự động/ngoài máy trên hạ tầng thật; số liệu RPO/RTO ở ../RPO-RTO.md là đề xuất
 ---
 
 # Khôi phục PostgreSQL tới thời điểm T
 
 > Người **không phải tác giả** phải chạy được từ tài liệu này (OPS-DR-008). Chưa diễn tập; ghi tên người diễn tập ở [../RUNBOOK.md](../RUNBOOK.md) mục 6.
-> Hiện **chưa có tác vụ sao lưu tự động nào trong repo**; các lệnh dưới là mẫu cho cơ chế được đề xuất ở [../RPO-RTO.md](../RPO-RTO.md). `<chủ dự án điền>` = thông tin hạ tầng chưa có.
+> Repo có `npm run -s backup` (sao lưu) và `npm run -s backup:drill` (diễn tập khôi phục vào CSDL tạm) — xem [../RUNBOOK.md](../RUNBOOK.md) mục "Sao lưu và khôi phục thử cục bộ"; chưa có lịch tự động/ngoài máy trên hạ tầng thật. Các lệnh dưới là mẫu khôi phục cho cơ chế được đề xuất ở [../RPO-RTO.md](../RPO-RTO.md) (mục A dùng đúng định dạng `pg_dump -Fc` mà `backup.sh` tạo ra). `<chủ dự án điền>` = thông tin hạ tầng chưa có.
 
 ## Thứ tự phụ thuộc
 1. Dừng ghi: `pm2 stop x-company` (tránh ghi vào DB đang khôi phục).

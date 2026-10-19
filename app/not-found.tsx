@@ -8,7 +8,7 @@ export default function NotFound() {
         <h1>{t("notFound.title")}</h1>
         <p>{t("notFound.body")}</p>
         {/* <a> thường, không next/link: trang 404 nằm trong cây gốc của mọi route — Link thêm 1 chunk client vào mọi trang (check:perf-budget). */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 404 toàn cục: điều hướng đầy đủ về trang chủ, tránh trạng thái router hỏng */}
         <a href="/">{t("notFound.home")}</a>
       </section>
     </main>

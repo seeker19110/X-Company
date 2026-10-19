@@ -1,9 +1,10 @@
 // Tiếp nhận từ website (F-003, AT01): mỗi submission_id → đúng một hồ sơ có mã, người phụ trách, hạn xử lý.
 // Chống spam nhiều lớp: honeypot (giả thành công, không lưu), điền quá nhanh (đánh dấu), giới hạn theo IP đã băm.
-import { createHmac, randomInt } from "node:crypto";
+import { createHmac, randomInt, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
+import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { sessionSecret } from "../nen/config.ts";
@@ -11,7 +12,12 @@ import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
 import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
-import { CHANNEL_WEB_FORM, isProcessingBlocked, recordConsent } from "../privacy/consent.ts";
+import {
+  CHANNEL_WEB_FORM,
+  isProcessingBlocked,
+  PURPOSE_TALENT_POOL,
+  recordConsent,
+} from "../privacy/consent.ts";
 import { t } from "../i18n/index.ts";
 
 export const CONSENT_NOTICE_VERSION = "2026-10-18";
@@ -31,6 +37,8 @@ export const ApplicationInput = z.object({
   phone: z.string().trim().regex(phoneRe).nullish(),
   cover_letter: z.string().max(8000).nullish(),
   consent: z.literal(true, { error: t("validation.inquiry.consent") }),
+  // Đồng ý RIÊNG "kho nhân tài" (D-030): không bắt buộc, mặc định false — không tích sẵn, không gộp với `consent`.
+  talent_pool: z.boolean().optional().default(false),
   website: z.string().max(200).optional().default(""),
   elapsed_ms: z.number().int().nonnegative().optional(),
 });
@@ -150,10 +158,13 @@ async function insertInquiry(
     const status = assignee ? "assigned" : "new";
     const code = await nextCode(tx, companyId, "YC", now);
     const spam = input.elapsed_ms !== undefined && input.elapsed_ms < MIN_FILL_MS;
+    // SĐT ghi dạng mã hoá (T-048): id sinh trước vì AAD gắn id dòng; cột bản rõ để NULL.
+    const newId = randomUUID();
+    const phone = await sealTextAsync(textColumn("inquiry", "phone"), newId, input.phone);
     const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO inquiry (company_id, code, submission_id, name, email, phone, message, service_slug, source, consent_at,
+      `INSERT INTO inquiry (id, company_id, code, submission_id, name, email, phone_enc, phone_bidx, message, service_slug, source, consent_at,
          consent_notice_version, status, assignee_user_id, due_at, suspected_spam, ip_hash, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$10)
+       VALUES ($18,$1,$2,$3,$4,$5,$6,$17,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$10)
        ON CONFLICT (company_id, submission_id) DO NOTHING RETURNING id`,
       [
         companyId,
@@ -161,7 +172,7 @@ async function insertInquiry(
         input.submission_id,
         input.name,
         input.email?.toLowerCase() ?? null,
-        input.phone ?? null,
+        phone.enc,
         input.message,
         input.service ?? null,
         input.source ?? null,
@@ -172,6 +183,8 @@ async function insertInquiry(
         addBusinessDays(now, 1),
         spam,
         hashIp(meta.ip),
+        phone.bidx,
+        newId,
       ],
     );
     if (!rows[0]) throw new DuplicateSubmission();
@@ -243,10 +256,12 @@ async function insertApplication(
       jobPageId = j.rows[0].id;
     }
     const code = await nextCode(tx, companyId, "UV", now);
+    const newId = randomUUID();
+    const phone = await sealTextAsync(textColumn("job_application", "phone"), newId, input.phone);
     const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO job_application (company_id, code, submission_id, job_page_id, name, email, phone, cover_letter, consent_at,
-         consent_notice_version, suspected_spam, ip_hash, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$9)
+      `INSERT INTO job_application (id, company_id, code, submission_id, job_page_id, name, email, phone_enc, phone_bidx, cover_letter,
+         consent_at, consent_notice_version, suspected_spam, ip_hash, created_at)
+       VALUES ($13,$1,$2,$3,$4,$5,$6,$7,$14,$8,$9,$10,$11,$12,$9)
        ON CONFLICT (company_id, submission_id) DO NOTHING RETURNING id`,
       [
         companyId,
@@ -255,12 +270,14 @@ async function insertApplication(
         jobPageId,
         input.name,
         input.email.toLowerCase(),
-        input.phone ?? null,
+        phone.enc,
         input.cover_letter ?? null,
         now,
         CONSENT_NOTICE_VERSION,
         input.elapsed_ms !== undefined && input.elapsed_ms < MIN_FILL_MS,
         hashIp(meta.ip),
+        newId,
+        phone.bidx,
       ],
     );
     if (!rows[0]) throw new DuplicateSubmission();
@@ -273,13 +290,23 @@ async function insertApplication(
       channel: CHANNEL_WEB_FORM,
       at: now,
     });
+    if (input.talent_pool)
+      await recordConsent(tx, {
+        companyId,
+        subjectType: "job_application",
+        subjectId: rows[0].id,
+        purposeId: PURPOSE_TALENT_POOL,
+        policyVersion: CONSENT_NOTICE_VERSION,
+        channel: CHANNEL_WEB_FORM,
+        at: now,
+      });
     await appendAudit(tx, {
       actorUserId: null,
       companyId,
       action: "application.create",
       objectType: "job_application",
       objectId: rows[0].id,
-      after: { code },
+      after: { code, talent_pool: input.talent_pool },
       requestId: meta.requestId ?? null,
     });
     await enqueue(tx, companyId, "application.received", { applicationId: rows[0]!.id, code });

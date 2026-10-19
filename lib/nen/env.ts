@@ -10,11 +10,23 @@ interface Field<T extends z.ZodType> {
   secret?: boolean;
   /** Bắt buộc ở lúc khởi động (thiếu = thoát ≠ 0). */
   required?: boolean;
+  /**
+   * Bắt buộc chỉ khi NODE_ENV=production (dev/test có giá trị thử cố định ở nơi dùng) — fail-closed ở production.
+   * Hàm: quyết theo các biến còn lại (vd khoá env không bắt buộc khi KMS_PROVIDER=transit).
+   */
+  requiredInProduction?: boolean | ((source: Source) => boolean);
+  /** Bắt buộc khi hàm trả true (phụ thuộc biến khác, vd KMS_TRANSIT_ADDR khi KMS_PROVIDER=transit), ở mọi môi trường. */
+  requiredWhen?: (source: Source) => boolean;
 }
 
 const field = <T extends z.ZodType>(
   schema: T,
-  o: { secret?: boolean; required?: boolean } = {},
+  o: {
+    secret?: boolean;
+    required?: boolean;
+    requiredInProduction?: boolean | ((source: Source) => boolean);
+    requiredWhen?: (source: Source) => boolean;
+  } = {},
 ): Field<T> => ({
   schema,
   ...o,
@@ -31,6 +43,29 @@ function validQrKeys(raw: string): boolean {
     parts.every((p) => {
       const i = p.indexOf(":");
       return i > 0 && bytes(p.slice(i + 1).trim()) >= MIN_SECRET_BYTES;
+    })
+  );
+}
+
+/** Khoá 32 byte mã hoá base64/base64url (44 ký tự có đệm `=` hoặc 43 không đệm). */
+const KEY_B64 = /^[A-Za-z0-9+/_-]{43}={0,1}$/;
+const validKey32 = (v: string) => KEY_B64.test(v) && Buffer.from(v, "base64").length === 32;
+
+/**
+ * "id:khoá,id:khoá" — mỗi khoá đúng 32 byte (base64), id dạng [A-Za-z0-9_-]{1,32} và không trùng. Khoá ĐẦU là khoá hiện
+ * hành (mã hoá); các khoá sau chỉ để giải mã (xoay khoá không cần dừng hệ thống). lib/crypto parse lại.
+ */
+function validDataKeys(raw: string): boolean {
+  const parts = raw.split(",").map((p) => p.trim());
+  const ids = new Set<string>();
+  return (
+    parts.length > 0 &&
+    parts.every((p) => {
+      const i = p.indexOf(":");
+      const id = p.slice(0, i);
+      if (i <= 0 || !/^[A-Za-z0-9_-]{1,32}$/.test(id) || ids.has(id)) return false;
+      ids.add(id);
+      return validKey32(p.slice(i + 1));
     })
   );
 }
@@ -71,6 +106,65 @@ export const SERVER_SPEC = {
       .refine(validQrKeys, { error: `phải dạng kid:khoá[,kid:khoá] với khoá ≥ ${MIN_SECRET_BYTES} byte` }),
     { required: true, secret: true },
   ),
+  // Mã hoá dữ liệu lúc lưu (T-048, BASE-SEC-013, DB-SEC-009): khoá dữ liệu (AES-256-GCM, xoay được) và khoá chỉ mục mù
+  // (HMAC-SHA256) — hai khoá RIÊNG, đều bí mật; KHÔNG nằm trong CSDL. Thiếu ở production → khởi động thất bại; dev/test dùng
+  // khoá thử dẫn xuất lúc chạy (lib/crypto, không trùng khoá thật). Sinh khoá: `openssl rand -base64 32`.
+  DATA_ENCRYPTION_KEYS: field(
+    z
+      .string()
+      .refine(validDataKeys, {
+        error: "phải dạng id:khoá[,id:khoá] với khoá là 32 byte base64, id không trùng",
+      })
+      .optional(),
+    // KMS_PROVIDER=transit: khoá dữ liệu nằm trong KMS (khoá env chỉ còn để ĐỌC dữ liệu v1 cũ khi chuyển đổi) → không bắt buộc.
+    { secret: true, requiredInProduction: (s) => rawOf(s, "KMS_PROVIDER") !== "transit" },
+  ),
+  DATA_INDEX_KEY: field(z.string().refine(validKey32, { error: "phải là khoá 32 byte base64" }).optional(), {
+    secret: true,
+    requiredInProduction: true,
+  }),
+  // KMS tự host (T-052, D-039; SEC-SECRET-013, DB-SEC-009, CMP-PRIV-007): `env` = khoá trong biến môi trường (hành vi cũ, mặc định);
+  // `transit` = mô hình phong bì — khoá dữ liệu (DEK) sinh cục bộ, bọc bằng khoá chủ trong OpenBao/Vault Transit (khoá chủ không
+  // bao giờ rời KMS). Token KMS là bí mật; TLS tuỳ chọn qua NODE_EXTRA_CA_CERTS (CA riêng). KMS lỗi → fail-closed, không rơi về khoá env.
+  KMS_PROVIDER: field(z.enum(["env", "transit"], { error: "phải là env|transit" }).default("env")),
+  KMS_TRANSIT_ADDR: field(url(/^https?$/, "http(s) của OpenBao/Vault").optional(), {
+    requiredWhen: (s) => rawOf(s, "KMS_PROVIDER") === "transit",
+  }),
+  KMS_TRANSIT_TOKEN: field(
+    z
+      .string()
+      .refine((v) => bytes(v) >= 8, { error: "phải dài ≥ 8 byte" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "KMS_PROVIDER") === "transit" },
+  ),
+  KMS_TRANSIT_MOUNT: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/, { error: "tên mount dạng [A-Za-z0-9_-]{1,64}" })
+      .default("transit"),
+  ),
+  KMS_TRANSIT_KEY: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,64}$/, { error: "tên khoá dạng [A-Za-z0-9_-]{1,64}" })
+      .default("xc-data"),
+  ),
+  KMS_TIMEOUT_MS: field(z.coerce.number().int().min(200).max(30_000).default(3_000)),
+  KMS_RETRIES: field(z.coerce.number().int().min(0).max(5).default(2)),
+  // DEK giải bọc được giữ trong bộ nhớ tối đa ngần ấy giây (TTL ngắn: không giữ khoá lâu dài); DEK ghi hiện hành cũng đổi theo chu kỳ này.
+  KMS_DEK_TTL_S: field(z.coerce.number().int().min(1).max(3_600).default(300)),
+  // Số lần mã hoá tối đa với MỘT DEK trước khi sinh DEK mới (GCM an toàn tới ~2^32 lần/khoá; chọn thấp hơn nhiều).
+  KMS_DEK_MAX_USES: field(z.coerce.number().int().min(1).max(100_000_000).default(1_000_000)),
+  // Trần số lời gọi KMS mỗi phút (chống bão gọi khi lỗi/tấn công); vượt → từ chối (fail-closed), không rơi về khoá env.
+  KMS_MAX_CALLS_PER_MIN: field(z.coerce.number().int().min(1).max(100_000).default(600)),
+  // Cổng thu toạ độ GPS ở server (T-051, D-032): mặc định TẮT; BẬT mới có thể nhận toạ độ — và chỉ của nhân viên có đồng ý
+  // riêng còn hiệu lực (purpose geo_attendance). Bật trên dữ liệu thật chỉ sau DPIA + xác nhận HR/pháp chế (docs/DPIA.md).
+  GEO_CAPTURE_ENABLED: field(
+    z
+      .enum(["true", "false"], { error: "phải là true|false" })
+      .default("false")
+      .transform((v) => v === "true"),
+  ),
   TRUST_PROXY_HOPS: field(z.coerce.number().int().min(0).max(10).optional()),
   TRUST_PROXY: field(z.enum(["0", "1"]).optional()),
   FILE_STORAGE_DIR: field(z.string().optional()),
@@ -96,15 +190,63 @@ export const SERVER_SPEC = {
       .default("true")
       .transform((v) => v === "true"),
   ),
+  // D-030 (nguồn: Luật 91/2025/QH15 Điều 3.3 "phù hợp mục đích", Điều 14.1 xoá khi hết mục đích — mức A; số cụ thể là lựa chọn
+  // thận trọng của chủ dự án uỷ quyền cho phiên chính, CHƯA có xác nhận pháp chế).
+  // Liên hệ khách: 24 tháng kể từ khi tạo rồi ẩn danh.
   RETENTION_INQUIRY_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(730)),
+  // Ứng viên đang xử lý mà quá lâu chưa chốt kết quả (lưới an toàn; không phải mốc của ứng viên đã chốt): ẩn danh sau ngần ấy ngày.
   RETENTION_APPLICATION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(365)),
+  // Ứng viên KHÔNG trúng tuyển: ẩn danh sau 30 ngày kể từ khi chốt kết quả (Luật 91/2025 Điều 25.1c: xoá thông tin ứng viên khi
+  // không tuyển, trừ thoả thuận khác — mức A), trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực.
+  RETENTION_APPLICATION_DECIDED_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
+  // Có đồng ý "kho nhân tài" còn hiệu lực: giữ 12 tháng kể từ khi chốt kết quả (đồng ý rút được bất kỳ lúc nào → quay về 30 ngày).
+  RETENTION_TALENT_POOL_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(365)),
+  // Nhân viên đã chấm dứt hợp đồng: sau ngần ấy ngày kể từ ngày chấm dứt, xoá phần liên hệ (SĐT, email) không phải giữ theo luật
+  // (Luật 91/2025 Điều 25.2c: xoá/huỷ khi chấm dứt hợp đồng trừ luật khác — mức A). 0 = ngay sau ngày chấm dứt.
+  RETENTION_EMPLOYEE_TERMINATED_DAYS: field(z.coerce.number().int().min(0).max(36_500).default(0)),
+  // Hồ sơ lao động, chấm công, lương, chứng từ: giữ 10 năm (Luật Kế toán 2015 Điều 41.5b, sửa bởi Luật 56/2024 — mức B; bảng lương
+  // thuộc nhóm 5 hay 10 năm CHƯA xác minh nên chọn 10). Hết hạn → họ tên nhân viên được ẩn danh (dòng công/lương không xoá được).
+  RETENTION_TIMESHEET_YEARS: field(z.coerce.number().int().min(1).max(100).default(10)),
+  // Hồ sơ vi phạm dữ liệu: giữ tối thiểu 5 năm sau khắc phục (NĐ 356/2025 Điều 29.1c — mức B). Chưa có bảng hồ sơ vi phạm trong
+  // CSDL (nằm ở quy trình docs/ops/runbooks/data-breach.md); hằng này để job/bảng tương lai và kiểm tài liệu bám theo.
+  RETENTION_BREACH_RECORD_YEARS: field(z.coerce.number().int().min(1).max(100).default(5)),
   RETENTION_SESSION_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
   RETENTION_LOGIN_ATTEMPT_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(90)),
   RETENTION_OUTBOX_DONE_DAYS: field(z.coerce.number().int().min(1).max(36_500).default(30)),
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
-  // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007), tính bằng ngày lịch kể từ lúc nhận. Mặc định 30 ngày là
-  // GIẢ ĐỊNH thận trọng — pháp chế xác minh số ngày theo NĐ 356/2025 (rút đồng ý/xoá có thể ngắn hơn, vd 72 giờ).
-  DSAR_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007; D-029) THEO LOẠI yêu cầu — NĐ 356/2025/NĐ-CP Điều 5 (nguồn mức B:
+  // bản sao thương mại, chưa đối chiếu Công báo). Ngày ở ba biến DSAR_DAYS_* là ngày LỊCH kể từ lúc nhận (GIẢ ĐỊNH: văn bản
+  // không nói ngày làm việc); riêng hạn phản hồi đã nhận tính theo ngày LÀM VIỆC (bỏ T7, CN; ngày lễ chưa loại — H02).
+  // Đường lùi D-029: đặt cả ba biến về cùng một số để quay lại hạn chung. Thay biến cũ DSAR_DAYS (một số chung = 30).
+  DSAR_RESPOND_WORKDAYS: field(z.coerce.number().int().min(1).max(30).default(2)),
+  // access (xem) · rectify (chỉnh sửa) · export (cung cấp): 10 ngày (Điều 5 khoản 3).
+  DSAR_DAYS_ACCESS: field(z.coerce.number().int().min(1).max(365).default(10)),
+  // withdraw_consent (rút đồng ý) · restrict (hạn chế) · object (phản đối): 15 ngày (Điều 5 khoản 2).
+  DSAR_DAYS_RESTRICT: field(z.coerce.number().int().min(1).max(365).default(15)),
+  // delete (xoá): 20 ngày (Điều 5 khoản 4).
+  DSAR_DAYS_DELETE: field(z.coerce.number().int().min(1).max(365).default(20)),
+  // Gia hạn tối đa MỘT lần kèm lý do. Số ngày gia hạn của khoản 2-4 CHƯA XÁC MINH (chỉ khoản 5 nêu ≤ 15 ngày) →
+  // GIẢ ĐỊNH 15 ngày, luật sư đối chiếu rồi đổi biến này.
+  DSAR_EXTEND_DAYS: field(z.coerce.number().int().min(1).max(365).default(15)),
+  // Cảnh báo vận hành cục bộ (T-046): bộ đánh giá chạy trong tiến trình worker khi ALERTS_ENABLED=true (mặc định tắt).
+  ALERTS_ENABLED: field(
+    z
+      .enum(["true", "false"], { error: "phải là true|false" })
+      .default("false")
+      .transform((v) => v === "true"),
+  ),
+  ALERT_INTERVAL_MS: field(z.coerce.number().int().min(1_000).max(3_600_000).default(60_000)),
+  // Cửa sổ chống lặp: cùng một luật đang bắn chỉ được nhắc lại sau ngần ấy ms (0 = không nhắc lại).
+  ALERT_REPEAT_MS: field(z.coerce.number().int().min(0).max(604_800_000).default(3_600_000)),
+  ALERT_RULES_FILE: field(z.string().min(1).default("docs/ops/alerts.json")),
+  ALERT_SINK_FILE: field(z.string().min(1).default(".data/alerts/alerts.jsonl")),
+  // URL webhook có thể chứa token → bí mật (che khi in cấu hình, không vào log).
+  ALERT_WEBHOOK_URL: field(url(/^https?$/, "http(s)").optional(), { secret: true }),
+  ALERT_WEBHOOK_TIMEOUT_MS: field(z.coerce.number().int().min(500).max(60_000).default(5_000)),
+  ALERT_METRICS_URL: field(url(/^https?$/, "http(s)").optional()),
+  ALERT_READYZ_URL: field(url(/^https?$/, "http(s)").optional()),
+  // Thư mục sao lưu (scripts/backup.sh ghi vào đây; cảnh báo tuổi bản sao lưu đọc manifest ở đây).
+  BACKUP_DIR: field(z.string().min(1).default(".data/backups")),
 } as const;
 
 /**
@@ -154,6 +296,12 @@ function parseOne(
   const f = spec[name]!;
   const raw = rawOf(source, name);
   if (raw === undefined && f.required) return { ok: false, issue: { name, message: "thiếu (bắt buộc)" } };
+  if (raw === undefined && f.requiredWhen?.(source) === true)
+    return { ok: false, issue: { name, message: "thiếu (bắt buộc theo cấu hình hiện tại)" } };
+  const reqProd =
+    typeof f.requiredInProduction === "function" ? f.requiredInProduction(source) : f.requiredInProduction;
+  if (raw === undefined && reqProd === true && source.NODE_ENV === "production")
+    return { ok: false, issue: { name, message: "thiếu (bắt buộc ở production)" } };
   const r = f.schema.safeParse(raw);
   if (r.success) return { ok: true, value: r.data };
   // Chỉ lấy `message` do ta/zod soạn (không chứa giá trị nhập); gộp thành một chuỗi ngắn.

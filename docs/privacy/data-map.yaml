@@ -11,7 +11,7 @@ pii:
     subject: nhan_vien
     purpose: "định danh nhân viên trong chấm công, công việc, bảng công"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "audit_event.before/after (đã che theo tên khoá); period_export.content (CSV); sao lưu DB"
     recipients: "HR, quản lý theo phạm vi; hệ lương nhận CSV"
     status: implemented
@@ -41,7 +41,7 @@ pii:
     subject: nhan_vien
     purpose: "liên hệ công việc, thông báo"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB; audit_event.before/after"
     recipients: "HR, quản lý theo phạm vi"
     status: implemented
@@ -51,7 +51,7 @@ pii:
     subject: nhan_vien
     purpose: "liên hệ công việc"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR, quản lý theo phạm vi"
     status: implemented
@@ -61,7 +61,7 @@ pii:
     subject: nhan_vien
     purpose: "hồ sơ nhân sự, tính phép"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR"
     status: implemented
@@ -71,7 +71,7 @@ pii:
     subject: nhan_vien
     purpose: "hồ sơ nhân sự, thu hồi quyền"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR"
     status: implemented
@@ -81,7 +81,7 @@ pii:
     subject: nhan_vien
     purpose: "lịch sử chức danh theo khoảng hiệu lực"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR, quản lý theo phạm vi"
     status: implemented
@@ -91,7 +91,7 @@ pii:
     subject: nhan_vien
     purpose: "quan hệ quản lý trực tiếp theo khoảng hiệu lực"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR, quản lý theo phạm vi"
     status: implemented
@@ -181,7 +181,7 @@ pii:
     subject: khach_lien_he
     purpose: "xử lý yêu cầu từ website"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "24 tháng (D-030; Luật 91/2025 Đ3.3, Đ14 mức A; số tháng chờ xác nhận pháp chế)"
     copies: "outbox_event.payload; sao lưu DB"
     recipients: "người phụ trách yêu cầu (kinh doanh)"
     status: implemented
@@ -191,7 +191,7 @@ pii:
     subject: khach_lien_he
     purpose: "liên hệ lại khách"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "24 tháng (D-030; Luật 91/2025 Đ3.3, Đ14 mức A; số tháng chờ xác nhận pháp chế)"
     copies: "outbox_event.payload; sao lưu DB"
     recipients: "người phụ trách yêu cầu"
     status: implemented
@@ -201,7 +201,7 @@ pii:
     subject: khach_lien_he
     purpose: "liên hệ lại khách"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "24 tháng (D-030; Luật 91/2025 Đ3.3, Đ14 mức A; số tháng chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "người phụ trách yêu cầu"
     status: implemented
@@ -211,7 +211,7 @@ pii:
     subject: khach_lien_he
     purpose: "nội dung nhu cầu (văn bản tự do, có thể chứa dữ liệu cá nhân)"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "24 tháng (D-030; Luật 91/2025 Đ3.3, Đ14 mức A; số tháng chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "người phụ trách yêu cầu"
     status: implemented
@@ -221,7 +221,7 @@ pii:
     subject: khach_lien_he
     purpose: "chống spam (IP đã băm)"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "24 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "24 tháng (D-030; Luật 91/2025 Đ3.3, Đ14 mức A; số tháng chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "quản trị"
     status: implemented
@@ -231,7 +231,7 @@ pii:
     subject: ung_vien
     purpose: "tuyển dụng"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "ứng viên không trúng tuyển: ẩn danh 30 ngày sau khi chốt; có đồng ý riêng kho nhân tài: 12 tháng (D-030; Luật 91/2025 Đ25.1c mức A; chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "chỉ HR (và grant tuyển dụng)"
     status: implemented
@@ -241,7 +241,7 @@ pii:
     subject: ung_vien
     purpose: "tuyển dụng"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "ứng viên không trúng tuyển: ẩn danh 30 ngày sau khi chốt; có đồng ý riêng kho nhân tài: 12 tháng (D-030; Luật 91/2025 Đ25.1c mức A; chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "chỉ HR"
     status: implemented
@@ -251,7 +251,7 @@ pii:
     subject: ung_vien
     purpose: "tuyển dụng"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "ứng viên không trúng tuyển: ẩn danh 30 ngày sau khi chốt; có đồng ý riêng kho nhân tài: 12 tháng (D-030; Luật 91/2025 Đ25.1c mức A; chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "chỉ HR"
     status: implemented
@@ -261,7 +261,7 @@ pii:
     subject: ung_vien
     purpose: "tuyển dụng (văn bản tự do)"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "ứng viên không trúng tuyển: ẩn danh 30 ngày sau khi chốt; có đồng ý riêng kho nhân tài: 12 tháng (D-030; Luật 91/2025 Đ25.1c mức A; chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "chỉ HR"
     status: implemented
@@ -271,7 +271,7 @@ pii:
     subject: ung_vien
     purpose: "chống spam (IP đã băm)"
     legal_basis: "đồng ý của chủ thể (consent_at, phiên bản thông báo)"
-    retention: "12 tháng (mặc định D-016; pháp chế chốt)"
+    retention: "ứng viên không trúng tuyển: ẩn danh 30 ngày sau khi chốt; có đồng ý riêng kho nhân tài: 12 tháng (D-030; Luật 91/2025 Đ25.1c mức A; chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "quản trị"
     status: implemented
@@ -321,7 +321,7 @@ pii:
     subject: nhan_vien
     purpose: "nhận diện thiết bị gửi sự kiện, chống chấm hộ"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
     status: implemented
@@ -331,7 +331,7 @@ pii:
     subject: nhan_vien
     purpose: "lý do nghỉ (văn bản tự do, có thể lộ thông tin sức khoẻ)"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "người duyệt theo phạm vi"
     status: implemented
@@ -341,7 +341,7 @@ pii:
     subject: nhan_vien
     purpose: "tên tệp do người dùng đặt (có thể chứa tên người)"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — HR/pháp chế (D-016 chưa nêu)"
+    retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "người có quyền đọc đối tượng chứa tệp"
     status: implemented
@@ -458,6 +458,27 @@ reviewed_non_pii:
   - table: worksite
     column: lng
     reason: "toạ độ địa điểm làm việc, không phải vị trí cá nhân"
+  - table: attendance_event
+    column: geo_enc
+    reason: "bản mã AES-256-GCM của geo_lat/geo_lng/geo_accuracy_m/geo_captured_at (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: employee
+    column: phone_enc
+    reason: "bản mã AES-256-GCM của employee.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: employee
+    column: phone_bidx
+    reason: "chỉ mục mù HMAC-SHA256 (không đảo ngược được nếu không có khoá DATA_INDEX_KEY) của employee.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: inquiry
+    column: phone_enc
+    reason: "bản mã AES-256-GCM của inquiry.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: inquiry
+    column: phone_bidx
+    reason: "chỉ mục mù HMAC-SHA256 (không đảo ngược được nếu không có khoá DATA_INDEX_KEY) của inquiry.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: job_application
+    column: phone_enc
+    reason: "bản mã AES-256-GCM của job_application.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
+  - table: job_application
+    column: phone_bidx
+    reason: "chỉ mục mù HMAC-SHA256 (không đảo ngược được nếu không có khoá DATA_INDEX_KEY) của job_application.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
 linked_tables:
   - table: shift_assignment
     note: "ca làm của nhân viên (employee_id)"

@@ -1,0 +1,1029 @@
+{
+  "label": "faithful-fixture",
+  "date": "2026-10-19",
+  "commit": "e9c178b9965f3d51cbe54f1c3a999ab16fb6c421+dirty",
+  "env": {
+    "node": "v22.22.0",
+    "next": "16.4.2",
+    "os": "Linux 6.18.44-fc-v139 x64",
+    "cpus": "4 x Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "memGiB": 16,
+    "psql": "psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"
+  },
+  "port": 3200,
+  "browser": "Chromium 156.0.8078.4 (Playwright, headless)",
+  "checkTotal": 155,
+  "requestTotal": 630,
+  "notProven": [
+    "Không phải ZAP/Burp: không có spider đầy đủ, không có active-scan theo chữ ký CVE; chỉ các nhóm probe liệt kê ở trên.",
+    "Không có TLS thật: HSTS/Secure/`__Host-` kiểm trên instance chạy `APP_ORIGIN=https://…` (mô phỏng proxy chấm dứt TLS); cấu hình TLS, chứng chỉ, cipher, header của reverse proxy/CDN thật chưa được kiểm.",
+    "Không chạy trên staging/production, không có WAF/CDN/proxy thật; X-Forwarded-For do probe tự đặt (`TRUST_PROXY_HOPS=1`).",
+    "XSS: payload là tập hữu hạn (HTML thô, scheme nguy hiểm, SVG, template, markdown độc, tên tệp) trên các đầu vào hiện có; không chứng minh không còn biến thể nào. DOM kiểm bằng Chromium của Playwright, không phải mọi trình duyệt.",
+    "BOLA/BFLA chỉ giữa các người dùng seed (hai nhân viên cùng công ty; vai trò khác nhau); không kiểm đa-tenant giữa hai công ty ở tầng HTTP (đã có test authz/RLS trong tests/).",
+    "Không kiểm: DoS/tải lớn (xem perf:load), phụ thuộc có lỗ hổng (npm audit/OSV), cấu hình hạ tầng/IaC, bí mật trong lịch sử git (gitleaks), SSRF (chưa có tính năng gọi URL do người dùng cung cấp)."
+  ],
+  "groups": [
+    {
+      "id": "DAST-A",
+      "title": "Header bảo mật mọi trang/route chính",
+      "refs": ["PRF-WEB-007", "SEC-WEB-006", "SEC-WEB-014"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "HTML /",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET / → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /dich-vu",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /lien-he",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /lien-he → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /gioi-thieu",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /gioi-thieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /tin-tuc",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /tin-tuc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /dich-vu/tu-van-thiet-ke",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/tu-van-thiet-ke → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /dich-vu/dast-markdown-doc",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/dast-markdown-doc → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /chinh-sach-du-lieu",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /chinh-sach-du-lieu → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "HTML /khong-co-trang-nay",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /khong-co-trang-nay → 404 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()] <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "HTML /app/login",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/login → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=()]"
+        },
+        {
+          "name": "nonce CSP đổi mỗi request",
+          "ok": true,
+          "errors": [],
+          "evidence": "10/10 nonce khác nhau"
+        },
+        {
+          "name": "HTML nội bộ /app/today",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/today (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "HTML nội bộ /app/tasks",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/tasks (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "HTML nội bộ /app/attendance",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/attendance (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "HTML nội bộ /app/approvals",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/approvals (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "HTML nội bộ /app/dashboard",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/dashboard (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "HTML nội bộ /app/me",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/me (đã đăng nhập) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); cache-control: private, no-store]"
+        },
+        {
+          "name": "redirect chưa đăng nhập vẫn không cache",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/today (không phiên) → 307 [location: /app/login; cache-control: private, no-store]"
+        },
+        {
+          "name": "API /api/healthz",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/healthz → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff; cache-control: no-store]"
+        },
+        {
+          "name": "API /api/readyz",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/readyz → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff; cache-control: no-store]"
+        },
+        {
+          "name": "API /api/app/me",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff; cache-control: no-store]"
+        },
+        {
+          "name": "API /api/app/tasks",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff; cache-control: no-store]"
+        },
+        {
+          "name": "HTTPS: / có HSTS + CSP + còn lại",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET / (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
+        },
+        {
+          "name": "HTTPS: /app/login có HSTS",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/login (APP_ORIGIN https) → 200 [content-security-policy: default-src 'self'; script-src 'self' '<đã-che>' 'strict-dynamic'; style-src 'self' '<đã-c…; x-frame-options: DENY; x-content-type-options: nosniff; referrer-policy: strict-origin-when-cross-origin; permissions-policy: camera=(self), geolocation=(self), microphone=(), payment=(), usb=(); strict-transport-security: max-age=31536000; includeSubDomains]"
+        },
+        {
+          "name": "HTTPS: API có HSTS",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me (APP_ORIGIN https) → 200 [strict-transport-security: max-age=31536000; includeSubDomains; x-content-type-options: nosniff]"
+        },
+        {
+          "name": "TRACE bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "TRACE / → 500 Internal Server Error"
+        }
+      ]
+    },
+    {
+      "id": "DAST-B",
+      "title": "Cookie phiên (HttpOnly/SameSite/Secure/__Host-/vòng đời)",
+      "refs": ["SEC-WEB-023", "SEC-WEB-007", "ASVS V7"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "HTTP: cookie phiên HttpOnly + SameSite + Path + hạn",
+          "ok": true,
+          "errors": [],
+          "evidence": "Set-Cookie: xc_session=<đã-che>; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800"
+        },
+        {
+          "name": "HTTPS: cookie phiên Secure + __Host- + HttpOnly + SameSite",
+          "ok": true,
+          "errors": [],
+          "evidence": "Set-Cookie: __Host-xc_session=<đã-che>; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800; Secure"
+        },
+        {
+          "name": "CSRF token không trùng giá trị cookie phiên (không lộ phiên cho script)",
+          "ok": true,
+          "errors": [],
+          "evidence": "csrf_token ≠ cookie phiên"
+        },
+        {
+          "name": "đăng nhập sai: không cookie, cùng thông điệp cho email lạ và sai mật khẩu",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/auth/login (sai) → 401 {\"type\":\"/problems/invalid-credentials\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Email hoặc m…"
+        },
+        {
+          "name": "fixation: token phiên mới do server cấp, khác cookie đã gài",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST login kèm cookie gài sẵn → 200"
+        },
+        {
+          "name": "mỗi lần đăng nhập một token phiên mới",
+          "ok": true,
+          "errors": [],
+          "evidence": "2 đăng nhập liên tiếp → 2 token khác nhau"
+        },
+        {
+          "name": "cookie bị sửa 1 ký tự → 401",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me (cookie sửa) → 401 {\"type\":\"/problems/unauthenticated\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Vui lòng đăng nh…"
+        },
+        {
+          "name": "cookie mã hoá sai → 401 (không 500)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me (cookie %E0%A4%A) → 401 {\"type\":\"/problems/unauthenticated\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Vui lòng đăng nh…"
+        },
+        {
+          "name": "đăng xuất xoá cookie + Clear-Site-Data",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/auth/logout → 200 [clear-site-data: \"cache\", \"storage\"] set-cookie: xc_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+        },
+        {
+          "name": "token cũ bị từ chối sau đăng xuất (phiên bị huỷ ở server)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me (token đã đăng xuất) → 401 {\"type\":\"/problems/unauthenticated\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Vui lòng đăng nh…"
+        }
+      ]
+    },
+    {
+      "id": "DAST-C",
+      "title": "XSS phản chiếu & lưu (HTML + Chromium thật)",
+      "refs": ["SEC-WEB-004", "FE-SEC-001", "ASVS V1/V3", "Top10:2025 A05"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "phản chiếu /lien-he?service={payload}&source={payload}&q={payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /lien-he?service=<payload>&source=<payload>&q=<payload> → 200; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu /?q={payload}&utm_source={payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /?q=<payload>&utm_source=<payload> → 200; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu /app/login?next={payload}&error={payload}&email={payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/login?next=<payload>&error=<payload>&email=<payload> → 200; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu /tim-kiem?q={payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /tim-kiem?q=<payload> → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu /dich-vu/{payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/<payload> → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu /{payload} × 10 payload",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /<payload> → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…; 10 payload (script, img/onerror, javascript:, svg, template, markdown, </title>, mXSS, RLO) — HTML không có phần tử/thuộc tính bị chèn"
+        },
+        {
+          "name": "phản chiếu trong lỗi API chỉ ở dạng JSON (không HTML)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks?limit=<payload> × 10 → application/problem+json"
+        },
+        {
+          "name": "tiền điều kiện: trang CMS độc đã xuất bản và có nội dung render",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/dast-markdown-doc → 200 — thân 17151 B"
+        },
+        {
+          "name": "CMS markdown độc (script/img/svg/iframe/javascript:/data:/entity/tab/autolink/bảng/code) + tiêu đề/tóm tắt/SEO/canonical",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/dast-markdown-doc → HTML không chứa phần tử/thuộc tính/URL nguy hiểm"
+        },
+        {
+          "name": "danh sách /dich-vu (tiêu đề + tóm tắt độc)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu → 200"
+        },
+        {
+          "name": "sitemap.xml an toàn (XML, không HTML chèn)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /sitemap.xml → 200 [content-type: application/xml]"
+        },
+        {
+          "name": "gửi 10 payload qua form liên hệ + ứng tuyển công khai (chấp nhận hoặc từ chối có cấu trúc, không 5xx)",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/public/inquiries|applications × 10; mỗi request một IP giả riêng"
+        },
+        {
+          "name": "đọc lại liên hệ đã lưu (sales): JSON đúng kiểu, nosniff, dữ liệu giữ nguyên dạng văn bản",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/inquiries → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff] — 10 bản ghi payload"
+        },
+        {
+          "name": "đọc lại hồ sơ ứng tuyển đã lưu (hr): JSON đúng kiểu + nosniff",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/applications → 200 [content-type: application/json; charset=utf-8; x-content-type-options: nosniff]"
+        },
+        {
+          "name": "bình luận 10 payload: lưu được, đọc lại ở JSON",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/comments?object_type=task → 200 [content-type: application/json; charset=utf-8]"
+        },
+        {
+          "name": "tệp: tên độc lưu an toàn, tải về attachment+nosniff; svg/html/đuôi kép/nội dung giả bị 415",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/files (tên chứa <img onerror>) → 201; svg/html/.pdf.html/.html.pdf/nội dung script → 415"
+        },
+        {
+          "name": "công cụ đo: payload canary CHẠY được trong Chromium thì probe bắt được",
+          "ok": true,
+          "errors": [],
+          "evidence": "canary onerror → 1 lần báo"
+        },
+        {
+          "name": "DOM thật: CMS markdown độc (công khai)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /dich-vu/dast-markdown-doc → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: danh sách dịch vụ (tiêu đề/tóm tắt độc)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /dich-vu → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 2 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: phản chiếu query ở /lien-he",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /lien-he?… → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 1 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: 404 phản chiếu đường dẫn",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /dich-vu/%22%3E%3Cimg%20data-mk%3D%22MK-… → 404; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 1 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: phản chiếu ở /app/login",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/login?… → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: việc của nv (tiêu đề + tiêu chí độc từ seed)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/tasks → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: hôm nay (nv)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/today → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 2 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: hồ sơ (nv)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/me → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: chấm công (nv)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/attendance → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: hộp duyệt (tl) — lý do OT do nv nhập",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/approvals → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        },
+        {
+          "name": "DOM thật: bảng điều hành (exec)",
+          "ok": true,
+          "errors": [],
+          "evidence": "Chromium mở /app/dashboard → 200; 0 dialog, 0 lần gán __dastHit, 0 [data-mk]; đã bấm 0 liên kết trong nội dung"
+        }
+      ]
+    },
+    {
+      "id": "DAST-D",
+      "title": "CSRF (token + Origin) và CORS",
+      "refs": ["SEC-WEB-007", "SEC-WEB-013", "ASVS V3"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "POST ghi: thiếu x-csrf-token → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Thiếu hoặc sai mã CSRF\",\"in…"
+        },
+        {
+          "name": "POST ghi: x-csrf-token sai → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Thiếu hoặc sai mã CSRF\",\"in…"
+        },
+        {
+          "name": "POST ghi: x-csrf-token của người khác (nv2) với cookie của nv → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Thiếu hoặc sai mã CSRF\",\"in…"
+        },
+        {
+          "name": "POST ghi: Origin lạ + token đúng → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "POST ghi: không Origin, không Sec-Fetch-Site + token đúng → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "POST ghi: Sec-Fetch-Site: cross-site, không Origin → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "POST ghi: Origin: null (iframe sandbox) + token đúng → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "POST ghi: Origin giả hậu tố (host hợp lệ + .evil.test) → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "POST ghi: form chéo nguồn (text/plain, không token) → 403 CSRF",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "đối chứng: cùng request hợp lệ (Origin + token đúng) → 201 (probe không đỏ/xanh vô nghĩa)",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments (hợp lệ) → 201"
+        },
+        {
+          "name": "login CSRF: đăng nhập từ Origin lạ → 403 và không cookie",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/auth/login (Origin lạ, mật khẩu đúng) → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "logout CSRF: Origin lạ → 403 và phiên còn nguyên",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/auth/logout (Origin lạ) → 403 {\"type\":\"/problems/csrf\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Yêu cầu không cùng nguồn\",\"…"
+        },
+        {
+          "name": "GET không đổi trạng thái: GET /api/app/auth/logout → 405",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/auth/logout → 405"
+        },
+        {
+          "name": "CORS /api/app/me: preflight và GET với Origin lạ không được cấp quyền",
+          "ok": true,
+          "errors": [],
+          "evidence": "OPTIONS /api/app/me (Origin lạ) → 204 | GET → 200, ACAO: (không có)"
+        },
+        {
+          "name": "CORS /api/public/inquiries: preflight và GET với Origin lạ không được cấp quyền",
+          "ok": true,
+          "errors": [],
+          "evidence": "OPTIONS /api/public/inquiries (Origin lạ) → 204 | GET → 405, ACAO: (không có)"
+        },
+        {
+          "name": "CORS /api/app/tasks: preflight và GET với Origin lạ không được cấp quyền",
+          "ok": true,
+          "errors": [],
+          "evidence": "OPTIONS /api/app/tasks (Origin lạ) → 204 | GET → 200, ACAO: (không có)"
+        },
+        {
+          "name": "CORS /api/readyz: preflight và GET với Origin lạ không được cấp quyền",
+          "ok": true,
+          "errors": [],
+          "evidence": "OPTIONS /api/readyz (Origin lạ) → 204 | GET → 200, ACAO: (không có)"
+        }
+      ]
+    },
+    {
+      "id": "DAST-E",
+      "title": "Open redirect (next/redirect/returnTo…, đường dẫn dị dạng, Host)",
+      "refs": ["SEC-WEB-017", "ASVS V3"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "/app/login với 9 tên tham số × 5 đích lạ (chưa đăng nhập)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/login?next=https://evil.test → 200; 90 request, không Location nào ra ngoài nguồn"
+        },
+        {
+          "name": "/app/login với 9 tên tham số × 5 đích lạ (đã đăng nhập)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/login?next=https://evil.test → 307 [location: /app/today]; 90 request, không Location nào ra ngoài nguồn"
+        },
+        {
+          "name": "đường dẫn dị dạng (// \\\\ %2F, thừa dấu /) × 12: chuẩn hoá/chuyển hướng không ra ngoài",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET //evil.test → 308 [location: /evil.test]; 12 đường dẫn"
+        },
+        {
+          "name": "Host header lạ: chuyển hướng chưa đăng nhập không bị đầu độc bằng Host",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/today (Host: evil.test) → 307 [location: /app/login]"
+        },
+        {
+          "name": "X-Forwarded-Host lạ không đầu độc chuyển hướng",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/today (X-Forwarded-Host: evil.test) → 307 [location: /app/login]"
+        }
+      ]
+    },
+    {
+      "id": "DAST-F",
+      "title": "Rò thông tin lỗi (stack/SQL/đường dẫn; RFC 9457)",
+      "refs": ["BASE-ERR-003", "SEC-WEB-002", "SEC-WEB-014", "ASVS V16"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "API: JSON hỏng",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/bad-json\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"JSON không hợp lệ…"
+        },
+        {
+          "name": "API: thiếu trường / sai kiểu",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"Dữ liệu gửi lên…"
+        },
+        {
+          "name": "API: body vượt trần (Content-Length)",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 413 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/payload-too-large\",\"title\":\"Dữ liệu quá lớn\",\"status\":413,\"detail\":\"Dữ liệu quá l…"
+        },
+        {
+          "name": "API: limit=abc",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks?limit=abc → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"limit phải là s…"
+        },
+        {
+          "name": "API: limit nghịch (SQL-ish)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks?limit=1'%20OR%20'1'%3D'1 → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"limit phải là s…"
+        },
+        {
+          "name": "API: offset âm",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks?offset=-1 → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"offset phải là …"
+        },
+        {
+          "name": "API: limit vượt trần",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks?limit=1000000 → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"limit phải là s…"
+        },
+        {
+          "name": "API: id không phải UUID",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/not-a-uuid → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+        },
+        {
+          "name": "API: UUID không tồn tại",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/7918347c-9f53-4b61-a287-be1526c5fdb8 → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+        },
+        {
+          "name": "API: id kiểu SQL injection",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/'%3B%20DROP%20TABLE%20app_user%3B-- → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+        },
+        {
+          "name": "API: hành động việc không tồn tại",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/hack → 404 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy\",\"insta…"
+        },
+        {
+          "name": "API: chưa đăng nhập",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me → 401 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/unauthenticated\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Vui lòng đăng nh…"
+        },
+        {
+          "name": "API: cookie hỏng",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me → 401 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/unauthenticated\",\"title\":\"Chưa đăng nhập\",\"status\":401,\"detail\":\"Vui lòng đăng nh…"
+        },
+        {
+          "name": "API: phương thức không hỗ trợ (DELETE /api/app/me)",
+          "ok": true,
+          "errors": [],
+          "evidence": "DELETE /api/app/me → 405"
+        },
+        {
+          "name": "API công khai: dữ liệu sai kiểu",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/public/inquiries → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"Dữ liệu gửi lên…"
+        },
+        {
+          "name": "API công khai: JSON hỏng",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/public/inquiries → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/bad-json\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"JSON không hợp lệ…"
+        },
+        {
+          "name": "API công khai: body rất lớn",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/public/inquiries → 413 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/payload-too-large\",\"title\":\"Dữ liệu quá lớn\",\"status\":413,\"detail\":\"Dữ liệu quá l…"
+        },
+        {
+          "name": "API: route không tồn tại",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/khong-co → 404 [content-type: text/html; charset=utf-8] <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "API: đăng nhập thiếu trường",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/auth/login → 400 [content-type: application/problem+json; charset=utf-8] {\"type\":\"/problems/validation\",\"title\":\"Yêu cầu không hợp lệ\",\"status\":400,\"detail\":\"Dữ liệu gửi lên…"
+        },
+        {
+          "name": "web: trang 404",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /khong-co-trang-nay → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: 404 với đường dẫn rất dài (6 000 ký tự)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/<đã-che> → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: slug SQL injection",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/'%20OR%201%3D1-- → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: percent-encoding hỏng",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /%E0%A4%A → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: byte NUL",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /%00 → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: traversal thô",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /dich-vu/..%2f..%2f..%2fetc%2fpasswd → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "web: /app/<không có>",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /app/khong-co-trang → 404 <!DOCTYPE html><html id=\"__next_error__\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=…"
+        },
+        {
+          "name": "readyz chỉ trả trạng thái ngắn (không chuỗi kết nối/phiên bản)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/readyz → 200"
+        },
+        {
+          "name": "quét toàn phiên: mọi phản hồi lỗi/JSON không lộ stack/SQL/đường dẫn",
+          "ok": true,
+          "errors": [],
+          "evidence": "353 phản hồi (4xx/5xx/JSON) trong 630 request của cả phiên quét, không khớp mẫu rò"
+        }
+      ]
+    },
+    {
+      "id": "DAST-G",
+      "title": "Đường dẫn nhạy cảm không được phục vụ (.env, .git, source map, metrics, uploads)",
+      "refs": ["PRF-WEB-008", "SEC-WEB-014", "SEC-WEB-019", "OPS-OBS-003", "ASVS V13"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "38 đường dẫn nhạy cảm/mã nguồn/thư mục/debug không được phục vụ",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET × 38 (.env, .git, package.json, mã nguồn, migrations, seed, báo cáo, .next, uploads, debug…) → 404/401/403, không dấu hiệu bí mật"
+        },
+        {
+          "name": "path traversal thô × 9 (.. %2e %2f %5c ;.. NUL)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET × 9, đường dẫn gửi nguyên văn không chuẩn hoá phía khách"
+        },
+        {
+          "name": "source map: 9 chunk JS không có sourceMappingURL và *.map trả 404",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /_next/static/chunks/1-nqmp1rl8kqt.js.map → 404 (… 9 chunk)"
+        },
+        {
+          "name": "/api/metrics cần bearer (không token/sai/query-string → 401; đúng → 200 không PII)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/metrics (không token) → 401 Unauthorized | sai → 401 | ?token= → 401 | đúng → 200"
+        },
+        {
+          "name": "/api/metrics khi METRICS_TOKEN chưa đặt → 404 (như không tồn tại)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/metrics (instance không đặt token) → 404 Not Found"
+        },
+        {
+          "name": "/_next/image không nạp URL tuỳ ý (SSRF qua bộ tối ưu ảnh)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /_next/image?url=<nội bộ|ngoài|metadata|file> → 4xx"
+        },
+        {
+          "name": "tải tệp chưa đăng nhập → 401",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/<uuid> (không phiên) → 401"
+        },
+        {
+          "name": "sitemap/robots: không lộ bản nháp, /app bị chặn bot",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /robots.txt → 200 User-Agent: * Allow: / Disallow: /app Disallow: /api Sitemap: http://localhost:3…"
+        }
+      ]
+    },
+    {
+      "id": "DAST-I",
+      "title": "IDOR/BOLA và BFLA giữa các người dùng seed trên /api/app/*",
+      "refs": ["STD-SEC-004", "OWASP API1 (BOLA)", "OWASP API5 (BFLA)", "ASVS V8"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "tiền điều kiện: nv sở hữu việc, tệp và bình luận",
+          "ok": true,
+          "errors": [],
+          "evidence": "việc d3dd419d…, tệp 949c020a…, bình luận → 201"
+        },
+        {
+          "name": "đối chứng: chủ việc đọc được bình luận của mình",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/comments (nv) → 200"
+        },
+        {
+          "name": "BOLA: nv2 tải tệp của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/949c020a-e1df-4d1d-a140-3eb1a488d071 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+        },
+        {
+          "name": "BOLA: nv2 đọc bình luận của việc nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/comments?object_type=task&object_id=d3dd419d-ba8b-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+        },
+        {
+          "name": "BOLA: nv2 bình luận lên việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/comments → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+        },
+        {
+          "name": "BOLA: nv2 đính kèm tệp vào việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/files → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+        },
+        {
+          "name": "BOLA: nv2 start việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+        },
+        {
+          "name": "BOLA: nv2 submit việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/submit → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+        },
+        {
+          "name": "BOLA: nv2 accept việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/accept → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+        },
+        {
+          "name": "BOLA: nv2 cancel việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/cancel → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+        },
+        {
+          "name": "BOLA: danh sách việc của nv2 không chứa việc của nv",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/tasks (nv2) → 0 mục, không có d3dd419d…"
+        },
+        {
+          "name": "BOLA: tham số/header user_id không đổi danh tính (mass assignment danh tính)",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/me?user_id=<nv> (phiên nv2) → user_id của nv2"
+        },
+        {
+          "name": "tenant: người dùng công ty khác tải tệp",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/files/949c020a-e1df-4d1d-a140-3eb1a488d071 → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy tệp\",\"i…"
+        },
+        {
+          "name": "tenant: đọc bình luận việc công ty khác",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/comments?object_type=task&object_id=d3dd419d-ba8b-4… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy đối tượ…"
+        },
+        {
+          "name": "tenant: đổi trạng thái việc công ty khác",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/tasks/d3dd419d-ba8b-4af8-a25b-bee9c19175b1/start → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy công vi…"
+        },
+        {
+          "name": "BFLA/BOLA: nv2 (đồng cấp) duyệt đơn OT của nv → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/approvals/ot/<id>/approve → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA/BOLA: nv (tự duyệt đơn của mình) duyệt đơn OT của nv → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/approvals/ot/<id>/approve → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: nv (nhân viên) đọc liên hệ khách → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/inquiries → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: nv đọc hồ sơ ứng tuyển → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/applications → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: nv đọc yêu cầu DSAR → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/privacy/requests → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: nv tạo yêu cầu DSAR → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST /api/app/privacy/requests → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: sales đọc hồ sơ ứng tuyển (tách quyền ứng viên) → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/applications → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: hr đọc liên hệ khách → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/inquiries → 403 {\"type\":\"/problems/forbidden\",\"title\":\"Không có quyền\",\"status\":403,\"detail\":\"Bạn không có quyền thự…"
+        },
+        {
+          "name": "BFLA: nv hiển thị QR địa điểm → bị từ chối",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET /api/app/attendance/qr/1d5f5feb-4a52-47b4-a0e0-d9e… → 404 {\"type\":\"/problems/not-found\",\"title\":\"Không tìm thấy\",\"status\":404,\"detail\":\"Không tìm thấy địa điể…"
+        },
+        {
+          "name": "không phiên → 401 trên 18 route /api/app/*",
+          "ok": true,
+          "errors": [],
+          "evidence": "GET×9 + POST×9 không cookie → 401"
+        }
+      ]
+    },
+    {
+      "id": "DAST-H",
+      "title": "Giới hạn tần suất (429 + Retry-After) và Idempotency-Key",
+      "refs": ["SEC-WEB-012", "BE-REL-006", "BE-API-008", "ARC-INT-001", "ASVS V2"],
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "form liên hệ: > 5 lần/10 phút/IP → 429 + Retry-After",
+          "ok": true,
+          "errors": [],
+          "evidence": "201,201,201,201,201,429,429,429 ; lần bị chặn → 429 [retry-after: 600] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn gửi quá nhiề…"
+        },
+        {
+          "name": "giới hạn theo IP: IP khác không bị chặn lây",
+          "ok": true,
+          "errors": [],
+          "evidence": "IP khác → 201"
+        },
+        {
+          "name": "form ứng tuyển: > 5 lần/10 phút/IP → 429 + Retry-After",
+          "ok": true,
+          "errors": [],
+          "evidence": "201,201,201,201,201,429,429,429"
+        },
+        {
+          "name": "đăng nhập sai: > 5 lần/15 phút/(email, IP) → 429 + Retry-After",
+          "ok": true,
+          "errors": [],
+          "evidence": "401,401,401,401,401,429,429,429 ; lần bị chặn → 429 [retry-after: 900] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Đăng nhập sai qu…"
+        },
+        {
+          "name": "khoá đăng nhập giữ: mật khẩu ĐÚNG từ cùng (email, IP) vẫn 429",
+          "ok": true,
+          "errors": [],
+          "evidence": "POST login (đúng mật khẩu, đang bị khoá) → 429 [retry-after: 900] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Đăng nhập sai qu…"
+        },
+        {
+          "name": "khoá theo (email, IP): chủ tài khoản từ IP khác không bị khoá lây",
+          "ok": true,
+          "errors": [],
+          "evidence": "IP khác → 200"
+        },
+        {
+          "name": "API ghi theo người dùng: > 60/phút → 429 + Retry-After",
+          "ok": true,
+          "errors": [],
+          "evidence": "62 request song song; lần bị chặn → 429 [retry-after: 22] {\"type\":\"/problems/rate-limited\",\"title\":\"Quá nhiều yêu cầu\",\"status\":429,\"detail\":\"Bạn thao tác quá…"
+        },
+        {
+          "name": "Idempotency-Key: tạo → phát lại nguyên văn; tái dùng khoá khác thân → 422; thiếu khoá → 400; song song cùng khoá → 1 lần chạy thật",
+          "ok": true,
+          "errors": [],
+          "evidence": "201 / phát lại 201 (true) / khoá tái dùng 422 / thiếu khoá 400 / song song 409,409,201,409,409,409"
+        }
+      ]
+    }
+  ]
+}

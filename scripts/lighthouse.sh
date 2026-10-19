@@ -15,6 +15,9 @@ SITE_COMPANY_ID="$(node -e "process.stdout.write(require('./e2e/.seed.json').com
 export APP_ORIGIN="http://localhost:3100"
 export SESSION_SECRET="${SESSION_SECRET:-lh-session-secret-0123456789abcdef-xyz}"
 export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:lh-qr-key-0123456789abcdef0123456789abcdef}"
+# Khoá mã hoá dữ liệu lúc lưu (T-048): bắt buộc ở production → sinh ngẫu nhiên mỗi lần chạy.
+export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-lh1:$(openssl rand -base64 32)}"
+export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
 FILE_STORAGE_DIR="$(mktemp -d)"
 export FILE_STORAGE_DIR
 if [ "${LH_SKIP_BUILD:-0}" != "1" ]; then npm run -s build >/dev/null; fi

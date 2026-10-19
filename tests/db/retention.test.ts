@@ -9,6 +9,7 @@ import {
   ANON_NAME,
   retentionConfig,
   runRetention,
+  yearsAgo,
   type RetentionConfig,
 } from "../../lib/worker/retention.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
@@ -23,6 +24,11 @@ const CFG: RetentionConfig = {
   enabled: true,
   inquiryDays: 730,
   applicationDays: 365,
+  applicationDecidedDays: 30,
+  talentPoolDays: 365,
+  employeeTerminatedDays: 0,
+  timesheetYears: 10,
+  breachRecordYears: 5,
   sessionDays: 30,
   loginAttemptDays: 90,
   outboxDoneDays: 30,
@@ -134,6 +140,116 @@ describe("retention", () => {
     assert.equal(rep.inquiryAnonymized + rep.applicationAnonymized, 0);
     const after = await one("SELECT count(*)::int AS n FROM audit_event WHERE action LIKE 'retention.%'");
     assert.equal(after.n, before.n);
+  });
+
+  const addDecided = async (
+    status: string,
+    decidedAt: Date | null,
+    talent: "none" | "grant" | "withdrawn",
+  ) => {
+    const code = `UV-${randomUUID().slice(0, 8)}`;
+    const created = daysAgo(400); // đủ cũ để chỉ nhánh "đã chốt" quyết định, không phải lưới an toàn (365)
+    const r = await one(
+      `INSERT INTO job_application (company_id, code, submission_id, name, email, consent_at, consent_notice_version,
+         status, decided_at, created_at) VALUES ($1,$2,$3,'Phạm Văn C','c@example.test',$4,'v1',$5,$6,$4) RETURNING id`,
+      [companyId, code, randomUUID(), created, status, decidedAt],
+    );
+    for (const ev of talent === "none" ? [] : talent === "grant" ? ["grant"] : ["grant", "withdraw"])
+      await db.admin.query(
+        `INSERT INTO consent_record (company_id, subject_type, subject_id, purpose_id, policy_version, event, granted_at,
+           channel, ui_snapshot_hash, withdrawn_at)
+         VALUES ($1,'job_application',$2,'talent_pool','v1',$3,$4,'web_form',$5,$6)`,
+        [companyId, r.id, ev, created, "0".repeat(64), ev === "withdraw" ? created : null],
+      );
+    return code;
+  };
+  const anonymizedAt = async (code: string) =>
+    (await one("SELECT anonymized_at FROM job_application WHERE code = $1", [code])).anonymized_at;
+
+  test("ứng viên không trúng tuyển: ẩn danh sau 30 ngày kể từ khi chốt (ranh giới), hired không bị đụng, chưa chốt chưa bị đụng", async () => {
+    const at30 = await addDecided("rejected", daysAgo(30), "none"); // đúng 30 ngày: chưa quá
+    const over30 = await addDecided("rejected", daysAgo(30, 1), "none");
+    const wd = await addDecided("withdrawn", daysAgo(31), "none");
+    const hired = await addDecided("hired", daysAgo(500), "none");
+    const open = await addApplication(daysAgo(100)); // status new, 100 ngày: chưa chốt, chưa tới 365
+    await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.equal(await anonymizedAt(at30), null, "đúng 30 ngày chưa ẩn danh");
+    assert.notEqual(await anonymizedAt(over30), null);
+    assert.notEqual(await anonymizedAt(wd), null);
+    assert.equal(await anonymizedAt(hired), null, "trúng tuyển không bị job ứng viên đụng tới");
+    assert.equal(await anonymizedAt(open), null);
+  });
+
+  test("đồng ý kho nhân tài: giữ 12 tháng; rút đồng ý → quay về 30 ngày; ca biên đúng 365 ngày", async () => {
+    const keep = await addDecided("rejected", daysAgo(200), "grant"); // quá 30 nhưng có đồng ý
+    const edge = await addDecided("rejected", daysAgo(365), "grant"); // đúng 365: chưa
+    const over = await addDecided("rejected", daysAgo(365, 1), "grant");
+    const withdrawn = await addDecided("rejected", daysAgo(200), "withdrawn");
+    const none = await addDecided("rejected", daysAgo(200), "none");
+    await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.equal(await anonymizedAt(keep), null, "có đồng ý: còn trong 12 tháng");
+    assert.equal(await anonymizedAt(edge), null, "đúng 365 ngày chưa quá");
+    assert.notEqual(await anonymizedAt(over), null, "quá 12 tháng");
+    assert.notEqual(await anonymizedAt(withdrawn), null, "đã rút đồng ý: như không có");
+    assert.notEqual(await anonymizedAt(none), null);
+  });
+
+  test("hồ sơ thiếu mốc chốt (dữ liệu cũ, rejected) lấy created_at; trigger điền decided_at khi đổi trạng thái", async () => {
+    const legacy = await addDecided("rejected", null, "none"); // created 400 ngày trước
+    await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.notEqual(await anonymizedAt(legacy), null);
+    const code = await addApplication(daysAgo(1));
+    await db.admin.query("UPDATE job_application SET status = 'rejected' WHERE code = $1", [code]);
+    assert.notEqual(
+      (await one("SELECT decided_at FROM job_application WHERE code = $1", [code])).decided_at,
+      null,
+    );
+  });
+
+  test("nhân viên đã chấm dứt hợp đồng: xoá liên hệ ngay sau ngày chấm dứt; 10 năm → ẩn danh họ tên; đang làm không đụng", async () => {
+    const mk = async (terminated: string | null, hired = "2010-01-01") =>
+      (
+        await one(
+          `INSERT INTO employee (company_id, code, full_name, work_email, phone, hired_on, terminated_on)
+           VALUES ($1,$2,'Hoàng Văn D','d@example.test','0123456783',$3,$4) RETURNING id`,
+          [companyId, `NV-${randomUUID().slice(0, 8)}`, hired, terminated],
+        )
+      ).id as string;
+    const active = await mk(null);
+    const today = await mk("2026-10-18"); // NOW = 2026-10-18T10:00Z (17:00 VN): ngày chấm dứt = hôm nay → chưa
+    const past = await mk("2026-10-17");
+    const exactly10 = await mk("2016-10-18"); // đúng 10 năm: chưa ẩn danh họ tên
+    const over10 = await mk("2016-10-17");
+    const rep = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.equal(rep.employeeContactCleared, 3);
+    assert.equal(rep.employeeAnonymized, 1);
+    const row = (id: string) =>
+      one("SELECT full_name, work_email, phone, anonymized_at FROM employee WHERE id = $1", [id]);
+    assert.deepEqual(Object.values(await row(active)), ["Hoàng Văn D", "d@example.test", "0123456783", null]);
+    assert.deepEqual(Object.values(await row(today)), ["Hoàng Văn D", "d@example.test", "0123456783", null]);
+    const p = await row(past);
+    assert.deepEqual(
+      [p.full_name, p.work_email, p.phone, p.anonymized_at],
+      ["Hoàng Văn D", null, null, null],
+    );
+    const e = await row(exactly10);
+    assert.equal(e.full_name, "Hoàng Văn D");
+    assert.equal(e.anonymized_at, null);
+    const o = await row(over10);
+    assert.deepEqual([o.full_name, o.work_email, o.phone], [ANON_NAME, null, null]);
+    assert.notEqual(o.anonymized_at, null);
+    // lũy đẳng + audit không PII
+    const again = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.equal(again.employeeContactCleared + again.employeeAnonymized, 0);
+    const aud = await db.admin.query(
+      "SELECT after FROM audit_event WHERE action LIKE 'retention.employee_%'",
+    );
+    assert.doesNotMatch(JSON.stringify(aud.rows), /Hoàng|example\.test/);
+  });
+
+  test("yearsAgo: lùi theo lịch, 29/2 về năm không nhuận", () => {
+    assert.equal(yearsAgo(new Date("2026-10-18T00:00:00Z"), 10).toISOString(), "2016-10-18T00:00:00.000Z");
+    assert.equal(yearsAgo(new Date("2028-02-29T00:00:00Z"), 1).toISOString(), "2027-03-01T00:00:00.000Z");
   });
 
   test("session hết hạn quá 30 ngày, login_attempt > 90 ngày, outbox done > 30 ngày bị xoá; còn lại giữ", async () => {
