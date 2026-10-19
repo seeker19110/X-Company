@@ -5,7 +5,7 @@
 //   2. End-to-end: bản build production (`next start`) xuất /api/metrics có bearer → Prometheus scrape mỗi giây, nạp rule thật
 //      + một rule diễn tập (`up == 0`) → Alertmanager → webhook HTTP cục bộ. Dừng app → cảnh báo "firing" tới webhook;
 //      bật lại → "resolved". Rule thật phải nạp với health=ok và không bắn khi lưu lượng sạch.
-// Ghi docs/ops/ops-stack-drill.md + .json (sinh lại được); exit 1 khi có bước đỏ.
+// Báo cáo docs/ops/ops-stack-drill.md + .json (sinh lại được) ghi ra thư mục tạm, hoặc vào repo khi XC_REPORT_DIR=. (reports:refresh); exit 1 khi có bước đỏ.
 // Nhãn bằng chứng: faithful-fixture — máy dev, Postgres tạm, kênh webhook cục bộ; KHÔNG phải hạ tầng giám sát production.
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -16,7 +16,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { environmentInfo, err, formatFiles, gitCommit, out, prepare } from "./lib/prod-harness.mjs";
+import {
+  environmentInfo,
+  err,
+  formatFiles,
+  gitCommit,
+  out,
+  prepare,
+  reportFile,
+} from "./lib/prod-harness.mjs";
 import { TOOLS, installedPath } from "./tools/install-tool.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -477,15 +485,17 @@ async function main() {
     ...NOT_PROVEN.map((n) => `- ${n}`),
     "",
   ].join("\n");
-  writeFileSync(path.join(ROOT, "docs/ops/ops-stack-drill.md"), md);
-  writeFileSync(path.join(ROOT, "docs/ops/ops-stack-drill.json"), `${JSON.stringify(report, null, 2)}\n`);
-  formatFiles(["docs/ops/ops-stack-drill.md", "docs/ops/ops-stack-drill.json"]);
+  const reportMd = reportFile("docs/ops/ops-stack-drill.md");
+  const reportJson = reportFile("docs/ops/ops-stack-drill.json");
+  writeFileSync(reportMd, md);
+  writeFileSync(reportJson, `${JSON.stringify(report, null, 2)}\n`);
+  formatFiles([reportMd, reportJson]);
   if (!ok) {
     for (const c of checks.filter((x) => !x.ok)) err(`✗ ${c.label}:\n${c.output}`);
-    err("ops:stack:drill ĐỎ — xem docs/ops/ops-stack-drill.md");
+    err(`ops:stack:drill ĐỎ — xem ${reportMd}`);
     process.exit(1);
   }
-  out("ops:stack:drill: PASS — docs/ops/ops-stack-drill.md");
+  out(`ops:stack:drill: PASS — ${reportMd}`);
   process.exit(0);
 }
 

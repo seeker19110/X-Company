@@ -1,9 +1,9 @@
 // dast-baseline.mjs — DAST cục bộ không cần docker (T-047, SEC-WEB-004): bộ probe tự viết tấn công THẬT bản build production
 // (`next start`) + Postgres tạm + dữ liệu seed. Gọi qua `npm run -s dast:probes` (bọc bởi scripts/with-test-db.sh).
-// Ghi docs/security/dast-report.md + docs/security/dast-report.json (sinh lại được); exit 1 khi có nhóm FAIL.
+// Báo cáo docs/security/dast-report.md + .json (sinh lại được) ghi ra thư mục tạm, hoặc vào repo khi XC_REPORT_DIR=. (reports:refresh); exit 1 khi có nhóm FAIL.
 // Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/staging/thực địa.
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { makeAgent, login, request, writeHeaders } from "./lib/http-client.mjs";
@@ -29,7 +29,15 @@ import {
   renderReport,
   clip,
 } from "./lib/dast-probes.mjs";
-import { environmentInfo, err, formatFiles, gitCommit, out, prepare } from "./lib/prod-harness.mjs";
+import {
+  environmentInfo,
+  err,
+  formatFiles,
+  gitCommit,
+  out,
+  prepare,
+  reportFile,
+} from "./lib/prod-harness.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PORT = Number(process.env.DAST_PORT ?? 3200);
@@ -158,20 +166,18 @@ async function main() {
       requestTotal,
       notProven: NOT_PROVEN,
     };
-    mkdirSync(path.join(ROOT, "docs/security"), { recursive: true });
-    writeFileSync(path.join(ROOT, "docs/security/dast-report.md"), renderReport(meta, groups));
-    writeFileSync(
-      path.join(ROOT, "docs/security/dast-report.json"),
-      `${JSON.stringify({ label: "faithful-fixture", ...meta, groups }, null, 2)}\n`,
-    );
-    formatFiles(["docs/security/dast-report.md", "docs/security/dast-report.json"]);
+    const reportMd = reportFile("docs/security/dast-report.md");
+    const reportJson = reportFile("docs/security/dast-report.json");
+    writeFileSync(reportMd, renderReport(meta, groups));
+    writeFileSync(reportJson, `${JSON.stringify({ label: "faithful-fixture", ...meta, groups }, null, 2)}\n`);
+    formatFiles([reportMd, reportJson]);
     for (const g of groups) {
       out(`${g.status}  ${g.id}  ${g.title}  (${g.checks.filter((c) => c.ok).length}/${g.checks.length})`);
       for (const c of g.checks.filter((c) => !c.ok)) out(`    ✗ ${c.name}: ${c.errors.join("; ")}`);
     }
     const failed = groups.filter((g) => g.status === "FAIL").length;
     out(
-      `DAST: ${groups.length - failed}/${groups.length} nhóm PASS · ${meta.checkTotal} kiểm tra · ${requestTotal} request · báo cáo docs/security/dast-report.md`,
+      `DAST: ${groups.length - failed}/${groups.length} nhóm PASS · ${meta.checkTotal} kiểm tra · ${requestTotal} request · báo cáo ${reportMd}`,
     );
     return failed === 0 ? 0 : 1;
   } finally {
