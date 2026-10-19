@@ -62,6 +62,7 @@ Autopilot bắt đầu bằng `python3 .xtemplates/scripts/xt.py doctor --fix` (
 - Cấu trúc thư mục: `docs/design/ARCHITECTURE.md` (mục Thư mục) — `app/(public)` website, `app/app` nội bộ/PWA, `app/api/{public,app}` route, `lib/<miền>` nghiệp vụ, `migrations/` SQL append-only, `tests/{unit,db,http}`, `e2e/`.
 - Đặt tên / kiến trúc / thư viện chính và lý do: `docs/adr/0001-stack.md`; quyết định tự duyệt ở `docs/autopilot/DECISIONS.md`. Route chỉ gọi `lib/` qua `withActor`; `lib/` không import `next/*`; quyền kiểm bằng `can()` ở server; mọi ghi nghiệp vụ kèm `audit.append` trong cùng giao dịch.
 - Môi trường & secrets: biến môi trường theo `.env.example` (không commit giá trị); test dùng Postgres thật qua `scripts/with-test-db.sh` (tự dựng cụm tạm bằng `initdb` khi không có `DATABASE_URL`) — test DB không bao giờ skip.
+- Tên phiên: `<Tên repo> — <tên nhánh>` (nhánh do agent tự đặt `<type>/<mô-tả-ngắn>`; Claude Code `/rename`, phiên cloud `set_session_title`; hook SessionStart in gợi ý khi đã nâng khung — `LOOP-HARNESS-028`).
 - Giao tiếp: tiếng Việt có dấu, ngắn, dẫn đầu bằng kết quả; báo cáo cuối việc: đã làm · bằng chứng · quyết định tự duyệt (D-NNN) · còn treo · đề xuất.
 
 ## 10. Lệnh
