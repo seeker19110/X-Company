@@ -138,6 +138,9 @@ jobs:
           cache: npm
       - name: PostgreSQL của runner vào PATH (initdb/pg_ctl cho scripts/with-test-db.sh)
         run: echo "$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)" >> "$GITHUB_PATH"
+      # `npm test` của README gồm test KMS/off-site chạy nhị phân thật (không skip): cài bản ghim sha256 như job quality.
+      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
+        run: node scripts/tools/install-tool.mjs install openbao restic
       - name: Lệnh trong README (trích tự động, chạy nguyên văn)
         run: node scripts/readme-smoke.mjs
 

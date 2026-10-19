@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -159,6 +160,7 @@ describe("sao lưu off-site restic + diễn tập khôi phục từ kho (Postgre
         .stdout.trim()
         .split("\n");
       const big = packs.sort((x, y) => statSync(y).size - statSync(x).size)[0]!;
+      chmodSync(big, 0o600); // restic tạo khối dữ liệu 0400; người chạy thường (CI) không ghi được nếu không đổi quyền
       if (mode === "truncate") truncateSync(big, Math.floor(statSync(big).size / 2));
       else {
         const fd = openSync(big, "r+");
