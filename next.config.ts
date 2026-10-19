@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'" },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },

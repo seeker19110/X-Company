@@ -57,3 +57,14 @@ describe("proxy: header bảo mật + chuyển hướng /app", () => {
     assert.equal(proxy(new NextRequest("http://xc.test/dich-vu")).headers.get("cache-control"), null);
   });
 });
+
+describe("next.config: CSP cho /api (ZAP 10038, 10055)", () => {
+  test("/api/:path* có CSP chặt kèm các directive không rơi về default-src", async () => {
+    const { default: cfg } = await import("../../next.config.ts");
+    const rules = await cfg.headers!();
+    const api = rules.find((r) => r.source === "/api/:path*");
+    const csp = api?.headers.find((h) => h.key === "Content-Security-Policy")?.value ?? "";
+    for (const d of ["default-src 'none'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'"])
+      assert.ok(csp.includes(d), `thiếu ${d}`);
+  });
+});
