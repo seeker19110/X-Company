@@ -32,7 +32,7 @@ status: faithful-fixture — bộ đánh giá cục bộ (lib/ops/alerts.ts) và
 
 ## Rule Prometheus (`ops/prometheus/alerts.yml`) — 2026-10-19 (UTC), máy phát triển (T-054)
 
-> Lệnh: `npm run -s ops:stack:drill` (Prometheus 3.14.0 + Alertmanager 0.34.1 thật, ghim sha256; báo cáo [ops-stack-drill.md](ops-stack-drill.md)). Job CI `ops-stack` chạy lại mỗi PR, nên mỗi thay đổi rule đều được thử lại; drill đỏ khi một alert thiếu ca bắn hoặc ca không bắn trong `alerts.test.yml`. `ops-stack` đã có trong required check của `.github/rulesets/main.json`, nhưng chỉ chặn merge sau khi chủ dự án import ruleset (đến lúc đó job đỏ vẫn hiện trên PR, chưa chặn).
+> Lệnh: `npm run -s ops:stack:drill` (Prometheus 3.14.0 + Alertmanager 0.34.1 thật, ghim sha256; báo cáo [ops-stack-drill.md](ops-stack-drill.md) — sinh lại bằng `npm run -s reports:refresh`; lệnh drill thường ghi báo cáo ra thư mục tạm để Gate không làm đổi cây làm việc). Job CI `ops-stack` chạy lại mỗi PR, nên mỗi thay đổi rule đều được thử lại; drill đỏ khi một alert thiếu ca bắn hoặc ca không bắn trong `alerts.test.yml`. `ops-stack` đã có trong required check của `.github/rulesets/main.json`, nhưng chỉ chặn merge sau khi chủ dự án import ruleset (đến lúc đó job đỏ vẫn hiện trên PR, chưa chặn).
 
 | Rule | Mức | Cách thử | Bắn | Không bắn | Kết quả |
 |---|---|---|---|---|---|

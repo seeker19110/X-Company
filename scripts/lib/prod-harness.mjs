@@ -4,7 +4,7 @@
 // Nhãn bằng chứng: máy dev, Postgres tạm, dữ liệu seed — KHÔNG phải production hay thực địa (faithful-fixture).
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -164,9 +164,34 @@ export function environmentInfo() {
   };
 }
 
-/** Định dạng tệp sinh ra bằng prettier của dự án (cổng `format:check` kiểm cả báo cáo sinh tự động). */
+/**
+ * Đường dẫn tuyệt đối để ghi báo cáo `rel` (vd `docs/ops/ops-stack-drill.md`). Mặc định ra thư mục tạm ngẫu nhiên: lệnh Gate/kiểm KHÔNG được ghi vào
+ * repo (`xt.py loop verify` đỏ khi cây đổi sau Gate, LOOP-DESIGN-022). Muốn cập nhật báo cáo đã commit: `XC_REPORT_DIR=.` (đặt sẵn ở
+ * job CI để giữ artifact; `npm run -s reports:refresh` cho người). Thư mục cha được tạo.
+ */
+export function reportFile(rel) {
+  const abs = path.join(reportBase(), rel);
+  mkdirSync(path.dirname(abs), { recursive: true });
+  return abs;
+}
+
+let tmpReportBase = null;
+/** `XC_REPORT_DIR` (rỗng coi như chưa đặt) hoặc MỘT thư mục tạm ngẫu nhiên 0700 mỗi tiến trình (không dùng tên cố định ở /tmp chung: tránh symlink/ghi đè). */
+function reportBase() {
+  const dir = process.env.XC_REPORT_DIR;
+  if (dir !== undefined && dir !== "") return path.resolve(ROOT, dir);
+  tmpReportBase ??= mkdtempSync(path.join(tmpdir(), "xc-reports-"));
+  return tmpReportBase;
+}
+
+/** Định dạng tệp sinh ra bằng prettier của dự án (cổng `format:check` kiểm cả báo cáo sinh tự động). Tệp ngoài repo (thư mục tạm) bỏ qua. */
 export function formatFiles(files) {
-  const r = spawnSync(path.join(ROOT, "node_modules", ".bin", "prettier"), ["--write", ...files], {
+  const inRepo = files.filter((f) => {
+    const rel = path.relative(ROOT, path.resolve(ROOT, f));
+    return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+  });
+  if (inRepo.length === 0) return;
+  const r = spawnSync(path.join(ROOT, "node_modules", ".bin", "prettier"), ["--write", ...inRepo], {
     cwd: ROOT,
     encoding: "utf8",
   });
