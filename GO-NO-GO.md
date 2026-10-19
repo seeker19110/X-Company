@@ -1,6 +1,6 @@
 # GO/NO-GO — X-Company · phát hành `v0 (lát 8–10, chạy local)` · 2026-10-19
 
-> Commit: `main` sau #32 (`5f01b0f`) + PR #33 (staging TLS, chờ người merge — ngoại lệ cứng) · Blueprint: MUST đạt 309 · miễn 73 · chưa 91 (đều chờ người/hạ tầng thật, `loop defer`) · CI: xanh trên các PR đã merge (#22 lát 9, #30–#32).
+> Commit: `main` sau #34 (`5ad442d`) + PR #33 (staging TLS) và PR #35 (RUM) — cả hai chờ người merge (ngoại lệ cứng) · Blueprint: MUST đạt 309 · miễn 73 · chưa 91 (đều chờ người/hạ tầng thật, `loop defer`) · CI: xanh trên các PR đã merge (#22 lát 9, #30–#34).
 > Người kiểm: agent autopilot (report-only) · Phạm vi: website + webapp nội bộ + PWA; hạ tầng đã dựng **cục bộ** (nhãn `faithful-fixture`, máy dev), chưa có production.
 
 ## 1. Đếm (BLOCKER)
@@ -27,7 +27,7 @@
 | 14 | Release notes + CHANGELOG | PASS (SHOULD) | real-path | `CHANGELOG.md`, release-please |
 | 15 | DAST | PASS (SHOULD) | faithful-fixture | `npm run -s dast:probes` 9/9 nhóm, 155 kiểm tra (XSS có Chromium thật); ZAP 2.17 baseline qua **https** của staging Caddy (`npm run -s staging:drill`, PR #33: sửa form GET lộ mật khẩu lên URL, thiếu HSTS/nosniff ở tệp tĩnh); CI `dast` chạy ZAP baseline + quét chủ động (http) |
 | 16 | Mã hoá dữ liệu lúc lưu | PASS (SHOULD) | faithful-fixture | AES-256-GCM cột nhạy cảm + tệp tải lên, xoay khoá, `pg_dump` không chứa bản rõ; khoá chủ ở env, chưa KMS/HSM |
-| 18 | Đề xuất "Khi chạy thật" đã được chủ dự án quyết | FAIL | — | `docs/autopilot/DECISIONS.md` D-016, D-018, D-020, D-027, D-029…D-038 có mục "Khi chạy thật" chờ chủ dự án |
+| 18 | Đề xuất "Khi chạy thật" đã được chủ dự án quyết | FAIL | — | `docs/autopilot/DECISIONS.md` D-016, D-018, D-020, D-027, D-029…D-044, D-047 có mục "Khi chạy thật" chờ chủ dự án |
 
 ### Hiệu năng (QA-PERF-006 — 5 trường)
 | Trường | Giá trị |
@@ -41,12 +41,13 @@
 ## 2b. Bằng chứng chưa chứng minh
 | Phạm vi | Vì sao chưa | Kiểm thật khi nào / ai |
 |---|---|---|
-| CWV p75/INP thực địa, tải đa máy, soak/spike | chỉ đo cục bộ giả lập | staging/production + RUM/CrUX — chủ dự án + vận hành |
+| CWV p75/INP thực địa, tải đa máy, soak/spike | RUM tự host đã có (beacon + `/api/public/rum` + p75 + cảnh báo, mặc định tắt `RUM_ENABLED`), nhưng chưa có người dùng thật nên chưa có số thực địa; tải đo cục bộ giả lập | bật RUM trên staging/production sau khi có pháp nhân (D-043) + CrUX — chủ dự án + vận hành |
 | Sao lưu off-site 3-2-1, KMS/HSM, lịch sao lưu tự động, diễn tập trên hạ tầng thật | mới chạy trên máy dev | khi chọn hạ tầng — chủ dự án |
 | Hạ tầng giám sát production, kênh trực có người, Sentry/OTel | Prometheus/Alertmanager mới chạy cục bộ (drill), kênh là webhook thử | khi có hạ tầng giám sát — vận hành |
 | Chứng chỉ ACME công khai, staging/production thật, WAF/CDN, pentest | staging TLS là Caddy `tls internal` (CA nội bộ) trên máy dev; mẫu ACME ở `ops/caddy/Caddyfile` mới kiểm cú pháp | tên miền + máy chủ thật — vận hành |
 | Ruleset nhánh (required checks, gồm `dast`, `ops-stack`, `staging-tls`) | `gh api rulesets` = `[]` | chủ repo import `.github/rulesets/main.json` |
 | Giá trị pháp lý (hạn DSAR theo loại, thời hạn lưu, trần OT) | tra từ bản sao thương mại (mức B), chưa đối chiếu bản chính thức/Công báo; chủ dự án uỷ quyền tự quyết | luật sư đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020 |
+| Pháp nhân (bên kiểm soát dữ liệu) | dự án chưa thành lập công ty; hệ thống chỉ chạy dữ liệu mẫu, không xử lý dữ liệu thật của bên thứ ba (DPIA mục 0b, D-043) | chủ dự án thành lập pháp nhân → mốc 60 ngày nộp DPIA bắt đầu từ ngày xử lý thật đầu tiên |
 | GPS/QR/ảnh trên dữ liệu thật | cần DPIA nộp + xác nhận HR/pháp chế + UI đồng ý | trước khi bật `GEO_CAPTURE_ENABLED` |
 | Quy tắc ca/OT thực tế của công ty | mặc định theo luật; HR chưa cung cấp ví dụ (RK-001) | HR |
 
