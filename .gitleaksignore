@@ -1,0 +1,4 @@
+# Hash sha256 trần của manifest khung X-Templates 3.11.0 (commit đầu PR nâng khung) — gitleaks `generic-api-key` bắt nhầm
+# dòng `".github/workflows/secret-scan.yml": "<64 hex>"`. Khung 3.11.1 ghi `sha256:<hex>` nên commit sau không còn khớp.
+8376bea40a3f666c57b7f2b4b0cc441a356bf9e2:.xtemplates/harness.sha256.json:generic-api-key:33
+8376bea40a3f666c57b7f2b4b0cc441a356bf9e2:.xtemplates/manifest.json:generic-api-key:34
