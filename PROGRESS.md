@@ -1,5 +1,6 @@
 # PROGRESS.md — X-Company
 ## Đang làm
+- 2026-10-21: lát 12–13 (`docs/autopilot/PLAN-lat-12.md`, D-055) — hoàn tất phát triển rồi pha harden trước production: T-065 gitleaks ghim, T-066 DATA-004 xong; tiếp T-067…T-078.
 - 2026-10-21: lát 11 (`docs/autopilot/PLAN-lat-11.md`, D-051…D-054) xong 7/7: T-058, T-059 (#62), T-060, T-061 (#63) đã merge; T-062 XFEAT-006, T-063 SEC-004 (D-053), T-064 PERF-002 (migration 0027, 0028) ở PR cuối — ngoại lệ cứng, người merge.
 - 2026-10-21: khung 3.12.0 (CI/ruleset tối thiểu, song song tối đa): `quality` nối tiếp 8m02s tách thành typecheck · lint · build · checks · test · coverage chạy cùng lúc, `quality` thành job tổng hợp mọi job (kể cả `dast-probes`, `dep-audit`); ruleset 13 → 4 check (`quality`, `gitleaks`, `merge-gate`, `pr-policy`), không strict — chủ dự án import lại ruleset.
 - Audit 2026-10-19 (`docs/ops/AUDIT-STATUS.md`): 6 đợt đã merge (#40 #41 #44 #49 #50 #53 #54 #55 #56) — 🟠 12 đã sửa, 4 mở (SEC-002, DOC-001, DOC-002 chờ người quyết; CFG-001 chờ người thêm khoá); 🟢 28 đã sửa, 12 mở.
