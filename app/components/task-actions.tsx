@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
-import { focusPageHeading } from "./focus";
+import { focusContainer, focusPageHeading, useRestoreFocus } from "./focus";
 import { useConfirm, type ConfirmRequest } from "./confirm-dialog";
 import { useSession } from "./session-context";
 
@@ -67,13 +67,17 @@ export function TaskActions({
   const box = useRef<HTMLDivElement>(null);
   const refocus = useRef(false);
 
+  const pressed = useRef<HTMLButtonElement | null>(null);
+  useRestoreFocus(busy, pressed, refocus); // thất bại → focus về nút vừa bấm (thành công thì effect dưới lo)
+
   // Nút bị vô hiệu/thay bằng bộ nút của trạng thái mới → focus rơi về <body>. Khi dữ liệu mới về (status/version đổi),
-  // đưa focus vào nút thao tác đầu tiên của việc này; việc không còn thao tác/biến mất khỏi danh sách → về tiêu đề trang.
+  // đưa focus vào KHỐI của việc này (không phải nút: Enter lần nữa không vô tình "Gửi nghiệm thu"); việc không còn thao
+  // tác/biến mất khỏi danh sách → về tiêu đề trang.
   useEffect(() => {
     if (!refocus.current) return;
     refocus.current = false;
-    const first = box.current?.querySelector<HTMLElement>("button");
-    if (first) first.focus();
+    const holder = box.current?.closest("li") ?? box.current;
+    if (holder) focusContainer(holder);
     else focusPageHeading();
   }, [status, version]);
   useEffect(
@@ -112,7 +116,16 @@ export function TaskActions({
   return (
     <div ref={box} className="row row-actions">
       {acts.map((a) => (
-        <button key={a} className="btn" disabled={busy} aria-busy={busy} onClick={() => run(a)}>
+        <button
+          key={a}
+          className="btn"
+          disabled={busy}
+          aria-busy={busy}
+          onClick={(e) => {
+            pressed.current = e.currentTarget;
+            void run(a);
+          }}
+        >
           {LABEL[a]}
         </button>
       ))}
