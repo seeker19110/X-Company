@@ -157,3 +157,38 @@ describe("install-tool: bảng ghim Prometheus/Alertmanager", () => {
     }
   });
 });
+
+describe("install-tool: gitleaks (T-065)", () => {
+  test("ghim 8.30.1, MIT, sha256 từ checksums chính thức cho linux x64/arm64; kiểm phiên bản khi cài", () => {
+    const g = (
+      TOOLS as Record<
+        string,
+        {
+          version: string;
+          license: string;
+          bin: string;
+          checksums: string;
+          platforms: Record<string, { archive: string; sha256: string; kind: string; member: string }>;
+          versionProbe: { args: string[]; expect: RegExp };
+        }
+      >
+    ).gitleaks;
+    assert.ok(g, "thiếu mục gitleaks");
+    assert.equal(g.version, "8.30.1");
+    assert.equal(g.license, "MIT");
+    assert.equal(g.checksums, "gitleaks_8.30.1_checksums.txt");
+    assert.equal(
+      g.platforms["linux-x64"]!.sha256,
+      "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    );
+    assert.equal(
+      g.platforms["linux-arm64"]!.sha256,
+      "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+    );
+    for (const p of Object.values(g.platforms)) {
+      assert.equal(p.kind, "tar.gz");
+      assert.equal(p.member, "gitleaks");
+    }
+    assert.ok(g.versionProbe.expect.test("8.30.1"));
+  });
+});

@@ -90,6 +90,40 @@ describe("kỳ công & sửa công (T-014, AT06)", () => {
     await db.close();
   });
 
+  test("AUD-DATA-004 (D-012): đơn nghỉ vắt ranh kỳ tính trọn vào ngày bắt đầu (giờ VN) và kỳ chứa ngày đó; không mất, không đếm hai lần", async () => {
+    const lt = (
+      await db.admin.query(
+        "INSERT INTO leave_type (company_id, code, name, requires_balance) VALUES ($1, 'P-RANH', 'Phép ranh kỳ', false) RETURNING id",
+        [org.companyId],
+      )
+    ).rows[0].id;
+    const leave = (start: Date, end: Date, minutes: number) =>
+      db.admin.query(
+        `INSERT INTO leave_request (company_id, employee_id, leave_type_id, start_at, end_at, minutes, status, created_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, 'approved', $7)`,
+        [org.companyId, emp.employeeId, lt, start, end, minutes, emp.userId],
+      );
+    // 31/10 → 03/11 (giờ VN), 1440 phút; và đơn bắt đầu 01/12 06:00 VN = 30/11 23:00 UTC (ngày UTC khác ngày VN).
+    await leave(vn("2026-10-31", "08:00"), vn("2026-11-03", "17:00"), 1440);
+    await leave(vn("2026-12-01", "06:00"), vn("2026-12-01", "10:00"), 240);
+    const sum = (ls: { employeeId: string; businessDate: string; leaveMinutes: number }[]) =>
+      ls.filter((l) => l.employeeId === emp.employeeId).map((l) => [l.businessDate, l.leaveMinutes]);
+    const oct = sum(await computeLines(db.app, org.companyId, "2026-10-01", "2026-10-31", emp.employeeId!));
+    const nov = sum(await computeLines(db.app, org.companyId, "2026-11-01", "2026-11-30", emp.employeeId!));
+    const dec = sum(await computeLines(db.app, org.companyId, "2026-12-01", "2026-12-31", emp.employeeId!));
+    assert.deepEqual(
+      oct,
+      [["2026-10-31", 1440]],
+      "trọn đơn 31/10→03/11 vào kỳ tháng 10, ngày không có ca → leave_only",
+    );
+    assert.deepEqual(nov, [], "phần đơn rơi vào 01–03/11 không bị đếm lại ở kỳ tháng 11");
+    assert.deepEqual(
+      dec,
+      [["2026-12-01", 240]],
+      "đơn 06:00 VN ngày 01/12 thuộc tháng 12 dù ngày UTC là 30/11",
+    );
+  });
+
   test("số liệu tạm: đủ / thiếu giờ ra / vắng", async () => {
     const lines = await computeLines(db.app, org.companyId, "2026-09-01", "2026-09-30");
     assert.deepEqual(
