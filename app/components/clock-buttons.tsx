@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { KIND_LABEL } from "./labels";
 import { useSession } from "./session-context";
@@ -20,10 +20,22 @@ export function ClockButtons({ nextKind }: { nextKind: "in" | "out" }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; cls: string } | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+
+  // Nút vô hiệu trong lúc gửi nên mất focus (về <body>): sau khi nút bật lại (và khi `nextKind` đổi sau refresh), trả focus
+  // về chính nút này — nó đã thành Ra ca/Vào ca (AUD-A11Y-002).
+  useEffect(() => {
+    if (!busy && refocus.current) {
+      refocus.current = false;
+      button.current?.focus();
+    }
+  }, [busy, nextKind]);
 
   async function clock(kind: "in" | "out") {
     setBusy(true);
     const r = await submitAttendance(userId, csrf, { kind, source: "gps" });
+    refocus.current = true;
     setBusy(false);
     const params = { kind: KIND_LABEL[kind] ?? kind, state: LABEL[r.state] };
     setMsg({
@@ -38,7 +50,12 @@ export function ClockButtons({ nextKind }: { nextKind: "in" | "out" }) {
   return (
     <div>
       <div className="row">
-        <button className="btn btn-primary btn-big" disabled={busy} onClick={() => clock(nextKind)}>
+        <button
+          ref={button}
+          className="btn btn-primary btn-big"
+          disabled={busy}
+          onClick={() => clock(nextKind)}
+        >
           {KIND_LABEL[nextKind]}
         </button>
       </div>

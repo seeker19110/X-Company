@@ -7,7 +7,7 @@ import { api, textOrNull } from "./api";
 import {
   FieldError,
   fieldA11y,
-  focusFirstInvalid,
+  useFocusFirstInvalid,
   SubmitButton,
   toFieldErrors,
   type FieldErrors,
@@ -17,6 +17,9 @@ import { KIND_LABEL } from "./labels";
 import { useSession } from "./session-context";
 
 type FormKey = "leave" | "ot" | "adj";
+type Msg = { text: string; cls: string };
+/** Nhãn ô bắt buộc: ghi rõ trong nhãn (WCAG 3.3.2), cùng cách với form liên hệ. */
+const req = (label: string) => t("requests.required", { label });
 const vnIso = (d: string, t: string) => `${d}T${t}:00+07:00`;
 
 type SchemaName = "LeaveFormInput" | "OtFormInput" | "AdjustmentInput";
@@ -50,9 +53,13 @@ export function adjMap(f: FormData): FieldMap {
 export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: string }[] }) {
   const { csrf } = useSession();
   const base = useId();
-  const [busy, setBusy] = useState(false);
-  const sending = useRef(false); // chặn bấm đúp trước khi React kịp vô hiệu nút (UX-STATE-006)
-  const [msg, setMsg] = useState<{ text: string; cls: string } | null>(null);
+  const focusFirstInvalid = useFocusFirstInvalid();
+  // Mỗi form có trạng thái gửi và vùng thông báo riêng (AUD-A11Y-004): gửi form này không khoá form kia, thông báo nằm cạnh form.
+  const [busy, setBusy] = useState<Record<FormKey, boolean>>({ leave: false, ot: false, adj: false });
+  const sending = useRef<Record<FormKey, boolean>>({ leave: false, ot: false, adj: false }); // chặn bấm đúp trước khi React kịp vô hiệu nút (UX-STATE-006)
+  const [msgs, setMsgs] = useState<Record<FormKey, Msg | null>>({ leave: null, ot: null, adj: null });
+  const setMsg = (k: FormKey, m: Msg) => setMsgs((all) => ({ ...all, [k]: m }));
+  const setBusyOf = (k: FormKey, v: boolean) => setBusy((all) => ({ ...all, [k]: v }));
   const [errors, setErrors] = useState<Record<FormKey, FieldErrors>>({ leave: {}, ot: {}, adj: {} });
   const setFormErrors = (k: FormKey, e: FieldErrors) => setErrors((all) => ({ ...all, [k]: e }));
 
@@ -66,31 +73,32 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
     mapFor: (f: FormData) => FieldMap,
   ) {
     e.preventDefault();
-    if (sending.current) return;
-    sending.current = true;
+    if (sending.current[key]) return;
+    sending.current[key] = true;
     const form = e.currentTarget;
     const data = new FormData(form);
     const body = build(data);
     const map = mapFor(data);
     const parsed = (await loadSchema(schema))?.safeParse(body);
     if (parsed && !parsed.success) {
-      sending.current = false;
+      sending.current[key] = false;
       const { fields, general } = toFieldErrors(parsed.error.issues, map);
       setFormErrors(key, fields);
-      setMsg({ text: general[0] ?? t("common.checkMarkedFields"), cls: "err" });
+      setMsg(key, { text: general[0] ?? t("common.checkMarkedFields"), cls: "err" });
       focusFirstInvalid(form);
       return;
     }
     setFormErrors(key, {});
-    setBusy(true);
+    setBusyOf(key, true);
     const r = await api("POST", path, { csrf, body });
-    sending.current = false;
-    setBusy(false);
+    sending.current[key] = false;
+    setBusyOf(key, false);
     if (!r.ok && r.fields !== undefined && r.fields.length > 0) {
       setFormErrors(key, toFieldErrors(r.fields, map).fields);
       focusFirstInvalid(form);
     }
     setMsg(
+      key,
       r.ok
         ? { text: t("requests.sent"), cls: "ok" }
         : { text: r.error ?? t("common.sendFailed"), cls: "err" },
@@ -101,14 +109,12 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
   const L = errors.leave;
   const O = errors.ot;
   const A = errors.adj;
+  const M = msgs;
   const lb = `${base}-l`;
   const ob = `${base}-o`;
   const ab = `${base}-a`;
   return (
     <>
-      <p role="status" aria-live="polite" className={msg?.cls}>
-        {msg?.text}
-      </p>
       <form
         method="post"
         className="card"
@@ -133,7 +139,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
       >
         <h2 id={`${lb}-h`}>{t("requests.leave.heading")}</h2>
         <label className="field">
-          {t("requests.leave.type")}
+          {req(t("requests.leave.type"))}
           <select name="type" required {...fieldA11y(lb, "type", L)}>
             {leaveTypes.map((lt) => (
               <option key={lt.id} value={lt.id}>
@@ -144,28 +150,28 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         </label>
         <FieldError base={lb} name="type" errors={L} />
         <label className="field">
-          {t("requests.date")}
+          {req(t("requests.date"))}
           <input name="date" type="date" required {...fieldA11y(lb, "date", L)} />
         </label>
         <FieldError base={lb} name="date" errors={L} />
         <div className="row">
           <div>
             <label className="field">
-              {t("requests.leave.from")}
+              {req(t("requests.leave.from"))}
               <input name="from" type="time" defaultValue="08:00" required {...fieldA11y(lb, "from", L)} />
             </label>
             <FieldError base={lb} name="from" errors={L} />
           </div>
           <div>
             <label className="field">
-              {t("requests.leave.to")}
+              {req(t("requests.leave.to"))}
               <input name="to" type="time" defaultValue="17:00" required {...fieldA11y(lb, "to", L)} />
             </label>
             <FieldError base={lb} name="to" errors={L} />
           </div>
           <div>
             <label className="field">
-              {t("requests.leave.minutes")}
+              {req(t("requests.leave.minutes"))}
               <input
                 name="minutes"
                 type="number"
@@ -183,9 +189,12 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           <textarea name="reason" maxLength={1000} {...fieldA11y(lb, "reason", L)} />
         </label>
         <FieldError base={lb} name="reason" errors={L} />
-        <SubmitButton className="btn btn-primary" busy={busy}>
+        <SubmitButton className="btn btn-primary" busy={busy.leave}>
           {t("requests.leave.submit")}
         </SubmitButton>
+        <p role="status" aria-live="polite" className={M.leave?.cls}>
+          {M.leave?.text}
+        </p>
       </form>
       <form
         method="post"
@@ -210,12 +219,12 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
       >
         <h2 id={`${ob}-h`}>{t("requests.ot.heading")}</h2>
         <label className="field">
-          {t("requests.date")}
+          {req(t("requests.date"))}
           <input name="date" type="date" required {...fieldA11y(ob, "date", O)} />
         </label>
         <FieldError base={ob} name="date" errors={O} />
         <label className="field">
-          {t("requests.ot.minutes")}
+          {req(t("requests.ot.minutes"))}
           <input
             name="minutes"
             type="number"
@@ -228,19 +237,22 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         </label>
         <FieldError base={ob} name="minutes" errors={O} />
         <label className="field">
-          {t("requests.reason")}
+          {req(t("requests.reason"))}
           <textarea name="reason" maxLength={1000} required {...fieldA11y(ob, "reason", O)} />
         </label>
         <FieldError base={ob} name="reason" errors={O} />
         <label>
           <input name="consent" type="checkbox" required {...fieldA11y(ob, "consent", O)} />{" "}
-          {t("requests.ot.consent")}
+          {req(t("requests.ot.consent"))}
         </label>
         <FieldError base={ob} name="consent" errors={O} />
         <p>
-          <SubmitButton className="btn btn-primary" busy={busy}>
+          <SubmitButton className="btn btn-primary" busy={busy.ot}>
             {t("requests.ot.submit")}
           </SubmitButton>
+        </p>
+        <p role="status" aria-live="polite" className={M.ot?.cls}>
+          {M.ot?.text}
         </p>
       </form>
       <form
@@ -276,14 +288,14 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         <div className="row">
           <div>
             <label className="field">
-              {t("requests.date")}
+              {req(t("requests.date"))}
               <input name="date" type="date" required {...fieldA11y(ab, "date", A)} />
             </label>
             <FieldError base={ab} name="date" errors={A} />
           </div>
           <div>
             <label className="field">
-              {t("requests.adjustment.time")}
+              {req(t("requests.adjustment.time"))}
               <input name="time" type="time" required {...fieldA11y(ab, "time", A)} />
             </label>
             <FieldError base={ab} name="time" errors={A} />
@@ -294,9 +306,12 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
           <textarea name="reason" maxLength={1000} required {...fieldA11y(ab, "reason", A)} />
         </label>
         <FieldError base={ab} name="reason" errors={A} />
-        <SubmitButton className="btn btn-primary" busy={busy}>
+        <SubmitButton className="btn btn-primary" busy={busy.adj}>
           {t("requests.adjustment.submit")}
         </SubmitButton>
+        <p role="status" aria-live="polite" className={M.adj?.cls}>
+          {M.adj?.text}
+        </p>
       </form>
     </>
   );

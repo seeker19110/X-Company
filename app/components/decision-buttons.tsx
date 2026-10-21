@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
+import { focusAfterRemoval } from "./focus";
 import { useConfirm } from "./confirm-dialog";
 import { useSession } from "./session-context";
 
@@ -15,6 +16,7 @@ export function DecisionButtons({ type, id, subject }: { type: string; id: strin
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
+  const box = useRef<HTMLDivElement>(null);
 
   async function decide(decision: "approve" | "reject") {
     let note: string | null = null;
@@ -36,12 +38,15 @@ export function DecisionButtons({ type, id, subject }: { type: string; id: strin
     const r = await api("POST", `/api/app/approvals/${type}/${id}/${decision}`, { csrf, body: { note } });
     sending.current = false;
     setBusy(false);
-    if (r.ok) router.refresh();
-    else setError(r.error ?? t("common.actionFailed"));
+    if (r.ok) {
+      // Mục đã xử lý sắp biến mất khỏi danh sách → đưa focus sang mục kế trước khi làm mới (AUD-A11Y-002).
+      focusAfterRemoval(box.current);
+      router.refresh();
+    } else setError(r.error ?? t("common.actionFailed"));
   }
 
   return (
-    <div className="row row-actions">
+    <div ref={box} className="row row-actions">
       <button className="btn btn-primary" disabled={busy} aria-busy={busy} onClick={() => decide("approve")}>
         {t("approvals.approve")}
       </button>

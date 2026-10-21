@@ -84,10 +84,17 @@ interface Series {
 
 const series = new Map<string, Series>();
 let dropped = 0;
+let syncItemErrors = 0;
 
 export function resetMetrics(): void {
   series.clear();
   dropped = 0;
+  syncItemErrors = 0;
+}
+
+/** Đếm một bản ghi đồng bộ ngoại tuyến gặp lỗi chưa lường (/api/app/sync trả HTTP 200 nên RED không thấy 5xx). */
+export function countSyncItemError(): void {
+  syncItemErrors += 1;
 }
 
 export function seriesCount(): number {
@@ -168,6 +175,10 @@ export function renderMetrics(outboxDead: number | null, opts: RenderOptions = {
     "# HELP http_server_series_dropped_total Số quan sát bị bỏ vì vượt trần số chuỗi nhãn.",
     "# TYPE http_server_series_dropped_total counter",
     `http_server_series_dropped_total ${dropped}`,
+    // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
+    "# HELP sync_item_errors_total Số bản ghi đồng bộ ngoại tuyến gặp lỗi chưa lường (kết quả INTERNAL trong lô HTTP 200).",
+    "# TYPE sync_item_errors_total counter",
+    `sync_item_errors_total ${syncItemErrors}`,
     // i18n-ignore: dòng HELP của Prometheus — siêu dữ liệu cho vận hành/bảng giám sát, không tới người dùng cuối
     "# HELP outbox_dead_total Số việc outbox ở trạng thái dead (DLQ); vắng mặt khi không đọc được DB.",
     "# TYPE outbox_dead_total gauge",

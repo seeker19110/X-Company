@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
-import { postSync } from "../../lib/offline/sync-route.ts";
+import type { ActorRequestContext } from "../../lib/http/index.ts";
+import { renderMetrics, resetMetrics } from "../../lib/http/metrics.ts";
+import { AppError } from "../../lib/nen/app-error.ts";
+import { postSync, processBatch } from "../../lib/offline/sync-route.ts";
 import { flush, memoryStore, newItem, type ItemResult, type QueueItem } from "../../lib/offline/queue.ts";
 import { loginHandler } from "../../lib/identity/routes.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
@@ -181,5 +184,51 @@ describe("đồng bộ hàng chờ /api/app/sync (T-021, AT05)", () => {
       ).status,
       400,
     );
+  });
+});
+
+describe("lỗi lạ khi đồng bộ không bị nuốt (AUD-XFEAT-002)", () => {
+  test("handler ném Error thường → INTERNAL + log ERROR kèm stack + sync_item_errors_total tăng; AppError không đếm", async () => {
+    const lines: string[] = [];
+    const saved = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = "debug";
+    const orig = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: string | Uint8Array) => {
+      const s = String(chunk);
+      if (s.startsWith("{")) lines.push(...s.trim().split("\n"));
+      else return orig(chunk);
+      return true;
+    }) as typeof process.stdout.write;
+    resetMetrics();
+    const ids = [randomUUID(), randomUUID()];
+    let results: ItemResult[];
+    try {
+      results = await processBatch(
+        {} as ActorRequestContext,
+        ids.map((id) => ({
+          id,
+          kind: "attendance" as const,
+          payload: {},
+          created_at: new Date().toISOString(),
+        })),
+        async (_ctx, item) => {
+          if (item.id === ids[0]) throw new Error("hỏng bất ngờ");
+          throw new AppError("RATE_LIMITED", 429, "chậm lại");
+        },
+      );
+    } finally {
+      process.stdout.write = orig;
+      if (saved === undefined) delete process.env.LOG_LEVEL;
+      else process.env.LOG_LEVEL = saved;
+    }
+    assert.equal(results[0]!.ok, false);
+    assert.equal((results[0] as { code: string }).code, "INTERNAL");
+    assert.equal((results[1] as { code: string }).code, "RATE_LIMITED");
+    const errLog = lines
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((l) => l.level === "error");
+    assert.ok(errLog, "phải có log ERROR");
+    assert.match(String(errLog!["exception.stacktrace"]), /hỏng bất ngờ/);
+    assert.match(renderMetrics(null), /^sync_item_errors_total 1$/m);
   });
 });

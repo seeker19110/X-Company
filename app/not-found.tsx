@@ -1,9 +1,10 @@
 import { t } from "@/lib/i18n";
 
-/** Trang 404 riêng (UX-STATE-005): trang mặc định của Next chèn <style> không nonce — CSP không 'unsafe-inline' chặn (ZAP 10055). */
+/** Trang 404 riêng (UX-STATE-005): trang mặc định của Next chèn <style> không nonce — CSP không 'unsafe-inline' chặn (ZAP 10055).
+ *  Không tự mở <main>: trang nằm trong layout công khai đã có <main>, lồng hai landmark main là sai (AUD-A11Y-006). */
 export default function NotFound() {
   return (
-    <main className="not-found">
+    <div className="not-found">
       <section>
         <h1>{t("notFound.title")}</h1>
         <p>{t("notFound.body")}</p>
@@ -11,6 +12,6 @@ export default function NotFound() {
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 404 toàn cục: điều hướng đầy đủ về trang chủ, tránh trạng thái router hỏng */}
         <a href="/">{t("notFound.home")}</a>
       </section>
-    </main>
+    </div>
   );
 }

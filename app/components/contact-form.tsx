@@ -8,7 +8,7 @@ import { textOrNull } from "./api";
 import {
   FieldError,
   fieldA11y,
-  focusFirstInvalid,
+  useFocusFirstInvalid,
   SubmitButton,
   toFieldErrors,
   type FieldErrors,
@@ -28,6 +28,7 @@ const toInput = (path: string) => (INPUTS.has(path) ? path : null);
 export function ContactForm() {
   const base = useId();
   const [state, setState] = useState<ContactState>({ kind: "idle" });
+  const focusFirstInvalid = useFocusFirstInvalid();
   const submissionId = useRef<string>("");
   const openedAt = useRef<number>(0);
   useEffect(() => {

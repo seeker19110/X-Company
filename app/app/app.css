@@ -1,3 +1,7 @@
+/* Thanh .app-nav cố định ở đáy che ô đang focus khi trình duyệt cuộn tới (WCAG 2.4.11): chừa chỗ ≥ chiều cao nav + lề. */
+html {
+  scroll-padding-bottom: 5rem;
+}
 .app-shell {
   min-height: 100dvh;
   padding-bottom: 5rem;
