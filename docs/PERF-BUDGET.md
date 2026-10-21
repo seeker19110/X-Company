@@ -29,7 +29,7 @@ Nâng ngưỡng = sửa `perf-budget.json`/`lighthouserc.json` trong PR kèm lý
 
 ## Chưa làm / giới hạn
 - RUM tự làm đã có (T-056, D-042: beacon `app/components/rum-beacon.tsx` → `/api/public/rum` → `rum_web_vitals_p75` + 3 luật `XCRum*`), nhưng chưa có số p75 thực địa: cần bật `RUM_ENABLED` và có người dùng production (PRF-WEB-005 cần ≥ 5 URL ở p75; nhãn trang hiện gộp theo `/`, `/app/<phân hệ>`, `/[...slug]`). CrUX chưa dùng. Beacon gắn ở layout `(public)`, layout `(secure)` và trang đăng nhập (không ở root layout: client component ở root làm tổng JS static +3,4 KB, vượt trần 230 KB). Không tách mobile/desktop (FE-PERF-001) — chưa có chiều đó trong mẫu.
-- Lighthouse CI là job `lighthouse`; đưa vào required check của ruleset (`.github/rulesets/main.json`) là bước import ruleset của chủ dự án.
+- Lighthouse CI là job `lighthouse`, job con của `quality` (required check của ruleset `.github/rulesets/main.json`) — đỏ thì chặn merge; ruleset có hiệu lực khi chủ dự án import.
 - Ngân sách kích thước image container (XC-GREEN-002) và thời gian/số job CI mỗi PR chưa có — dự án chưa build image container.
 
 ## Đo tải cục bộ (T-049, faithful-fixture)

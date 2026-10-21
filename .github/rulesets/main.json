@@ -36,47 +36,20 @@
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
             "context": "quality"
           },
           {
-            "context": "protection-guard"
-          },
-          {
             "context": "gitleaks"
-          },
-          {
-            "context": "dep-audit"
           },
           {
             "context": "merge-gate"
           },
           {
-            "context": "e2e"
-          },
-          {
             "context": "pr-policy"
-          },
-          {
-            "context": "readme-smoke"
-          },
-          {
-            "context": "supply-chain"
-          },
-          {
-            "context": "lighthouse"
-          },
-          {
-            "context": "dast"
-          },
-          {
-            "context": "ops-stack"
-          },
-          {
-            "context": "staging-tls"
           }
         ]
       }

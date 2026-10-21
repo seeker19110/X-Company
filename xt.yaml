@@ -58,3 +58,6 @@ commit_gate: fast
 test_fast: scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 "tests/unit/**/*.test.ts" # chỉ test unit (vài suite cần Postgres thật); test db/http ở CI
 delivery_phase: build
 # pr_title_check: ""    # off = không đòi tiêu đề PR `<type>(scope): mô tả` ≤ 72 ký tự
+
+# Khoá mới của khung (bản 3.12.0 (5b8b8a6)) — bật bằng cách bỏ "# "; vắng khoá = hành vi cũ
+# e2e_setup: ""         # trước e2e: cài trình duyệt (vd npx playwright install --with-deps chromium)

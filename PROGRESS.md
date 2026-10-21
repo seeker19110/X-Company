@@ -1,5 +1,6 @@
 # PROGRESS.md — X-Company
 ## Đang làm
+- 2026-10-21: khung 3.12.0 (CI/ruleset tối thiểu, song song tối đa): `quality` nối tiếp 8m02s tách thành typecheck · lint · build · checks · test · coverage chạy cùng lúc, `quality` thành job tổng hợp mọi job (kể cả `dast-probes`, `dep-audit`); ruleset 13 → 4 check (`quality`, `gitleaks`, `merge-gate`, `pr-policy`), không strict — chủ dự án import lại ruleset.
 - Lát 10 đã merge hết (#32 #33 #35 #36). Audit 2026-10-19 (`docs/ops/AUDIT-STATUS.md`): đợt 1–3 đã merge (#40 #41 #44), sót SEC-003 (`APP_ORIGIN` http ở production) và CODE-009 (phạm vi duyệt OT lệch ngày) → làm cùng đợt kế. Còn đợt 4 (sync log + a11y), 5 (CI/harness), 6 (tài liệu) — mỗi đợt một PR.
 - `GO-NO-GO.md` = NO-GO production; MUST đạt 309 · miễn 73 · chưa 91 (chờ người/hạ tầng thật). Chưa có pháp nhân: hệ thống chỉ chạy dữ liệu mẫu (DPIA mục 0b, D-043).
 
