@@ -145,6 +145,19 @@ test("check-tests: bắt test không assertion và .only/.skip/.todo; chấp nh�
   assert.deepEqual(checkSource("e.test.ts", ""), []);
 });
 
+test("check-tests: page.route chỉ hợp lệ trong phạm vi test.use({ serviceWorkers: 'block' }) (SW nuốt request)", () => {
+  const bare = `test("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); });`;
+  assert.equal(checkSource("e2e/a.spec.ts", bare).length, 1);
+  const otherOption = `test.describe("d", () => { test.use({ viewport: { width: 320, height: 800 } });\n  test("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); }); });`;
+  assert.equal(checkSource("e2e/b.spec.ts", otherOption).length, 1);
+  const allow = `test.describe("d", () => { test.use({ serviceWorkers: "allow" });\n  test("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); }); });`;
+  assert.equal(checkSource("e2e/c.spec.ts", allow).length, 1);
+  const nested = `test.describe("d", () => { test.use({ serviceWorkers: "block" });\n  test.describe("e", () => { test.use({ viewport: { width: 320, height: 800 } });\n    test("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); }); }); });`;
+  assert.deepEqual(checkSource("e2e/d.spec.ts", nested), []);
+  const fileLevel = `test.use({ serviceWorkers: "block" });\ntest("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); });`;
+  assert.deepEqual(checkSource("e2e/e.spec.ts", fileLevel), []);
+});
+
 test("check-adr: chỉ dòng Trạng thái/liên kết được đổi", () => {
   const okDiff =
     "--- a/x\n+++ b/x\n@@ -3 +3 @@\n-- Trạng thái: Chấp nhận · Ngày: 1\n+- Trạng thái: Thay thế · Ngày: 1\n+Thay thế bởi: ADR-0009";

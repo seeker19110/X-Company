@@ -42,6 +42,36 @@ function hasAssertion(node: ts.Node): boolean {
   return found;
 }
 
+/** `test.use({ serviceWorkers: "block" })` là một câu lệnh trực tiếp của khối này? */
+function blocksServiceWorkers(stmts: ts.NodeArray<ts.Statement>): boolean {
+  return stmts.some((s) => {
+    if (!ts.isExpressionStatement(s) || !ts.isCallExpression(s.expression)) return false;
+    const callee = s.expression.expression;
+    if (!ts.isPropertyAccessExpression(callee) || callee.name.text !== "use") return false;
+    if (!ts.isIdentifier(callee.expression) || callee.expression.text !== "test") return false;
+    return s.expression.arguments.some(
+      (a) =>
+        ts.isObjectLiteralExpression(a) &&
+        a.properties.some(
+          (p) =>
+            ts.isPropertyAssignment(p) &&
+            ts.isIdentifier(p.name) &&
+            p.name.text === "serviceWorkers" &&
+            ts.isStringLiteral(p.initializer) &&
+            p.initializer.text === "block",
+        ),
+    );
+  });
+}
+
+/** Có khối tổ tiên (describe hoặc cấp tệp) chặn service worker? */
+function underServiceWorkerBlock(n: ts.Node): boolean {
+  for (let p: ts.Node | undefined = n.parent; p !== undefined; p = p.parent) {
+    if ((ts.isBlock(p) || ts.isSourceFile(p)) && blocksServiceWorkers(p.statements)) return true;
+  }
+  return false;
+}
+
 export function checkSource(file: string, src: string): string[] {
   const errors: string[] = [];
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
@@ -69,6 +99,18 @@ export function checkSource(file: string, src: string): string[] {
     if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && TEST_FN.has(n.expression.text)) {
       const fn = n.arguments.find((a) => ts.isArrowFunction(a) || ts.isFunctionExpression(a));
       if (fn !== undefined && !hasAssertion(fn)) errors.push(`${pos(n)}: test không có assertion`);
+    }
+    // Service worker (public/sw.js: skipWaiting + clients.claim) giành trang không đồng bộ; khi đã giành, fetch đi qua SW
+    // và page.route không thấy request → mock lúc ăn lúc trượt (AT09 đỏ trên PR #58).
+    if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      n.expression.name.text === "route" &&
+      ts.isIdentifier(n.expression.expression) &&
+      n.expression.expression.text === "page" &&
+      !underServiceWorkerBlock(n)
+    ) {
+      errors.push(`${pos(n)}: page.route cần test.use({ serviceWorkers: "block" }) ở describe chứa nó`);
     }
     ts.forEachChild(n, visit);
   };
