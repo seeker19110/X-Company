@@ -19,7 +19,10 @@ export const RULES = [
     "google/osv-scanner-action/osv-scanner-action@",
     "SEC-SUPPLY-006: osv-scanner",
   ],
-  [".github/workflows/osv-scanner.yml", "pull_request:", "SEC-SUPPLY-006: PR"],
+  // Trên PR: OSV-Scanner chạy trong job `gate` của ci.yml, chặn merge qua `quality` (D-128, ADR-0039).
+  [".github/workflows/ci.yml", "google/osv-scanner-action/osv-scanner-action@", "SEC-SUPPLY-006: PR (gate)"],
+  [".github/workflows/ci.yml", "--config=osv-scanner.toml", "SEC-SUPPLY-006: PR theo osv-scanner.toml"],
+  [".github/workflows/ci.yml", "--lockfile=package-lock.json", "SEC-SUPPLY-006: PR quét lockfile prod + dev"],
   [".github/workflows/osv-scanner.yml", "schedule:", "SEC-SUPPLY-006: lịch tuần"],
   [".github/workflows/osv-scanner.yml", "check-osv-exceptions.mjs", "BASE-DEP-004: kiểm hạn ngoại lệ"],
   [".github/workflows/maintenance.yml", "schedule:", "OPS-MAINT-003: lịch tuần"],

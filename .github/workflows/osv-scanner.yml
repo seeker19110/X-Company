@@ -1,11 +1,11 @@
 name: OSV-Scanner
 
-# SEC-SUPPLY-006, BASE-DEP-004: quét package-lock.json GỒM phụ thuộc dev trên mỗi PR + lịch tuần.
-# Ngoại lệ có hạn: osv-scanner.toml (reason + ignoreUntil); quá hạn → bước kiểm hạn đỏ. dep-audit.yml (npm audit --omit=dev) giữ nguyên.
+# SEC-SUPPLY-006, BASE-DEP-004: quét package-lock.json GỒM phụ thuộc dev trên push main + lịch tuần (bắt lỗ hổng MỚI công
+# bố khi không có PR). Trên PR, cùng action và cùng tham số chạy trong job `gate` của ci.yml — chặn merge qua `quality`
+# (D-128; ruleset chỉ quality + gitleaks, ADR-0039). Ngoại lệ có hạn: osv-scanner.toml (reason + ignoreUntil); quá hạn →
+# bước kiểm hạn đỏ. dep-audit.yml (npm audit --omit=dev) giữ nguyên.
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   schedule:
     - cron: "37 2 * * 1"
