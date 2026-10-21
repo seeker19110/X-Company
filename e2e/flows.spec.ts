@@ -101,16 +101,36 @@ test.describe("ứng dụng nội bộ", () => {
     await login(page, "nv");
     await page.goto("/app/tasks");
     const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
+    // Thao tác thất bại → focus về nút vừa bấm, không rơi về <body> (review PR #50).
+    await page.route(
+      "**/api/app/tasks/*/start",
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: "application/problem+json",
+          body: JSON.stringify({ status: 409, code: "CONFLICT", title: "Xung đột", detail: "Thử lại" }),
+        }),
+      { times: 1 },
+    );
+    await item.getByRole("button", { name: "Bắt đầu" }).click();
+    await expect(item.getByRole("alert")).toBeVisible();
+    await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeFocused();
     await item.getByRole("button", { name: "Bắt đầu" }).click();
     await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
-    // AUD-A11Y-002: báo bị chặn rồi tiếp tục → mỗi lần bộ nút đổi, focus ở nút thao tác đầu của việc, không rơi về <body>.
+    // AUD-A11Y-002: báo bị chặn rồi tiếp tục → mỗi lần bộ nút đổi, focus ở KHỐI của việc (không rơi về <body>, và không đặt lên
+    // nút thao tác: Enter lần nữa không được vô tình "Gửi nghiệm thu" — review PR #50).
     await item.getByRole("button", { name: "Báo bị chặn" }).click();
     const blockDialog = page.getByRole("dialog", { name: "Báo việc bị chặn?" });
     await blockDialog.getByLabel("Lý do").fill("Chờ vật tư về");
     await blockDialog.getByRole("button", { name: "Báo bị chặn" }).click();
-    await expect(item.getByRole("button", { name: "Tiếp tục" })).toBeFocused();
+    await expect(item.getByRole("button", { name: "Tiếp tục" })).toBeVisible();
+    await expect(item).toBeFocused();
     await item.getByRole("button", { name: "Tiếp tục" }).click();
-    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeFocused();
+    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
+    await expect(item).toBeFocused();
+    await page.keyboard.press("Enter"); // focus ở khối việc, không phải nút → không gửi nghiệm thu
+    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeEnabled();
+    await expect(item).not.toContainText("Chờ nghiệm thu");
     await item.getByRole("button", { name: "Gửi nghiệm thu" }).click();
     // Người làm vẫn thấy việc, ở trạng thái chờ nghiệm thu, không còn nút thao tác.
     await expect(item).toContainText("Chờ nghiệm thu");
@@ -162,8 +182,12 @@ test.describe("ứng dụng nội bộ", () => {
     await adjItem.getByRole("button", { name: "Duyệt" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Sửa công" })).toHaveCount(0);
     const leaveItem = page.getByRole("listitem").filter({ hasText: "Nghỉ phép" });
-    // AUD-A11Y-002: mục đã xử lý biến mất → focus sang mục kế, không rơi về <body>.
-    await expect(leaveItem.getByRole("button", { name: "Duyệt" })).toBeFocused();
+    // AUD-A11Y-002: mục đã xử lý biến mất → focus sang mục kế (chính mục, không phải nút Duyệt của nó: Enter lần nữa
+    // không được duyệt luôn đơn kế mà không xác nhận — review PR #50), không rơi về <body>.
+    await expect(leaveItem).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(leaveItem.getByRole("button", { name: "Duyệt" })).toBeEnabled();
+    await expect(leaveItem).toBeVisible();
     await leaveItem.getByRole("button", { name: "Từ chối" }).click();
     // UX-STATE-008 + FE-FORM-002: hộp thoại nêu đối tượng; Esc = huỷ (đơn còn nguyên); lý do bắt buộc.
     const dialog = page.getByRole("dialog", { name: "Từ chối đơn?" });
