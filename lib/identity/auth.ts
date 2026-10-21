@@ -1,4 +1,5 @@
-// Đăng nhập / đăng xuất (SPEC-identity-org). Giới hạn 5 lần sai / 15 phút / (email, IP) → 429.
+// Đăng nhập / đăng xuất (SPEC-identity-org). Giới hạn lần sai trong 15 phút → 429: 5 / (email, IP); chống dò rải
+// (AUD-SEC-004, D-053): 30 / IP qua mọi email, 50 / email qua mọi IP (ngưỡng email cao để kẻ lạ khó khoá hộ tài khoản).
 import { appendAudit } from "../audit/index.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
@@ -11,6 +12,8 @@ import { minutesToMs, msToSeconds } from "../nen/units.ts";
 import { t } from "../i18n/index.ts";
 
 export const MAX_FAILURES = 5;
+export const MAX_IP_FAILURES = 30;
+export const MAX_EMAIL_FAILURES = 50;
 export const WINDOW_MS = minutesToMs(15);
 
 export function normalizeEmail(email: string): string {
@@ -48,14 +51,33 @@ export async function login(
       email,
       input.ip,
     ]);
-    const fails = await tx.query<{ n: number; oldest: Date | null }>(
-      `SELECT count(*)::int AS n, min(attempted_at) AS oldest FROM login_attempt
-       WHERE email = $1 AND ip = $2 AND success = false AND attempted_at > $3`,
+    // Một câu đếm ba bộ: cặp (email, IP), IP qua mọi email, email qua mọi IP. Khoá advisory chỉ theo cặp nên request song
+    // song từ nhiều email có thể vượt bộ IP vài lượt — chấp nhận (ngưỡng là chặn dò hàng loạt, không phải đếm chính xác).
+    const fails = await tx.query<{
+      pair_n: number;
+      pair_oldest: Date | null;
+      ip_n: number;
+      ip_oldest: Date | null;
+      email_n: number;
+      email_oldest: Date | null;
+    }>(
+      `SELECT count(*) FILTER (WHERE email = $1 AND ip = $2)::int AS pair_n,
+              min(attempted_at) FILTER (WHERE email = $1 AND ip = $2) AS pair_oldest,
+              count(*) FILTER (WHERE ip = $2)::int AS ip_n, min(attempted_at) FILTER (WHERE ip = $2) AS ip_oldest,
+              count(*) FILTER (WHERE email = $1)::int AS email_n, min(attempted_at) FILTER (WHERE email = $1) AS email_oldest
+       FROM login_attempt
+       WHERE (email = $1 OR ip = $2) AND success = false AND attempted_at > $3`,
       [email, input.ip, since],
     );
     const f = fails.rows[0]!;
-    if (f.n >= MAX_FAILURES) {
-      const oldest = f.oldest?.getTime() ?? now.getTime();
+    const over = [
+      { n: f.pair_n, oldest: f.pair_oldest, max: MAX_FAILURES },
+      { n: f.ip_n, oldest: f.ip_oldest, max: MAX_IP_FAILURES },
+      { n: f.email_n, oldest: f.email_oldest, max: MAX_EMAIL_FAILURES },
+    ].filter((b) => b.n >= b.max);
+    if (over.length > 0) {
+      // Gợi ý thử lại: lúc lần sai cũ nhất của bộ chặn muộn nhất rời cửa sổ (giống cách tính cũ của cặp email+IP).
+      const oldest = Math.max(...over.map((b) => b.oldest?.getTime() ?? now.getTime()));
       const retryAfter = Math.max(1, Math.ceil(msToSeconds(oldest + WINDOW_MS - now.getTime())));
       logSecurityEvent({
         ...meta,

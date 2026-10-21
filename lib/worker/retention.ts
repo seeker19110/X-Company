@@ -83,6 +83,23 @@ export function yearsAgo(now: Date, years: number): Date {
 }
 const DAY = MS_PER_DAY;
 const HOUR = 3_600_000;
+/** Số hàng mỗi lô xoá/ẩn danh (AUD-PERF-002): mỗi lô một giao dịch ngắn, không khoá cả bảng một lúc. */
+export const RETENTION_BATCH = 5000;
+
+/** Bộ chọn hàng quá hạn ($1 = mốc thời gian) — một nguồn cho job và test EXPLAIN (mỗi cái có index, migration 0028). */
+export const RETENTION_SELECTORS = [
+  { table: "session", where: "absolute_expires_at < $1" },
+  { table: "login_attempt", where: "attempted_at < $1" },
+  { table: "idempotency_record", where: "created_at < $1" },
+  { table: "rum_sample", where: "received_at < $1" },
+  { table: "public_rate_event", where: "at < $1" },
+  { table: "outbox_event", where: "status = 'done' AND processed_at < $1" },
+  { table: "inquiry", where: "anonymized_at IS NULL AND created_at < $1" },
+] as const;
+type PurgeTable = Exclude<(typeof RETENTION_SELECTORS)[number]["table"], "inquiry" | "outbox_event">;
+const selector = (table: (typeof RETENTION_SELECTORS)[number]["table"]): string =>
+  RETENTION_SELECTORS.find((x) => x.table === table)!.where;
+
 /** public_rate_event chỉ cần cửa sổ giới hạn tần suất (≤ 10 phút); giữ 1 ngày cho điều tra rồi xoá (trước đây tăng mãi). */
 const RATE_EVENT_DAYS = 1;
 
@@ -165,22 +182,32 @@ async function anonymize(
   where: string,
   cutoffs: { a: Date; b: Date },
   now: Date,
+  batch: number,
   action = "retention.anonymize",
 ): Promise<number> {
   const sets = ANON_SETS[table];
   // Tham số chưa được tham chiếu làm Postgres không suy được kiểu → chỉ truyền $5 khi điều kiện dùng nó.
   const params = [cutoffs.a, now, ANON_NAME, ANON_EMAIL, ...(where.includes("$5") ? [cutoffs.b] : [])];
-  return inTx(pool, async (tx) => {
-    const r = await tx.query<{ company_id: string }>(
-      // sql-interp-allow: `table` là "inquiry" | "job_application"; `sets`/`where` là hằng của lời gọi nội bộ trong tệp này; giá trị qua $1..$5.
-      `UPDATE ${table} SET ${sets}, anonymized_at = $2 WHERE anonymized_at IS NULL AND ${where} RETURNING company_id`,
-      params,
-    );
-    const per = new Map<string, number>();
-    for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
-    for (const [companyId, n] of per) await audited(tx, companyId, action, table, cutoffs.a, n);
-    return r.rowCount ?? 0;
-  });
+  const limit = `$${params.length + 1}`;
+  let total = 0;
+  for (;;) {
+    // Theo lô (AUD-PERF-002): mỗi lô một giao dịch + audit đếm của lô đó; hàng đã ẩn danh rời bộ chọn nên vòng dừng.
+    const n = await inTx(pool, async (tx) => {
+      const r = await tx.query<{ company_id: string }>(
+        // sql-interp-allow: `table` là "inquiry" | "job_application"; `sets`/`where` là hằng của lời gọi nội bộ trong tệp này; `limit` là "$N" tự tính; giá trị qua tham số.
+        `UPDATE ${table} SET ${sets}, anonymized_at = $2 WHERE id IN (
+           SELECT id FROM ${table} WHERE anonymized_at IS NULL AND ${where} LIMIT ${limit} FOR UPDATE SKIP LOCKED)
+         RETURNING company_id`,
+        [...params, batch],
+      );
+      const per = new Map<string, number>();
+      for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
+      for (const [companyId, k] of per) await audited(tx, companyId, action, table, cutoffs.a, k);
+      return r.rowCount ?? 0;
+    });
+    total += n;
+    if (n < batch) return total;
+  }
 }
 
 // Ứng viên không trúng tuyển (rejected | withdrawn) đã chốt: $1 = mốc 30 ngày, $5 = mốc 12 tháng (có đồng ý kho nhân tài).
@@ -233,52 +260,65 @@ async function anonymizeEmployees(pool: pg.Pool, cutoff: string, now: Date, befo
   });
 }
 
-async function purge(
-  pool: pg.Pool,
-  table: string,
-  action: string,
-  where: string,
-  before: Date,
-): Promise<number> {
-  return inTx(pool, async (tx) => {
-    // sql-interp-allow: `table` và `where` là hằng của các lời gọi purge(...) nội bộ trong tệp này; `before` qua $1.
-    const r = await tx.query(`DELETE FROM ${table} WHERE ${where}`, [before]);
-    await audited(tx, null, action, table, before, r.rowCount ?? 0);
-    return r.rowCount ?? 0;
-  });
+async function purge(pool: pg.Pool, table: PurgeTable, before: Date, batch: number): Promise<number> {
+  const where = selector(table);
+  let total = 0;
+  for (;;) {
+    // Theo lô (AUD-PERF-002): mỗi lô một giao dịch ngắn + audit đếm của lô; lô thiếu = đã hết hàng quá hạn.
+    const n = await inTx(pool, async (tx) => {
+      const r = await tx.query(
+        // sql-interp-allow: `table` là PurgeTable, `where` là hằng RETENTION_SELECTORS; `before` qua $1, cỡ lô qua $2.
+        `DELETE FROM ${table} WHERE ctid IN (SELECT ctid FROM ${table} WHERE ${where} LIMIT $2 FOR UPDATE SKIP LOCKED)`,
+        [before, batch],
+      );
+      await audited(tx, null, "retention.purge", table, before, r.rowCount ?? 0);
+      return r.rowCount ?? 0;
+    });
+    total += n;
+    if (n < batch) return total;
+  }
 }
 
 /** Outbox `done` cũ: xoá dấu khử trùng của chúng trước (FK), rồi xoá hàng. `dead` (DLQ) không bị đụng. */
-async function purgeOutboxDone(pool: pg.Pool, before: Date): Promise<number> {
-  return inTx(pool, async (tx) => {
-    const old = "SELECT id FROM outbox_event WHERE status = 'done' AND processed_at < $1";
-    // sql-interp-allow: `old` là hằng SELECT cục bộ (dòng trên), `before` qua $1.
-    await tx.query(`DELETE FROM processed_message WHERE event_id IN (${old})`, [before]);
-    const r = await tx.query("DELETE FROM outbox_event WHERE status = 'done' AND processed_at < $1", [
-      before,
-    ]);
-    await audited(tx, null, "retention.purge", "outbox_event", before, r.rowCount ?? 0);
-    return r.rowCount ?? 0;
-  });
+async function purgeOutboxDone(pool: pg.Pool, before: Date, batch: number): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const n = await inTx(pool, async (tx) => {
+      const ids = await tx.query<{ id: string }>(
+        // sql-interp-allow: bộ chọn là hằng RETENTION_SELECTORS; `before` qua $1, cỡ lô qua $2.
+        `SELECT id FROM outbox_event WHERE ${selector("outbox_event")} LIMIT $2 FOR UPDATE SKIP LOCKED`,
+        [before, batch],
+      );
+      const list = ids.rows.map((r) => r.id);
+      if (list.length === 0) return 0;
+      await tx.query("DELETE FROM processed_message WHERE event_id = ANY($1)", [list]);
+      const r = await tx.query("DELETE FROM outbox_event WHERE id = ANY($1)", [list]);
+      await audited(tx, null, "retention.purge", "outbox_event", before, r.rowCount ?? 0);
+      return r.rowCount ?? 0;
+    });
+    total += n;
+    if (n < batch) return total;
+  }
 }
 
 /** idempotency_record (T-028) có thể chưa tồn tại ở nhánh này → bỏ qua; cột thời gian `created_at`. */
-async function purgeIdempotency(pool: pg.Pool, before: Date): Promise<number> {
+async function purgeIdempotency(pool: pg.Pool, before: Date, batch: number): Promise<number> {
   const t = await pool.query<{ ok: boolean }>(
     `SELECT to_regclass('public.idempotency_record') IS NOT NULL AND EXISTS (
        SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'idempotency_record' AND column_name = 'created_at') AS ok`,
   );
   if (!t.rows[0]?.ok) return 0;
-  return purge(pool, "idempotency_record", "retention.purge", "created_at < $1", before);
+  return purge(pool, "idempotency_record", before, batch);
 }
 
 export async function runRetention(
-  opts: { config?: RetentionConfig; now?: Date; pool?: pg.Pool } = {},
+  opts: { config?: RetentionConfig; now?: Date; pool?: pg.Pool; batchSize?: number } = {},
 ): Promise<RetentionReport> {
   const cfg = opts.config ?? retentionConfig();
   const now = opts.now ?? new Date();
   const pool = opts.pool ?? getPool();
+  const batch = opts.batchSize ?? RETENTION_BATCH;
   const report: RetentionReport = {
     skipped: !cfg.enabled,
     inquiryAnonymized: 0,
@@ -300,6 +340,7 @@ export async function runRetention(
     "created_at < $1",
     { a: inquiryBefore, b: inquiryBefore },
     now,
+    batch,
   );
   const decidedBefore = ago(now, cfg.applicationDecidedDays * DAY);
   const talentBefore = ago(now, cfg.talentPoolDays * DAY);
@@ -311,6 +352,7 @@ export async function runRetention(
       APPLICATION_DECIDED_WHERE,
       { a: decidedBefore, b: talentBefore },
       now,
+      batch,
     )) +
     (await anonymize(
       pool,
@@ -318,40 +360,22 @@ export async function runRetention(
       APPLICATION_STALE_WHERE,
       { a: staleBefore, b: staleBefore },
       now,
+      batch,
     ));
   const contactCutoff = localDate(ago(now, cfg.employeeTerminatedDays * DAY));
   report.employeeContactCleared = await clearEmployeeContacts(pool, contactCutoff, now);
   const recordBefore = yearsAgo(now, cfg.timesheetYears);
   report.employeeAnonymized = await anonymizeEmployees(pool, localDate(recordBefore), now, recordBefore);
-  report.sessionDeleted = await purge(
-    pool,
-    "session",
-    "retention.purge",
-    "absolute_expires_at < $1",
-    ago(now, cfg.sessionDays * DAY),
-  );
+  report.sessionDeleted = await purge(pool, "session", ago(now, cfg.sessionDays * DAY), batch);
   report.loginAttemptDeleted = await purge(
     pool,
     "login_attempt",
-    "retention.purge",
-    "attempted_at < $1",
     ago(now, cfg.loginAttemptDays * DAY),
+    batch,
   );
-  report.outboxDoneDeleted = await purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY));
-  report.idempotencyDeleted = await purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR));
-  report.rumSampleDeleted = await purge(
-    pool,
-    "rum_sample",
-    "retention.purge",
-    "received_at < $1",
-    ago(now, cfg.rumDays * DAY),
-  );
-  report.rateEventDeleted = await purge(
-    pool,
-    "public_rate_event",
-    "retention.purge",
-    "at < $1",
-    ago(now, RATE_EVENT_DAYS * DAY),
-  );
+  report.outboxDoneDeleted = await purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY), batch);
+  report.idempotencyDeleted = await purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR), batch);
+  report.rumSampleDeleted = await purge(pool, "rum_sample", ago(now, cfg.rumDays * DAY), batch);
+  report.rateEventDeleted = await purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch);
   return report;
 }

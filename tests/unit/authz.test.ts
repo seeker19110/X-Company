@@ -36,6 +36,27 @@ describe("can() — mặc định từ chối (R1, R2)", () => {
   });
 });
 
+describe("hành động riêng cho đơn của chính mình (AUD-XFEAT-006)", () => {
+  test("ot.request / adjustment.request_own: chỉ chủ dữ liệu, không vai trò nào; tên hành động đúng nghiệp vụ", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const name of ["leave.request", "ot.request", "adjustment.request_own"] as const) {
+      const p = (PERMISSIONS as Record<string, { roles: readonly string[]; self: boolean }>)[name];
+      assert.deepEqual(p, { roles: [], self: true }, name);
+      assert.equal(
+        can(actor([]), name as keyof typeof PERMISSIONS, { companyId: C1, ownerEmployeeId: "e-self" }),
+        true,
+      );
+      assert.equal(
+        can(actor([]), name as keyof typeof PERMISSIONS, { companyId: C1, ownerEmployeeId: "e-x" }),
+        false,
+      );
+    }
+    // Audit "denied" mang tên hành động: OT và sửa công không được mượn quyền của đơn nghỉ.
+    assert.doesNotMatch(readFileSync("lib/attendance/ot.ts", "utf8"), /"leave\.request"/);
+    assert.doesNotMatch(readFileSync("lib/attendance/period.ts", "utf8"), /"leave\.request"/);
+  });
+});
+
 describe("kịch bản SPEC-identity-org", () => {
   test("S-ID-01: nhân viên đọc công của người khác → từ chối", () => {
     const a = actor([g("employee", "self")]);
