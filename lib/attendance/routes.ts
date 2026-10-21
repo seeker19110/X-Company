@@ -1,7 +1,14 @@
 // Route chấm công: POST /api/app/attendance/events (Idempotency-Key bắt buộc), GET /api/app/attendance/qr/:worksiteId.
 import { z } from "zod";
 import { getPool } from "../db/index.ts";
-import { authorize, json, readJson, withActor, type ActorRequestContext } from "../http/index.ts";
+import {
+  authorize,
+  isValidIdempotencyKey,
+  json,
+  readJson,
+  withActor,
+  type ActorRequestContext,
+} from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { recordEvent } from "./events.ts";
 import { policyAt } from "./policy.ts";
@@ -41,6 +48,9 @@ async function activeEmployee(ctx: ActorRequestContext): Promise<string> {
   return employeeId;
 }
 
+/** Trần độ dài khoá theo CHECK của `attendance_event.idempotency_key` (migration 0008). */
+const ATTENDANCE_KEY_MAX = 100;
+
 export async function handleEvent(
   ctx: ActorRequestContext,
   body: unknown,
@@ -52,7 +62,7 @@ export async function handleEvent(
     companyId: ctx.actor.companyId,
     ownerEmployeeId: employeeId,
   });
-  if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 100)
+  if (!isValidIdempotencyKey(idempotencyKey, ATTENDANCE_KEY_MAX))
     throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.attendance.thieuIdempotencyKeyHopLe"));
   const b = EventBody.parse(body);
   return recordEvent(
@@ -90,10 +100,16 @@ export function eventResponseBody(r: Awaited<ReturnType<typeof recordEvent>>) {
   };
 }
 
-export const postEvent = withActor(async (ctx) => {
-  const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
-  return json(eventResponseBody(r), r.replayed ? 200 : 201);
-});
+// AUD-XFEAT-004: cùng trần với /sync (60 lượt/phút/người dùng) — nhu cầu thật vài lượt/ngày; hàng chờ ngoại tuyến đi /sync.
+const EVENT_LIMIT = { bucket: "attendance.event", max: 60, windowSec: 60 };
+
+export const postEvent = withActor(
+  async (ctx) => {
+    const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
+    return json(eventResponseBody(r), r.replayed ? 200 : 201);
+  },
+  { rateLimit: EVENT_LIMIT },
+);
 
 export const getQr = withActor(async (ctx) => {
   const worksiteId = new URL(ctx.req.url).pathname.split("/").pop() ?? "";

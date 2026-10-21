@@ -133,3 +133,20 @@ describe("renderLoadReport", () => {
     assert.ok(bad.includes("**VƯỢT**") && bad.includes("VƯỢT ngân sách"));
   });
 });
+
+// @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
+import * as PU from "../../scripts/lib/perf-users.mjs";
+
+describe("nhân viên của kịch bản ghi chấm công (AUD-XFEAT-004)", () => {
+  test("usersNeeded: chia đều dưới trần mỗi người; ca biên 0 và trần không hợp lệ", () => {
+    assert.equal(PU.usersNeeded(0, 60), 0);
+    assert.equal(PU.usersNeeded(60, 60), 1);
+    assert.equal(PU.usersNeeded(61, 60), 2);
+    assert.equal(PU.usersNeeded(-5, 60), 0);
+    assert.throws(() => PU.usersNeeded(10, 0), RangeError);
+  });
+  test("đủ người cho 400 rps × (12 s đo + 3 s khởi động) mà không ai vượt 60 lượt/phút", () => {
+    assert.ok(PU.PERF_ATTENDANCE_USERS >= PU.usersNeeded(400 * 15, 60), String(PU.PERF_ATTENDANCE_USERS));
+    assert.equal(PU.perfAttendanceEmail(7), "perf-att-7@e2e.test");
+  });
+});

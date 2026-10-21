@@ -36,6 +36,14 @@ const PROCESSING_STALE_SEC = 120;
 const MAX_HASH_BYTES = mb(21);
 const KEY_RE = /^[\x21-\x7e]{8,255}$/;
 
+/**
+ * Luật khoá Idempotency dùng chung cho mọi route (AUD-XFEAT-003): 8–255 ký tự ASCII in được, không khoảng trắng.
+ * `maxLen` hạ trần khi bảng đích có CHECK chặt hơn (attendance_event: 100).
+ */
+export function isValidIdempotencyKey(key: string | null | undefined, maxLen = 255): key is string {
+  return typeof key === "string" && key.length <= maxLen && KEY_RE.test(key);
+}
+
 export interface GuardCtx {
   req: Request;
   actor: { userId: string; companyId: string };
@@ -177,7 +185,7 @@ export async function guarded(
   const key = ctx.req.headers.get("idempotency-key");
   if (key === null || key === "")
     throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.http.thieuHeaderIdempotencyKey"));
-  if (!KEY_RE.test(key))
+  if (!isValidIdempotencyKey(key))
     throw new AppError("IDEMPOTENCY_KEY_REQUIRED", 400, t("err.http.idempotencyKeyPhaiGom8255"));
 
   const c = await claim(ctx, key, await requestHash(ctx.req));

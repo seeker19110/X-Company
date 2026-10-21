@@ -20,6 +20,7 @@ import {
   reportFile,
 } from "./lib/prod-harness.mjs";
 import { evaluateBudget, maxOf, renderLoadReport, summarize } from "./lib/perf-stats.mjs";
+import { PERF_ATTENDANCE_USERS, perfAttendanceEmail } from "./lib/perf-users.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PORT = Number(process.env.PERF_PORT ?? 3300);
@@ -205,7 +206,7 @@ function lighthouseSection() {
 }
 
 async function main() {
-  const h = prepare({ prefix: "PERF" });
+  const h = prepare({ prefix: "PERF", extraSeeds: ["scripts/seed-perf.ts"] });
   const server = await h.start(PORT, { TRUST_PROXY_HOPS: "1" });
   try {
     const base = server.baseUrl;
@@ -227,6 +228,15 @@ async function main() {
     const tlS = await sess("tl", 2);
     const salesS = await sess("sales", 2);
     const pick = (arr, id) => arr[id % arr.length];
+    // Ghi chấm công: mỗi request một nhân viên kế tiếp (vòng tròn) để không chạm trần 60 lượt/phút/người (AUD-XFEAT-004).
+    const attS = [];
+    for (let i = 0; i < PERF_ATTENDANCE_USERS; i += 16) {
+      const batch = Array.from({ length: Math.min(16, PERF_ATTENDANCE_USERS - i) }, (_, j) =>
+        login(base, origin, perfAttendanceEmail(i + j), pw, { "x-forwarded-for": ip() }),
+      );
+      attS.push(...(await Promise.all(batch)));
+    }
+    let attN = 0;
 
     // Dữ liệu đại diện: nhiều liên hệ cho kịch bản phân trang (QA-PERF-010) — qua API công khai, mỗi request một IP giả.
     for (let i = 0; i < INQUIRY_SEED; i += 25) {
@@ -311,7 +321,7 @@ async function main() {
     const kinds = ["in", "break_start", "break_end", "out"];
     await run(
       "Ghi chấm công (POST /api/app/attendance/events)",
-      "Vào ca/nghỉ/hết nghỉ/ra ca xen kẽ bởi 4 phiên (2 nhân viên), mỗi request khoá Idempotency riêng; chấp nhận 200/201 và 409 nghiệp vụ trình tự.",
+      `Vào ca/nghỉ/hết nghỉ/ra ca xen kẽ, request chia vòng tròn cho ${PERF_ATTENDANCE_USERS} nhân viên (trần 60 lượt/phút/người — 429 tính là lỗi), mỗi request khoá Idempotency riêng; chấp nhận 200/201 và 409 nghiệp vụ trình tự.`,
       8,
       "attendance",
       [200, 201, 409],
@@ -320,7 +330,7 @@ async function main() {
           conns: 8,
           expected: [200, 201, 409],
           next: (id, i) => {
-            const s = pick([...nvS.slice(0, 2), ...nv2S], id);
+            const s = attS[attN++ % attS.length];
             return {
               method: "POST",
               path: "/api/app/attendance/events",
