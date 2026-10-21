@@ -19,13 +19,13 @@ import { approve, createPage, publish, submitForReview } from "../lib/cms/index.
 import { loadActor } from "../lib/authz/load.ts";
 import { addMember, createProject, createTask } from "../lib/work/tasks.ts";
 import { localDate } from "../lib/nen/time.ts";
-import type { Role, ScopeType } from "../lib/authz/index.ts";
+import { SYSTEM_ACTOR, type Role, type ScopeType } from "../lib/authz/index.ts";
 
 const PASSWORD = "E2e-mat-khau-dai-2026!";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 setPool(pool);
 registerKms(); // KMS_PROVIDER=transit (nếu bật) cần transport trước khi seed ghi dữ liệu mã hoá
-const sys = { userId: null };
+const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
 
 type Users = Record<string, { email: string; userId: string; employeeId: string }>;
 

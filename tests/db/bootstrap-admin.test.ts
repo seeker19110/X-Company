@@ -85,6 +85,11 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
         actions.includes("company.create"),
     );
     assert.equal((await verifyAuditChain(db.admin)).ok, true);
+    // AUD-SEC-005: grant đầu tiên do actor hệ thống tường minh cấp (không người cấp).
+    const ga = await db.admin.query(
+      "SELECT a.actor_user_id, g.granted_by FROM audit_event a JOIN role_grant g ON g.id::text = a.object_id::text WHERE a.action = 'grant.create'",
+    );
+    assert.deepEqual(ga.rows, [{ actor_user_id: null, granted_by: null }]);
   });
 
   test("đã có admin → từ chối (kể cả chạy song song), không tạo thêm", async () => {

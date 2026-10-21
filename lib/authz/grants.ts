@@ -3,11 +3,39 @@ import { appendAudit } from "../audit/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { destroyUserSessions } from "../identity/session.ts";
 import { AppError } from "../nen/app-error.ts";
-import type { Actor } from "../org/index.ts";
-import { ROLES, type Role, type ScopeType } from "./index.ts";
+import {
+  can,
+  isSystemActor,
+  ROLES,
+  type ActorContext,
+  type Role,
+  type ScopeType,
+  type SystemActor,
+} from "./index.ts";
 import { t } from "../i18n/index.ts";
 
-const SCOPE_TABLE: Partial<Record<ScopeType, string>> = { branch: "branch", department: "department" };
+const SCOPE_TABLE: Partial<Record<ScopeType, string>> = {
+  branch: "branch",
+  department: "department",
+  project: "project",
+};
+
+/** Người dùng đã nạp (`loadActor`) hoặc actor hệ thống tường minh. */
+export type GrantActor = (ActorContext & { requestId?: string | null }) | SystemActor;
+
+/** AUD-SEC-005: tự kiểm `access.manage` ở server, không trông vào lớp gọi. Đồng bộ — không thể quên await. */
+function requireAccessManage(
+  actor: GrantActor,
+  companyId: string,
+  object: { type: string; id: string },
+): void {
+  if (isSystemActor(actor)) return;
+  if (can(actor, "access.manage", { companyId })) return;
+  throw new AppError("FORBIDDEN", 403, t("err.shared.banKhongCoQuyenThucHien"), {
+    action: "access.manage",
+    object,
+  });
+}
 
 export interface GrantInput {
   userId: string;
@@ -20,16 +48,17 @@ export interface GrantInput {
 
 export async function grantRole(
   tx: Queryable,
-  actor: Actor,
+  actor: GrantActor,
   companyId: string,
   g: GrantInput,
 ): Promise<string> {
+  requireAccessManage(actor, companyId, { type: "app_user", id: g.userId });
   if (!ROLES.includes(g.role)) throw new AppError("INVALID_ROLE", 422, t("err.authz.vaiTroKhongHopLe"));
   const needsId = g.scopeType !== "company" && g.scopeType !== "self";
   if (needsId !== !!g.scopeId) throw new AppError("INVALID_SCOPE", 422, t("err.authz.phamViVaMaPhamVi"));
   const table = SCOPE_TABLE[g.scopeType];
   if (table) {
-    // sql-interp-allow: `table` lấy từ SCOPE_TABLE (hằng "branch"/"department"), không bao giờ từ đầu vào.
+    // sql-interp-allow: `table` lấy từ SCOPE_TABLE (hằng "branch"/"department"/"project"), không bao giờ từ đầu vào.
     const ok = await tx.query(`SELECT 1 FROM ${table} WHERE company_id = $1 AND id = $2`, [
       companyId,
       g.scopeId,
@@ -69,11 +98,12 @@ export async function grantRole(
 
 export async function revokeGrant(
   tx: Queryable,
-  actor: Actor,
+  actor: GrantActor,
   companyId: string,
   grantId: string,
   reason: string,
 ) {
+  requireAccessManage(actor, companyId, { type: "role_grant", id: grantId });
   const { rows } = await tx.query<{ user_id: string }>(
     `UPDATE role_grant SET revoked_at = now() WHERE company_id = $1 AND id = $2 AND revoked_at IS NULL RETURNING user_id`,
     [companyId, grantId],

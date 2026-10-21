@@ -7,6 +7,9 @@ import { validateNewPassword, verifyPassword } from "../../lib/identity/password
 import { grantRole, revokeGrant } from "../../lib/authz/grants.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
+import { loadActor } from "../../lib/authz/load.ts";
+import { SYSTEM_ACTOR } from "../../lib/authz/index.ts";
+import { errorResponse } from "../../lib/http/index.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
 
@@ -188,7 +191,7 @@ describe("xác thực (T-007)", () => {
     const u = await seedUser(org.companyId, { grants: [{ role: "hr", scopeType: "company" }] });
     const { cookie } = await doLogin(u.email);
     const gid = (await db.admin.query("SELECT id FROM role_grant WHERE user_id = $1", [u.userId])).rows[0].id;
-    await withTx((tx) => revokeGrant(tx, { userId: null }, org.companyId, gid, "nghỉ việc"));
+    await withTx((tx) => revokeGrant(tx, SYSTEM_ACTOR, org.companyId, gid, "nghỉ việc"));
     // Đổi đặc quyền → phiên cũ bị huỷ (BE-AUTH-004); phiên mới không còn vai trò.
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie }))).status, 401);
     const fresh = await doLogin(u.email);
@@ -234,7 +237,7 @@ describe("xác thực (T-007)", () => {
     assert.notEqual(a.cookie, b.cookie);
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: b.cookie }))).status, 200);
     await withTx((tx) =>
-      grantRole(tx, { userId: null }, org.companyId, { userId: u.userId, role: "hr", scopeType: "company" }),
+      grantRole(tx, SYSTEM_ACTOR, org.companyId, { userId: u.userId, role: "hr", scopeType: "company" }),
     );
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: a.cookie }))).status, 401);
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: b.cookie }))).status, 401);
@@ -247,13 +250,50 @@ describe("xác thực (T-007)", () => {
     const other = await seedUser(org.companyId);
     const o = await doLogin(other.email);
     await withTx((tx) =>
-      grantRole(tx, { userId: null }, org.companyId, {
+      grantRole(tx, SYSTEM_ACTOR, org.companyId, {
         userId: u.userId,
         role: "employee",
         scopeType: "self",
       }),
     );
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie: o.cookie }))).status, 200);
+  });
+
+  test("AUD-SEC-005: người dùng đăng nhập không có access.manage cấp/thu quyền → 403 problem; sysadmin được", async () => {
+    const plain = await seedUser(org.companyId, { grants: [{ role: "executive", scopeType: "company" }] });
+    const admin = await seedUser(org.companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+    const target = await seedUser(org.companyId);
+    const actorOf = async (email: string) => {
+      const token = (await doLogin(email)).cookie.split("=")[1]!;
+      const s = await resolveSession(db.app, token);
+      assert.ok(s);
+      return (await loadActor(db.app, s.userId))!;
+    };
+    const plainActor = await actorOf(plain.email);
+    const adminActor = await actorOf(admin.email);
+    const err = await withTx((tx) =>
+      grantRole(tx, plainActor, org.companyId, {
+        userId: target.userId,
+        role: "sysadmin",
+        scopeType: "company",
+      }),
+    ).catch((e: unknown) => e);
+    const res = errorResponse(err, "00000000-0000-4000-8000-0000000000aa");
+    assert.equal(res.status, 403);
+    assert.equal((await res.json()).code, "FORBIDDEN");
+    const gid = await withTx((tx) =>
+      grantRole(tx, adminActor, org.companyId, { userId: target.userId, role: "hr", scopeType: "company" }),
+    );
+    await assert.rejects(
+      withTx((tx) => revokeGrant(tx, plainActor, org.companyId, gid, "thử")),
+      isCode("FORBIDDEN"),
+    );
+    await withTx((tx) => revokeGrant(tx, adminActor, org.companyId, gid, "xong"));
+    const n = await db.admin.query(
+      "SELECT count(*)::int AS n FROM role_grant WHERE user_id = $1 AND role = 'sysadmin'",
+      [target.userId],
+    );
+    assert.equal(n.rows[0].n, 0);
   });
 
   test("không cookie / cookie rác → 401; phiên quá hạn trượt → null", async () => {
