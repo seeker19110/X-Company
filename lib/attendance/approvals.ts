@@ -108,10 +108,14 @@ export async function pendingApprovals(
     const rows = res.rows;
     for (const r of rows) {
       if (r.created_by_user_id === actor.userId || r.employee_id === actor.employeeId) continue; // R5
-      let scope = resources.get(r.employee_id);
+      // Cùng ngày xét phạm vi với hàm quyết định (AUD-CODE-009): OT theo business_date (`decideOt`), nghỉ/sửa công theo hôm
+      // nay (`decideLeave`/`decideAdjustment`) — lệch ngày thì người thấy đơn bị 403 còn người duyệt được lại không thấy.
+      const date = r.type === "ot" ? r.label : undefined;
+      const key = `${r.employee_id}|${date ?? ""}`;
+      let scope = resources.get(key);
       if (scope === undefined) {
-        scope = await employeeResource(db, actor.companyId, r.employee_id);
-        resources.set(r.employee_id, scope);
+        scope = await employeeResource(db, actor.companyId, r.employee_id, date);
+        resources.set(key, scope);
       }
       if (!can(actor, "attendance.approve", scope)) continue;
       out.push({

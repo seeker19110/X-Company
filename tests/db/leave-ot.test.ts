@@ -465,5 +465,33 @@ describe("nghỉ phép & OT (T-013)", () => {
       await db.admin.query("DELETE FROM leave_request WHERE employee_id = $1", [x.employeeId]);
       await db.admin.query("UPDATE leave_request SET status = 'cancelled' WHERE id = $1", [id]);
     });
+
+    test("AUD-CODE-009: hộp duyệt OT xét phòng ban tại business_date — đúng người duyệt được mới thấy đơn", async () => {
+      const x = await seedUser(org.companyId, { grants: [{ role: "employee", scopeType: "self" }] });
+      await withTx(async (tx) => {
+        await assignEmployment(tx, { userId: null }, org.companyId, x.employeeId!, {
+          departmentId: org.subDeptId,
+          validFrom: "2026-01-01",
+        });
+        // chuyển sang D2 từ một ngày tương lai; đơn OT rơi vào SAU ngày chuyển
+        await assignEmployment(tx, { userId: null }, org.companyId, x.employeeId!, {
+          departmentId: org.otherDeptId,
+          validFrom: "2027-06-01",
+        });
+      });
+      const xa = await actorOf(x);
+      const id = await withTx((tx) =>
+        requestOt(tx, xa, { businessDate: "2027-06-10", minutes: 60, reason: "chạy tiến độ", consent: true }),
+      );
+      const leadSees = (await pendingApprovals(db.app, lead)).some((i) => i.id === id);
+      const otherSees = (await pendingApprovals(db.app, otherLead)).some((i) => i.id === id);
+      assert.equal(leadSees, false, "trưởng nhóm D1 không duyệt được (decideOt 403) thì không được thấy");
+      assert.equal(otherSees, true, "trưởng nhóm D2 duyệt được thì phải thấy");
+      await assert.rejects(
+        withTx((tx) => decideOt(tx, lead, id, "approve")),
+        isCode("FORBIDDEN"),
+      );
+      await withTx((tx) => decideOt(tx, otherLead, id, "approve"));
+    });
   });
 });

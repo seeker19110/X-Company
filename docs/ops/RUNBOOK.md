@@ -24,7 +24,7 @@ status: nháp — chưa có môi trường production thật; lệnh PM2/psql l�
 | Người trực | `<chủ dự án điền: tên, kênh liên lạc>` — mặc định chủ dự án (@seeker19110) |
 
 Biến môi trường mà mã đọc (tên thật trong mã; giá trị không ghi ở đây): `DATABASE_URL` (ứng dụng, role không phải owner) · `MIGRATE_DATABASE_URL` (chỉ migration, role owner) ·
-`SESSION_SECRET` (≥ 32 byte) · `QR_SIGNING_KEYS` (`kid1:khoá1,kid2:khoá2`; kid đầu dùng để ký) · `APP_ORIGIN` · `TRUST_PROXY` hoặc `TRUST_PROXY_HOPS` (production **bắt buộc khai một trong hai**, `0` = không có proxy; thiếu thì khởi động thất bại) ·
+`SESSION_SECRET` (≥ 32 byte) · `QR_SIGNING_KEYS` (`kid1:khoá1,kid2:khoá2`; kid đầu dùng để ký) · `APP_ORIGIN` (production **phải `https://`**; `http` chỉ nhận cho localhost/127.0.0.1/[::1] của harness) · `TRUST_PROXY` hoặc `TRUST_PROXY_HOPS` (production **bắt buộc khai một trong hai**, `0` = không có proxy; thiếu thì khởi động thất bại) ·
 `SITE_COMPANY_ID` · `FILE_STORAGE_DIR` · `DB_POOL_MAX` · `NEXT_TELEMETRY_DISABLED=1` · `METRICS_TOKEN` (tuỳ chọn, bí mật, ≥ 16 byte; đặt thì `GET /api/metrics` với `Authorization: Bearer …` trả metric Prometheus, không đặt thì 404 — chỉ mở cho Prometheus nội bộ).
 
 ## 1. Lệnh vận hành (mẫu — chưa chạy trên production)
