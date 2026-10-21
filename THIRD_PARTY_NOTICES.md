@@ -63,14 +63,14 @@ Tổng: 93 thành phần.
 | @node-rs/argon2-win32-x64-msvc | 2.2.2 | MIT |
 | @playwright/test | 1.64.1 | Apache-2.0 |
 | @swc/helpers | 0.5.23 | Apache-2.0 |
-| argparse | 3.0.2 | PSF-2.0 |
+| argparse | 3.0.3 | PSF-2.0 |
 | baseline-browser-mapping | 2.11.29 | Apache-2.0 |
 | caniuse-lite | 1.0.30001816 | CC-BY-4.0 |
 | client-only | 0.0.1 | MIT |
 | detect-libc | 2.1.2 | Apache-2.0 |
 | entities | 8.1.0 | BSD-2-Clause |
 | linkify-it | 6.1.0 | MIT |
-| markdown-it | 15.0.2 | MIT |
+| markdown-it | 15.0.3 | MIT |
 | mdurl | 2.1.0 | MIT |
 | nanoid | 3.3.20 | MIT |
 | next | 16.4.2 | MIT |
