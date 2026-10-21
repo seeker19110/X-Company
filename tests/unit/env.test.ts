@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { describe, test } from "node:test";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
-import { collectFiles, findEnvViolations } from "../../scripts/check-env.ts";
+import { collectFiles, exampleKeys, findEnvViolations, findExampleDrift } from "../../scripts/check-env.ts";
 import {
   CLIENT_SPEC,
   EnvError,
@@ -468,5 +468,25 @@ describe("APP_ORIGIN ở production phải https (AUD-SEC-003)", () => {
       issueNames(() => loadEnv({ ...prod, APP_ORIGIN: "http://localhost.evil.example" })),
       ["APP_ORIGIN"],
     );
+  });
+});
+
+describe("khoá env ⊆ .env.example (AUD-CFG-001)", () => {
+  const ex = exampleKeys(
+    "# Mẫu\nAPP_ORIGIN=https://x\nDATABASE_URL=\n# LOG_LEVEL=info\n  SESSION_SECRET = abc\nkhong_phai=1\n",
+  );
+  test("đọc tên khoá (kể cả dòng mẫu # KEY=), không đọc giá trị", () => {
+    assert.deepEqual([...ex].sort(), ["APP_ORIGIN", "DATABASE_URL", "LOG_LEVEL", "SESSION_SECRET"]);
+  });
+  test("khoá thiếu → lỗi nêu tên; biến runtime của Next/Node bỏ qua", () => {
+    assert.deepEqual(findExampleDrift(["APP_ORIGIN", "NODE_ENV", "QR_SIGNING_KEYS"], ex, new Set()), [
+      ".env.example thiếu QR_SIGNING_KEYS (khai ở lib/nen/env.ts)",
+    ]);
+  });
+  test("khoá đang chờ người thêm thì không lỗi; đã có trong mẫu mà còn trong danh sách chờ → lỗi để danh sách co lại", () => {
+    assert.deepEqual(findExampleDrift(["RUM_ENABLED"], ex, new Set(["RUM_ENABLED"])), []);
+    assert.deepEqual(findExampleDrift(["LOG_LEVEL"], ex, new Set(["LOG_LEVEL"])), [
+      ".env.example đã có LOG_LEVEL — xoá khỏi PENDING_EXAMPLE_KEYS",
+    ]);
   });
 });

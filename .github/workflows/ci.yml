@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -39,6 +41,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -56,6 +60,8 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -74,6 +80,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # check:arch so ADR với nhánh gốc; progress-check cần SHA bàn giao
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -93,7 +100,9 @@ jobs:
       - name: Khung — PLAN/blueprint/CI hợp lệ
         run: |
           python3 .xtemplates/scripts/xt.py ci-check .github/workflows
-          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json > /dev/null
+          # AUD-HAR-001: không --strict thì luôn exit 0 (MUST còn mở là hợp lệ) → tự đỏ khi miễn trừ thiếu lý do/dòng hỏng.
+          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print("blueprint: bad_waivers", d["bad_waivers"], "bad_lines", d["bad_lines"]); sys.exit(1 if d["bad_waivers"] or d["bad_lines"] else 0)'
 
   # `test` và `coverage` chạy cùng bộ test (coverage dưới c8) song song với nhau: `test` là đúng lệnh `test` của xt.yaml
   # (WF-CI-002), `coverage` giữ ngưỡng baseline (QA-COV-002). Cả hai cần Postgres 17 + client 17 + OpenBao/restic thật.
@@ -115,6 +124,8 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -155,6 +166,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # check:coverage-baseline so .c8rc.json với nhánh gốc
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -189,6 +201,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -214,6 +228,8 @@ jobs:
       CI: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -242,6 +258,8 @@ jobs:
     # BASE-DOC-005, XC-DX-001: chạy đúng các lệnh "Bắt đầu nhanh" của README trên clone sạch (Postgres có sẵn của runner).
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -260,6 +278,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Required check trong ruleset ↔ job có thật
         run: |
           set -euo pipefail
@@ -306,6 +326,8 @@ jobs:
     # CMP-LIC-001/002/003, BASE-DEP-005, SEC-SUPPLY-006: license, ngoại lệ OSV còn hạn, SBOM, THIRD_PARTY_NOTICES, nối dây workflow.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -346,6 +368,8 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc

@@ -2,8 +2,10 @@
 //  1) KHÔNG đọc `process.env` ngoài lib/nen/env.ts trong lib/, app/, proxy.ts, instrumentation.ts, next.config.ts
 //     (scripts/ và tests/ được phép). Ngoại lệ duy nhất: `process.env.NEXT_RUNTIME` ở instrumentation.ts (hằng của Next).
 //  2) Tên biến NEXT_PUBLIC_* không chứa SECRET|KEY|TOKEN|PASSWORD ở bất kỳ đâu trong mã/CI.
+//  3) Mọi khoá khai trong lib/nen/env.ts có trong `.env.example` (chỉ so TÊN khoá; không in giá trị) — AUD-CFG-001.
 // Exit 1 + liệt kê vi phạm. Logic thuần ở các hàm xuất để test.
 import { readFileSync, readdirSync } from "node:fs";
+import { CLIENT_SPEC, SERVER_SPEC } from "../lib/nen/env.ts";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -74,6 +76,50 @@ export function collectFiles(root: string, dirs: string[]): SourceFile[] {
   return out;
 }
 
+/** Biến do Next/Node tự đặt — người vận hành không khai trong `.env`. */
+export const RUNTIME_KEYS = new Set(["NODE_ENV", "NEXT_PHASE", "NEXT_RUNTIME"]);
+/**
+ * Khoá đã có trong mã nhưng `.env.example` chưa có, đang CHỜ NGƯỜI thêm (hook chặn agent đọc/ghi `.env.*` — AUD-CFG-001).
+ * Khoá trong đây mà `.env.example` đã có → lỗi, để danh sách tự co về rỗng.
+ */
+export const PENDING_EXAMPLE_KEYS = new Set([
+  "RUM_ENABLED",
+  "RETENTION_RUM_DAYS",
+  // phát hiện khi bật kiểm này (2026-10-21): KMS (T-052), pool DB, TRUST_PROXY (AUD-SEC-001) chưa có dòng mẫu
+  "DB_POOL_MAX",
+  "KMS_PROVIDER",
+  "KMS_TRANSIT_ADDR",
+  "KMS_TRANSIT_TOKEN",
+  "KMS_TRANSIT_MOUNT",
+  "KMS_TRANSIT_KEY",
+  "KMS_TIMEOUT_MS",
+  "KMS_RETRIES",
+  "KMS_DEK_TTL_S",
+  "KMS_DEK_MAX_USES",
+  "KMS_MAX_CALLS_PER_MIN",
+  "TRUST_PROXY",
+]);
+
+/** Tên khoá trong tệp dạng `.env` (`KEY=…`, kể cả dòng `# KEY=…` chú thích mẫu). Không trả giá trị. */
+export function exampleKeys(text: string): Set<string> {
+  return new Set([...text.matchAll(/^\s*#?\s*([A-Z][A-Z0-9_]*)\s*=/gm)].map((m) => m[1]!));
+}
+
+/** 3) Khoá khai trong module env ⊆ `.env.example` (AUD-CFG-001). Chỉ nêu TÊN khoá, không bao giờ giá trị. */
+export function findExampleDrift(
+  specKeys: readonly string[],
+  example: Set<string>,
+  pending: Set<string> = PENDING_EXAMPLE_KEYS,
+): string[] {
+  const out: string[] = [];
+  for (const k of specKeys) {
+    if (RUNTIME_KEYS.has(k)) continue;
+    if (!example.has(k) && !pending.has(k)) out.push(`.env.example thiếu ${k} (khai ở ${ENV_MODULE})`);
+    if (example.has(k) && pending.has(k)) out.push(`.env.example đã có ${k} — xoá khỏi PENDING_EXAMPLE_KEYS`);
+  }
+  return out;
+}
+
 function main(): void {
   const root = process.cwd();
   const top = readdirSync(root, { withFileTypes: true })
@@ -82,7 +128,13 @@ function main(): void {
   const dirs = ["lib", "app", "scripts", "e2e", ".github"].filter((d) => readdirSync(root).includes(d));
   // Tệp kiểm này nhắc tên mẫu trong chú thích/biểu thức — không tự quét chính nó.
   const files = [...top, ...collectFiles(root, dirs)].filter((f) => f.path !== "scripts/check-env.ts");
-  const violations = findEnvViolations(files);
+  const violations = [
+    ...findEnvViolations(files),
+    ...findExampleDrift(
+      [...Object.keys(SERVER_SPEC), ...Object.keys(CLIENT_SPEC)],
+      exampleKeys(readFileSync(path.join(root, ".env.example"), "utf8")),
+    ),
+  ];
   if (violations.length > 0) {
     console.error(`check:env — ${violations.length} vi phạm:\n${violations.map((v) => `  ${v}`).join("\n")}`);
     process.exit(1);

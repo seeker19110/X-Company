@@ -364,3 +364,10 @@
 - Chọn: Allowlist 20012 giới hạn đúng hai đường dẫn, cùng lý do với 10202 (D-047)
 - Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: hai form chỉ gửi gốc về chính trang, không handler đổi trạng thái; gửi thật qua fetch có Origin check hoặc endpoint công khai không phiên. Giữ phạm vi hẹp theo đường dẫn nên form khác vẫn đỏ.
 - Đường lùi: Xoá mục 20012 trong security/zap/allowlist.json (cổng đỏ lại)
+
+### D-050 · 2026-10-21T05:49:40+00:00 · AUD-CI-002/CFG-001: kiểm ruleset sống và khoá .env.example nên làm đỏ CI hay chỉ cảnh báo?
+
+- Phương án: (1) Đỏ ngay khi ruleset sống thiếu context/khoá .env.example thiếu (theo nguyên văn đề xuất audit) · (2) Đỏ với độ lệch MỚI; độ lệch đã biết chờ người nằm trong danh sách có tên (PENDING_EXAMPLE_KEYS) tự co; ruleset sống giữ cảnh báo
+- Chọn: Đỏ với độ lệch MỚI; độ lệch đã biết chờ người nằm trong danh sách có tên (PENDING_EXAMPLE_KEYS) tự co; ruleset sống giữ cảnh báo
+- Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: phương án 1 khoá mọi PR (kể cả PR sửa) tới khi người import ruleset/ghi .env.example — agent không được ghi .env.*, API rules lỗi mạng cũng thành đỏ giả. Ruleset đã import (protection-guard run 39545193098 không cảnh báo). Phương án 2 vẫn chặn mọi độ lệch mới, danh sách chờ hiện tên từng khoá và báo lỗi khi đã thêm nên không mục nát.
+- Đường lùi: Xoá PENDING_EXAMPLE_KEYS (check:env đỏ tới khi .env.example đủ khoá); đổi ::warning thành ::error ở bước ruleset của protection-guard

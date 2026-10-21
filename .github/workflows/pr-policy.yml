@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Mô tả PR, tiêu đề Conventional Commits, fix kèm test, lockfile, migration
         run: node scripts/pr-policy.mjs
       # QA-INT-007: chặn thay đổi phá vỡ hợp đồng API (so docs/api/openapi.json với origin/main; fetch-depth 0 ở trên).
