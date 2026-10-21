@@ -684,7 +684,12 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     try {
       must = JSON.parse(r.stdout).levels.MUST;
     } catch {
-      fail("số liệu: không đọc được `xt.py blueprint-status BLUEPRINT.md --json`");
+      must = null;
+    }
+    // JSON hỏng HOẶC thiếu levels.MUST đều là đỏ — không lặng lẽ bỏ qua kiểm (âm tính giả).
+    if (typeof must !== "object" || must === null) {
+      must = null;
+      fail("số liệu: không đọc được levels.MUST từ `xt.py blueprint-status BLUEPRINT.md --json`");
     }
   } else out("CẢNH BÁO: không có xt.py/BLUEPRINT.md — bỏ qua kiểm số MUST");
   const nRules = has("docs/ops/alerts.json")
@@ -704,10 +709,11 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
         if (+m[1] !== must.open)
           fail(`số liệu: ${f}: "${m[0]}" nhưng blueprint-status MUST chưa = ${must.open}`);
     }
+    // Chỉ dòng nói về `alerts:drill`, chỉ so MẪU số (tổng luật): tử số là kết quả diễn tập, có thể < tổng một cách trung thực.
     if (nRules !== null)
-      for (const m of txt.matchAll(/\b(\d+)\/(\d+) luật/g))
-        if (+m[1] !== nRules || +m[2] !== nRules)
-          fail(`số liệu: ${f}: "${m[0]}" nhưng docs/ops/alerts.json có ${nRules} luật`);
+      for (const line of txt.split("\n").filter((l) => l.includes("alerts:drill")))
+        for (const m of line.matchAll(/\b\d+\/(\d+) luật/g))
+          if (+m[1] !== nRules) fail(`số liệu: ${f}: "${m[0]}" nhưng docs/ops/alerts.json có ${nRules} luật`);
   }
 }
 
