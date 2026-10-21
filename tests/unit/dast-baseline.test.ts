@@ -23,6 +23,22 @@ const goodHtml = (): Res =>
     },
   });
 
+describe("clip bằng chứng (AUD-DOC-006)", () => {
+  test("không cắt giữa URL: bỏ cả URL dở dang; chuỗi ngắn/rỗng giữ nguyên", () => {
+    const body = "User-Agent: * Allow: / Sitemap: http://localhost:3100/sitemap.xml";
+    const out: string = P.clip(body, 40);
+    assert.ok(!/https?:\/\/\S*…/.test(out) && !out.includes("http://"), out);
+    assert.ok(out.endsWith("…"));
+    assert.equal(P.clip(body, 500), body);
+    assert.equal(P.clip("", 10), "");
+    assert.equal(P.clip("Tiếng Việt có dấu ✓ ok", 100), "Tiếng Việt có dấu ✓ ok");
+  });
+  test("điểm cắt rơi TRƯỚC `://` vẫn nhận là URL (review PR #55)", () => {
+    assert.equal(P.clip("xem https://example.com/abc", 9), "xem…");
+    assert.equal(P.clip("https://example.com/abc", 5), "…");
+  });
+});
+
 describe("header bảo mật", () => {
   test("đạt khi đủ; bắt từng thiếu sót", () => {
     assert.deepEqual(P.checkSecurityHeaders(goodHtml(), { https: true, kind: "html" }), []);

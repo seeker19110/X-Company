@@ -671,6 +671,52 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     });
 }
 
+// ---- 11. Số liệu tay trong GO-NO-GO/PROGRESS không được lệch nguồn đo (AUD-DOC-003): chỉ chặn lệch, không sinh lại.
+//      MUST đạt/miễn/chưa ↔ `xt.py blueprint-status --json`; `N/N luật` (alerts:drill) ↔ số luật docs/ops/alerts.json.
+{
+  const xt = ".xtemplates/scripts/xt.py";
+  let must = null;
+  if (has(xt) && has("BLUEPRINT.md")) {
+    const r = spawnSync("python3", [p(xt), "blueprint-status", p("BLUEPRINT.md"), "--json"], {
+      encoding: "utf8",
+      maxBuffer: 1 << 26,
+    });
+    try {
+      must = JSON.parse(r.stdout).levels.MUST;
+    } catch {
+      must = null;
+    }
+    // JSON hỏng HOẶC thiếu levels.MUST đều là đỏ — không lặng lẽ bỏ qua kiểm (âm tính giả).
+    if (typeof must !== "object" || must === null) {
+      must = null;
+      fail("số liệu: không đọc được levels.MUST từ `xt.py blueprint-status BLUEPRINT.md --json`");
+    }
+  } else out("CẢNH BÁO: không có xt.py/BLUEPRINT.md — bỏ qua kiểm số MUST");
+  const nRules = has("docs/ops/alerts.json")
+    ? (JSON.parse(read("docs/ops/alerts.json")).rules ?? []).length
+    : null;
+  for (const f of ["GO-NO-GO.md", "PROGRESS.md"]) {
+    if (!has(f)) continue;
+    const txt = read(f);
+    if (must) {
+      for (const m of txt.matchAll(/MUST đạt (\d+) · miễn (\d+) · chưa (\d+)/g)) {
+        const got = { done: +m[1], waived: +m[2], open: +m[3] };
+        for (const k of ["done", "waived", "open"])
+          if (got[k] !== must[k])
+            fail(`số liệu: ${f}: MUST ${k} ghi ${got[k]} nhưng blueprint-status = ${must[k]}`);
+      }
+      for (const m of txt.matchAll(/\b(\d+) MUST chưa đạt/g))
+        if (+m[1] !== must.open)
+          fail(`số liệu: ${f}: "${m[0]}" nhưng blueprint-status MUST chưa = ${must.open}`);
+    }
+    // Chỉ dòng nói về `alerts:drill`, chỉ so MẪU số (tổng luật): tử số là kết quả diễn tập, có thể < tổng một cách trung thực.
+    if (nRules !== null)
+      for (const line of txt.split("\n").filter((l) => l.includes("alerts:drill")))
+        for (const m of line.matchAll(/\b\d+\/(\d+) luật/g))
+          if (+m[1] !== nRules) fail(`số liệu: ${f}: "${m[0]}" nhưng docs/ops/alerts.json có ${nRules} luật`);
+  }
+}
+
 if (errors.length) {
   for (const e of errors) process.stderr.write(`✗ ${e}\n`);
   process.stderr.write(`check:docs: ${errors.length} lỗi\n`);

@@ -125,6 +125,7 @@ const config = [
     // Gồm tệp thuần đã khai ở docs/architecture/domains.md và quy ước `*.pure.ts`, `lib/**/pure/**`.
     files: [
       "lib/attendance/compute.ts",
+      "lib/attendance/labor-rules.ts",
       "lib/work/progress-compute.ts",
       "lib/authz/index.ts",
       "lib/offline/queue.ts",

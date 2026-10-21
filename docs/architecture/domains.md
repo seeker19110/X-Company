@@ -1,7 +1,7 @@
 # Miền (bounded context) và điểm xuất công khai
 
-> Nguồn sự thật cho ARC-MOD-005/008. Script `scripts/check-domains.mjs` (chạy trong `npm run check:arch`) kiểm hai điều:
-> (1) mọi thư mục `lib/*` đều được khai ở đây; (2) import chéo miền (từ `lib/`, `app/`, `scripts/`) chỉ trỏ vào **tệp công khai** đã khai.
+> Nguồn sự thật cho ARC-MOD-005/008. Script `scripts/check-domains.ts` (chạy trong `npm run check:arch`) kiểm ba điều:
+> (1) mọi thư mục `lib/*` đều được khai ở đây; (2) mọi miền khai ở đây đều có thư mục `lib/<miền>`; (3) import chéo miền (từ `lib/`, `app/`, `scripts/`, `adapters/`, `instrumentation.ts`, `proxy.ts`) chỉ trỏ vào **tệp công khai** đã khai.
 > Tên miền bám `docs/design/ARCHITECTURE.md` (mục Nghiệp vụ) và `PROJECT.md`. Thêm miền/tệp công khai = sửa bảng này trong cùng PR.
 
 Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền khác được import; mặc định `index.ts`. Tests không bị kiểm (được chạm nội bộ).
@@ -22,7 +22,6 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029) |
 | `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `crypto` | `index.ts`, `columns.ts`, `file.ts`, `rotate.ts`, `kms.ts` | mã hoá dữ liệu lúc lưu (T-048): AES-256-GCM có AAD + phong bì `v1:<keyId>:…`, chỉ mục mù HMAC, mã hoá tệp theo luồng (khoá tệp bọc bằng khoá chủ), sổ cột PII đã mã hoá (`columns.ts`), backfill/xoay khoá (`rotate.ts`, chạy bằng script). Chỉ dùng `node:crypto`; không import `next/*` |
-| `notify`     | `index.ts`            | thông báo, email/push qua outbox                                 |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
 | `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
 | `dashboard`  | `index.ts`            | tổng hợp cho trang điều hành                                     |
@@ -37,7 +36,6 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `nen` | `app-error.ts`, `config.ts`, `time.ts`, `health.ts`, `timeouts.ts`, `shutdown.ts`, `env.ts`, `log.ts`, `security-event.ts`, `startup.ts`, `units.ts`, `text.ts`, `pagination.ts` | `AppError`, tiện ích nền, health/readiness, timeout, tắt êm |
 | `http`    | `index.ts`, `metrics-route.ts`, `metrics.ts` | `withActor`, phiên, CSRF — cổng từ `app/` vào `lib/`     |
 | `web`     | `safe-html.ts`, `theme.ts` | HTML an toàn duy nhất cho DOM sink + `safeUrl()` (FE-SEC-001/002); `theme.ts` SINH từ token (`npm run build:tokens`) |
-| `logger`  | `index.ts`               | nhật ký có cấu trúc                                      |
 | `i18n`    | `index.ts`, `client.ts`, `client-app.ts`, `client-site.ts`, `format.ts` | `t(khoá, tham số)` trên `messages/vi.json` (+ `vi.context.json`), định dạng Intl (số/tiền VND/ngày giờ múi VN/danh sách/tương đối) — thuần, dùng ở client + server + `*.pure.ts` |
 | `offline` | `index.ts`, `device.ts`, `queue.ts`, `sync-route.ts` | hàng chờ offline — mô-đun thuần                          |
 | `ops` | `index.ts` | cảnh báo vận hành cục bộ (T-046): luật `docs/ops/alerts.json`, kênh đích, bộ đánh giá chạy trong worker (`rules.ts` kiểm luật là mô-đun thuần về I/O mạng) |

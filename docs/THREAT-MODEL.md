@@ -2,7 +2,7 @@
 title: THREAT-MODEL — X-Company
 kind: threat-model
 version: 4
-updated: 2026-10-19
+updated: 2026-10-21
 owner: seeker19110
 review: <chủ dự án/người phụ trách bảo mật duyệt — chưa duyệt>
 ---
@@ -105,7 +105,7 @@ Quyết định ∈ mitigate / eliminate / transfer / accept. Bằng chứng: t�
 | T6 | Info disclosure | IDOR công/tệp/xuất ngoài phạm vi | 3 | 3 | Cao | mitigate | `can()` ở server mọi route; tải tệp qua route kiểm quyền; test "bị cấm" từng route | `tests/db/org.test.ts` R7 chéo công ty (có); `tests/unit/authz.test.ts` S-ID-01..06 (có) | một phần |
 | T7 | Info disclosure | Dữ liệu người trước còn trên thiết bị chung | 2 | 2 | TB | mitigate | IndexedDB theo user, xoá khi đăng xuất, `Clear-Site-Data`, chế độ thiết bị dùng chung | `tests/unit/device-data.test.ts` S-PWA-02 (có) | mở |
 | T8 | Info disclosure | XSS qua CMS/bình luận | 2 | 3 | Cao | mitigate | Markdown không HTML thô, React escape, CSP nonce, chặn `javascript:` | `tests/db/cms.test.ts` S-WEB-06 (có) | mở |
-| T9 | Info disclosure | Lộ PII trong log/audit | 2 | 2 | TB | mitigate | che trường theo tên khoá (`maskSensitive`); logger che email/SĐT/geo (chưa có: T-026) | `tests/db/audit.test.ts` che trường nhạy cảm (có; chỉ che pass/token/secret/hash/totp/otp/cookie/session) | một phần |
+| T9 | Info disclosure | Lộ PII trong log/audit | 2 | 2 | TB | mitigate | che trường theo tên khoá (`maskSensitive`); logger `lib/nen/log.ts` che bí mật + PII theo tên trường (`isSensitiveKey`: email/SĐT/CCCD/toạ độ/mã số thuế…) và theo mẫu giá trị (`redactString`: Bearer, JWT, URL có mật khẩu, email trong chuỗi); số điện thoại tự do trong chuỗi không có tên trường vẫn chưa che; khoá camelCase (`phoneNumber`, `userEmail`, `geoLat`) chưa nhận là nhạy cảm (hiện chưa có chỗ gọi dùng các khoá này) | `tests/db/audit.test.ts` che trường nhạy cảm (có; chỉ che pass/token/secret/hash/totp/otp/cookie/session); `tests/unit/log.test.ts` che theo tên trường, theo mẫu giá trị và PII thường (có) | một phần |
 | T10 | DoS | Spam form công khai | 2 | 2 | TB | mitigate | honeypot, rate limit IP, giới hạn kích thước | `tests/http/inquiry.test.ts` S-WEB-04 (có) | mở |
 | T11 | Elevation | Tự duyệt / leo thang vai trò | 2 | 3 | Cao | mitigate | R5 SoD ở lib, grant chỉ `sysadmin` cấp, audit | `tests/unit/authz.test.ts` S-ID-04 (có) | mở |
 | T12 | Elevation | Bỏ qua RLS/role DB | 2 | 3 | Cao | mitigate | role ứng dụng không owner, không BYPASSRLS, không tạo bảng; migration bằng role riêng | `tests/db/migrate.test.ts` (có) | đã giảm |
@@ -135,7 +135,7 @@ Tên nhóm theo <https://top10.owasp.org/2025> (đối chiếu lại khi rà đ�
 | A06:2025 Insecure Design | threat model này, kịch bản S-* và ca biên trong spec, idempotency, kỳ công bất biến, quy tắc ⚙ là cấu hình có ngày hiệu lực | T3, T4 |
 | A07:2025 Authentication Failures | Argon2id, giới hạn đăng nhập, phiên trượt 12 giờ/tuyệt đối 7 ngày, TOTP cho `sysadmin`/`hr`/`executive` (trước pilot), thu hồi tức thì | T1, T13 |
 | A08:2025 Software or Data Integrity Failures | audit chuỗi băm, migration checksum, sự kiện công chỉ thêm, ruleset nhánh + CODEOWNERS, xuất CSV có checksum | T3, T17 |
-| A09:2025 Security Logging & Alerting Failures | `audit_event` cho cả `denied`, logger che PII (chưa có), cảnh báo/ngưỡng sẽ định nghĩa theo `docs/ops/SLO.md`; thất bại ghi log bảo mật là sự kiện bảo mật | T5, T9 |
+| A09:2025 Security Logging & Alerting Failures | `audit_event` cho cả `denied`, logger che bí mật/PII (`lib/nen/log.ts`, `tests/unit/log.test.ts`; SĐT tự do trong chuỗi và khoá camelCase chưa che), cảnh báo/ngưỡng sẽ định nghĩa theo `docs/ops/SLO.md`; thất bại ghi log bảo mật là sự kiện bảo mật | T5, T9 |
 | A10:2025 Mishandling of Exceptional Conditions | `AppError` thống nhất, mặc định từ chối khi lỗi quyền, giao dịch rollback khi lỗi (test có), ca biên "mất mạng/thiếu checkout" ghi rõ trong spec | T18 |
 
 Không có nhóm nào "không áp dụng": cả mười đều chạm hệ thống này ở mức nào đó.

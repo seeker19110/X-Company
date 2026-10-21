@@ -201,7 +201,7 @@ Tham chiếu: PRF-WEB-008, SEC-WEB-014, SEC-WEB-019, OPS-OBS-003, ASVS V13
 | /api/metrics khi METRICS_TOKEN chưa đặt → 404 (như không tồn tại) | PASS | GET /api/metrics (instance không đặt token) → 404 Not Found |
 | /_next/image không nạp URL tuỳ ý (SSRF qua bộ tối ưu ảnh) | PASS | GET /_next/image?url=<nội bộ\|ngoài\|metadata\|file> → 4xx |
 | tải tệp chưa đăng nhập → 401 | PASS | GET /api/app/files/<uuid> (không phiên) → 401 |
-| sitemap/robots: không lộ bản nháp, /app bị chặn bot | PASS | GET /robots.txt → 200 User-Agent: * Allow: / Disallow: /app Disallow: /api Sitemap: http://localhost:3… |
+| sitemap/robots: không lộ bản nháp, /app bị chặn bot | PASS | GET /robots.txt → 200 User-Agent: * Allow: / Disallow: /app Disallow: /api Sitemap:… |
 
 ## DAST-I — IDOR/BOLA và BFLA giữa các người dùng seed trên /api/app/*: PASS
 

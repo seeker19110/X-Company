@@ -17,7 +17,7 @@
 |---|---|---|
 | Web (Next.js) | App Router, RSC + route handler | `app/(public)` website · `app/app` khu nội bộ/PWA · `app/api/public/*` (liên hệ, tuyển dụng) · `app/api/app/*` (nội bộ) |
 | Proxy | `proxy.ts` (Next 16) | header bảo mật/CSP, chuyển hướng chưa đăng nhập; **không** là nơi kiểm quyền (kiểm ở route) |
-| Nghiệp vụ | `lib/<miền>` TS thuần | `identity`, `org`, `authz`, `audit`, `attendance`, `work`, `cms`, `inquiry`, `files`, `notify` — hàm nhận `tx` + `actor`, không đọc request |
+| Nghiệp vụ | `lib/<miền>` TS thuần | `identity`, `org`, `authz`, `audit`, `attendance`, `work`, `cms`, `inquiry`, `files` (danh sách đủ: `docs/architecture/domains.md`) — hàm nhận `tx` + `actor`, không đọc request |
 | DB | PostgreSQL 17 | `migrations/NNNN_*.sql` append-only; role ứng dụng không phải owner/superuser |
 | Worker | `scripts/worker.ts` (Node, `npm run worker`) + `lib/worker/` | **đã có (T-029):** lấy `outbox_event` `FOR UPDATE SKIP LOCKED`, handler theo topic + schema zod, backoff mũ có jitter (tối đa 5 lần), DLQ (`status='dead'`), khử trùng `processed_message`; kênh gửi qua adapter (hiện chỉ ghi log — SMTP/Web Push chưa có; kênh tắt → giữ `pending`). Retention: `npm run retention:run` (D-016) |
 | SW | `public/sw.js` | cache tĩnh, fallback offline; hàng chờ ở IndexedDB do trang quản lý |

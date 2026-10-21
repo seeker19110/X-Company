@@ -69,6 +69,40 @@ test("check-domains: thư mục lib rỗng/không tồn tại không lỗi", () 
   }
 });
 
+test("check-domains: miền khai mà không có thư mục lib/<miền> bị bắt (AUD-DOC-004)", () => {
+  const dir = fixture({ "lib/a/index.ts": "export {};", "lib/b/index.ts": "export {};" });
+  try {
+    const errors = checkDomains(dir, MD);
+    assert.deepEqual(errors.length, 1, errors.join("\n"));
+    assert.ok(errors[0]?.includes('miền "c"') && errors[0].includes("lib/c"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("check-domains: quét adapters/, instrumentation.ts, proxy.ts (AUD-ARCH-002)", () => {
+  const dir = fixture({
+    "lib/a/index.ts": "export {};",
+    "lib/b/index.ts": "export {};",
+    "lib/b/internal.ts": "export {};",
+    "lib/c/index.ts": "export {};",
+    "adapters/x.ts": `import { i } from "../lib/b/internal.ts";\nexport default i;`,
+    "instrumentation.ts": `import { i } from "./lib/b/internal.ts";\nexport default i;`,
+    "proxy.ts": `import { i } from "./lib/b/internal.ts";\nimport { ok } from "./lib/a/index.ts";\nexport default [i, ok];`,
+  });
+  try {
+    const errors = checkDomains(dir, MD);
+    assert.equal(errors.length, 3, errors.join("\n"));
+    for (const f of ["adapters/x.ts", "instrumentation.ts", "proxy.ts"])
+      assert.ok(
+        errors.some((e) => e.startsWith(f) && e.includes("nội bộ")),
+        f,
+      );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("urlOf: bỏ nhóm route, giữ tham số động", () => {
   assert.equal(urlOf("app/(public)/page.tsx"), "/");
   assert.equal(urlOf("app/app/cong-viec/[id]/page.tsx"), "/app/cong-viec/[id]");
