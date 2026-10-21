@@ -1,10 +1,10 @@
 # PROGRESS.md — X-Company
 ## Đang làm
-- Lát 10: T-052 KMS, T-053 off-site, T-054 Prometheus/Alertmanager (#32 đã merge), T-055 staging TLS + ZAP qua https (PR #33 — ngoại lệ cứng, chờ người merge), T-056 RUM tự host (đang làm), T-057 chốt.
-- T-050 chốt lát 9 xong (GO-NO-GO cập nhật). `GO-NO-GO.md` = NO-GO production; MUST đạt 309 · miễn 73 · chưa 91 (chờ người/hạ tầng thật).
+- Lát 10 xong về phía agent: T-052 KMS, T-053 off-site, T-054 Prometheus/Alertmanager (#32), T-055 staging TLS + ZAP qua https (PR #33), T-056 RUM tự host (PR #35), T-057 chốt (PR này). #33 và #35 là ngoại lệ cứng (form đăng nhập, migration) — chờ người merge.
+- `GO-NO-GO.md` = NO-GO production; MUST đạt 309 · miễn 73 · chưa 91 (chờ người/hạ tầng thật). Chưa có pháp nhân: hệ thống chỉ chạy dữ liệu mẫu (DPIA mục 0b, D-043).
 
 ## Tiếp theo
-1. Chủ dự án: merge PR #33 (chạm form đăng nhập); xem lại Release PR #25 (nay là 0.2.0, D-046); import `.github/rulesets/main.json` (thêm `ops-stack`, `staging-tls`); bật Private Vulnerability Reporting; LICENSE; DPIA trong 60 ngày từ ngày xử lý thật
+1. Chủ dự án: merge PR #33 và #35 (ngoại lệ cứng); thêm `RUM_ENABLED=false` và `RETENTION_RUM_DAYS=30` vào `.env.example` (hook chặn agent đọc/ghi tệp này); xem lại Release PR #25 (nay là 0.2.0, D-046); thành lập pháp nhân trước khi xử lý dữ liệu thật; import `.github/rulesets/main.json` (thêm `ops-stack`, `staging-tls`); bật Private Vulnerability Reporting; LICENSE; DPIA trong 60 ngày từ ngày xử lý thật
 2. Luật sư: đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020 (mức B); HR chốt nội quy ca/OT
 3. Hạ tầng thật: KMS/HSM, đích off-site, giám sát production + kênh trực, tên miền + ACME (mẫu `ops/caddy/Caddyfile`) rồi `loop resume`
 
@@ -14,6 +14,6 @@
 - Công cụ vận hành ghim hash ở `scripts/tools/install-tool.mjs` (OpenBao, restic, Prometheus, Alertmanager, Caddy, ZAP)
 
 ## Bàn giao phiên
-- Nhánh làm việc `claude/amazing-bohr-8fw50g`: `main` `5f01b0f` + PR #33 (chờ người merge) + commit docs T-050 (chưa push để không lẫn vào PR ngoại lệ cứng)
+- Commit cuối trên nhánh chính: `5ad442d` (#34) · các PR lát 10 còn lại: #33, #35, #36 (T-057)
 - Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` · `npm run -s ops:stack:drill` · `npm run -s staging:drill` · e2e cần `PW_CHROMIUM_PATH` khi máy chưa có Chromium đúng bản Playwright
-- Đang chặn: không · Câu hỏi cần người: merge #33; xác nhận pháp chế; hạ tầng production
+- Đang chặn: không · Câu hỏi cần người: merge #33/#35; `.env.example`; pháp nhân + xác nhận pháp chế; hạ tầng production

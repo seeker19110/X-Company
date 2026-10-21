@@ -1,6 +1,6 @@
 ---
 title: DPIA — X-Company (đã lập, chờ nộp)
-version: 1
+version: 2
 updated: 2026-10-19
 status: ĐÃ LẬP — CHỜ chủ dự án nộp cho cơ quan chuyên trách trong 60 ngày kể từ ngày bắt đầu xử lý thật; chưa có xác nhận pháp chế
 ---
@@ -19,6 +19,12 @@ status: ĐÃ LẬP — CHỜ chủ dự án nộp cho cơ quan chuyên trách tr
 | Người phụ trách bảo vệ dữ liệu / liên hệ | `<chưa chỉ định — chủ dự án điền>`; kênh nhận yêu cầu chủ thể: HR (quyền `privacy.manage`) |
 | Trạng thái nộp | **chưa nộp** (hạn: 60 ngày kể từ ngày bắt đầu xử lý thật — mức B, chưa xác minh bản chính) |
 | Cập nhật kế tiếp | khi đổi mục đích/bên nhận/cờ thu GPS; định kỳ theo quy định |
+
+### 0b. Chưa có pháp nhân — điều kiện trước khi xử lý thật (D-043)
+- **Bên kiểm soát dữ liệu phải là pháp nhân.** Trong lúc dự án chưa thành lập công ty, hệ thống chỉ chạy với dữ liệu mẫu/seed của chính nhóm phát triển; **không xử lý dữ liệu cá nhân thật của bên thứ ba** (nhân viên, khách truy cập, ứng viên của một tổ chức khác). Bật `RUM_ENABLED` hoặc đưa người dùng thật vào chỉ sau khi có pháp nhân.
+- **Mốc 60 ngày** để nộp hồ sơ này tính từ **ngày xử lý dữ liệu thật đầu tiên**, không tính từ ngày lập hồ sơ (mức B, chưa đối chiếu bản chính).
+- **Ưu đãi cho startup** (Luật 91/2025/QH15 Điều 38, nguồn mức B) không áp dụng khi xử lý dữ liệu nhạy cảm (GPS) hoặc quy mô lớn; vì vậy GPS **tắt mặc định** và có cổng server (cờ + đồng ý riêng), xem mục 3.
+- Hạ tầng đã dựng sẵn và kiểm cục bộ (sao lưu off-site, KMS, giám sát, staging TLS) để bật khi có pháp nhân; các bước còn lại ở mục 9.
 
 ## 1. Mục đích, loại dữ liệu, chủ thể
 Chi tiết từng cột: [privacy/data-map.yaml](privacy/data-map.yaml), [compliance/data-inventory.csv](compliance/data-inventory.csv).
@@ -108,6 +114,6 @@ Hạn chế đã biết: dòng chấm công/lương không xoá được (cấm 
 2. Luật sư đọc bản chính thức Luật 91/2025/QH15 và NĐ 356/2025/NĐ-CP (hiện đọc qua bản sao thương mại, mức A/B): đối chiếu Điều 5 (hạn + số ngày gia hạn khoản 2–4), Điều 19.3 (Mẫu số 10), Điều 29.
 3. Luật sư/kế toán xác nhận 5 hay 10 năm cho bảng lương/chấm công (Luật Kế toán 2015 sửa bởi 56/2024) và thời hạn hồ sơ nhân sự; Luật Lưu trữ 2024.
 4. HR chốt nội quy ca/OT/nghỉ (mặc định theo luật, RK-001) và soạn thông báo xử lý dữ liệu cho nhân viên.
-5. Chỉ định người phụ trách bảo vệ dữ liệu; điền thông tin pháp nhân.
+5. **Thành lập pháp nhân** (bên kiểm soát), chỉ định người phụ trách bảo vệ dữ liệu, điền thông tin pháp nhân (mục 0); chỉ sau đó mới xử lý dữ liệu thật và bắt đầu tính 60 ngày (mục 0b, D-043).
 6. **Trước khi bật GPS:** nhân viên được thông báo biện pháp giám sát + đồng ý riêng; cổng server cho `geo` ĐÃ CÓ (T-051) — cần thêm giao diện xin đồng ý riêng; xác nhận HR/pháp chế (kế hoạch §12).
 7. Hạ tầng: KMS/HSM giữ khoá dữ liệu tách khỏi máy chủ ứng dụng/CSDL, mã hoá đĩa/volume Postgres, giữ khoá sao lưu riêng, quy trình xoá khỏi sao lưu, nhà cung cấp SMTP/hạ tầng ở nước ngoài (nếu có).
