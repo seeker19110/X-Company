@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
-import { focusAfterRemoval } from "./focus";
+import { focusAfterRemoval, useRestoreFocus } from "./focus";
 import { useConfirm } from "./confirm-dialog";
 import { useSession } from "./session-context";
 
@@ -17,6 +17,8 @@ export function DecisionButtons({ type, id, subject }: { type: string; id: strin
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
   const box = useRef<HTMLDivElement>(null);
+  const pressed = useRef<HTMLButtonElement | null>(null);
+  useRestoreFocus(busy, pressed); // thất bại → focus về nút vừa bấm thay vì <body>
 
   async function decide(decision: "approve" | "reject") {
     let note: string | null = null;
@@ -47,10 +49,26 @@ export function DecisionButtons({ type, id, subject }: { type: string; id: strin
 
   return (
     <div ref={box} className="row row-actions">
-      <button className="btn btn-primary" disabled={busy} aria-busy={busy} onClick={() => decide("approve")}>
+      <button
+        className="btn btn-primary"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={(e) => {
+          pressed.current = e.currentTarget;
+          void decide("approve");
+        }}
+      >
         {t("approvals.approve")}
       </button>
-      <button className="btn" disabled={busy} aria-busy={busy} onClick={() => decide("reject")}>
+      <button
+        className="btn"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={(e) => {
+          pressed.current = e.currentTarget;
+          void decide("reject");
+        }}
+      >
         {t("approvals.reject")}
       </button>
       {error && (
