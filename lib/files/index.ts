@@ -196,17 +196,6 @@ export async function downloadFile(db: Queryable, actor: ActorContext, fileId: s
   return { mime: f.mime, name: f.original_name, sha256: f.sha256, data };
 }
 
-export async function listDocuments(db: Queryable, actor: ActorContext, type: ObjectType, id: string) {
-  await objectAccess(db, actor, type, id);
-  const { rows } = await db.query(
-    `SELECT d.id AS document_id, d.title, v.version, v.file_id, f.mime, f.size_bytes, f.original_name, v.created_at
-     FROM document d JOIN document_version v ON v.document_id = d.id JOIN file_object f ON f.id = v.file_id
-     WHERE d.company_id = $1 AND d.object_type = $2 AND d.object_id = $3 ORDER BY d.created_at, v.version`,
-    [actor.companyId, type, id],
-  );
-  return rows;
-}
-
 export async function addComment(
   tx: Queryable,
   actor: ActorContext,

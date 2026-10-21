@@ -6,7 +6,7 @@ Sản phẩm X-Company dùng các thành phần mã nguồn mở dưới đây (
 bản quyền của tác giả và được cấp phép theo license ghi bên cạnh; toàn văn license nằm trong gói tương ứng ở `node_modules/`.
 Chính sách chấp nhận license: `license-policy.yaml`. SBOM CycloneDX của mỗi build: artifact CI `sbom`.
 
-Tổng: 93 thành phần.
+Tổng: 94 thành phần.
 
 | Thành phần | Phiên bản | License |
 | --- | --- | --- |
@@ -95,6 +95,7 @@ Tổng: 93 thành phần.
 | react-dom | 19.3.1 | MIT |
 | scheduler | 0.28.0 | MIT |
 | semver | 7.8.5 | ISC |
+| server-only | 0.0.1 | MIT |
 | sharp | 0.35.5 | Apache-2.0 |
 | source-map-js | 1.2.2 | BSD-3-Clause |
 | split2 | 4.2.0 | ISC |

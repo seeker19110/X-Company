@@ -93,19 +93,6 @@ async function loadPeriod(db: Queryable, companyId: string, periodId: string, lo
   };
 }
 
-/** Kỳ đã khoá chứa ngày nghiệp vụ `date` (null nếu không). */
-export async function lockedPeriodFor(
-  db: Queryable,
-  companyId: string,
-  date: string,
-): Promise<string | null> {
-  const { rows } = await db.query<{ id: string }>(
-    "SELECT id FROM attendance_period WHERE company_id = $1 AND status = 'locked' AND $2::date BETWEEN start_date AND end_date",
-    [companyId, date],
-  );
-  return rows[0]?.id ?? null;
-}
-
 // ---- Tính số liệu ------------------------------------------------------------------------------------------------
 
 export async function computeLines(
@@ -372,21 +359,35 @@ export async function lockPeriod(
   return { version: 1, checksum: exp.checksum };
 }
 
+/** Số dòng tối đa mỗi câu INSERT khi chốt kỳ (giới hạn kích thước tham số mảng; 200×31 dòng = 7 câu). */
+const LINE_BATCH = 1000;
+
+/**
+ * Ghi dòng công theo lô (AUD-PERF-001): mỗi lô một câu `INSERT … SELECT … FROM unnest(...)`, giá trị đi qua tham số mảng.
+ * `WITH ORDINALITY` + `ORDER BY` giữ thứ tự chèn (id tăng) đúng thứ tự `lines`, như vòng lặp từng dòng trước đây.
+ */
 async function insertLines(tx: Queryable, periodId: string, version: number, lines: Line[]) {
-  for (const l of lines) {
+  for (let i = 0; i < lines.length; i += LINE_BATCH) {
+    const batch = lines.slice(i, i + LINE_BATCH);
     await tx.query(
       `INSERT INTO period_line (period_id, version, employee_id, business_date, shift_assignment_id, status, present_minutes,
-         ot_approved_minutes, leave_minutes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+         ot_approved_minutes, leave_minutes)
+       SELECT $1, $2, u.employee_id, u.business_date, u.shift_assignment_id, u.status, u.present_minutes,
+         u.ot_approved_minutes, u.leave_minutes
+       FROM unnest($3::uuid[], $4::date[], $5::uuid[], $6::text[], $7::int[], $8::int[], $9::int[])
+         WITH ORDINALITY AS u(employee_id, business_date, shift_assignment_id, status, present_minutes,
+           ot_approved_minutes, leave_minutes, ord)
+       ORDER BY u.ord`,
       [
         periodId,
         version,
-        l.employeeId,
-        l.businessDate,
-        l.shiftAssignmentId,
-        l.status,
-        l.presentMinutes,
-        l.otApprovedMinutes,
-        l.leaveMinutes,
+        batch.map((l) => l.employeeId),
+        batch.map((l) => l.businessDate),
+        batch.map((l) => l.shiftAssignmentId),
+        batch.map((l) => l.status),
+        batch.map((l) => l.presentMinutes),
+        batch.map((l) => l.otApprovedMinutes),
+        batch.map((l) => l.leaveMinutes),
       ],
     );
   }

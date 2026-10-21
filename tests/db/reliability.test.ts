@@ -39,6 +39,7 @@ import { MY_TASKS_SQL } from "../../lib/work/routes.ts";
 import { createProject } from "../../lib/work/tasks.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { within } from "../helpers/wait.ts";
 
 setTestEnv();
 const isCode = (code: string) => (e: unknown) => e instanceof AppError && e.code === code;
@@ -179,12 +180,17 @@ describe("timeout ở mức vai trò ứng dụng (migration 0018)", () => {
       connectionString: url.toString(),
       options: "-c idle_in_transaction_session_timeout=300", // rút ngắn để test nhanh; cơ chế giống production
     });
+    // Máy chủ ngắt phiên → client phát "error"/"end": chờ sự kiện đó (có hạn) thay cho sleep cố định (AUD-TEST-001).
+    const terminated = new Promise<void>((resolve) => {
+      c.once("error", () => resolve());
+      c.once("end", () => resolve());
+    });
     c.on("error", () => {});
     await c.connect();
     try {
       await c.query("BEGIN");
       await c.query("SELECT 1");
-      await sleep(900);
+      await within(terminated, "máy chủ ngắt phiên idle in transaction");
       await assert.rejects(
         c.query("SELECT 1"),
         /terminating connection|idle-in-transaction|Connection terminated|not queryable/i,

@@ -280,7 +280,9 @@ case "$CMD" in
     set +e
     # Token chỉ đưa vào môi trường của lệnh con (không in, không ghi log chung).
     (
-      export KMS_PROVIDER=transit KMS_TRANSIT_ADDR="$(addr)" KMS_TRANSIT_KEY="$KEY_NAME" \
+      # Gán riêng rồi export: lỗi của addr không bị export che (SC2155); đang set +e nên tự thoát.
+      KMS_TRANSIT_ADDR="$(addr)" || exit 1
+      export KMS_PROVIDER=transit KMS_TRANSIT_ADDR KMS_TRANSIT_KEY="$KEY_NAME" \
         NODE_EXTRA_CA_CERTS="$DIR/tls/cert.pem" KMS_DEV_DIR="$DIR"
       KMS_TRANSIT_TOKEN="$(cat "$DIR/app.token")"
       KMS_TRANSIT_OPS_TOKEN="$(cat "$DIR/ops.token")"

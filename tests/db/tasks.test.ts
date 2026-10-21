@@ -300,6 +300,45 @@ describe("công việc (T-015, SPEC-work)", () => {
     assert.equal(v, 3);
   });
 
+  test("AUD-CODE-005: việc đã done/cancelled không cho báo % tiến độ (người làm lẫn quản lý)", async () => {
+    // Việc done (luồng không nghiệm thu): người làm báo % → 409 INVALID_STATE, dữ liệu giữ nguyên.
+    const done = await withTx((tx) =>
+      createTask(tx, pm, {
+        ...base(),
+        requiresAcceptance: false,
+        reviewerEmployeeId: null,
+        acceptanceCriteria: null,
+      }),
+    );
+    let v = await withTx((tx) => transitionTask(tx, dev, done, "start", { expectedVersion: 1 }));
+    v = await withTx((tx) => transitionTask(tx, dev, done, "submit", { expectedVersion: v }));
+    await assert.rejects(
+      withTx((tx) => updateTask(tx, dev, done, v, { reportedPct: 10 })),
+      isCode("INVALID_STATE"),
+    );
+    await assert.rejects(
+      withTx((tx) => updateTask(tx, pm, done, v, { reportedPct: 0 })),
+      isCode("INVALID_STATE"),
+    );
+    const d = await db.admin.query("SELECT reported_pct, version FROM task WHERE id = $1", [done]);
+    assert.deepEqual(d.rows[0], { reported_pct: 100, version: v });
+
+    // Việc cancelled: người làm báo % → 409 INVALID_STATE.
+    const cancelled = await withTx((tx) => createTask(tx, pm, base()));
+    const vc = await withTx((tx) =>
+      transitionTask(tx, pm, cancelled, "cancel", { expectedVersion: 1, reason: "khách huỷ" }),
+    );
+    await assert.rejects(
+      withTx((tx) => updateTask(tx, dev, cancelled, vc, { reportedPct: 30 })),
+      isCode("INVALID_STATE"),
+    );
+
+    // Ca được phép: việc đang làm, người làm báo % vẫn được.
+    const open = await withTx((tx) => createTask(tx, pm, base()));
+    const vo = await withTx((tx) => updateTask(tx, dev, open, 1, { reportedPct: 30 }));
+    assert.equal(vo, 2);
+  });
+
   test("phụ thuộc FS: chặn vòng lặp, khác dự án; cảnh báo hạn việc sau trước việc trước", async () => {
     const a = await withTx((tx) => createTask(tx, pm, { ...base(), title: "A", dueDate: "2026-11-20" }));
     const b = await withTx((tx) => createTask(tx, pm, { ...base(), title: "B", dueDate: "2026-11-10" }));

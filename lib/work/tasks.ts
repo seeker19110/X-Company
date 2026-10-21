@@ -451,7 +451,8 @@ export async function updateTask(
     throw new AppError("VERSION_CONFLICT", 409, tr("err.work.congViecDaDuocNguoiKhac"), {
       currentVersion: t.version,
     });
-  if (["done", "cancelled"].includes(t.status) && !onlyProgress)
+  // Việc đã hoàn tất/huỷ là đóng: kể cả báo % tiến độ cũng bị từ chối (AUD-CODE-005).
+  if (["done", "cancelled"].includes(t.status))
     throw new AppError("INVALID_STATE", 409, tr("err.work.khongSuaViecDaHoanTat"));
   const significant = keys.some((k) =>
     ["dueDate", "responsibleEmployeeId", "reviewerEmployeeId", "acceptanceCriteria", "title"].includes(k),
