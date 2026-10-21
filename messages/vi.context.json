@@ -317,6 +317,8 @@
       "dieuChinhCanLyDo": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "butToanKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "thoiGianKetThucPhaiSau": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "soPhutNghiVuotKhoang": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422) khi số phút của đơn nghỉ lớn hơn khoảng bắt đầu–kết thúc; miền attendance. Ngắn, nói rõ cách sửa.",
+      "thoiDiemSuKienTuongLai": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422) khi đề nghị sửa công thêm sự kiện ở tương lai; miền attendance. Ngắn, nói rõ cách sửa.",
       "khongTimThayDon": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "donDaDuocXuLy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_STATE 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "trungThoiGianVoiDonNghi": "Thông báo lỗi nghiệp vụ trả client (AppError LEAVE_OVERLAP 409); miền attendance. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -540,10 +542,11 @@
       "adjustmentPeriodRef": "Lý do ghi vào nhật ký khi duyệt đề nghị sửa công; {id} = mã đề nghị, {reason} = lý do do nhân viên nhập."
     },
     "approvals": {
-      "summaryLeave": "Tóm tắt một đơn nghỉ trong hộp phê duyệt; {name} = loại nghỉ, {minutes} = số phút.",
+      "summaryLeave": "Tóm tắt một đơn nghỉ trong hộp phê duyệt; {name} = loại nghỉ, {from}/{to} = ngày bắt đầu/kết thúc dd/mm/yyyy, {minutes} = số phút.",
       "summaryOt": "Tóm tắt một đơn làm thêm giờ đã được người lao động đồng ý; {date} = ngày YYYY-MM-DD.",
       "summaryOtAwaitingConsent": "Tóm tắt đơn làm thêm giờ còn chờ người lao động đồng ý; {date} = ngày YYYY-MM-DD.",
-      "summaryAdjustment": "Tóm tắt đề nghị sửa công trong hộp phê duyệt; {reason} = lý do do nhân viên nhập."
+      "summaryAdjustment": "Tóm tắt đề nghị sửa công trong hộp phê duyệt; {reason} = lý do do nhân viên nhập.",
+      "summaryAdjustmentAdd": "Tóm tắt đề nghị sửa công THÊM sự kiện; {kind} = loại sự kiện (in/out/break_start/break_end), {at} = ngày giờ dd/mm/yyyy hh:mm, {reason} = lý do do nhân viên nhập."
     },
     "cms": {
       "imageMissingAlt": "Cảnh báo khi duyệt nội dung (WCAG 1.1.1): ảnh Markdown không có văn bản thay thế; {src} = địa chỉ ảnh."
