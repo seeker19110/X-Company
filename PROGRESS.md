@@ -5,7 +5,7 @@
 
 ## Tiếp theo
 1. Agent: PR SEC-003 + CODE-009 → đợt 4 → đợt 5 → đợt 6 (`docs/ops/AUDIT-REPORT-2026-10-19.md` §5)
-2. Chủ dự án: thêm `RUM_ENABLED=false` và `RETENTION_RUM_DAYS=30` vào `.env.example` (hook chặn agent đọc/ghi tệp này); xem lại Release PR #25 (0.2.0, D-046); import `.github/rulesets/main.json`; bật Private Vulnerability Reporting; LICENSE; quyết SEC-002 (TOTP trước pilot), DOC-001 (form ứng tuyển hay hoãn), DOC-002 (kênh thông báo thật); thành lập pháp nhân trước khi xử lý dữ liệu thật; DPIA trong 60 ngày từ ngày xử lý thật
+2. Chủ dự án: thêm `RUM_ENABLED=false` và `RETENTION_RUM_DAYS=30` vào `.env.example` (hook chặn agent đọc/ghi tệp này); import `.github/rulesets/main.json`; bật Private Vulnerability Reporting; LICENSE; quyết SEC-002 (TOTP trước pilot), DOC-001 (form ứng tuyển hay hoãn), DOC-002 (kênh thông báo thật); thành lập pháp nhân trước khi xử lý dữ liệu thật; DPIA trong 60 ngày từ ngày xử lý thật
 3. Luật sư: đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020 (mức B); HR chốt nội quy ca/OT
 4. Hạ tầng thật: KMS/HSM, đích off-site, giám sát production + kênh trực, tên miền + ACME (mẫu `ops/caddy/Caddyfile`) rồi `loop resume`
 
@@ -15,6 +15,6 @@
 - Công cụ vận hành ghim hash ở `scripts/tools/install-tool.mjs` (OpenBao, restic, Prometheus, Alertmanager, Caddy, ZAP)
 
 ## Bàn giao phiên
-- Commit cuối trên nhánh chính: `6b959de` (#33) · PR mở: Release #25
+- Commit cuối trên nhánh chính: `b534e35` (release 0.2.0, #25) · PR mở: không
 - Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` · `npm run -s ops:stack:drill` · `npm run -s staging:drill` · e2e cần `PW_CHROMIUM_PATH` khi máy chưa có Chromium đúng bản Playwright
 - Đang chặn: không · Câu hỏi cần người: `.env.example`; ruleset; SEC-002/DOC-001/DOC-002; pháp nhân + xác nhận pháp chế; hạ tầng production
