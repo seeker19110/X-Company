@@ -89,6 +89,18 @@ json_file() {
   echo "$f"
 }
 cleanup_tmp() { rm -f "$DIR"/.hdr.* "$DIR"/.body.* "$DIR/.resp" 2>/dev/null || true; }
+# Sau unseal, raft một node còn phải tự bầu leader rồi mới thành active; gọi API ghi trước lúc đó → HTTP 500 "internal
+# error" (runner CI chậm). Chờ sys/health = 200 (đã init, mở niêm phong, active); 429/5xx = chưa sẵn sàng.
+wait_active() {
+  local code=000
+  for _ in $(seq 1 150); do
+    alive || die 1 "OpenBao dừng khi chờ active"
+    code="$(curl -s --max-time 2 --cacert "$DIR/tls/cert.pem" -o /dev/null -w '%{http_code}' "$(addr)/v1/sys/health" 2>/dev/null)" || code=000
+    [ "$code" = "200" ] && return 0
+    sleep 0.2
+  done
+  die 1 "OpenBao chưa active sau 30 giây (sys/health=$code)"
+}
 
 write_config() {
   cat >"$DIR/config.hcl" <<HCL
@@ -222,6 +234,7 @@ do_start() {
     local b
     b="$(json_file "$(jq -c '{key: .keys_base64[0]}' "$DIR/init.json")")"
     api PUT sys/unseal "$b" >/dev/null || die 1 "mở niêm phong thất bại"
+    wait_active
   fi
   if [ "$first" = "1" ]; then setup_first; fi
   cleanup_tmp
@@ -252,6 +265,7 @@ case "$CMD" in
     alive || die 1 "KMS không chạy"
     b="$(json_file "$(jq -c '{key: .keys_base64[0]}' "$DIR/init.json")")"
     api PUT sys/unseal "$b" >/dev/null || die 1 "mở niêm phong thất bại"
+    wait_active
     cleanup_tmp
     ;;
   env)
