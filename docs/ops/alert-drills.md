@@ -40,12 +40,15 @@ status: faithful-fixture — bộ đánh giá cục bộ (lib/ops/alerts.ts) và
 | XCAvailabilitySlowBurn | ticket | `promtool test rules`: 1% 5xx trong 7 giờ | có | lưu lượng sạch | ĐẠT |
 | XCAttendanceLatencyFastBurn | ticket | `promtool test rules`: 50% yêu cầu ghi chấm công > 1 s | có | 99% ≤ 1 s; route khác chậm | ĐẠT |
 | XCOutboxDeadLetter | ticket | `promtool test rules`: gauge 2 trong 20 phút rồi về 0 | phút 21 | phút 10 (chưa đủ 15 phút); phút 30 (đã hết) | ĐẠT |
+| XCRumLcpSlow | ticket | `promtool test rules`: p75 LCP 3,1 s trong 60 phút (đồng hồ giả); còn pending ở phút 20 (`for: 30m`) | phút 40 | p75 2,4 s; phút 20 (chưa đủ 30 phút) | ĐẠT |
+| XCRumInpSlow | ticket | `promtool test rules`: p75 INP 0,35 s trong 60 phút | phút 40 | p75 0,19 s; phút 20 | ĐẠT |
+| XCRumClsHigh | ticket | `promtool test rules`: p75 CLS 0,22 trong 60 phút | phút 40 | p75 0,05; phút 20 | ĐẠT |
 | XCDrillTargetDown (rule diễn tập, chỉ có trong drill) | page | end-to-end thời gian thật: dừng `next start` → Prometheus mất scrape → Alertmanager → webhook; bật lại → resolved | có (firing tới webhook) | nền khoẻ: 0 thông báo | ĐẠT |
 
-End-to-end cũng kiểm: 4 rule thật nạp vào Prometheus với health=ok và không bắn khi lưu lượng sạch; Prometheus scrape `/api/metrics` bằng bearer (thiếu bearer → 401); truy vấn SLI trong [SLO.md](SLO.md) chạy được.
+End-to-end cũng kiểm: 7 rule thật nạp vào Prometheus với health=ok và không bắn khi lưu lượng sạch; Prometheus scrape `/api/metrics` bằng bearer (thiếu bearer → 401); truy vấn SLI trong [SLO.md](SLO.md) chạy được.
 
 ## Chưa thử / giới hạn
-- 4 rule Prometheus được thử bằng `promtool test rules` (đồng hồ giả) và đường ống thật bằng rule diễn tập; chưa có lần bắn rule SLO thật trên lưu lượng thật theo thời gian thật (cửa sổ 1–6 giờ), chưa có Prometheus/Alertmanager production.
+- 7 rule Prometheus được thử bằng `promtool test rules` (đồng hồ giả) và đường ống thật bằng rule diễn tập; chưa có lần bắn rule SLO thật trên lưu lượng thật theo thời gian thật (cửa sổ 1–6 giờ), chưa có Prometheus/Alertmanager production.
 - Kênh trực có người (trang/SMS/chat) chưa có: kênh đã thử là tệp, log và webhook tới máy chủ giả cục bộ. Webhook thật (Slack/Teams/PagerDuty…) chưa thử.
 - Trạng thái luật nằm trong bộ nhớ worker: khởi động lại worker thì một cảnh báo đang bắn được gửi lại một lần.
 - BASE-ERR-011 (thu thập lỗi ERROR/FATAL qua Sentry/GlitchTip/OTel Collector) chưa đạt: chưa có bộ thu lỗi thật.

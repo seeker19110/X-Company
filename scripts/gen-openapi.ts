@@ -16,6 +16,7 @@ import { LoginBody } from "../lib/identity/routes.ts";
 import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
 import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
+import { RumInput } from "../lib/rum/index.ts";
 import { ACTIONS as PRIVACY_ACTIONS, ActionBody, STATUSES } from "../lib/privacy/routes.ts";
 import { ACTIONS as TASK_ACTIONS, Body as TaskActionBody } from "../lib/work/routes.ts";
 import { PAGE_DEFAULT_LIMIT, PAGE_MAX_LIMIT, PAGE_MAX_OFFSET } from "../lib/nen/pagination.ts";
@@ -346,6 +347,7 @@ function requestSchemas(): Record<string, Json> {
     PrivacyRequestCreate: fromZod(CreateRequestInput),
     PrivacyRequestActionRequest: fromZod(ActionBody),
     InquiryRequest: fromZod(InquiryInput),
+    RumRequest: fromZod(RumInput),
     ApplicationRequest: fromZod(ApplicationInput),
   };
 }
@@ -857,6 +859,22 @@ export const REGISTRY: Registry = {
         201: { description: "Đã tạo yêu cầu.", schema: "CodeResult" },
       },
       errors: [413, 429],
+    },
+  },
+  "/api/public/rum": {
+    POST: {
+      source: "lib/rum/routes.ts#postRum",
+      operationId: "submitRumBeacon",
+      tag: "Công khai",
+      summary: "Gửi số đo web-vitals (RUM)",
+      description:
+        "Beacon của trình duyệt (`navigator.sendBeacon`), chỉ khi cờ `RUM_ENABLED` bật — tắt thì 404. Phải cùng nguồn (`Origin`). " +
+        "Tối đa 2 KiB; `page` được chuẩn hoá thành nhãn có số giá trị bị chặn trước khi lưu; không lưu IP/user agent.",
+      auth: "public",
+      idempotency: "none",
+      body: { kind: "json", schema: "RumRequest" },
+      ok: { 204: { description: "Đã ghi số đo (không có thân)." } },
+      errors: [403, 404, 429],
     },
   },
   "/api/readyz": {

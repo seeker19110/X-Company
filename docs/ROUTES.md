@@ -14,6 +14,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/[...slug]` | `app/(public)/[...slug]/page.tsx` | động   | Trang CMS theo đường dẫn, đọc DB mỗi request, không phiên       |
 | `/api/public/applications` | `app/api/public/applications/route.ts` | động | Ghi hồ sơ ứng tuyển; không cache |
 | `/api/public/inquiries` | `app/api/public/inquiries/route.ts` | động | Ghi yêu cầu liên hệ; không cache |
+| `/api/public/rum` | `app/api/public/rum/route.ts` | động | Beacon web-vitals (RUM tự làm, cờ `RUM_ENABLED`, tắt thì 404); cùng nguồn, ≤ 2 KiB, giới hạn tần suất; `no-store` |
 | `/api/healthz` | `app/api/healthz/route.ts` | động | Liveness, không chạm DB; `no-store` |
 | `/api/metrics` | `app/api/metrics/route.ts` | động | Metric Prometheus (RED + DLQ); bearer `METRICS_TOKEN`, không đặt thì 404; `no-store` |
 | `/api/readyz` | `app/api/readyz/route.ts` | động | Readiness: `SELECT 1` có timeout, 503 khi DB lỗi/đang tắt; `no-store` |

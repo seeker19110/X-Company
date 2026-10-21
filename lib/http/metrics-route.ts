@@ -1,6 +1,7 @@
 // GET /api/metrics (OPS-OBS-003): chỉ truy cập nội bộ — bearer METRICS_TOKEN. Không đặt token → 404 (như không tồn tại).
 import { getPool } from "../db/index.ts";
 import { env } from "../nen/env.ts";
+import { readRumP75 } from "../rum/index.ts";
 import { bearerMatches, readOutboxDead, renderMetrics } from "./metrics.ts";
 
 const NO_STORE = { "cache-control": "no-store" };
@@ -25,7 +26,15 @@ export async function metricsHandler(req: Request): Promise<Response> {
   } catch {
     dead = null; // thiếu cấu hình DB: vẫn trả metric HTTP
   }
-  return new Response(renderMetrics(dead), {
+  let rum: Awaited<ReturnType<typeof readRumP75>> | undefined;
+  if (env("RUM_ENABLED")) {
+    try {
+      rum = await readRumP75(getPool());
+    } catch {
+      rum = null; // thiếu cấu hình DB: bỏ mẫu RUM, giữ metric HTTP
+    }
+  }
+  return new Response(renderMetrics(dead, rum === undefined ? {} : { rum }), {
     status: 200,
     headers: { ...NO_STORE, "content-type": "text/plain; version=0.0.4; charset=utf-8" },
   });
