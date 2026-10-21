@@ -385,3 +385,10 @@
 - Chọn: PLAN riêng docs/autopilot/PLAN-lat-11.md, PLAN.md trỏ tới; vòng chỉ kiểm task mới
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: bằng chứng lát 1–10 đã có ở CI/PR đã merge; chạy lại không thêm độ tin cho việc mới mà tốn hàng giờ; CI vẫn chạy toàn bộ cổng ở mỗi PR
 - Đường lùi: Gộp task lát 11 về PLAN.md và loop init lại
+
+### D-053 · 2026-10-21T19:41:30+00:00 · AUD-SEC-004: chặn dò mật khẩu rải — ngưỡng và loại khoá thêm ngoài cặp (email, IP) 5/15 phút?
+
+- Phương án: (1) Thêm khoá theo IP (mọi email) 30 lần sai/15 phút và theo email (mọi IP) 50 lần sai/15 phút; đếm lần sai đã ghi, cùng cửa sổ, 429 + Retry-After; index (ip, attempted_at) cho lần sai · (2) Khoá theo email (mọi IP) ở ngưỡng thấp 10/15 phút · (3) Chỉ khoá theo IP
+- Chọn: Thêm khoá theo IP (mọi email) 30 lần sai/15 phút và theo email (mọi IP) 50 lần sai/15 phút; đếm lần sai đã ghi, cùng cửa sổ, 429 + Retry-After; index (ip, attempted_at) cho lần sai
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: rải một IP qua nhiều email bị chặn sau 30 lần; một email bị dò từ nhiều IP bị chặn sau 50 lần (~4.800 lần/ngày thay vì vô hạn). Ngưỡng email cao để kẻ lạ cần ≥ 10 IP mới khoá được tài khoản người khác — tránh lặp lại lỗi khoá-tài-khoản-hộ của SEC-001; ngưỡng thấp (phương án 2) đổi dò mật khẩu lấy DoS khoá tài khoản
+- Đường lùi: Bỏ hai bộ đếm mới trong lib/identity/auth.ts; index chỉ thêm, giữ hoặc DROP bằng migration contract

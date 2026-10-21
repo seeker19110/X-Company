@@ -106,6 +106,40 @@ describe("xác thực (T-007)", () => {
     assert.equal(r.userId, u.userId);
   });
 
+  // AUD-SEC-004 (D-053): dò mật khẩu rải — một IP qua nhiều email, hoặc một email từ nhiều IP.
+  const isRateLimited = (e: unknown) =>
+    e instanceof AppError && e.code === "RATE_LIMITED" && e.status === 429;
+  const tryLogin = (email: string, ip: string, now: Date, password = "sai-mat-khau-123") =>
+    login(db.app, { email, password, ip }, now).then(
+      () => "ok",
+      (e: unknown) => (isRateLimited(e) ? "429" : e instanceof AppError ? e.code : "lỗi lạ"),
+    );
+
+  test("AUD-SEC-004: một IP sai 30 lần qua 30 email khác nhau → lượt kế (kể cả đúng mật khẩu) 429; IP khác không bị ảnh hưởng", async () => {
+    const u = await seedUser(org.companyId);
+    const now = new Date("2026-10-21T08:00:00Z");
+    const ip = "203.0.113.7";
+    for (let i = 0; i < 30; i++)
+      assert.equal(await tryLogin(`spray-${i}@x.test`, ip, now), "INVALID_CREDENTIALS", `lượt ${i + 1}`);
+    assert.equal(await tryLogin(u.email, ip, now, PASSWORD), "429");
+    assert.equal(await tryLogin(u.email, "198.51.100.1", now, PASSWORD), "ok");
+    assert.equal(await tryLogin(u.email, ip, new Date(now.getTime() + 16 * 60_000), PASSWORD), "ok");
+  });
+
+  test("AUD-SEC-004: một email sai 50 lần từ 50 IP → lượt kế từ IP mới 429; dưới ngưỡng thì vẫn đăng nhập được", async () => {
+    const u = await seedUser(org.companyId);
+    const now = new Date("2026-10-21T09:00:00Z");
+    for (let i = 0; i < 49; i++)
+      assert.equal(await tryLogin(u.email, `192.0.2.${i}`, now), "INVALID_CREDENTIALS", `lượt ${i + 1}`);
+    assert.equal(await tryLogin(u.email, "192.0.2.200", now, PASSWORD), "ok", "49 lần sai: chưa khoá");
+    assert.equal(await tryLogin(u.email, "192.0.2.201", now), "INVALID_CREDENTIALS");
+    assert.equal(await tryLogin(u.email, "192.0.2.202", now, PASSWORD), "429");
+    assert.equal(
+      await tryLogin(u.email, "192.0.2.203", new Date(now.getTime() + 16 * 60_000), PASSWORD),
+      "ok",
+    );
+  });
+
   test("S-ID-09: POST thiếu/sai CSRF hoặc khác Origin → 403; login từ origin lạ → 403", async () => {
     const u = await seedUser(org.companyId);
     const { cookie, body } = await doLogin(u.email);
