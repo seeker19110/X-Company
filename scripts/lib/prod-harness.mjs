@@ -176,6 +176,18 @@ export function reportFile(rel) {
   return abs;
 }
 
+/**
+ * AUD-PERF-003: báo cáo ghi VÀO repo phải đo đúng một commit — cây bẩn (`+dirty`) thì trả lý do từ chối, ngược lại null.
+ * Thư mục tạm/ngoài repo luôn được (bản nháp). `reportDir` như `XC_REPORT_DIR` (rỗng/undefined = thư mục tạm).
+ */
+export function repoReportRefusal(commit, reportDir, root = ROOT) {
+  if (reportDir === undefined || reportDir === "") return null;
+  const rel = path.relative(root, path.resolve(root, reportDir));
+  const inRepo = rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+  if (!inRepo || !commit.endsWith("+dirty")) return null;
+  return `cây làm việc có thay đổi chưa commit (${commit}) — báo cáo ghi vào repo phải đo một commit sạch: commit/stash rồi chạy lại, hoặc bỏ XC_REPORT_DIR để ghi ra thư mục tạm`;
+}
+
 let tmpReportBase = null;
 /** `XC_REPORT_DIR` (rỗng coi như chưa đặt) hoặc MỘT thư mục tạm ngẫu nhiên 0700 mỗi tiến trình (không dùng tên cố định ở /tmp chung: tránh symlink/ghi đè). */
 function reportBase() {

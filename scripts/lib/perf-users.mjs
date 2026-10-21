@@ -8,3 +8,11 @@ export function usersNeeded(requests, perUserMax) {
   if (!(perUserMax > 0)) throw new RangeError("perUserMax phải > 0");
   return Math.ceil(Math.max(0, requests) / perUserMax);
 }
+
+// Kịch bản chốt kỳ (scripts/perf-period.ts, AUD-PERF-001): 200 nhân viên × 3 kỳ 31 ngày ở quá khứ — không chạm kỳ hiện tại.
+export const PERIOD_EMPLOYEES = 200;
+export const PERIOD_MONTHS = [
+  { code: "PERF-2025-01", start: "2025-01-01", end: "2025-01-31", days: 31 },
+  { code: "PERF-2025-03", start: "2025-03-01", end: "2025-03-31", days: 31 },
+  { code: "PERF-2025-05", start: "2025-05-01", end: "2025-05-31", days: 31 },
+];
