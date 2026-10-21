@@ -9,6 +9,7 @@ import { localDate } from "../nen/time.ts";
 import { guardPeriodChange } from "./period.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 import { t } from "../i18n/index.ts";
+import { MS_PER_MINUTE } from "../nen/units.ts";
 
 /** Số dư phép = tổng sổ — xuất ra để test EXPLAIN (DB-PERF-001). */
 export const LEAVE_BALANCE_SQL =
@@ -69,6 +70,9 @@ export async function requestLeave(
     await requireOn(tx, actor, "attendance.approve", res, { type: "employee", id: employeeId });
   else await requireOn(tx, actor, "leave.request", res, { type: "employee", id: employeeId });
   if (r.endAt <= r.startAt) throw new AppError("VALIDATION", 422, t("err.attendance.thoiGianKetThucPhaiSau"));
+  // Số phút không thể lớn hơn khoảng thời gian xin nghỉ (sổ phép/kỳ công dùng số này; người duyệt thấy cả hai).
+  if (r.minutes > Math.floor((r.endAt.getTime() - r.startAt.getTime()) / MS_PER_MINUTE))
+    throw new AppError("VALIDATION", 422, t("err.attendance.soPhutNghiVuotKhoang"));
   // Lý do nghỉ có thể lộ thông tin sức khoẻ (nhạy cảm): ghi dạng mã hoá (T-048), cột bản rõ để NULL; id sinh trước vì AAD gắn id dòng.
   const newId = randomUUID();
   const sealedReason = await sealTextAsync(textColumn("leave_request", "reason"), newId, r.reason);

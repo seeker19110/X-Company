@@ -428,7 +428,7 @@ describe("BOLA / BFLA tầng HTTP", () => {
       employee_id: emp2Id,
       action: "add_event",
       new_kind: "out",
-      new_at: "2026-11-06T17:00:00+07:00",
+      new_at: new Date(Date.now() - 86_400_000).toISOString(), // quá khứ gần: đề nghị sửa công không được ở tương lai
       reason: "quên bấm",
     });
     assert.equal(adj.status, 201);
