@@ -50,6 +50,32 @@ export const TOOLS = {
     },
     versionProbe: { args: ["version"], expect: /OpenBao v2\.7\.1/ },
   },
+  // gitleaks: quét bí mật toàn lịch sử trên máy dev — lệnh Kiểm BASE-SEC-002/WF-GIT-010/QA-STATIC-005 (T-065). CI dùng
+  // gitleaks-action riêng. sha256 đối chiếu tệp checksums chính thức + tự tính trên asset (researcher 2026-10-21).
+  gitleaks: {
+    version: "8.30.1",
+    license: "MIT",
+    bin: "gitleaks",
+    verified: "2026-10-21",
+    release: "https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1",
+    base: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1",
+    checksums: "gitleaks_8.30.1_checksums.txt",
+    platforms: {
+      "linux-x64": {
+        archive: "gitleaks_8.30.1_linux_x64.tar.gz",
+        sha256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+        kind: "tar.gz",
+        member: "gitleaks",
+      },
+      "linux-arm64": {
+        archive: "gitleaks_8.30.1_linux_arm64.tar.gz",
+        sha256: "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+        kind: "tar.gz",
+        member: "gitleaks",
+      },
+    },
+    versionProbe: { args: ["version"], expect: /^v?8\.30\.1\b/ },
+  },
   restic: {
     version: "0.19.1",
     license: "BSD-2-Clause",

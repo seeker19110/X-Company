@@ -399,3 +399,10 @@
 - Chọn: Gộp một PR, giữ ba commit riêng theo task để người review từng commit; PR mô tả tách mục
 - Lý do (tiêu chí chất lượng cuối): Cả ba là ngoại lệ cứng (authz/auth/migration) nên đều chờ người merge; phiên chỉ được đẩy một nhánh nên PR thứ hai không mở được trước khi PR đầu merge — tách thì T-064 không tới tay người review. ~120 dòng là test; mã sản phẩm mỗi task < 80 dòng
 - Đường lùi: Người review có thể yêu cầu tách; revert từng commit theo task
+
+### D-055 · 2026-10-21T22:21:26+00:00 · Duyệt PLAN lát 12–13 (T-065…T-078): hoàn tất phát triển rồi pha harden trước production, theo yêu cầu chủ dự án 'chạy dev hoàn chỉnh trước khi lên production'
+
+- Phương án: (1) Lát 12: mọi audit 🟢 agent tự làm được (SEC-005, DATA-003/004, PERF-001/003, A11Y-007/008/009 sau khi giảm JS thật, TEST-001) + ghim gitleaks; lát 13: delivery_phase harden, audit delta, release-check, GO-NO-GO. Không làm DEP-001 (typescript-eslint 8.72.0 peer typescript <6.1.0, npm 2026-10-21), HAR-003, phần XFEAT-005 chờ lịch công ty · (2) Chỉ chuyển harden ngay, để các mục 🟢 lại
+- Chọn: Lát 12: mọi audit 🟢 agent tự làm được (SEC-005, DATA-003/004, PERF-001/003, A11Y-007/008/009 sau khi giảm JS thật, TEST-001) + ghim gitleaks; lát 13: delivery_phase harden, audit delta, release-check, GO-NO-GO. Không làm DEP-001 (typescript-eslint 8.72.0 peer typescript <6.1.0, npm 2026-10-21), HAR-003, phần XFEAT-005 chờ lịch công ty
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: đóng lỗi đã biết trước khi đánh giá phát hành; giữ trần JS 230 KB và cách đo (giảm JS thật trước khi thêm tính năng a11y); TS7 làm gãy lint có kiểu nên chờ hệ sinh thái
+- Đường lùi: Đánh [~] task chưa làm kèm lý do; đóng PR chưa merge; xt.yaml về delivery_phase: build
