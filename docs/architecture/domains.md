@@ -18,6 +18,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `work` | `index.ts`, `tasks.ts`, `progress.ts`, `routes.ts` | dự án/công việc; `progress-compute.ts` là lõi thuần                      |
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
 | `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
+| `rum` | `index.ts`, `routes.ts`, `page.pure.ts`, `vitals.pure.ts` | RUM web-vitals tự làm (T-056, D-042): beacon `/api/public/rum`, mẫu theo nhãn trang chuẩn hoá (`page.pure.ts` = lõi thuần, tập nhãn bị chặn; `vitals.pure.ts` = CLS cửa sổ phiên, INP xấp xỉ cho client), gộp p75 cho `/api/metrics` — không dữ liệu cá nhân |
 | `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029) |
 | `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `crypto` | `index.ts`, `columns.ts`, `file.ts`, `rotate.ts`, `kms.ts` | mã hoá dữ liệu lúc lưu (T-048): AES-256-GCM có AAD + phong bì `v1:<keyId>:…`, chỉ mục mù HMAC, mã hoá tệp theo luồng (khoá tệp bọc bằng khoá chủ), sổ cột PII đã mã hoá (`columns.ts`), backfill/xoay khoá (`rotate.ts`, chạy bằng script). Chỉ dùng `node:crypto`; không import `next/*` |

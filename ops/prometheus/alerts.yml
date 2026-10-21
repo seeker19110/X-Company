@@ -74,3 +74,34 @@ groups:
         annotations:
           summary: "Có việc outbox ở DLQ (status=dead) quá 15 phút"
           runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#dlq--redrive"
+  - name: x-company-rum
+    rules:
+      # RUM tự làm (T-056, D-042; PRF-WEB-005/008): p75 24 giờ theo trang từ rum_web_vitals_p75 (chỉ nhóm ≥ 5 mẫu; LCP/INP giây, CLS điểm).
+      # Ngưỡng "tốt" của Core Web Vitals (web.dev): LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1 ở p75. Gauge vắng mặt (RUM tắt/ít mẫu) thì không bắn.
+      - alert: XCRumLcpSlow
+        expr: rum_web_vitals_p75{metric="LCP"} > 2.5
+        for: 30m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "LCP p75 > 2,5 s trên {{ $labels.page }} quá 30 phút"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"
+      - alert: XCRumInpSlow
+        expr: rum_web_vitals_p75{metric="INP"} > 0.2
+        for: 30m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "INP p75 > 0,2 s trên {{ $labels.page }} quá 30 phút"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"
+      - alert: XCRumClsHigh
+        expr: rum_web_vitals_p75{metric="CLS"} > 0.1
+        for: 30m
+        labels:
+          severity: ticket
+          owner: seeker19110
+        annotations:
+          summary: "CLS p75 > 0,1 trên {{ $labels.page }} quá 30 phút"
+          runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"

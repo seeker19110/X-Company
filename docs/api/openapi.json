@@ -945,6 +945,28 @@
         "security": []
       }
     },
+    "/api/public/rum": {
+      "post": {
+        "operationId": "submitRumBeacon",
+        "tags": ["Công khai"],
+        "summary": "Gửi số đo web-vitals (RUM)",
+        "description": "Beacon của trình duyệt (`navigator.sendBeacon`), chỉ khi cờ `RUM_ENABLED` bật — tắt thì 404. Phải cùng nguồn (`Origin`). Tối đa 2 KiB; `page` được chuẩn hoá thành nhãn có số giá trị bị chặn trước khi lưu; không lưu IP/user agent.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RumRequest" } } }
+        },
+        "responses": {
+          "204": { "description": "Đã ghi số đo (không có thân)." },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "403": { "$ref": "#/components/responses/Problem403" },
+          "404": { "$ref": "#/components/responses/Problem404" },
+          "413": { "$ref": "#/components/responses/Problem413" },
+          "429": { "$ref": "#/components/responses/Problem429" },
+          "500": { "$ref": "#/components/responses/Problem500" }
+        },
+        "security": []
+      }
+    },
     "/api/readyz": {
       "get": {
         "operationId": "getReadiness",
@@ -1630,6 +1652,27 @@
           "source": { "anyOf": [{ "type": "string", "maxLength": 300 }, { "type": "null" }] }
         },
         "required": ["submission_id", "name", "message", "consent"]
+      },
+      "RumRequest": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "string", "minLength": 1, "maxLength": 200, "format": "starts_with" },
+          "nav": { "type": "string", "enum": ["navigate", "reload", "back_forward", "prerender"] },
+          "metrics": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "enum": ["LCP", "INP", "CLS", "FCP", "TTFB"] },
+                "value": { "type": "number", "minimum": 0 }
+              },
+              "required": ["name", "value"]
+            }
+          }
+        },
+        "required": ["page", "metrics"]
       },
       "ApplicationRequest": {
         "type": "object",

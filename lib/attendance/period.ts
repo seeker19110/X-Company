@@ -9,6 +9,7 @@ import { addDays, computeShift, localDateOf, type ShiftEvent } from "./compute.t
 import { findAssignment } from "./events.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 import { t as tr } from "../i18n/index.ts";
+import { minutesToMs } from "../nen/units.ts";
 
 export const PERIOD_FLOW = ["open", "employee_review", "manager_confirmed", "hr_closed", "locked"] as const;
 export type PeriodStatus = (typeof PERIOD_FLOW)[number];
@@ -585,6 +586,9 @@ export async function requestAdjustment(
   } else {
     if (a.newKind === undefined || a.newAt === undefined)
       throw new AppError("VALIDATION", 422, tr("err.attendance.thieuLoaiVaThoiDiemSu"));
+    // Sự kiện thêm tay không được ở tương lai (dung sai 5 phút cho lệch đồng hồ): chặn "chấm ra 23:59" khai trước.
+    if (a.newAt.getTime() > Date.now() + minutesToMs(5))
+      throw new AppError("VALIDATION", 422, tr("err.attendance.thoiDiemSuKienTuongLai"));
     after = { kind: a.newKind, at: a.newAt.toISOString() };
     at = a.newAt;
   }

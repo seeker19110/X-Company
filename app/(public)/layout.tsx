@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { RumIfEnabled } from "@/app/server/rum";
 import { t } from "@/lib/i18n";
 import "./site.css";
 
@@ -47,6 +48,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
           </p>
         </div>
       </footer>
+      <RumIfEnabled />
     </>
   );
 }

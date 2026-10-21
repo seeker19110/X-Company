@@ -446,6 +446,9 @@ pii:
     recipients: "chỉ HR"
     status: implemented
 reviewed_non_pii:
+  # rum_sample (T-056, D-042): KHÔNG cột nào trùng bộ dò tên PII (page, metric, value_ms, cls_milli_n, nav_type, received_at) nên không cần
+  # khai ở đây. Đã rà: không IP/user agent/mã người dùng; `page` là nhãn chuẩn hoá có tập giá trị bị chặn (lib/rum/page.pure.ts), không chứa
+  # id/slug/query. Thêm cột vào bảng này mà tên gợi PII → phải khai ở `pii` hoặc ở danh sách dưới.
   - table: company
     column: tax_code
     reason: "mã số thuế của pháp nhân, không phải cá nhân"

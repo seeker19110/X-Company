@@ -172,3 +172,99 @@ tests:
       - eval_time: 30m
         alertname: XCOutboxDeadLetter
         exp_alerts: []
+
+  # LCP: p75 3.1 > 2.5 liên tục 30 phút mới bắn (`for: 30m`); dưới ngưỡng thì im lặng.
+  - name: rum lcp — vượt ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="LCP"}'
+        values: "3.1x60"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: XCRumLcpSlow
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: XCRumLcpSlow
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+              page: "/"
+              metric: LCP
+            exp_annotations:
+              summary: "LCP p75 > 2,5 s trên / quá 30 phút"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"
+
+  - name: rum lcp — dưới ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="LCP"}'
+        values: "2.4x60"
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: XCRumLcpSlow
+        exp_alerts: []
+
+  # INP: p75 0.35 > 0.2 liên tục 30 phút mới bắn (`for: 30m`); dưới ngưỡng thì im lặng.
+  - name: rum inp — vượt ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="INP"}'
+        values: "0.35x60"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: XCRumInpSlow
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: XCRumInpSlow
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+              page: "/"
+              metric: INP
+            exp_annotations:
+              summary: "INP p75 > 0,2 s trên / quá 30 phút"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"
+
+  - name: rum inp — dưới ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="INP"}'
+        values: "0.19x60"
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: XCRumInpSlow
+        exp_alerts: []
+
+  # CLS: p75 0.22 > 0.1 liên tục 30 phút mới bắn (`for: 30m`); dưới ngưỡng thì im lặng.
+  - name: rum cls — vượt ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="CLS"}'
+        values: "0.22x60"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: XCRumClsHigh
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: XCRumClsHigh
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              owner: seeker19110
+              page: "/"
+              metric: CLS
+            exp_annotations:
+              summary: "CLS p75 > 0,1 trên / quá 30 phút"
+              runbook_url: "https://github.com/seeker19110/X-Company/blob/main/docs/ops/RUNBOOK.md#rum--chỉ-số-web"
+
+  - name: rum cls — dưới ngưỡng
+    interval: 1m
+    input_series:
+      - series: 'rum_web_vitals_p75{page="/",metric="CLS"}'
+        values: "0.05x60"
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: XCRumClsHigh
+        exp_alerts: []

@@ -55,7 +55,7 @@ test("mọi route dưới app/api có mặt, không thừa (test đỏ khi thi�
     .filter((f) => f.startsWith("app/api/") && f.endsWith("route.ts"))
     .map((f) => urlOf(f).replace(/\[([^\]]+)\]/g, "{$1}"))
     .sort();
-  assert.equal(real.length, 25);
+  assert.equal(real.length, 26);
   assert.deepEqual(Object.keys(doc().paths).sort(), real);
   assert.deepEqual(registryErrors(ROOT), []);
 });
@@ -106,13 +106,14 @@ test("registryErrors bắt route thiếu, thừa, sai hàm xử lý và cờ ide
 
 // ---- Idempotency-Key (BE-API-008) --------------------------------------------------------------------------------------
 
-/** POST không dùng guard Idempotency-Key: xác thực, đăng xuất, đồng bộ (khoá theo bản ghi), form công khai (submission_id). */
+/** POST không dùng guard Idempotency-Key: xác thực, đăng xuất, đồng bộ (khoá theo bản ghi), form công khai (submission_id), beacon RUM (không ghi nghiệp vụ, mẫu ẩn danh). */
 const NO_GUARD_POST = [
   "/api/app/auth/login",
   "/api/app/auth/logout",
   "/api/app/sync",
   "/api/public/applications",
   "/api/public/inquiries",
+  "/api/public/rum",
 ];
 
 test("mọi POST ghi nghiệp vụ có Idempotency-Key bắt buộc + 400/409/422/phát lại; ngoại lệ có danh sách", () => {
@@ -487,5 +488,5 @@ test("PR policy chạy check-api-breaking, action ghim SHA, quyền tối thiể
   assert.match(pkg.scripts["check:arch"]!, /check:openapi/);
   assert.equal(pkg.scripts["gen:openapi"], "tsx scripts/gen-openapi.ts");
   assert.equal(pkg.scripts["check:api-breaking"], "node scripts/check-api-breaking.mjs");
-  assert.ok(Object.keys(REGISTRY).length === 25);
+  assert.ok(Object.keys(REGISTRY).length === 26);
 });

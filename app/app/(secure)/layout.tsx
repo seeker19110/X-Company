@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { requireSession } from "@/app/server/session";
 import { SessionProvider } from "@/app/components/session-context";
 import { AppNav } from "@/app/components/app-nav";
+import { RumIfEnabled } from "@/app/server/rum";
 import { ServiceWorkerRegister } from "@/app/components/sw-register";
 import { can } from "@/lib/authz";
 import { t } from "@/lib/i18n";
@@ -33,6 +34,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
         </main>
         <AppNav approver={approver} />
         <ServiceWorkerRegister />
+        <RumIfEnabled />
       </div>
     </SessionProvider>
   );

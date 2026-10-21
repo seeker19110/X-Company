@@ -138,6 +138,8 @@
       "dieuChinhCanLyDo": "Điều chỉnh cần lý do",
       "butToanKhongHopLe": "Bút toán không hợp lệ",
       "thoiGianKetThucPhaiSau": "Thời gian kết thúc phải sau bắt đầu",
+      "soPhutNghiVuotKhoang": "Số phút nghỉ không được vượt khoảng từ lúc bắt đầu đến lúc kết thúc",
+      "thoiDiemSuKienTuongLai": "Thời điểm sự kiện không được ở tương lai",
       "khongTimThayDon": "Không tìm thấy đơn",
       "donDaDuocXuLy": "Đơn đã được xử lý",
       "trungThoiGianVoiDonNghi": "Trùng thời gian với đơn nghỉ đã duyệt",
@@ -297,6 +299,13 @@
       "daGiaHanMotLan": "Yêu cầu này đã gia hạn một lần; luật chỉ cho gia hạn tối đa một lần",
       "quaHanKhongGiaHan": "Yêu cầu đã quá hạn xử lý nên không gia hạn được; hãy hoàn tất hoặc từ chối và nêu căn cứ"
     },
+    "rum": {
+      "khongTimThay": "Không tìm thấy",
+      "trangKhongHopLe": "Đường dẫn trang không hợp lệ",
+      "guiQuaNhieu": "Gửi quá nhiều lần, vui lòng thử lại sau",
+      "tenChiSoTrung": "Tên chỉ số bị trùng trong cùng một beacon",
+      "giaTriVuotTran": "Giá trị vượt trần {max}"
+    },
     "work": {
       "banKhongCoQuyenDeXuat": "Bạn không có quyền đề xuất baseline",
       "canLyDoDeXuatBaseline": "Cần lý do đề xuất baseline",
@@ -361,10 +370,11 @@
       "adjustmentPeriodRef": "điều chỉnh {id}: {reason}"
     },
     "approvals": {
-      "summaryLeave": "{name} · {minutes} phút",
+      "summaryLeave": "{name} · {from} – {to} · {minutes} phút",
       "summaryOt": "OT {date} · {minutes} phút",
       "summaryOtAwaitingConsent": "OT {date} · {minutes} phút (chờ đồng ý)",
-      "summaryAdjustment": "Sửa công: {reason}"
+      "summaryAdjustment": "Sửa công: {reason}",
+      "summaryAdjustmentAdd": "Sửa công: thêm {kind} lúc {at} · {reason}"
     },
     "cms": {
       "imageMissingAlt": "Ảnh {src} thiếu văn bản thay thế"
