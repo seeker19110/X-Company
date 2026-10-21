@@ -209,3 +209,181 @@ describe("cổng GPS ở server (T-051)", () => {
     assert.equal(/biometric|faceId|fingerprint|selfie/i.test(src), false);
   });
 });
+
+// AUD-DATA-003 (T-068): đường xoá toạ độ CÓ KIỂM SOÁT. Trigger vẫn chặn mọi UPDATE trực tiếp xoá bản mã (cả khi tự đặt cờ
+// xc.geo_erase); chỉ hàm SECURITY DEFINER hẹp attendance_event_erase_geo (migration 0029) được đặt cả năm cột toạ độ về NULL.
+describe("xoá toạ độ có kiểm soát (AUD-DATA-003)", () => {
+  let db: TestDb;
+  let companyId: string;
+  let employeeId: string;
+  const NOW = new Date("2026-10-18T10:00:00Z");
+  before(async () => {
+    db = await freshDb();
+    ({ companyId } = await seedCompany());
+    employeeId = (await seedUser(companyId)).employeeId!;
+  });
+  after(async () => {
+    await db.close();
+  });
+
+  const addEvent = async (
+    receivedAt: Date,
+    g: { enc?: string | null; plain?: boolean } = { enc: "v1:g1:ban-ma-gia" },
+  ) =>
+    (
+      await db.admin.query(
+        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+           server_received_at, source, status, geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at)
+         VALUES ($1, $2, $3, 'h', 'in', $4, $4, 'gps', 'accepted', $5, $6, $6, $7, $8) RETURNING id`,
+        [
+          companyId,
+          employeeId,
+          randomUUID(),
+          receivedAt,
+          g.enc ?? null,
+          g.plain ? 10.5 : null,
+          g.plain ? 12 : null,
+          g.plain ? receivedAt : null,
+        ],
+      )
+    ).rows[0]!.id as string;
+  const geoOf = async (id: string) =>
+    (
+      await db.admin.query(
+        "SELECT geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at, status, kind FROM attendance_event WHERE id = $1",
+        [id],
+      )
+    ).rows[0]!;
+  const erase = (pool: typeof db.app, before: Date, limit = 100) =>
+    pool.query<{ company_id: string }>("SELECT attendance_event_erase_geo($1, $2) AS company_id", [
+      before,
+      limit,
+    ]);
+
+  test("role ứng dụng UPDATE trực tiếp geo_enc = NULL vẫn bị chặn — kể cả xoá cả năm cột, kể cả tự đặt cờ xc.geo_erase", async () => {
+    const ev = await addEvent(new Date("2025-01-01T00:00:00Z"));
+    await assert.rejects(
+      db.app.query("UPDATE attendance_event SET geo_enc = NULL WHERE id = $1", [ev]),
+      /không xoá bản mã/,
+    );
+    const c = await db.app.connect();
+    try {
+      await c.query("BEGIN");
+      await c.query("SET LOCAL xc.geo_erase = 'on'");
+      await assert.rejects(
+        c.query(
+          "UPDATE attendance_event SET geo_enc = NULL, geo_lat = NULL, geo_lng = NULL, geo_accuracy_m = NULL, geo_captured_at = NULL WHERE id = $1",
+          [ev],
+        ),
+        /không xoá bản mã/,
+      );
+      await c.query("ROLLBACK");
+      // Gọi hàm xoá xong, UPDATE trực tiếp sau đó trong CÙNG giao dịch vẫn bị chặn (cờ chỉ sống trong hàm).
+      const ev2 = await addEvent(new Date("2025-01-01T00:00:00Z"));
+      await c.query("BEGIN");
+      await c.query("SELECT attendance_event_erase_geo($1, 10)", [new Date("2000-01-01T00:00:00Z")]);
+      await assert.rejects(
+        c.query("UPDATE attendance_event SET geo_enc = NULL WHERE id = $1", [ev2]),
+        /không xoá bản mã/,
+      );
+      await c.query("ROLLBACK");
+    } finally {
+      c.release();
+    }
+    // Owner (migration) UPDATE trực tiếp cũng không đi tắt được — chỉ đường hàm.
+    await assert.rejects(
+      db.admin.query("UPDATE attendance_event SET geo_enc = NULL WHERE id = $1", [ev]),
+      /không xoá bản mã/,
+    );
+    assert.equal((await geoOf(ev)).geo_enc, "v1:g1:ban-ma-gia");
+  });
+
+  test("hàm xoá: hàng quá hạn bị xoá cả bản mã lẫn bản rõ; hàng chưa tới hạn, đúng ranh giới (UTC) và cột khác không đổi", async () => {
+    const cutoff = new Date("2026-07-20T00:00:00Z");
+    const old = await addEvent(new Date("2026-07-19T23:59:59.999Z"));
+    const oldPlain = await addEvent(new Date("2026-06-01T00:00:00Z"), { enc: null, plain: true });
+    const edge = await addEvent(cutoff); // đúng mốc: giữ (chỉ < mốc)
+    const fresh = await addEvent(new Date("2026-10-01T00:00:00Z"));
+    const noGeo = await addEvent(new Date("2025-01-01T00:00:00Z"), { enc: null });
+    const before0 = await geoOf(old);
+    // Hàng quá hạn còn toạ độ (gồm cả hàng của ca trước trong file) — đếm độc lập bằng owner trước khi xoá.
+    const due = (
+      await db.admin.query(
+        `SELECT count(*)::int AS n FROM attendance_event
+          WHERE server_received_at < $1 AND (geo_enc IS NOT NULL OR geo_lat IS NOT NULL)`,
+        [cutoff],
+      )
+    ).rows[0]!.n as number;
+    assert.ok(due >= 2);
+    const r = await erase(db.app, cutoff);
+    assert.equal(r.rowCount, due);
+    assert.deepEqual([...new Set(r.rows.map((x) => x.company_id))], [companyId]);
+    for (const id of [old, oldPlain]) {
+      const g = await geoOf(id);
+      assert.deepEqual(
+        [g.geo_enc, g.geo_lat, g.geo_lng, g.geo_accuracy_m, g.geo_captured_at],
+        [null, null, null, null, null],
+      );
+    }
+    const after0 = await geoOf(old);
+    assert.deepEqual([after0.status, after0.kind], [before0.status, before0.kind]);
+    assert.equal((await geoOf(edge)).geo_enc, "v1:g1:ban-ma-gia");
+    assert.equal((await geoOf(fresh)).geo_enc, "v1:g1:ban-ma-gia");
+    assert.equal((await geoOf(noGeo)).geo_enc, null);
+    // Chạy lại: idempotent — hàng đã NULL không bị đếm lại.
+    assert.equal((await erase(db.app, cutoff)).rowCount, 0);
+  });
+
+  test("hàm xoá: tham số sai bị từ chối (mốc NULL/tương lai, lô ngoài 1..10000)", async () => {
+    await assert.rejects(erase(db.app, new Date(Date.now() + 86_400_000)), /mốc/);
+    await assert.rejects(db.app.query("SELECT attendance_event_erase_geo(NULL, 10)"), /mốc/);
+    await assert.rejects(erase(db.app, NOW, 0), /lô/);
+    await assert.rejects(erase(db.app, NOW, 10_001), /lô/);
+  });
+
+  test("phân quyền: role ứng dụng được EXECUTE; role không thuộc xc_app_rw bị từ chối; hàm cố định search_path", async () => {
+    const outsider = `xc_outsider_${randomBytes(3).toString("hex")}`;
+    await db.admin.query(`CREATE ROLE ${outsider} NOLOGIN`);
+    const c = await db.admin.connect();
+    try {
+      await c.query(`SET ROLE ${outsider}`);
+      await assert.rejects(c.query("SELECT attendance_event_erase_geo($1, 10)", [NOW]), /permission denied/);
+      await c.query("RESET ROLE");
+    } finally {
+      c.release();
+      await db.admin.query(`DROP ROLE ${outsider}`);
+    }
+    const fns = await db.admin.query<{ proname: string; prosecdef: boolean; proconfig: string[] }>(
+      `SELECT proname, prosecdef, proconfig FROM pg_proc
+        WHERE proname = 'attendance_event_erase_geo'`,
+    );
+    assert.equal(fns.rowCount, 1);
+    for (const f of fns.rows) {
+      assert.equal(f.prosecdef, true);
+      assert.ok(
+        f.proconfig.some((x) => x.startsWith("search_path=")),
+        `${f.proname} thiếu search_path cố định`,
+      );
+    }
+    assert.ok((await erase(db.app, NOW)).rowCount! >= 0, "role ứng dụng gọi được");
+  });
+
+  test("đồng thời: hai phiên xoá cùng lúc không đếm trùng (SKIP LOCKED) và xoá đủ", async () => {
+    const at = new Date("2026-01-01T00:00:00Z");
+    for (let i = 0; i < 30; i++) await addEvent(at);
+    const before1 = new Date("2026-01-02T00:00:00Z");
+    const [a, b] = await Promise.all([erase(db.app, before1, 7), erase(db.app, before1, 7)]);
+    let total = a.rowCount! + b.rowCount!;
+    for (;;) {
+      const n = (await erase(db.app, before1, 7)).rowCount!;
+      total += n;
+      if (n === 0) break;
+    }
+    assert.equal(total, 30);
+    const left = await db.admin.query(
+      "SELECT count(*)::int AS n FROM attendance_event WHERE server_received_at = $1 AND geo_enc IS NOT NULL",
+      [at],
+    );
+    assert.equal(left.rows[0]!.n, 0);
+  });
+});

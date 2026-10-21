@@ -243,6 +243,11 @@ export const SERVER_SPEC = {
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
   // Mẫu RUM (rum_sample): 30 ngày — đủ so sánh tuần/tháng; số đo gộp p75 chỉ cần 24 giờ gần nhất.
   RETENTION_RUM_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Toạ độ GPS chấm công (attendance_event.geo_*; AUD-DATA-003): xoá toạ độ (bản mã + bản rõ) sau ngần ấy ngày kể từ lúc server
+  // nhận; giờ công/sự kiện giữ nguyên. Mặc định 90 ngày (GIẢ ĐỊNH, chưa có xác nhận pháp chế): toạ độ chỉ dùng đối chiếu vị trí,
+  // dữ liệu nhạy cảm → giữ tối thiểu (Luật 91/2025 Điều 3.3, 14.1 — mức A), đủ qua chốt kỳ tháng + thời gian khiếu nại/điều chỉnh.
+  // Trần 3650 ngày: không cho cấu hình giữ toạ độ lâu hơn hồ sơ công.
+  RETENTION_GEO_DAYS: field(z.coerce.number().int().min(1).max(3_650).default(90)),
   // Hạn xử lý yêu cầu chủ thể dữ liệu (DSAR, CMP-INTL-007; D-029) THEO LOẠI yêu cầu — NĐ 356/2025/NĐ-CP Điều 5 (nguồn mức B:
   // bản sao thương mại, chưa đối chiếu Công báo). Ngày ở ba biến DSAR_DAYS_* là ngày LỊCH kể từ lúc nhận (GIẢ ĐỊNH: văn bản
   // không nói ngày làm việc); riêng hạn phản hồi đã nhận tính theo ngày LÀM VIỆC (bỏ T7, CN; ngày lễ chưa loại — H02).

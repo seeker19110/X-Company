@@ -34,6 +34,7 @@ const CFG: RetentionConfig = {
   outboxDoneDays: 30,
   idempotencyHours: 24,
   rumDays: 30,
+  geoDays: 90,
 };
 
 describe("cấu hình retention (env)", () => {
@@ -57,6 +58,9 @@ describe("cấu hình retention (env)", () => {
     assert.equal(retentionConfig({ ...base, RETENTION_ENABLED: "" }).enabled, true, "rỗng = chưa đặt");
     assert.throws(() => retentionConfig({ ...base, RETENTION_INQUIRY_DAYS: "0" }), /RETENTION_INQUIRY_DAYS/);
     assert.throws(() => retentionConfig({ ...base, RETENTION_ENABLED: "no" }), /RETENTION_ENABLED/);
+    assert.equal(retentionConfig({ ...base, RETENTION_GEO_DAYS: "30" }).geoDays, 30);
+    assert.throws(() => retentionConfig({ ...base, RETENTION_GEO_DAYS: "0" }), /RETENTION_GEO_DAYS/);
+    assert.throws(() => retentionConfig({ ...base, RETENTION_GEO_DAYS: "1.5" }), /RETENTION_GEO_DAYS/);
   });
 });
 
@@ -387,5 +391,82 @@ describe("retention", () => {
     assert.equal(a.display_name, ANON_NAME);
     assert.match(a.email, /@anonymized\.invalid$/);
     assert.notEqual(a.email, ANON_EMAIL, "email phải duy nhất (app_user_email_key)");
+  });
+
+  test("AUD-DATA-003: toạ độ GPS quá RETENTION_GEO_DAYS bị xoá (bản mã + bản rõ) theo lô; ranh giới UTC giữ; audit chỉ đếm; chạy lại = 0", async () => {
+    const emp = (await seedUser(companyId)).employeeId!;
+    const ev = async (receivedAt: Date, enc: string | null = "v1:g1:ban-ma-gia") =>
+      (
+        await one(
+          `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+             server_received_at, source, status, geo_enc) VALUES ($1, $2, $3, 'h', 'in', $4, $4, 'gps', 'accepted', $5)
+           RETURNING id`,
+          [companyId, emp, randomUUID(), receivedAt, enc],
+        )
+      ).id as string;
+    const cutoff = daysAgo(90);
+    const old = [];
+    for (let i = 0; i < 5; i++) old.push(await ev(new Date(cutoff.getTime() - 1 - i)));
+    const edge = await ev(cutoff); // đúng mốc: giữ
+    const fresh = await ev(daysAgo(10));
+    const already = await ev(daysAgo(400), null);
+    const geoActions = () =>
+      db.admin.query(
+        "SELECT company_id, after FROM audit_event WHERE action = 'retention.geo_erase' ORDER BY seq",
+      );
+    const auditBefore = (await geoActions()).rowCount!;
+
+    const rep = await runRetention({ config: CFG, now: NOW, pool: db.app, batchSize: 2 });
+    assert.equal(rep.geoErased, 5);
+    for (const id of old)
+      assert.equal((await one("SELECT geo_enc FROM attendance_event WHERE id = $1", [id])).geo_enc, null);
+    for (const id of [edge, fresh])
+      assert.equal(
+        (await one("SELECT geo_enc FROM attendance_event WHERE id = $1", [id])).geo_enc,
+        "v1:g1:ban-ma-gia",
+      );
+    assert.equal((await one("SELECT geo_enc FROM attendance_event WHERE id = $1", [already])).geo_enc, null);
+    const aud = (await geoActions()).rows.slice(auditBefore);
+    assert.deepEqual(
+      aud.map((r) => [r.company_id, r.after.count]),
+      [
+        [companyId, 2],
+        [companyId, 2],
+        [companyId, 1],
+      ],
+    );
+    assert.deepEqual(Object.keys(aud[0].after).sort(), ["count", "olderThan"], "audit không chứa toạ độ");
+    assert.equal(aud[0].after.olderThan, cutoff.toISOString());
+    assert.equal((await verifyAuditChain(db.admin)).ok, true);
+
+    const again = await runRetention({ config: CFG, now: NOW, pool: db.app, batchSize: 2 });
+    assert.equal(again.geoErased, 0);
+    assert.equal((await geoActions()).rowCount, auditBefore + 3, "chạy lại không ghi audit thêm");
+    // Rút ngắn cấu hình → hàng 10 ngày tuổi cũng bị xoá; hàng đúng mốc cũ giờ quá hạn.
+    const short = await runRetention({ config: { ...CFG, geoDays: 5 }, now: NOW, pool: db.app });
+    assert.equal(short.geoErased, 2);
+  });
+
+  test("AUD-DATA-003: hai lượt retention đồng thời không xoá/đếm trùng toạ độ", async () => {
+    const emp = (await seedUser(companyId)).employeeId!;
+    for (let i = 0; i < 20; i++)
+      await db.admin.query(
+        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+           server_received_at, source, status, geo_enc) VALUES ($1, $2, $3, 'h', 'in', $4, $4, 'gps', 'accepted', 'v1:g1:x')`,
+        [companyId, emp, randomUUID(), daysAgo(200)],
+      );
+    const auditN = async () =>
+      (
+        await one(
+          "SELECT coalesce(sum((after->>'count')::int), 0)::int AS n FROM audit_event WHERE action = 'retention.geo_erase'",
+        )
+      ).n as number;
+    const a0 = await auditN();
+    const [x, y] = await Promise.all([
+      runRetention({ config: CFG, now: NOW, pool: db.app, batchSize: 3 }),
+      runRetention({ config: CFG, now: NOW, pool: db.app, batchSize: 3 }),
+    ]);
+    assert.equal(x.geoErased + y.geoErased, 20);
+    assert.equal((await auditN()) - a0, 20);
   });
 });
