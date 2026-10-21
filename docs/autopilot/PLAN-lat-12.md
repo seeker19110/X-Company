@@ -43,7 +43,7 @@ Mọi mục audit agent tự làm được đã đóng bằng mã + test; pha ha
 - [ ] `T-072` AUD-A11Y-009: gửi form đơn xong (hoặc lỗi không kèm `fields`) focus về khối của form, không rơi về `<body>` (sau: T-071; files: app/components/, e2e/flows.spec.ts) — Gate: `npm run -s check:perf-budget && npm run -s e2e`
 - [ ] `T-073` AUD-A11Y-008: dải "Đang ngoại tuyến" khi mất mạng và khi trang lấy từ bộ đệm SW (sau: T-072; files: app/, public/sw.js, e2e/) — Gate: `npm run -s check:perf-budget && npm run -s e2e`
 - [ ] `T-074` AUD-A11Y-007: axe quét thêm 1280 px, trạng thái lỗi/hộp thoại, bảng dashboard có seed mốc và `<caption>` (sau: T-073; files: e2e/, scripts/seed-e2e.ts, app/app/) — Gate: `npm run -s e2e`
-- [ ] `T-075` AUD-TEST-001 phần còn lại: script chạy lặp test nhạy thời gian dưới tải CPU, 50 lượt health + reliability xanh (files: scripts/flaky-check.sh, tests/) — Gate: `scripts/flaky-check.sh 50 tests/http/health.test.ts tests/db/reliability.test.ts`
+- [x] `T-075` AUD-TEST-001 phần còn lại: script chạy lặp test nhạy thời gian dưới tải CPU, 50 lượt health + reliability xanh (files: scripts/flaky-check.sh, tests/) — Gate: `scripts/flaky-check.sh 50 tests/http/health.test.ts tests/db/reliability.test.ts`
 
 ### Lát 13 — Harden trước production (G7)
 - [ ] `T-076` Chuyển `delivery_phase: harden` trong `xt.yaml` (lý do trong PR), doctor sạch (sau: T-075; files: xt.yaml) — Gate: `python3 .xtemplates/scripts/xt.py doctor && grep -q '^delivery_phase: harden' xt.yaml`
