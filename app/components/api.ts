@@ -12,11 +12,6 @@ export interface ApiResult<T> {
   fields?: { path: string; message: string }[];
 }
 
-/** Giá trị ô biểu mẫu → chuỗi, hoặc null khi trống/không phải chuỗi (BASE-DATA-003: rỗng = chưa nhập). */
-export function textOrNull(v: FormDataEntryValue | null): string | null {
-  return typeof v === "string" && v !== "" ? v : null;
-}
-
 /** Khoá đang dùng cho một thao tác chưa có kết quả chắc chắn: gửi lại cùng route + cùng nội dung → cùng khoá. */
 const pendingKeys = new Map<string, { key: string; at: number }>();
 const PENDING_KEY_TTL_MS = minutesToMs(10);

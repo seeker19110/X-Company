@@ -3,12 +3,13 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { t } from "@/lib/i18n/client-app";
 import type * as RequestSchemas from "@/lib/attendance/request-schema.pure";
-import { api, textOrNull } from "./api";
+import { api } from "./api";
 import {
   FieldError,
   fieldA11y,
   useFocusFirstInvalid,
   SubmitButton,
+  textOrNull,
   toFieldErrors,
   type FieldErrors,
   type FieldMap,

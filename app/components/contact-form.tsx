@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { t } from "@/lib/i18n/client-site";
 import { API_FETCH_TIMEOUT_MS } from "@/lib/nen/timeouts";
-import { textOrNull } from "./api";
 import {
   FieldError,
   fieldA11y,
   useFocusFirstInvalid,
   SubmitButton,
+  textOrNull,
   toFieldErrors,
   type FieldErrors,
 } from "./form-parts";

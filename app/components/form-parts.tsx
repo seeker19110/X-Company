@@ -2,6 +2,12 @@
 // Logic thuần (zod issues → lỗi theo ô) tách khỏi JSX để test không cần trình duyệt (FE-FORM-002, FE-TEST-001).
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
+/** Giá trị ô biểu mẫu → chuỗi, hoặc null khi trống/không phải chuỗi (BASE-DATA-003: rỗng = chưa nhập).
+ *  Đặt ở đây, không ở api.ts: trang chỉ cần đọc ô thì không kéo theo cả client API (FE-PERF-004). */
+export function textOrNull(v: FormDataEntryValue | null): string | null {
+  return typeof v === "string" && v !== "" ? v : null;
+}
+
 export type FieldErrors = Record<string, string>;
 export interface Issue {
   path: PropertyKey[] | string;
