@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
+import { focusPageHeading } from "./focus";
 import { useConfirm, type ConfirmRequest } from "./confirm-dialog";
 import { useSession } from "./session-context";
 
@@ -63,6 +64,24 @@ export function TaskActions({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const sending = useRef(false);
+  const box = useRef<HTMLDivElement>(null);
+  const refocus = useRef(false);
+
+  // Nút bị vô hiệu/thay bằng bộ nút của trạng thái mới → focus rơi về <body>. Khi dữ liệu mới về (status/version đổi),
+  // đưa focus vào nút thao tác đầu tiên của việc này; việc không còn thao tác/biến mất khỏi danh sách → về tiêu đề trang.
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const first = box.current?.querySelector<HTMLElement>("button");
+    if (first) first.focus();
+    else focusPageHeading();
+  }, [status, version]);
+  useEffect(
+    () => () => {
+      if (refocus.current) focusPageHeading(); // bị gỡ khỏi danh sách (vd. đã nghiệm thu) trước khi kịp focus
+    },
+    [],
+  );
 
   async function run(a: Action) {
     let reason: string | null = null;
@@ -82,14 +101,16 @@ export function TaskActions({
     const r = await api("POST", `/api/app/tasks/${id}/${a}`, { csrf, body: { version, reason } });
     sending.current = false;
     setBusy(false);
-    if (r.ok) router.refresh();
-    else setError(r.error ?? t("common.actionFailed"));
+    if (r.ok) {
+      refocus.current = true;
+      router.refresh();
+    } else setError(r.error ?? t("common.actionFailed"));
   }
 
   const acts = actionsFor(status, role);
   if (acts.length === 0) return null;
   return (
-    <div className="row row-actions">
+    <div ref={box} className="row row-actions">
       {acts.map((a) => (
         <button key={a} className="btn" disabled={busy} aria-busy={busy} onClick={() => run(a)}>
           {LABEL[a]}

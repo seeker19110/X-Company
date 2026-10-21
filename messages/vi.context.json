@@ -213,6 +213,7 @@
     "cancelled": "Thông báo sau khi người dùng huỷ đăng xuất: dữ liệu chưa gửi vẫn còn."
   },
   "requests": {
+    "required": "Nhãn ô bắt buộc của biểu mẫu đơn: {label} là tên ô, thêm '(bắt buộc)' để người dùng đọc màn hình biết trước khi nhập.",
     "sent": "Thông báo thành công sau khi gửi một đơn (nghỉ, làm thêm, sửa công).",
     "date": "Nhãn ô chọn ngày dùng chung cho các biểu mẫu đơn.",
     "reason": "Nhãn ô nhập lý do dùng chung cho các biểu mẫu đơn.",

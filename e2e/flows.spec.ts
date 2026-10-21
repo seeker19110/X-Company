@@ -80,6 +80,8 @@ test.describe("ứng dụng nội bộ", () => {
     await expectAccessible(page);
     await page.getByRole("button", { name: "Vào ca" }).click();
     await expect(page.getByRole("status").first()).toContainText("Vào ca: Đã được xác nhận");
+    // AUD-A11Y-002: nút Vào ca vô hiệu trong lúc gửi → xong, focus ở nút Ra ca (không rơi về <body>).
+    await expect(page.getByRole("button", { name: "Ra ca" })).toBeFocused();
     await page.reload();
     await context.setOffline(true);
     await page.getByRole("button", { name: "Ra ca" }).click();
@@ -101,6 +103,14 @@ test.describe("ứng dụng nội bộ", () => {
     const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
     await item.getByRole("button", { name: "Bắt đầu" }).click();
     await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
+    // AUD-A11Y-002: báo bị chặn rồi tiếp tục → mỗi lần bộ nút đổi, focus ở nút thao tác đầu của việc, không rơi về <body>.
+    await item.getByRole("button", { name: "Báo bị chặn" }).click();
+    const blockDialog = page.getByRole("dialog", { name: "Báo việc bị chặn?" });
+    await blockDialog.getByLabel("Lý do").fill("Chờ vật tư về");
+    await blockDialog.getByRole("button", { name: "Báo bị chặn" }).click();
+    await expect(item.getByRole("button", { name: "Tiếp tục" })).toBeFocused();
+    await item.getByRole("button", { name: "Tiếp tục" }).click();
+    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeFocused();
     await item.getByRole("button", { name: "Gửi nghiệm thu" }).click();
     // Người làm vẫn thấy việc, ở trạng thái chờ nghiệm thu, không còn nút thao tác.
     await expect(item).toContainText("Chờ nghiệm thu");
@@ -138,12 +148,12 @@ test.describe("ứng dụng nội bộ", () => {
     await adj.getByLabel("Giờ").fill("17:00");
     await adj.getByLabel("Lý do (bắt buộc)").fill("Quên bấm ra ca, có tổ trưởng xác nhận");
     await adj.getByRole("button", { name: "Gửi đề nghị" }).click();
-    await expect(page.getByRole("status").first()).toContainText("Đã gửi đơn");
+    await expect(adj.getByRole("status")).toContainText("Đã gửi đơn");
     await expectAccessible(page);
     const leave = page.locator("form").filter({ has: page.getByRole("heading", { name: "Xin nghỉ" }) });
     await leave.getByLabel("Ngày").fill("2026-12-01");
     await leave.getByRole("button", { name: "Gửi đơn nghỉ" }).click();
-    await expect(page.getByRole("status").first()).toContainText("Đã gửi đơn");
+    await expect(leave.getByRole("status")).toContainText("Đã gửi đơn");
     await logout(page);
     await login(page, "tl");
     await page.goto("/app/approvals");
@@ -152,6 +162,8 @@ test.describe("ứng dụng nội bộ", () => {
     await adjItem.getByRole("button", { name: "Duyệt" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: "Sửa công" })).toHaveCount(0);
     const leaveItem = page.getByRole("listitem").filter({ hasText: "Nghỉ phép" });
+    // AUD-A11Y-002: mục đã xử lý biến mất → focus sang mục kế, không rơi về <body>.
+    await expect(leaveItem.getByRole("button", { name: "Duyệt" })).toBeFocused();
     await leaveItem.getByRole("button", { name: "Từ chối" }).click();
     // UX-STATE-008 + FE-FORM-002: hộp thoại nêu đối tượng; Esc = huỷ (đơn còn nguyên); lý do bắt buộc.
     const dialog = page.getByRole("dialog", { name: "Từ chối đơn?" });
@@ -167,6 +179,7 @@ test.describe("ứng dụng nội bộ", () => {
     await reason.fill("Trùng lịch kiểm tra công trình");
     await dialog.getByRole("button", { name: "Từ chối đơn" }).click();
     await expect(page.getByText("Không có đơn chờ bạn duyệt.")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeFocused(); // hết mục → về tiêu đề trang
     await expectAccessible(page);
     await logout(page);
   });
@@ -184,7 +197,7 @@ test.describe("ứng dụng nội bộ", () => {
     await ot.getByLabel("Lý do").fill("Hoàn thiện hạng mục gấp");
     await ot.getByRole("checkbox").check();
     await ot.getByRole("button", { name: "Gửi đơn OT" }).dblclick();
-    await expect(page.getByRole("status").first()).toContainText("Đã gửi đơn");
+    await expect(ot.getByRole("status")).toContainText("Đã gửi đơn");
     expect(sent).toHaveLength(1);
     expect(sent[0]!.key).toMatch(/^[0-9a-f-]{16,}$/);
   });
@@ -236,12 +249,70 @@ test.describe("lỗi máy chủ (UX-STATE-005)", () => {
     await ot.getByLabel("Lý do").fill("Hoàn thiện hạng mục gấp");
     await ot.getByRole("checkbox").check();
     await ot.getByRole("button", { name: "Gửi đơn OT" }).click();
-    const status = page.getByRole("status").first();
+    const status = ot.getByRole("status");
     await expect(status).toContainText("Lỗi hệ thống");
     await expect(status).not.toContainText(/(Error:|at .*\.js|SELECT|Exception|TypeError)/);
     await ot.getByRole("button", { name: "Gửi đơn OT" }).click();
     await expect(status).toContainText("Đã gửi đơn");
     expect(keys[1]).toBe(keys[0]);
+    await logout(page);
+  });
+});
+
+test.describe("focus và thông báo sau thao tác bất đồng bộ (AUD-A11Y-003..005)", () => {
+  test("A11Y-003: gửi form nghỉ rỗng nhiều lần → ô ngày đầu tiên luôn nhận focus", async ({ page }) => {
+    await login(page, "nv2");
+    await page.goto("/app/attendance");
+    const leave = page.locator("form").filter({ has: page.getByRole("heading", { name: "Xin nghỉ" }) });
+    for (let i = 0; i < 4; i++) {
+      await leave.getByRole("button", { name: "Gửi đơn nghỉ" }).click();
+      await expect(leave.getByLabel("Ngày")).toBeFocused();
+      await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+    }
+    await logout(page);
+  });
+
+  test.describe("ở 320 px", () => {
+    test.use({ viewport: { width: 320, height: 800 } });
+
+    test("A11Y-004: thông báo nằm cạnh form vừa gửi, trong khung nhìn; form khác không bị khoá", async ({
+      page,
+    }) => {
+      await login(page, "nv2");
+      await page.goto("/app/attendance");
+      const adj = page
+        .locator("form")
+        .filter({ has: page.getByRole("heading", { name: "Đề nghị sửa công (quên chấm)" }) });
+      const ot = page.locator("form").filter({ has: page.getByRole("heading", { name: "Làm thêm giờ" }) });
+      // Trễ phản hồi để thấy form kia KHÔNG bị khoá trong lúc form này đang gửi.
+      await page.route("**/api/app/adjustments", async (route) => {
+        await new Promise((r) => setTimeout(r, 800));
+        await route.continue();
+      });
+      await adj.getByLabel("Ngày").fill("2026-10-02");
+      await adj.getByLabel("Giờ").fill("17:00");
+      await adj.getByLabel("Lý do (bắt buộc)").fill("Quên bấm ra ca, có tổ trưởng xác nhận");
+      await adj.getByRole("button", { name: "Gửi đề nghị" }).click();
+      await expect(adj.getByRole("button", { name: /Gửi đề nghị/ })).toBeDisabled();
+      await expect(ot.getByRole("button", { name: "Gửi đơn OT" })).toBeEnabled();
+      await expect(adj.getByRole("status")).toContainText("Đã gửi đơn");
+      await expect(adj.getByRole("status")).toBeInViewport();
+      await expect(ot.getByRole("status")).toBeEmpty();
+      await logout(page);
+    });
+  });
+
+  test("A11Y-005: mọi ô bắt buộc của form đơn có '(bắt buộc)' trong nhãn", async ({ page }) => {
+    await login(page, "nv2");
+    await page.goto("/app/attendance");
+    await expect(page.getByRole("heading", { name: "Xin nghỉ" })).toBeVisible();
+    const bad = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLInputElement>("main [required]")]
+        .filter((el) => !/\(bắt buộc\)/.test([...(el.labels ?? [])].map((l) => l.textContent).join(" ")))
+        .map((el) => el.name),
+    );
+    expect(bad).toEqual([]);
+    expect(await page.locator("main [required]").count()).toBeGreaterThanOrEqual(8);
     await logout(page);
   });
 });

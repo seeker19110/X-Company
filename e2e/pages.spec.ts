@@ -46,6 +46,41 @@ test.describe("mọi trang ở 320 px (UX-RESP-001, UX-A11Y-001)", () => {
   });
 });
 
+test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
+  test("404: đúng một landmark <main> (không lồng)", async ({ page }) => {
+    const res = await page.goto("/khong-co");
+    expect(res?.status()).toBe(404);
+    await expect(page.locator("main")).toHaveCount(1);
+  });
+
+  test.describe("ở 320 px", () => {
+    test.use({ viewport: NARROW });
+
+    // WCAG 2.4.11 (AA, 2.2): ô đang focus không bị thanh điều hướng cố định ở đáy che hoàn toàn.
+    test("Tab qua mọi ô của /app/attendance: ô nhận focus không nằm dưới `.app-nav`", async ({ page }) => {
+      await login(page, "nv2");
+      await page.goto("/app/attendance");
+      const covered: string[] = [];
+      for (let i = 0; i < 60; i++) {
+        await page.keyboard.press("Tab");
+        const hit = await page.evaluate(() => {
+          const el = document.activeElement;
+          const nav = document.querySelector(".app-nav");
+          if (!el || !nav || nav.contains(el) || el === document.body) return null;
+          const r = el.getBoundingClientRect();
+          const top = nav.getBoundingClientRect().top;
+          return r.bottom > top
+            ? `${el.tagName} ${el.getAttribute("name") ?? ""} bottom=${r.bottom} navTop=${top}`
+            : null;
+        });
+        if (hit) covered.push(hit);
+      }
+      expect(covered).toEqual([]);
+      await logout(page);
+    });
+  });
+});
+
 /** Tab tới khi `target` nhận focus (tối đa `max` lần); đỏ nếu không tới được bằng bàn phím. */
 async function tabTo(page: Page, target: Locator, max = 40) {
   for (let i = 0; i < max; i++) {

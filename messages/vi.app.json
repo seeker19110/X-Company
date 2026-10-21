@@ -49,6 +49,7 @@
     "cancelled": "Đã huỷ đăng xuất — dữ liệu chưa gửi vẫn còn trên thiết bị."
   },
   "requests": {
+    "required": "{label} (bắt buộc)",
     "sent": "Đã gửi đơn, chờ duyệt.",
     "date": "Ngày",
     "reason": "Lý do",

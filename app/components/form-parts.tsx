@@ -1,6 +1,6 @@
 // Thành phần biểu mẫu dùng chung: lỗi theo từng ô (aria-invalid + aria-describedby → phần tử lỗi), nút gửi khoá khi đang gửi.
 // Logic thuần (zod issues → lỗi theo ô) tách khỏi JSX để test không cần trình duyệt (FE-FORM-002, FE-TEST-001).
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 export type FieldErrors = Record<string, string>;
 export interface Issue {
@@ -71,7 +71,13 @@ export function SubmitButton({
   );
 }
 
-/** Đưa focus vào ô lỗi đầu tiên của form sau khi render lại. */
-export function focusFirstInvalid(form: HTMLFormElement): void {
-  window.requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+/** Đưa focus vào ô lỗi đầu tiên của form SAU KHI React đã commit lỗi: gọi cùng lượt với setState lỗi → focus chạy trong
+ *  effect (không đua với commit như requestAnimationFrame trước đây — AUD-A11Y-003). */
+export function useFocusFirstInvalid(): (form: HTMLFormElement) => void {
+  const [req, setReq] = useState<{ form: HTMLFormElement } | null>(null);
+  useEffect(() => {
+    req?.form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [req]);
+  // Đối tượng mới mỗi lần → effect chạy lại kể cả khi gửi lần nữa vẫn lỗi cùng ô.
+  return useCallback((form) => setReq({ form }), []);
 }

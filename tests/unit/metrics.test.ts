@@ -11,6 +11,7 @@ import {
   ROUTE_PATTERNS,
   UNMATCHED_ROUTE,
   bearerMatches,
+  countSyncItemError,
   observeRequest,
   readOutboxDead,
   renderMetrics,
@@ -158,6 +159,15 @@ describe("histogram http_server_request_duration_seconds (exposition Prometheus)
     assert.ok(out.endsWith("\n"));
     assert.doesNotMatch(out, /http_server_request_duration_seconds_(bucket|sum|count)\{/);
     assert.match(out, /^http_server_series_dropped_total 0$/m);
+  });
+
+  test("sync_item_errors_total: 0 ban đầu, tăng theo từng lỗi, resetMetrics đưa về 0 (AUD-XFEAT-002)", () => {
+    assert.match(renderMetrics(null), /^# TYPE sync_item_errors_total counter\nsync_item_errors_total 0$/m);
+    countSyncItemError();
+    countSyncItemError();
+    assert.match(renderMetrics(null), /^sync_item_errors_total 2$/m);
+    resetMetrics();
+    assert.match(renderMetrics(null), /^sync_item_errors_total 0$/m);
   });
 });
 
