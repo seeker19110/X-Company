@@ -626,7 +626,6 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     h
       .replace(/`/g, "")
       .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-      .replace(/<[^>]+>/g, "")
       .trim()
       .toLowerCase()
       .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, "")
