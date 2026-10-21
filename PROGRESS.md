@@ -1,6 +1,6 @@
 # PROGRESS.md — X-Company
 ## Đang làm
-- 2026-10-21: lát 11 (`docs/autopilot/PLAN-lat-11.md`, D-051/D-052) — sửa 7 mục audit 🟢: T-058 XFEAT-003, T-059 XFEAT-004 xong (PR 1); còn T-060 XFEAT-007 · T-061 XFEAT-005 · T-062 XFEAT-006 · T-063 SEC-004 · T-064 PERF-002.
+- 2026-10-21: lát 11 (`docs/autopilot/PLAN-lat-11.md`, D-051/D-052) — sửa 7 mục audit 🟢: T-058, T-059 (#62 đã merge); T-060 XFEAT-007, T-061 XFEAT-005 (PR 2); còn T-062 XFEAT-006 · T-063 SEC-004 · T-064 PERF-002 (người merge).
 - 2026-10-21: khung 3.12.0 (CI/ruleset tối thiểu, song song tối đa): `quality` nối tiếp 8m02s tách thành typecheck · lint · build · checks · test · coverage chạy cùng lúc, `quality` thành job tổng hợp mọi job (kể cả `dast-probes`, `dep-audit`); ruleset 13 → 4 check (`quality`, `gitleaks`, `merge-gate`, `pr-policy`), không strict — chủ dự án import lại ruleset.
 - Audit 2026-10-19 (`docs/ops/AUDIT-STATUS.md`): 6 đợt đã merge (#40 #41 #44 #49 #50 #53 #54 #55 #56) — 🟠 12 đã sửa, 4 mở (SEC-002, DOC-001, DOC-002 chờ người quyết; CFG-001 chờ người thêm khoá); 🟢 21 đã sửa, 19 mở.
 - `GO-NO-GO.md` = NO-GO production; MUST đạt 309 · miễn 73 · chưa 91 (chờ người/hạ tầng thật). Chưa có pháp nhân: hệ thống chỉ chạy dữ liệu mẫu (DPIA mục 0b, D-043).
