@@ -97,63 +97,68 @@ test.describe("ứng dụng nội bộ", () => {
     await logout(page);
   });
 
-  test("AT09: nhân viên làm và gửi nghiệm thu; trưởng nhóm nghiệm thu @smoke", async ({ page }) => {
-    await login(page, "nv");
-    await page.goto("/app/tasks");
-    const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
-    // Thao tác thất bại → focus về nút vừa bấm, không rơi về <body> (review PR #50).
-    await page.route(
-      "**/api/app/tasks/*/start",
-      (route) =>
-        route.fulfill({
-          status: 409,
-          contentType: "application/problem+json",
-          body: JSON.stringify({ status: 409, code: "CONFLICT", title: "Xung đột", detail: "Thử lại" }),
-        }),
-      { times: 1 },
-    );
-    await item.getByRole("button", { name: "Bắt đầu" }).click();
-    await expect(item.getByRole("alert")).toBeVisible();
-    await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeFocused();
-    await item.getByRole("button", { name: "Bắt đầu" }).click();
-    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
-    // AUD-A11Y-002: báo bị chặn rồi tiếp tục → mỗi lần bộ nút đổi, focus ở KHỐI của việc (không rơi về <body>, và không đặt lên
-    // nút thao tác: Enter lần nữa không được vô tình "Gửi nghiệm thu" — review PR #50).
-    await item.getByRole("button", { name: "Báo bị chặn" }).click();
-    const blockDialog = page.getByRole("dialog", { name: "Báo việc bị chặn?" });
-    await blockDialog.getByLabel("Lý do").fill("Chờ vật tư về");
-    await blockDialog.getByRole("button", { name: "Báo bị chặn" }).click();
-    await expect(item.getByRole("button", { name: "Tiếp tục" })).toBeVisible();
-    await expect(item).toBeFocused();
-    await item.getByRole("button", { name: "Tiếp tục" }).click();
-    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
-    await expect(item).toBeFocused();
-    await page.keyboard.press("Enter"); // focus ở khối việc, không phải nút → không gửi nghiệm thu
-    await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeEnabled();
-    await expect(item).not.toContainText("Chờ nghiệm thu");
-    await item.getByRole("button", { name: "Gửi nghiệm thu" }).click();
-    // Người làm vẫn thấy việc, ở trạng thái chờ nghiệm thu, không còn nút thao tác.
-    await expect(item).toContainText("Chờ nghiệm thu");
-    await expect(item.getByRole("button")).toHaveCount(0);
-    await expectAccessible(page);
-    await logout(page);
-    await login(page, "tl");
-    await page.goto("/app/tasks");
-    const r = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
-    await expect(r).toContainText("bạn nghiệm thu");
-    await r.getByRole("button", { name: "Nghiệm thu" }).click();
-    // UX-STATE-008: hộp thoại nêu tên việc; Esc đóng mà không nghiệm thu; nút ghi đúng động từ.
-    const dialog = page.getByRole("dialog", { name: "Nghiệm thu việc?" });
-    await expect(dialog).toContainText("Lắp đặt tủ điện tầng 3");
-    await expectAccessible(page);
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    await expect(r).toBeVisible();
-    await r.getByRole("button", { name: "Nghiệm thu" }).click();
-    await dialog.getByRole("button", { name: "Nghiệm thu việc" }).click();
-    await expect(page.getByText("Lắp đặt tủ điện tầng 3")).toHaveCount(0);
-    await expectAccessible(page);
-    await logout(page);
+  test.describe("nghiệm thu (mock 409 lúc bắt đầu)", () => {
+    // Mock bằng page.route: SW đã giành trang thì request đi qua SW, mock bị trượt (check:tests bắt buộc).
+    test.use({ serviceWorkers: "block" });
+
+    test("AT09: nhân viên làm và gửi nghiệm thu; trưởng nhóm nghiệm thu @smoke", async ({ page }) => {
+      await login(page, "nv");
+      await page.goto("/app/tasks");
+      const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
+      // Thao tác thất bại → focus về nút vừa bấm, không rơi về <body> (review PR #50).
+      await page.route(
+        "**/api/app/tasks/*/start",
+        (route) =>
+          route.fulfill({
+            status: 409,
+            contentType: "application/problem+json",
+            body: JSON.stringify({ status: 409, code: "CONFLICT", title: "Xung đột", detail: "Thử lại" }),
+          }),
+        { times: 1 },
+      );
+      await item.getByRole("button", { name: "Bắt đầu" }).click();
+      await expect(item.getByRole("alert")).toBeVisible();
+      await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeFocused();
+      await item.getByRole("button", { name: "Bắt đầu" }).click();
+      await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
+      // AUD-A11Y-002: báo bị chặn rồi tiếp tục → mỗi lần bộ nút đổi, focus ở KHỐI của việc (không rơi về <body>, và không đặt lên
+      // nút thao tác: Enter lần nữa không được vô tình "Gửi nghiệm thu" — review PR #50).
+      await item.getByRole("button", { name: "Báo bị chặn" }).click();
+      const blockDialog = page.getByRole("dialog", { name: "Báo việc bị chặn?" });
+      await blockDialog.getByLabel("Lý do").fill("Chờ vật tư về");
+      await blockDialog.getByRole("button", { name: "Báo bị chặn" }).click();
+      await expect(item.getByRole("button", { name: "Tiếp tục" })).toBeVisible();
+      await expect(item).toBeFocused();
+      await item.getByRole("button", { name: "Tiếp tục" }).click();
+      await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeVisible();
+      await expect(item).toBeFocused();
+      await page.keyboard.press("Enter"); // focus ở khối việc, không phải nút → không gửi nghiệm thu
+      await expect(item.getByRole("button", { name: "Gửi nghiệm thu" })).toBeEnabled();
+      await expect(item).not.toContainText("Chờ nghiệm thu");
+      await item.getByRole("button", { name: "Gửi nghiệm thu" }).click();
+      // Người làm vẫn thấy việc, ở trạng thái chờ nghiệm thu, không còn nút thao tác.
+      await expect(item).toContainText("Chờ nghiệm thu");
+      await expect(item.getByRole("button")).toHaveCount(0);
+      await expectAccessible(page);
+      await logout(page);
+      await login(page, "tl");
+      await page.goto("/app/tasks");
+      const r = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
+      await expect(r).toContainText("bạn nghiệm thu");
+      await r.getByRole("button", { name: "Nghiệm thu" }).click();
+      // UX-STATE-008: hộp thoại nêu tên việc; Esc đóng mà không nghiệm thu; nút ghi đúng động từ.
+      const dialog = page.getByRole("dialog", { name: "Nghiệm thu việc?" });
+      await expect(dialog).toContainText("Lắp đặt tủ điện tầng 3");
+      await expectAccessible(page);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(r).toBeVisible();
+      await r.getByRole("button", { name: "Nghiệm thu" }).click();
+      await dialog.getByRole("button", { name: "Nghiệm thu việc" }).click();
+      await expect(page.getByText("Lắp đặt tủ điện tầng 3")).toHaveCount(0);
+      await expectAccessible(page);
+      await logout(page);
+    });
   });
 
   test("AT06/AT07: đề nghị sửa công và đơn nghỉ → trưởng nhóm thấy trong hộp duyệt, duyệt và từ chối có lý do @smoke", async ({
@@ -297,7 +302,8 @@ test.describe("focus và thông báo sau thao tác bất đồng bộ (AUD-A11Y-
   });
 
   test.describe("ở 320 px", () => {
-    test.use({ viewport: { width: 320, height: 800 } });
+    // Trễ phản hồi bằng page.route: chặn SW để request không đi vòng qua SW (check:tests bắt buộc).
+    test.use({ viewport: { width: 320, height: 800 }, serviceWorkers: "block" });
 
     test("A11Y-004: thông báo nằm cạnh form vừa gửi, trong khung nhìn; form khác không bị khoá", async ({
       page,
