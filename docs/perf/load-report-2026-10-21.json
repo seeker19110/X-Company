@@ -1,0 +1,232 @@
+{
+  "label": "faithful-fixture",
+  "qa_perf_006": {
+    "commit": "0c553b416c97df67cdbb56b6585fa65e144b7719",
+    "environment": "máy dev (Linux 6.18.44-fc-v140 x64); Node v22.22.0; Next 16.4.2 `next start` bản build production; psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1); app chạy bằng role không superuser; DB_POOL_MAX=10 (mặc định)",
+    "device_network": "4 x Intel(R) Xeon(R) Processor @ 2.10GHz, 16 GiB RAM; bộ phát tải cùng máy; mạng loopback 127.0.0.1 (không mô phỏng băng thông/độ trễ)",
+    "load": "16 kết nối keep-alive (ghi: 8), 12 s đo + 3 s khởi động mỗi kịch bản (OT: 120 request cố định); dữ liệu seed e2e + 1500 liên hệ; chốt 3 kỳ × 200 nhân viên × 31 ngày",
+    "date": "2026-10-21"
+  },
+  "dbConnectionsMax": 10,
+  "dbConnectionBudget": 12,
+  "scenarios": [
+    {
+      "name": "Trang công khai (/, /dich-vu, /lien-he, /dich-vu/tu-van-thiet-ke)",
+      "connections": 16,
+      "budget": {
+        "p95Ms": 400,
+        "maxErrorRate": 0.01,
+        "why": "trang SSR công khai: p95 ≤ 400 ms ở 16 kết nối trên 4 nhân dùng chung với bộ phát tải (mục tiêu LCP ≤ 2,5 s cần TTFB ≪ 1 s)."
+      },
+      "summary": {
+        "samples": 2037,
+        "ok": 2037,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 169.3,
+        "p50": 93.1,
+        "p95": 115.4,
+        "p99": 154.1,
+        "max": 180.4,
+        "avg": 94,
+        "byStatus": {
+          "200": 2037
+        }
+      },
+      "dbConnMax": 10,
+      "violations": []
+    },
+    {
+      "name": "GET /api/readyz",
+      "connections": 16,
+      "budget": {
+        "p95Ms": 150,
+        "maxErrorRate": 0.01,
+        "why": "readyz chỉ `SELECT 1`: p95 ≤ 150 ms; sai lệch lớn nghĩa là hàng đợi pool/CPU quá tải."
+      },
+      "summary": {
+        "samples": 9976,
+        "ok": 9976,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 829.7,
+        "p50": 18.1,
+        "p95": 29,
+        "p99": 36.1,
+        "max": 76.8,
+        "avg": 19.2,
+        "byStatus": {
+          "200": 9976
+        }
+      },
+      "dbConnMax": 10,
+      "violations": []
+    },
+    {
+      "name": "Nhân viên đọc (today, tasks, approvals)",
+      "connections": 16,
+      "budget": {
+        "p95Ms": 500,
+        "maxErrorRate": 0.01,
+        "why": "đọc khu nội bộ (SSR hôm nay + API việc/duyệt): p95 ≤ 500 ms ở 16 kết nối."
+      },
+      "summary": {
+        "samples": 2279,
+        "ok": 2279,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 189.5,
+        "p50": 85,
+        "p95": 153.8,
+        "p99": 202.6,
+        "max": 278.6,
+        "avg": 84,
+        "byStatus": {
+          "200": 2279
+        }
+      },
+      "dbConnMax": 10,
+      "violations": []
+    },
+    {
+      "name": "Ghi chấm công (POST /api/app/attendance/events)",
+      "connections": 8,
+      "budget": {
+        "p95Ms": 1000,
+        "maxErrorRate": 0.01,
+        "why": "SLO-2 (docs/ops/SLO.md): ghi chấm công p95 < 1 s — dùng NGUYÊN ngưỡng SLO, không nới cho máy dev."
+      },
+      "summary": {
+        "samples": 2846,
+        "ok": 2846,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 236.8,
+        "p50": 32.5,
+        "p95": 44.6,
+        "p99": 54,
+        "max": 112.5,
+        "avg": 33.6,
+        "byStatus": {
+          "201": 2846
+        }
+      },
+      "dbConnMax": 10,
+      "violations": []
+    },
+    {
+      "name": "Tạo đơn OT có Idempotency-Key (POST /api/app/ot-requests)",
+      "connections": 8,
+      "budget": {
+        "p95Ms": 1000,
+        "maxErrorRate": 0.01,
+        "why": "ghi nghiệp vụ có Idempotency-Key + kiểm hạn mức OT: dùng cùng ngưỡng p95 < 1 s của SLO ghi chấm công."
+      },
+      "summary": {
+        "samples": 120,
+        "ok": 120,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 228.6,
+        "p50": 32.4,
+        "p95": 49.5,
+        "p99": 62.8,
+        "max": 68.4,
+        "avg": 34.5,
+        "byStatus": {
+          "201": 120
+        }
+      },
+      "dbConnMax": 8,
+      "violations": []
+    },
+    {
+      "name": "Phát lại Idempotency-Key (POST /api/app/ot-requests)",
+      "connections": 8,
+      "budget": {
+        "p95Ms": 500,
+        "maxErrorRate": 0.01,
+        "why": "phát lại Idempotency-Key (đọc bản ghi đã lưu): p95 ≤ 500 ms."
+      },
+      "summary": {
+        "samples": 4468,
+        "ok": 4468,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 372.1,
+        "p50": 20.9,
+        "p95": 27.2,
+        "p99": 33.8,
+        "max": 131,
+        "avg": 21.4,
+        "byStatus": {
+          "201": 4468
+        }
+      },
+      "dbConnMax": 8,
+      "violations": []
+    },
+    {
+      "name": "Danh sách phân trang (tasks, inquiries ≥ 1 500 hàng)",
+      "connections": 16,
+      "budget": {
+        "p95Ms": 500,
+        "maxErrorRate": 0.01,
+        "why": "danh sách phân trang (limit 50–200, offset lệch) trên ≥ 1 500 hàng: p95 ≤ 500 ms."
+      },
+      "summary": {
+        "samples": 3781,
+        "ok": 3781,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 314.4,
+        "p50": 49.7,
+        "p95": 68.6,
+        "p99": 82.6,
+        "max": 126.8,
+        "avg": 50.7,
+        "byStatus": {
+          "200": 3781
+        }
+      },
+      "dbConnMax": 10,
+      "violations": []
+    },
+    {
+      "name": "Chốt kỳ công 200 nhân viên × 31 ngày (lockPeriod)",
+      "connections": 1,
+      "budget": {
+        "p95Ms": 10000,
+        "maxErrorRate": 0,
+        "maxQueries": 50,
+        "why": "chốt kỳ 200 nhân viên × 31 ngày trong MỘT giao dịch giữ khoá kỳ: mỗi lần ≤ 10 s (một phần ba statement_timeout 30 s của role ứng dụng, migration 0018 — còn dư khi dữ liệu lớn gấp ba) và ≤ 50 câu SQL (gom lô, không một INSERT mỗi dòng — AUD-PERF-001); không lần nào lỗi, đủ dòng."
+      },
+      "summary": {
+        "samples": 3,
+        "ok": 3,
+        "errors": 0,
+        "errorRate": 0,
+        "rps": 0.2,
+        "p50": 4213,
+        "p95": 4352,
+        "p99": 4352,
+        "max": 4352,
+        "avg": 4192.7,
+        "byStatus": {
+          "200": 3
+        }
+      },
+      "dbConnMax": null,
+      "violations": []
+    }
+  ],
+  "notProven": [
+    "Core Web Vitals p75 và INP thực địa (RUM/CrUX) — cần người dùng thật trên production (FE-PERF-001, PRF-WEB-005).",
+    "Mạng thật: đo qua loopback cùng máy, không có độ trễ/mất gói/TLS/CDN; số p95 trên mạng di động sẽ cao hơn.",
+    "Tải đa máy/đa instance, autoscale, và hành vi khi Postgres ở máy khác (độ trễ mạng DB).",
+    "Độ bền dài (soak ≥ 30 phút), spike đột ngột, rò bộ nhớ/kết nối theo thời gian (QA-PERF-011/012).",
+    "Bộ phát tải và máy chủ chia sẻ CPU của một máy 4 nhân: RPS là cận dưới, p99 chịu ảnh hưởng của bộ phát tải.",
+    "Chốt kỳ đồng thời với ghi chấm công/duyệt đơn của cùng công ty (tranh khoá kỳ) — kịch bản chốt kỳ chạy một mình sau các kịch bản HTTP.",
+    "Dữ liệu ở quy mô production (chỉ ~1 500 liên hệ + seed e2e); kế hoạch truy vấn trên dữ liệu lớn xem docs/db/explain/."
+  ]
+}
