@@ -11,7 +11,7 @@ status: đề xuất — chủ dự án chốt
 |---|---|---|
 | Phụ thuộc production | `npm audit --omit=dev --audit-level=moderate` (job `dep-audit`, `.github/workflows/dep-audit.yml`) | mỗi push/PR + lịch tuần (thứ Hai 02:17 UTC) |
 | Cập nhật phụ thuộc | Dependabot (`.github/dependabot.yml`) | tuần |
-| Phụ thuộc production + dev | osv-scanner trên `package-lock.json` (job `osv-scanner`, `.github/workflows/osv-scanner.yml`; ngoại lệ có hạn ở `osv-scanner.toml`, hạn kiểm bởi `scripts/check-osv-exceptions.mjs`) | mỗi push/PR + lịch tuần (thứ Hai 02:37 UTC) |
+| Phụ thuộc production + dev | osv-scanner trên `package-lock.json` (PR: bước trong job `gate` của `ci.yml`, chặn qua `quality`; push `main` và lịch: `.github/workflows/osv-scanner.yml`; ngoại lệ có hạn ở `osv-scanner.toml`, hạn kiểm bởi `scripts/check-osv-exceptions.mjs`) | mỗi push/PR + lịch tuần (thứ Hai 02:37 UTC) |
 | Mã nguồn (SAST) | CodeQL javascript-typescript, `security-extended` (`.github/workflows/codeql.yml`) | mỗi PR + lịch tuần (thứ Ba) |
 | Bí mật | gitleaks trên push/PR (`secret-scan.yml`) + toàn lịch sử (job `gitleaks-history`, `maintenance.yml`) | mỗi push/PR; lịch tuần |
 | License | `scripts/check-licenses.mjs` + `license-policy.yaml` (job `supply-chain`, `ci.yml`) | mỗi push/PR |

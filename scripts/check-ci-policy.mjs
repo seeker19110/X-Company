@@ -50,9 +50,12 @@ need(
   read(".github/workflows/pr-policy.yml").includes("node scripts/pr-policy.mjs"),
   "WF-REVIEW-002: workflow pr-policy",
 );
-// Khung 3.12.0 (D-116): ruleset tối thiểu — `quality` gom mọi job của ci.yml; `pr-policy` đứng riêng vì chạy lại khi sửa mô tả PR.
-for (const c of ["quality", "gitleaks", "merge-gate", "pr-policy"])
-  need(contexts.includes(c), `WF-CI-001: ruleset thiếu required check ${c}`);
+// Khung 3.13 (ADR-0039, D-127): ruleset chỉ `quality` (gom mọi job của ci.yml) và `gitleaks`.
+const REQUIRED = ["gitleaks", "quality"];
+need(
+  JSON.stringify([...contexts].sort()) === JSON.stringify(REQUIRED),
+  `WF-CI-001: ruleset phải đòi đúng ${REQUIRED.join(" + ")} (ADR-0039), đang là ${JSON.stringify(contexts)}`,
+);
 need(
   !ruleset.rules.some(
     (r) => r.type === "required_status_checks" && r.parameters.strict_required_status_checks_policy,
@@ -64,7 +67,7 @@ const jobsBlock = ci.split(/^jobs:\n/m)[1] ?? "";
 const ciJobs = [...jobsBlock.matchAll(/^ {2}([a-z0-9_-]+):\n/gm)]
   .map((m) => m[1])
   .filter((j) => j !== "quality");
-need(ciJobs.length > 5, "WF-CI-001: không đọc được danh sách job của ci.yml");
+need(ciJobs.length >= 2, "WF-CI-001: không đọc được danh sách job của ci.yml");
 for (const j of ciJobs)
   need(
     qualityNeeds
@@ -74,8 +77,23 @@ for (const j of ciJobs)
     `WF-CI-001: job ${j} của ci.yml không nằm trong quality.needs`,
   );
 need(/^ {4}if: \$\{\{ always\(\) \}\}$/m.test(ci), "WF-CI-001: quality chạy if: always()");
+// D-128: song song tối đa trong số job tối thiểu — job của ci.yml chạy ngay, không `needs` (trừ job tổng hợp `quality`).
+for (const m of jobsBlock.matchAll(/^ {2}([a-z0-9_-]+):\n((?: {4}.*\n|\n| {2}#.*\n)*)/gm))
+  if (m[1] !== "quality")
+    need(
+      !/^ {4}needs:/m.test(m[2]),
+      `D-128: job ${m[1]} của ci.yml có needs — chỉ quality được chờ job khác`,
+    );
 // AUD-CI-001: job chạy trên PR mà không chặn merge thì PR làm đỏ nó vẫn merge được. Job của ci.yml đã gom vào `quality`
-// (kiểm ở trên); job của workflow KHÁC có trigger pull_request/pull_request_target phải là required check của ruleset.
+// (kiểm ở trên); job của workflow KHÁC có trigger pull_request/pull_request_target phải là required check của ruleset —
+// trừ danh sách ĐÓNG dưới đây: CHẠY trên PR nhưng KHÔNG chặn merge (ADR-0039, D-128 — ruleset chỉ quality + gitleaks).
+// OSV-Scanner không ở đây: trên PR nó là bước của `gate` (chặn qua `quality`); osv-scanner.yml chỉ còn push main + lịch.
+// Thêm workflow PR mới: gộp job vào ci.yml (`quality.needs`) — không thêm vào danh sách này nếu không có ADR/D-NNN.
+const PR_ADVISORY = new Map([
+  ["pr-policy", "pr-policy.yml chạy lại khi sửa mô tả PR (`edited`) — không gộp được vào ci.yml (ADR-0039)"],
+  ["codeql", "CodeQL cần security-events: write, kết quả ở Code scanning (ADR-0039)"],
+  ["merge-gate", "stub tạm luôn xanh (D-122, ADR-0036) — giữ context cho ruleset sống cũ"],
+]);
 for (const f of readdirSync(".github/workflows").filter((x) => /\.ya?ml$/.test(x) && x !== "ci.yml")) {
   const txt = read(`.github/workflows/${f}`);
   // `on:` dạng khối (`on:\n  pull_request:`) hoặc một dòng (`on: pull_request`, `on: [push, pull_request]`).
@@ -85,7 +103,7 @@ for (const f of readdirSync(".github/workflows").filter((x) => /\.ya?ml$/.test(x
   for (const m of jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\n((?: {4}.*\n|\n)*)/gm)) {
     const name = /^ {4}name:\s*["']?(.+?)["']?\s*$/m.exec(m[2])?.[1] ?? m[1];
     need(
-      contexts.includes(name),
+      contexts.includes(name) || PR_ADVISORY.has(name),
       `AUD-CI-001: job "${name}" (${f}) chạy trên PR nhưng không là required check của ruleset`,
     );
   }

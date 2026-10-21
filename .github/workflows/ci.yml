@@ -14,118 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Khung 3.12.0 (ADR-0034, WF-CI-024/025): job `quality` cũ chạy nối tiếp 8m02s (đường găng của CI) — typecheck+lint chạy hai
-  # lần (bước riêng + trong `dev-task.sh gate`), rồi coverage chạy lại cả bộ test. Tách thành job chạy CÙNG LÚC, mỗi job đúng
-  # lệnh của xt.yaml qua dev-task.sh; `quality` nay là job TỔNG HỢP (cuối file) `needs` mọi job — required check duy nhất của
-  # ci.yml. Test không đọc sản phẩm build (`.next`) nên tách build/test không làm test nào tự bỏ qua.
-  typecheck:
-    name: typecheck
+  # Khung 3.13 (ADR-0039, D-127, D-128): ÍT JOB NHẤT mà không bỏ kiểm nào, SONG SONG TỐI ĐA trong số job đó. Fan-out "mỗi
+  # kiểm một job" (3.12.0, ADR-0034) làm 17 job xếp hàng dưới trần job đồng thời của tài khoản (e2e chờ runner 6 phút).
+  # Nay: `gate` gom mọi kiểm ngắn (một lần cài phụ thuộc, đúng lệnh cũ, chạy nền song song theo phụ thuộc thật); `test`
+  # chạy bộ test MỘT lần dưới c8 (coverage); job dài cần Postgres + bản build production đứng riêng (e2e, dast,
+  # lighthouse, readme-smoke) hoặc gộp khi tổng ngắn (`drills`). Không job nào `needs` job khác trừ `quality` (cuối
+  # file), job tổng hợp — cùng `gitleaks` là required check duy nhất của ruleset.
+  gate:
+    name: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
-      - name: typecheck — đúng lệnh trong xt.yaml
-        run: .xtemplates/scripts/dev-task.sh typecheck
-
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
-      - name: lint (gồm format:check) — đúng lệnh trong xt.yaml
-        run: .xtemplates/scripts/dev-task.sh lint
-
-  build:
-    name: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
-      - name: build — đúng lệnh trong xt.yaml
-        run: .xtemplates/scripts/dev-task.sh build
-
-  # Kiểm tĩnh của dự án và khung (nhanh, cần lịch sử để so với nhánh gốc).
-  checks:
-    name: checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # check:arch so ADR với nhánh gốc; progress-check cần SHA bàn giao
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
-      - name: Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
-        run: npm run -s check:arch
-      - name: Migration append-only, không thao tác phá vỡ (DB-MIG-008, OPS-DEPLOY-003)
-        run: npm run -s check:migrations
-      - name: Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
-        run: |
-          npm run -s check:docs
-          npm run -s check:repo-docs
-      - name: PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
-        run: python3 .xtemplates/scripts/xt.py progress-check
-      - name: Khung — PLAN/blueprint/CI hợp lệ
-        run: |
-          python3 .xtemplates/scripts/xt.py ci-check .github/workflows
-          set -o pipefail
-          # AUD-HAR-001: không --strict thì luôn exit 0 (MUST còn mở là hợp lệ) → tự đỏ khi miễn trừ thiếu lý do/dòng hỏng.
-          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print("blueprint: bad_waivers", d["bad_waivers"], "bad_lines", d["bad_lines"]); sys.exit(1 if d["bad_waivers"] or d["bad_lines"] else 0)'
-
-  # `test` và `coverage` chạy cùng bộ test (coverage dưới c8) song song với nhau: `test` là đúng lệnh `test` của xt.yaml
-  # (WF-CI-002), `coverage` giữ ngưỡng baseline (QA-COV-002). Cả hai cần Postgres 17 + client 17 + OpenBao/restic thật.
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    services:
-      postgres:
-        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: xc_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
-    env:
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
-      NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
           persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -133,22 +37,132 @@ jobs:
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
-      # pg_dump phải cùng bản chính với máy chủ Postgres 17 của service (test sao lưu/khôi phục, mã hoá, cảnh báo):
-      # bản trong image runner cũ hơn → "server version mismatch". Cài client 17 từ kho PGDG chính thức.
-      - name: Cài postgresql-client-17 (khớp máy chủ)
+      # Bước GHI tệp đã commit đứng riêng, TRƯỚC khi chạy song song: `check:supply-chain` (so notices) và `prettier --check`
+      # (lint) đọc tệp này — ghi lúc chúng đang đọc là đỏ ngẫu nhiên.
+      - name: Sinh lại THIRD_PARTY_NOTICES.md và so với bản commit (CMP-LIC-001)
         run: |
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y --no-install-recommends postgresql-client-17
-          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-      # T-052/T-053: test KMS (OpenBao) và off-site (restic) chạy nhị phân THẬT, không skip. Tải bản GHIM phiên bản + sha256 vào .tools/
-      # (scripts/tools/install-tool.mjs; sai sha256 → dừng). Không cache để không thêm action chưa ghim SHA; ~85 MB mỗi lần chạy.
-      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
-        run: node scripts/tools/install-tool.mjs install openbao restic
-      - name: test — đúng lệnh trong xt.yaml
-        run: .xtemplates/scripts/dev-task.sh test
+          node scripts/gen-third-party-notices.mjs
+          git diff --exit-code THIRD_PARTY_NOTICES.md
+      # D-128: các nhóm chạy NỀN cùng lúc, mỗi nhóm một log, chờ từng PID; nhóm nào đỏ thì bước đỏ (sau khi in đủ log).
+      # Phụ thuộc thật: `build` ghi `.next/` + `next-env.d.ts`, mà `typecheck` (tsconfig gồm `.next/types`) và `lint`
+      # (ESLint type-aware `projectService`) đọc → hai nhóm này chạy SAU build (như `dev-task.sh gate`: build → typecheck
+      # → lint). Kiểm tĩnh/chuỗi cung ứng/audit/protection-guard không đọc `.next` (walker bỏ qua `.next`, check:encoding
+      # dùng git ls-files) → chạy cùng lúc với build. SBOM ghi `sbom.cdx.json` (gitignore — prettier bỏ qua).
+      - name: Kiểm song song — build → (typecheck ∥ lint) ∥ kiểm tĩnh ∥ chuỗi cung ứng + SBOM ∥ dep-audit ∥ protection-guard
+        run: |
+          set -uo pipefail
+          L="$RUNNER_TEMP/gate-logs"
+          mkdir -p "$L"
+          declare -A PID
+          fail=0
+          start() { local n="$1"; shift; ( set -euo pipefail; "$@" ) >"$L/$n.log" 2>&1 & PID[$n]=$!; }
+          finish() {
+            local n="$1" r=0
+            wait "${PID[$n]}" || r=$?
+            echo "::group::$n (exit $r)"; cat "$L/$n.log"; echo "::endgroup::"
+            if [ "$r" != 0 ]; then echo "::error::Nhóm $n đỏ (exit $r) — log ở nhóm $n phía trên"; fail=1; fi
+          }
+          g_build() { .xtemplates/scripts/dev-task.sh build; }                # build — đúng lệnh trong xt.yaml
+          g_typecheck() { .xtemplates/scripts/dev-task.sh typecheck; }        # typecheck — đúng lệnh trong xt.yaml
+          g_lint() { .xtemplates/scripts/dev-task.sh lint; }                  # lint (gồm format:check) — đúng lệnh trong xt.yaml
+          g_checks() {
+            # Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
+            npm run -s check:arch
+            # Migration append-only, không thao tác phá vỡ (DB-MIG-008, OPS-DEPLOY-003)
+            npm run -s check:migrations
+            # Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
+            npm run -s check:docs
+            npm run -s check:repo-docs
+            # PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
+            python3 .xtemplates/scripts/xt.py progress-check
+            # Khung — PLAN/blueprint/CI hợp lệ
+            python3 .xtemplates/scripts/xt.py ci-check .github/workflows
+            # AUD-HAR-001: không --strict thì luôn exit 0 (MUST còn mở là hợp lệ) → tự đỏ khi miễn trừ thiếu lý do/dòng hỏng.
+            python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json \
+              | python3 -c 'import json,sys; d=json.load(sys.stdin); print("blueprint: bad_waivers", d["bad_waivers"], "bad_lines", d["bad_lines"]); sys.exit(1 if d["bad_waivers"] or d["bad_lines"] else 0)'
+          }
+          g_supply() {
+            # CMP-LIC-001/002/003, BASE-DEP-005, SEC-SUPPLY-006: license, ngoại lệ OSV còn hạn, notices, nối dây workflow, ci-check.
+            npm run -s check:supply-chain
+            # SBOM CycloneDX (production) và kiểm license ≥ 99% (CMP-LIC-003)
+            node scripts/check-sbom.mjs --out sbom.cdx.json
+          }
+          # Lỗ hổng phụ thuộc production trên mọi PR/push (dep-audit.yml chỉ còn lịch tuần) — đỏ khi ≥ moderate.
+          g_audit() { npm audit --omit=dev --audit-level=moderate; }
+          g_guard() {
+            # WF-GIT-003 (protection-guard): required check trong ruleset ↔ job có thật.
+            jobs=$(python3 - <<'PY'
+          import glob, re
+          names = set()
+          for f in glob.glob(".github/workflows/*.yml"):
+              txt = open(f, encoding="utf-8").read()
+              m = re.search(r"^jobs:\n(.*)", txt, re.S | re.M)
+              if not m: continue
+              for jm in re.finditer(r"^  ([A-Za-z0-9_-]+):\n((?:    .*\n|\n)*)", m.group(1), re.M):
+                  key, body = jm.group(1), jm.group(2)
+                  nm = re.search(r"^    name:\s*(.+?)\s*$", body, re.M)
+                  names.add(nm.group(1).strip('"\'') if nm else key)
+          print("\n".join(sorted(names)))
+          PY
+            )
+            local bad=0
+            for c in $(python3 -c "import json;[print(x['context']) for r in json.load(open('.github/rulesets/main.json'))['rules'] if r['type']=='required_status_checks' for x in r['parameters']['required_status_checks']]"); do
+              grep -qx "$c" <<<"$jobs" || { echo "::error::Required check '$c' không khớp job nào trong .github/workflows/"; bad=1; }
+            done
+            [ "$bad" = 0 ] && echo "OK — mọi required check đều là job có thật."
+            return $bad
+          }
+          start build g_build
+          start checks g_checks
+          start supply-chain g_supply
+          start dep-audit g_audit
+          start protection-guard g_guard
+          finish build
+          # Sau build (kể cả khi build đỏ — vẫn chạy để thấy đủ kết quả như khi còn là job riêng).
+          start typecheck g_typecheck
+          start lint g_lint
+          for n in typecheck lint checks supply-chain dep-audit protection-guard; do finish "$n"; done
+          exit "$fail"
+      - name: Lưu SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90
+      # SEC-SUPPLY-006, BASE-DEP-004: OSV-Scanner trên package-lock.json GỒM phụ thuộc dev — CHẶN PR qua `quality` (D-128;
+      # osv-scanner.yml chỉ còn push main + lịch tuần). Hạn ngoại lệ osv-scanner.toml đã kiểm trong check:supply-chain.
+      # Action container → không chạy nền được trong bước trên; `!cancelled()` để vẫn quét khi bước song song đỏ.
+      - name: Quét lockfile (prod + dev) theo osv-scanner.toml
+        if: ${{ !cancelled() }}
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+        with:
+          scan-args: |-
+            --config=osv-scanner.toml
+            --lockfile=package-lock.json
+      # Bước có token đứng riêng (không đưa GITHUB_TOKEN vào môi trường của script npm ở bước song song).
+      - name: Ruleset trên nhánh mặc định đang hiệu lực? (cảnh báo)
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -uo pipefail
+          rules=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/rules/branches/$BRANCH" || echo "[]")
+          for t in pull_request required_status_checks deletion non_fast_forward; do
+            if ! python3 -c "import json,sys; r=json.loads(sys.argv[1]); sys.exit(0 if any(x.get('type')==sys.argv[2] for x in r) else 1)" "$rules" "$t"; then
+              echo "::warning::Nhánh $BRANCH chưa có rule '$t' — import .github/rulesets/main.json (Settings → Rules → Rulesets → Import)."
+            fi
+          done
+          echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."
 
-  coverage:
-    name: coverage
+  # `test`: chạy bộ test MỘT lần. `npm run -s coverage` (khoá `coverage` của xt.yaml) chạy đúng tập test của khoá `test`
+  # (`node --import tsx --test --test-concurrency=1` cùng glob) dưới c8 — test đỏ thì c8 trả exit ≠ 0 — và giữ ngưỡng
+  # baseline (QA-COV-002). Trước 3.13 `test` và `coverage` là hai job chạy cùng bộ test hai lần. Cần Postgres 17 + client 17
+  # + OpenBao/restic thật.
+  test:
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -193,22 +207,6 @@ jobs:
           path: coverage/
           retention-days: 14
           if-no-files-found: warn
-
-  # Lỗ hổng phụ thuộc production trên mọi PR/push (trước ở dep-audit.yml như required check riêng; dep-audit.yml nay chỉ
-  # còn lịch tuần) — job con của `quality` để ruleset chỉ giữ check tối thiểu (khung 3.12.0, D-116).
-  dep-audit:
-    name: dep-audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
-      - name: Quét lỗ hổng phụ thuộc production (đỏ khi ≥ moderate)
-        run: npm audit --omit=dev --audit-level=moderate
 
   e2e:
     name: e2e
@@ -272,83 +270,6 @@ jobs:
         run: node scripts/tools/install-tool.mjs install openbao restic
       - name: Lệnh trong README (trích tự động, chạy nguyên văn)
         run: node scripts/readme-smoke.mjs
-
-  protection-guard:
-    name: protection-guard
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Required check trong ruleset ↔ job có thật
-        run: |
-          set -euo pipefail
-          jobs=$(python3 - <<'PY'
-          import glob, re
-          names = set()
-          for f in glob.glob(".github/workflows/*.yml"):
-              txt = open(f, encoding="utf-8").read()
-              m = re.search(r"^jobs:\n(.*)", txt, re.S | re.M)
-              if not m: continue
-              for jm in re.finditer(r"^  ([A-Za-z0-9_-]+):\n((?:    .*\n|\n)*)", m.group(1), re.M):
-                  key, body = jm.group(1), jm.group(2)
-                  nm = re.search(r"^    name:\s*(.+?)\s*$", body, re.M)
-                  names.add(nm.group(1).strip('"\'') if nm else key)
-          print("\n".join(sorted(names)))
-          PY
-          )
-          fail=0
-          for c in $(python3 -c "import json;[print(x['context']) for r in json.load(open('.github/rulesets/main.json'))['rules'] if r['type']=='required_status_checks' for x in r['parameters']['required_status_checks']]"); do
-            grep -qx "$c" <<<"$jobs" || { echo "::error::Required check '$c' không khớp job nào trong .github/workflows/"; fail=1; }
-          done
-          [ "$fail" = 0 ] && echo "OK — mọi required check đều là job có thật."
-          exit $fail
-      - name: Ruleset trên nhánh mặc định đang hiệu lực? (cảnh báo)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -uo pipefail
-          rules=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/rules/branches/$BRANCH" || echo "[]")
-          for t in pull_request required_status_checks deletion non_fast_forward; do
-            if ! python3 -c "import json,sys; r=json.loads(sys.argv[1]); sys.exit(0 if any(x.get('type')==sys.argv[2] for x in r) else 1)" "$rules" "$t"; then
-              echo "::warning::Nhánh $BRANCH chưa có rule '$t' — import .github/rulesets/main.json (Settings → Rules → Rulesets → Import)."
-            fi
-          done
-          echo "Đã kiểm ruleset (cảnh báo nếu thiếu)."
-
-  supply-chain:
-    name: supply-chain
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # CMP-LIC-001/002/003, BASE-DEP-005, SEC-SUPPLY-006: license, ngoại lệ OSV còn hạn, SBOM, THIRD_PARTY_NOTICES, nối dây workflow.
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false # AUD-CI-003: không job nào push; không để token trong .git/config
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
-      - name: Cổng chuỗi cung ứng (license, hạn ngoại lệ OSV, notices, workflow, ci-check)
-        run: npm run -s check:supply-chain
-      - name: Sinh lại THIRD_PARTY_NOTICES.md và so với bản commit (CMP-LIC-001)
-        run: |
-          node scripts/gen-third-party-notices.mjs
-          git diff --exit-code THIRD_PARTY_NOTICES.md
-      - name: SBOM CycloneDX (production) và kiểm license ≥ 99% (CMP-LIC-003)
-        run: node scripts/check-sbom.mjs --out sbom.cdx.json
-      - name: Lưu SBOM
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: sbom
-          path: sbom.cdx.json
-          retention-days: 90
 
   lighthouse:
     name: lighthouse
@@ -437,11 +358,18 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  dast-probes:
-    name: dast-probes
+  # `drills`: ba diễn tập ngắn cùng cần Postgres + bản build production (trước là job `dast-probes`, `ops-stack`,
+  # `staging-tls`, mỗi job 1,3–1,7 phút). Mỗi diễn tập migrate + seed + build riêng như khi là job riêng; seed-e2e không
+  # chạy lại được trên cùng CSDL (email cố định) nên ops-stack/staging-tls dùng CSDL riêng tạo trên cùng service. Cổng
+  # app khác nhau (3200/3400/3500). Đỏ ở diễn tập trước không chặn diễn tập sau (`!cancelled()`); job vẫn đỏ.
+  # TUẦN TỰ, không chạy nền song song (D-128, đã đọc script): cả ba ghi rồi đọc cùng tệp `e2e/.seed.json` (seed-e2e.ts
+  # ghi đường dẫn cố định, prod-harness readSeed đọc lại → diễn tập này đọc công ty của CSDL kia) và cùng `npm run build`
+  # vào `.next/`. Cổng không tranh (cố định khác nhau + freePort). Song song hoá cần script nhận đường dẫn seed riêng.
+  drills:
+    name: drills
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # SEC-WEB-004: DAST cục bộ (bộ probe tự viết + Chromium) trên bản build production với Postgres service và DB seed — faithful-fixture, không phải staging.
+    timeout-minutes: 45 # tổng ba job cũ (mỗi job 30) — đo thật 2026-10-21: 1,3–1,7 phút mỗi diễn tập
+    # dast-probes — SEC-WEB-004: DAST cục bộ (bộ probe tự viết + Chromium) trên bản build production với Postgres service và DB seed — faithful-fixture, không phải staging.
     permissions:
       contents: read
     services:
@@ -466,6 +394,9 @@ jobs:
           cache: npm
       - name: Cài phụ thuộc theo lockfile
         run: npm ci
+      - name: CSDL riêng cho ops-stack và staging-tls (cùng service Postgres)
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE DATABASE xc_ops' -c 'CREATE DATABASE xc_staging'
       - name: Cài Chromium đúng phiên bản Playwright
         run: npx --no-install playwright install --with-deps chromium
       - name: DAST cục bộ (header, cookie, XSS, CSRF, open redirect, rò lỗi, đường dẫn lộ, giới hạn tần suất, BOLA)
@@ -482,41 +413,15 @@ jobs:
             docs/security/dast-report.json
           retention-days: 30
           if-no-files-found: ignore
-
-  ops-stack:
-    name: ops-stack
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # OPS-SLO-006, OPS-OBS-*: Prometheus + Alertmanager THẬT (ghim sha256) — promtool check/test rules, scrape /api/metrics của bản
-    # build production, rule diễn tập → Alertmanager → webhook cục bộ (firing rồi resolved). faithful-fixture, không phải production.
-    permissions:
-      contents: read
-    services:
-      postgres:
-        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: xc_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
-    env:
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
-      NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
+      # ops-stack — OPS-SLO-006, OPS-OBS-*: Prometheus + Alertmanager THẬT (ghim sha256) — promtool check/test rules, scrape /api/metrics của bản
+      # build production, rule diễn tập → Alertmanager → webhook cục bộ (firing rồi resolved). faithful-fixture, không phải production.
       - name: Cài Prometheus/promtool/Alertmanager/amtool (ghim sha256)
+        if: ${{ !cancelled() }} # diễn tập độc lập: diễn tập trước đỏ vẫn chạy để thấy đủ kết quả (trước là job riêng)
         run: node scripts/tools/install-tool.mjs install prometheus promtool alertmanager amtool
       - name: Diễn tập giám sát end-to-end
+        if: ${{ !cancelled() }} # diễn tập độc lập: diễn tập trước đỏ vẫn chạy để thấy đủ kết quả (trước là job riêng)
         env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_ops
           XC_REPORT_DIR: . # báo cáo ghi vào repo để upload artifact ở bước sau (mặc định ra thư mục tạm)
         run: npm run -s ops:stack:drill
       - name: Lưu báo cáo diễn tập
@@ -529,42 +434,16 @@ jobs:
             docs/ops/ops-stack-drill.json
           retention-days: 30
           if-no-files-found: ignore
-
-  staging-tls:
-    name: staging-tls
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # SEC-WEB-001/004, BASE-SEC-004, PRF-WEB-009 (một phần): staging có TLS cục bộ — Caddy `tls internal` → bản build production;
-    # kiểm TLS có xác minh chứng chỉ, http→https, header/cookie qua https, ZAP 2.17.0 (Java) baseline qua https + zap-gate.
-    # faithful-fixture: CA nội bộ, không phải staging/production thật.
-    permissions:
-      contents: read
-    services:
-      postgres:
-        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: xc_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
-    env:
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
-      NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Cài phụ thuộc theo lockfile
-        run: npm ci
+      # staging-tls — SEC-WEB-001/004, BASE-SEC-004, PRF-WEB-009 (một phần): staging có TLS cục bộ — Caddy `tls internal` → bản build production;
+      # kiểm TLS có xác minh chứng chỉ, http→https, header/cookie qua https, ZAP 2.17.0 (Java) baseline qua https + zap-gate.
+      # faithful-fixture: CA nội bộ, không phải staging/production thật.
       - name: Cài Caddy (ghim sha512) và ZAP (ghim sha256)
+        if: ${{ !cancelled() }} # diễn tập độc lập: diễn tập trước đỏ vẫn chạy để thấy đủ kết quả (trước là job riêng)
         run: node scripts/tools/install-tool.mjs install caddy zap
       - name: Staging TLS — Caddy + kiểm TLS/header/cookie + ZAP baseline qua https
+        if: ${{ !cancelled() }} # diễn tập độc lập: diễn tập trước đỏ vẫn chạy để thấy đủ kết quả (trước là job riêng)
         env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_staging
           XC_REPORT_DIR: . # báo cáo ghi vào repo để upload artifact ở bước sau (mặc định ra thư mục tạm)
         run: npm run -s staging:drill
       - name: Lưu báo cáo staging TLS
@@ -579,30 +458,13 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  # Required check `quality` (ruleset `.github/rulesets/main.json`): job TỔNG HỢP của MỌI job ở trên (WF-CI-001, khung 3.12.0).
+  # Required check `quality` (ruleset `.github/rulesets/main.json`, cùng `gitleaks`): job TỔNG HỢP của MỌI job ở trên
+  # (WF-CI-001, ADR-0039).
   # `always()` — không phải `!cancelled()`: run bị huỷ thì `quality` vẫn chạy và ĐỎ (job con `cancelled`/`skipped` ≠ `success`);
   # `skipped` của required check được GitHub tính là ĐẠT nên không được để `quality` thành `skipped`.
   quality:
     name: quality
-    needs:
-      [
-        typecheck,
-        lint,
-        build,
-        checks,
-        test,
-        coverage,
-        dep-audit,
-        e2e,
-        readme-smoke,
-        protection-guard,
-        supply-chain,
-        lighthouse,
-        dast,
-        dast-probes,
-        ops-stack,
-        staging-tls,
-      ]
+    needs: [gate, test, e2e, readme-smoke, lighthouse, dast, drills]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
