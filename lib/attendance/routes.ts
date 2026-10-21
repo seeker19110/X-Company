@@ -100,10 +100,16 @@ export function eventResponseBody(r: Awaited<ReturnType<typeof recordEvent>>) {
   };
 }
 
-export const postEvent = withActor(async (ctx) => {
-  const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
-  return json(eventResponseBody(r), r.replayed ? 200 : 201);
-});
+// AUD-XFEAT-004: cùng trần với /sync (60 lượt/phút/người dùng) — nhu cầu thật vài lượt/ngày; hàng chờ ngoại tuyến đi /sync.
+const EVENT_LIMIT = { bucket: "attendance.event", max: 60, windowSec: 60 };
+
+export const postEvent = withActor(
+  async (ctx) => {
+    const r = await handleEvent(ctx, await readJson(ctx.req, kb(8)), ctx.req.headers.get("idempotency-key"));
+    return json(eventResponseBody(r), r.replayed ? 200 : 201);
+  },
+  { rateLimit: EVENT_LIMIT },
+);
 
 export const getQr = withActor(async (ctx) => {
   const worksiteId = new URL(ctx.req.url).pathname.split("/").pop() ?? "";

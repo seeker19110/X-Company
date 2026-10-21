@@ -9,6 +9,7 @@ import { disableUser } from "../../lib/identity/auth.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { createWorksite } from "../../lib/org/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
+import { setRateClockForTest } from "../../lib/http/idempotency.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
 
@@ -120,6 +121,20 @@ describe("sự kiện chấm công (T-012)", () => {
     }
     assert.equal((await send(s, { kind: "nap", device_time: iso(), source: "gps" })).status, 400);
     assert.equal((await send(s, { kind: "in", device_time: "hôm qua", source: "gps" })).status, 400);
+  });
+
+  test("AUD-XFEAT-004: giới hạn 60 lượt/phút theo người dùng như /sync → lượt 61 là 429 + Retry-After; người khác không bị ảnh hưởng", async (t) => {
+    setRateClockForTest(() => new Date("2026-10-18T12:00:30Z")); // giữa cửa sổ phút: 61 lượt không vắt qua ranh giới
+    t.after(() => setRateClockForTest(null));
+    const flood = await seedUser(companyId, { grants: [{ role: "employee", scopeType: "self" }] });
+    const fs = await login(flood.email);
+    const bad = { kind: "nap", device_time: iso(), source: "gps" }; // body sai vẫn bị đếm (đếm trước khi xử lý)
+    for (let i = 0; i < 60; i++) assert.equal((await send(fs, bad)).status, 400, `lượt ${i + 1}`);
+    const over = await send(fs, { kind: "in", device_time: iso(), source: "gps" });
+    assert.equal(over.status, 429);
+    const ra = Number(over.headers.get("retry-after"));
+    assert.ok(ra >= 1 && ra <= 60, String(ra));
+    assert.equal((await send(s, bad)).status, 400);
   });
 
   test("C6: lệch giờ thiết bị trực tuyến > 5' → needs_review CLOCK_SKEW; tương lai → FUTURE_TIME", async () => {

@@ -175,7 +175,7 @@
         "operationId": "recordAttendanceEvent",
         "tags": ["Chấm công"],
         "summary": "Ghi một sự kiện chấm công",
-        "description": "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`. Toạ độ `geo` chỉ được lưu (mã hoá) khi cờ `GEO_CAPTURE_ENABLED` bật VÀ nhân viên có đồng ý riêng `geo_attendance` còn hiệu lực; ngược lại server bỏ toạ độ, không báo lỗi, và trả `geo_stored: false`.\n\nQuyền: `attendance.write_own`: chính chủ, còn làm việc.",
+        "description": "Idempotent theo bản ghi: `Idempotency-Key` (8–100 ký tự ASCII in được, không khoảng trắng — cùng luật với guard chung) là khoá UNIQUE trong DB, nên cùng khoá trả 200 với bản ghi cũ thay vì 201 (không có header `Idempotent-Replayed`; khoá khác nội dung → 409 `IDEMPOTENCY_CONFLICT`). Đây không phải lớp guard chung của `/api/app/*`. Toạ độ `geo` chỉ được lưu (mã hoá) khi cờ `GEO_CAPTURE_ENABLED` bật VÀ nhân viên có đồng ý riêng `geo_attendance` còn hiệu lực; ngược lại server bỏ toạ độ, không báo lỗi, và trả `geo_stored: false`.\n\nQuyền: `attendance.write_own`: chính chủ, còn làm việc.",
         "x-permission": "`attendance.write_own`: chính chủ, còn làm việc.",
         "parameters": [{ "$ref": "#/components/parameters/IdempotencyKeyEvent" }],
         "requestBody": {
@@ -200,6 +200,7 @@
           "409": { "$ref": "#/components/responses/Problem409" },
           "413": { "$ref": "#/components/responses/Problem413" },
           "422": { "$ref": "#/components/responses/Problem422" },
+          "429": { "$ref": "#/components/responses/Problem429" },
           "500": { "$ref": "#/components/responses/Problem500" },
           "503": { "$ref": "#/components/responses/Problem503" }
         },
