@@ -33,6 +33,10 @@ describe("clip bằng chứng (AUD-DOC-006)", () => {
     assert.equal(P.clip("", 10), "");
     assert.equal(P.clip("Tiếng Việt có dấu ✓ ok", 100), "Tiếng Việt có dấu ✓ ok");
   });
+  test("điểm cắt rơi TRƯỚC `://` vẫn nhận là URL (review PR #55)", () => {
+    assert.equal(P.clip("xem https://example.com/abc", 9), "xem…");
+    assert.equal(P.clip("https://example.com/abc", 5), "…");
+  });
 });
 
 describe("header bảo mật", () => {

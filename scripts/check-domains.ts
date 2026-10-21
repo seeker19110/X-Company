@@ -29,6 +29,7 @@ export function importsOf(src: string): string[] {
 function walk(dir: string, out: string[] = []): string[] {
   if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
+    if (name === "node_modules" || name === ".next") continue;
     const p = path.join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);
     else if (/\.(ts|tsx|mjs)$/.test(name)) out.push(p);
