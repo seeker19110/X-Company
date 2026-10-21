@@ -50,6 +50,12 @@
           },
           {
             "context": "pr-policy"
+          },
+          {
+            "context": "codeql"
+          },
+          {
+            "context": "osv-scanner"
           }
         ]
       }

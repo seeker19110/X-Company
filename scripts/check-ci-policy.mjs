@@ -1,5 +1,5 @@
 // check:ci-policy — Gate T-036: các hàng rào CI/repo đã nối thật (không chỉ có tệp). Mỗi dòng lỗi nêu mục blueprint.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { REQUIRED_SECTIONS } from "./pr-policy.mjs";
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
@@ -74,6 +74,36 @@ for (const j of ciJobs)
     `WF-CI-001: job ${j} của ci.yml không nằm trong quality.needs`,
   );
 need(/^ {4}if: \$\{\{ always\(\) \}\}$/m.test(ci), "WF-CI-001: quality chạy if: always()");
+// AUD-CI-001: job chạy trên PR mà không chặn merge thì PR làm đỏ nó vẫn merge được. Job của ci.yml đã gom vào `quality`
+// (kiểm ở trên); job của workflow KHÁC có trigger pull_request/pull_request_target phải là required check của ruleset.
+for (const f of readdirSync(".github/workflows").filter((x) => /\.ya?ml$/.test(x) && x !== "ci.yml")) {
+  const txt = read(`.github/workflows/${f}`);
+  // `on:` dạng khối (`on:\n  pull_request:`) hoặc một dòng (`on: pull_request`, `on: [push, pull_request]`).
+  const on = /^on:([^\n]*)\n((?:[ \t]+.*\n|\n)*)/m.exec(txt) ?? [];
+  if (!/\bpull_request(_target)?\b/.test(`${on[1] ?? ""}\n${on[2] ?? ""}`)) continue;
+  const jobs = /^jobs:\n([\s\S]*)/m.exec(txt)?.[1] ?? "";
+  for (const m of jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\n((?: {4}.*\n|\n)*)/gm)) {
+    const name = /^ {4}name:\s*["']?(.+?)["']?\s*$/m.exec(m[2])?.[1] ?? m[1];
+    need(
+      contexts.includes(name),
+      `AUD-CI-001: job "${name}" (${f}) chạy trên PR nhưng không là required check của ruleset`,
+    );
+  }
+}
+// AUD-CI-003 (zizmor artipacked): checkout để token trong .git/config cho mọi bước sau; không job nào push bằng git.
+for (const f of readdirSync(".github/workflows").filter((x) => /\.ya?ml$/.test(x))) {
+  const lines = read(`.github/workflows/${f}`).split("\n");
+  lines.forEach((l, i) => {
+    if (!/uses: actions\/checkout@/.test(l)) return;
+    const step = [];
+    for (let j = i + 1; j < lines.length && !/^\s*- /.test(lines[j]) && !/^ {0,4}\S/.test(lines[j]); j++)
+      step.push(lines[j]);
+    need(
+      step.some((s) => /^\s+persist-credentials: false\b/.test(s)),
+      `AUD-CI-003: ${f}:${i + 1} checkout thiếu persist-credentials: false`,
+    );
+  });
+}
 const tpl = read(".github/pull_request_template.md");
 for (const s of REQUIRED_SECTIONS)
   need(new RegExp(`^## ${s}$`, "m").test(tpl), `PR template thiếu "## ${s}"`);

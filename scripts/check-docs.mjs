@@ -619,6 +619,58 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
   } else out("CẢNH BÁO: không có check-links.py — bỏ qua kiểm liên kết");
 }
 
+// ---- 10b. Anchor `tệp.md#mục` phải trỏ tới tiêu đề có thật (AUD-HAR-002; check-links.py của khung chỉ kiểm tệp).
+//      Slug theo GitHub: chữ thường, bỏ dấu câu (giữ chữ có dấu, số, `-`, `_`), khoảng trắng → `-`, trùng thêm `-1`, `-2`…
+{
+  const slug = (h) =>
+    h
+      .replace(/`/g, "")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, "")
+      .replace(/\s/g, "-");
+  const fenced = (text) => {
+    let fence = false;
+    return text.split("\n").map((l) => {
+      if (/^\s*(```|~~~)/.test(l)) fence = !fence;
+      return fence ? "" : l;
+    });
+  };
+  const anchorCache = new Map();
+  const anchorsOf = (rel) => {
+    if (!anchorCache.has(rel)) {
+      const set = new Set();
+      const seen = new Map();
+      for (const l of fenced(read(rel))) {
+        const m = /^#{1,6}\s+(.*?)\s*#*\s*$/.exec(l);
+        if (!m) continue;
+        const s = slug(m[1]);
+        const n = seen.get(s) ?? 0;
+        seen.set(s, n + 1);
+        set.add(n ? `${s}-${n}` : s);
+      }
+      for (const m of read(rel).matchAll(/<a\s+(?:name|id)="([^"]+)"/g)) set.add(m[1]);
+      anchorCache.set(rel, set);
+    }
+    return anchorCache.get(rel);
+  };
+  const mdFiles = execFileSync("git", ["ls-files", "*.md"], { cwd: ROOT, encoding: "utf8" })
+    .split("\n")
+    .filter((f) => f && !/^(\.xtemplates|node_modules|docs\/input)\//.test(f) && has(f));
+  for (const f of mdFiles)
+    fenced(read(f)).forEach((l, i) => {
+      for (const m of l.replace(/`[^`]*`/g, "").matchAll(/\]\(([^)\s]*#[^)\s]+)\)/g)) {
+        if (/^[a-z][a-z0-9+.-]*:/i.test(m[1])) continue;
+        const [path, frag] = m[1].split("#");
+        const target = path ? relative(ROOT, resolve(ROOT, dirname(f), decodeURIComponent(path))) : f;
+        if (!target.endsWith(".md") || !has(target) || statSync(p(target)).isDirectory()) continue;
+        if (!anchorsOf(target).has(decodeURIComponent(frag).toLowerCase()))
+          fail(`liên kết: ${f}:${i + 1}: #${frag} không có tiêu đề tương ứng trong ${target}`);
+      }
+    });
+}
+
 if (errors.length) {
   for (const e of errors) process.stderr.write(`✗ ${e}\n`);
   process.stderr.write(`check:docs: ${errors.length} lỗi\n`);
