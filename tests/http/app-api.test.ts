@@ -157,7 +157,7 @@ describe("API nội bộ: công việc, đơn từ, phê duyệt (T-019)", () =>
     const adj = await post(postAdjustment, emp, "/api/app/adjustments", {
       action: "add_event",
       new_kind: "out",
-      new_at: "2026-11-04T17:00:00+07:00",
+      new_at: new Date(Date.now() - 86_400_000).toISOString(), // quá khứ gần: đề nghị sửa công không được ở tương lai
       reason: "quên bấm",
     });
     assert.equal(adj.status, 201);
