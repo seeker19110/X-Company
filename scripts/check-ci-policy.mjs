@@ -78,8 +78,9 @@ need(/^ {4}if: \$\{\{ always\(\) \}\}$/m.test(ci), "WF-CI-001: quality chạy if
 // (kiểm ở trên); job của workflow KHÁC có trigger pull_request/pull_request_target phải là required check của ruleset.
 for (const f of readdirSync(".github/workflows").filter((x) => /\.ya?ml$/.test(x) && x !== "ci.yml")) {
   const txt = read(`.github/workflows/${f}`);
-  const on = /^on:\n([\s\S]*?)^\S/m.exec(txt)?.[1] ?? "";
-  if (!/^ {2}pull_request(_target)?:/m.test(on)) continue;
+  // `on:` dạng khối (`on:\n  pull_request:`) hoặc một dòng (`on: pull_request`, `on: [push, pull_request]`).
+  const on = /^on:([^\n]*)\n((?:[ \t]+.*\n|\n)*)/m.exec(txt) ?? [];
+  if (!/\bpull_request(_target)?\b/.test(`${on[1] ?? ""}\n${on[2] ?? ""}`)) continue;
   const jobs = /^jobs:\n([\s\S]*)/m.exec(txt)?.[1] ?? "";
   for (const m of jobs.matchAll(/^ {2}([A-Za-z0-9_-]+):\n((?: {4}.*\n|\n)*)/gm)) {
     const name = /^ {4}name:\s*["']?(.+?)["']?\s*$/m.exec(m[2])?.[1] ?? m[1];

@@ -100,6 +100,7 @@ jobs:
       - name: Khung — PLAN/blueprint/CI hợp lệ
         run: |
           python3 .xtemplates/scripts/xt.py ci-check .github/workflows
+          set -o pipefail
           # AUD-HAR-001: không --strict thì luôn exit 0 (MUST còn mở là hợp lệ) → tự đỏ khi miễn trừ thiếu lý do/dòng hỏng.
           python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json \
             | python3 -c 'import json,sys; d=json.load(sys.stdin); print("blueprint: bad_waivers", d["bad_waivers"], "bad_lines", d["bad_lines"]); sys.exit(1 if d["bad_waivers"] or d["bad_lines"] else 0)'
