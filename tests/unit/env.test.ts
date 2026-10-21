@@ -437,3 +437,36 @@ describe("TRUST_PROXY ở production (AUD-SEC-001)", () => {
     assert.equal(loadEnv({ ...prod, TRUST_PROXY_HOPS: "2" }).TRUST_PROXY_HOPS, 2);
   });
 });
+
+describe("APP_ORIGIN ở production phải https (AUD-SEC-003)", () => {
+  const prod = {
+    ...GOOD,
+    NODE_ENV: "production",
+    TRUST_PROXY: "1",
+    DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
+    DATA_INDEX_KEY: DATA_KEY,
+  };
+  test("http với tên miền thật → lỗi nêu tên biến (cookie mất Secure/__Host-, không HSTS)", () => {
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...prod, APP_ORIGIN: "http://x-company.example" })),
+      ["APP_ORIGIN"],
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...prod, APP_ORIGIN: "http://10.0.0.5:3000" })),
+      ["APP_ORIGIN"],
+    );
+  });
+  test("https luôn hợp lệ; http chỉ cho loopback (harness e2e/DAST chạy build production cục bộ); dev/test không ràng buộc", () => {
+    assert.equal(loadEnv(prod).APP_ORIGIN, "https://x-company.example");
+    for (const o of ["http://localhost:3100", "http://127.0.0.1:3100", "http://[::1]:3100"])
+      assert.equal(loadEnv({ ...prod, APP_ORIGIN: o }).APP_ORIGIN, o);
+    assert.equal(
+      loadEnv({ ...GOOD, APP_ORIGIN: "http://x-company.example" }).APP_ORIGIN,
+      "http://x-company.example",
+    );
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...prod, APP_ORIGIN: "http://localhost.evil.example" })),
+      ["APP_ORIGIN"],
+    );
+  });
+});

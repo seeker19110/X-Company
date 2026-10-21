@@ -17,6 +17,8 @@ interface Field<T extends z.ZodType> {
   requiredInProduction?: boolean | ((source: Source) => boolean);
   /** Bắt buộc khi hàm trả true (phụ thuộc biến khác, vd KMS_TRANSIT_ADDR khi KMS_PROVIDER=transit), ở mọi môi trường. */
   requiredWhen?: (source: Source) => boolean;
+  /** Ràng buộc thêm chỉ khi NODE_ENV=production: trả thông điệp lỗi (không chứa giá trị) hoặc undefined = đạt. */
+  productionRule?: (raw: string) => string | undefined;
 }
 
 const field = <T extends z.ZodType>(
@@ -26,6 +28,7 @@ const field = <T extends z.ZodType>(
     required?: boolean;
     requiredInProduction?: boolean | ((source: Source) => boolean);
     requiredWhen?: (source: Source) => boolean;
+    productionRule?: (raw: string) => string | undefined;
   } = {},
 ): Field<T> => ({
   schema,
@@ -70,6 +73,9 @@ function validDataKeys(raw: string): boolean {
   );
 }
 
+/** Loopback: harness e2e/DAST/Lighthouse chạy bản build production cục bộ qua http. */
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 const url = (protocols: RegExp, what: string) =>
   z
     .string()
@@ -88,7 +94,16 @@ export const SERVER_SPEC = {
     url(/^https?$/, "http(s)")
       .transform((v) => new URL(v).origin)
       .pipe(z.string()),
-    { required: true },
+    {
+      required: true,
+      // http ở production = cookie phiên mất Secure/__Host-, không HSTS (fail-open, AUD-SEC-003); chỉ loopback được miễn.
+      productionRule: (raw) => {
+        const u = new URL(raw);
+        return u.protocol === "https:" || LOOPBACK_HOSTS.has(u.hostname)
+          ? undefined
+          : "phải là https ở production (http chỉ cho localhost/127.0.0.1/[::1])";
+      },
+    },
   ),
   DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), { required: true, secret: true }),
   MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), { secret: true }),
@@ -317,7 +332,10 @@ function parseOne(
   if (raw === undefined && reqProd === true && source.NODE_ENV === "production")
     return { ok: false, issue: { name, message: "thiếu (bắt buộc ở production)" } };
   const r = f.schema.safeParse(raw);
-  if (r.success) return { ok: true, value: r.data };
+  if (r.success) {
+    const bad = raw !== undefined && source.NODE_ENV === "production" ? f.productionRule?.(raw) : undefined;
+    return bad === undefined ? { ok: true, value: r.data } : { ok: false, issue: { name, message: bad } };
+  }
   // Chỉ lấy `message` do ta/zod soạn (không chứa giá trị nhập); gộp thành một chuỗi ngắn.
   const message = [...new Set(r.error.issues.map((i) => i.message))].join(", ");
   return { ok: false, issue: { name, message: message === "" ? "không hợp lệ" : message } };
