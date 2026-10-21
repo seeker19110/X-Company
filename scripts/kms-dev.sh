@@ -92,8 +92,8 @@ cleanup_tmp() { rm -f "$DIR"/.hdr.* "$DIR"/.body.* "$DIR/.resp" 2>/dev/null || t
 # Sau unseal, raft một node còn phải tự bầu leader rồi mới thành active; gọi API ghi trước lúc đó → HTTP 500 "internal
 # error" (runner CI chậm). Chờ sys/health = 200 (đã init, mở niêm phong, active); 429/5xx = chưa sẵn sàng.
 wait_active() {
-  local code=000
-  for _ in $(seq 1 150); do
+  local code=000 deadline=$((SECONDS + 30))
+  while [ "$SECONDS" -lt "$deadline" ]; do
     alive || die 1 "OpenBao dừng khi chờ active"
     code="$(curl -s --max-time 2 --cacert "$DIR/tls/cert.pem" -o /dev/null -w '%{http_code}' "$(addr)/v1/sys/health" 2>/dev/null)" || code=000
     [ "$code" = "200" ] && return 0
