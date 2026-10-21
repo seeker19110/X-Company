@@ -6,9 +6,12 @@ import { readiness } from "../../lib/nen/health.ts";
 import { registerShutdown } from "../../lib/nen/shutdown.ts";
 
 registerShutdown();
+// Mốc cho test chờ theo sự kiện (AUD-TEST-001): đăng ký SAU registerShutdown nên chạy khi controller đã chuyển sang "đang tắt".
+process.on("SIGTERM", () => console.log("TERM"));
 const slowMs = Number(process.env.SLOW_MS ?? 800);
 async function handle(req: http.IncomingMessage, res: http.ServerResponse) {
   if (req.url === "/slow") {
+    console.log("SLOW"); // đã nhận request chậm (đã được đếm in-flight)
     await new Promise((r) => setTimeout(r, slowMs));
     res.writeHead(200, { "content-type": "text/plain" }).end("xong");
   } else if (req.url === "/readyz") {

@@ -14,6 +14,7 @@ import { setShutdownControllerForTest, ShutdownController } from "../../lib/nen/
 import { config as proxyConfig, proxy } from "../../proxy.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { setTestEnv } from "../helpers/fixtures.ts";
+import { waitFor } from "../helpers/wait.ts";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -177,11 +178,11 @@ describe("tắt êm (ShutdownController)", () => {
       }, 400);
     });
     const slow = get(port);
-    await sleep(100);
+    await waitFor(() => ctl.inflightCount() === 1, "request chậm đã vào server");
     assert.equal(ctl.inflightCount(), 1);
     const done = ctl.shutdownAndExit("SIGTERM");
     assert.equal(ctl.isShuttingDown(), true);
-    await sleep(100);
+    await waitFor(() => !server.listening, "listener đã đóng");
     await assert.rejects(get(port), /ECONNREFUSED/); // ngừng nhận
     const r = await slow;
     assert.deepEqual([r.status, r.body], [200, "chậm-xong"]);
@@ -212,7 +213,7 @@ describe("tắt êm (ShutdownController)", () => {
       /* không bao giờ trả lời */
     });
     const hung = get(port).catch(() => "bị cắt");
-    await sleep(50);
+    await waitFor(() => ctl.inflightCount() === 1, "request treo đã vào server");
     const t0 = Date.now();
     await ctl.shutdownAndExit("SIGTERM");
     assert.ok(Date.now() - t0 >= 190 && Date.now() - t0 < 2000);
@@ -243,7 +244,6 @@ describe("tắt êm (ShutdownController)", () => {
       res.end(ctl.isShuttingDown() ? "đang-tắt" : "bình-thường"),
     );
     const done = ctl.shutdownAndExit("SIGTERM");
-    await sleep(50);
     assert.equal((await get(port)).body, "đang-tắt"); // chưa đóng listener
     await done;
     await assert.rejects(get(port), /ECONNREFUSED/);
@@ -267,19 +267,20 @@ describe("tắt êm — tiến trình thật nhận SIGTERM (BE-REL-004)", () =>
     const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) =>
       child.on("exit", (code, signal) => resolve({ code, signal })),
     );
-    const port = await new Promise<number>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("tiến trình con không sẵn sàng")), 30_000);
-      let buf = "";
-      child.stdout.on("data", (c: Buffer) => {
-        buf += c.toString();
-        const m = /READY (\d+)/.exec(buf);
-        if (m) {
-          clearTimeout(timer);
-          resolve(Number(m[1]));
-        }
-      });
-      child.on("exit", () => reject(new Error("tiến trình con thoát sớm")));
-    });
+    // Đọc stdout của tiến trình con thành dòng; chờ theo dòng (sự kiện), không theo thời gian.
+    let out = "";
+    child.stdout.on("data", (c: Buffer) => void (out += c.toString()));
+    let exitedEarly = false;
+    child.on("exit", () => void (exitedEarly = true));
+    await waitFor(
+      () => {
+        if (exitedEarly) throw new Error("tiến trình con thoát sớm");
+        return /READY \d+/.test(out);
+      },
+      "tiến trình con sẵn sàng (READY)",
+      { timeoutMs: 30_000 },
+    );
+    const port = Number(/READY (\d+)/.exec(out)![1]);
     const admin = new pg.Client({ connectionString: process.env.DATABASE_URL });
     await admin.connect();
     const conns = async () =>
@@ -295,9 +296,9 @@ describe("tắt êm — tiến trình thật nhận SIGTERM (BE-REL-004)", () =>
       assert.ok((await conns()) >= 1, "pool của tiến trình con phải có kết nối trước khi tắt");
       const t0 = Date.now();
       const slow = get(port, "/slow");
-      await sleep(200);
+      await waitFor(() => /^SLOW$/m.test(out), "tiến trình con đã nhận /slow");
       child.kill("SIGTERM");
-      await sleep(150);
+      await waitFor(() => /^TERM$/m.test(out), "tiến trình con đã nhận SIGTERM");
       const ready = await get(port, "/readyz");
       assert.deepEqual([ready.status, JSON.parse(ready.body)], [503, { status: "shutting_down" }]);
       const r = await slow;
@@ -305,7 +306,10 @@ describe("tắt êm — tiến trình thật nhận SIGTERM (BE-REL-004)", () =>
       const end = await exited;
       assert.deepEqual(end, { code: 0, signal: null });
       assert.ok(Date.now() - t0 < 5000 + 600, `thoát sau ${Date.now() - t0} ms`);
-      for (let i = 0; i < 20 && (await conns()) > 0; i++) await sleep(100);
+      await waitFor(async () => (await conns()) === 0, "pool của tiến trình con đóng hết kết nối", {
+        timeoutMs: 2_000,
+        intervalMs: 100,
+      }).catch(() => {}); // hết hạn → assert dưới báo đỏ kèm thông điệp
       assert.equal(await conns(), 0, "pool.end() phải đóng mọi kết nối");
     } finally {
       child.kill("SIGKILL");

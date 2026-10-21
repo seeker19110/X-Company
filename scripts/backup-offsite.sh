@@ -104,6 +104,8 @@ CHECK_ARGS=()
 T_CHECK="$(date +%s.%N)"
 
 # --- chính sách giữ -----------------------------------------------------------------------------------------------------
+# "host,tags" là MỘT đối số của restic --group-by (dấu phẩy có chủ đích), không phải lỗi tách phần tử mảng.
+# shellcheck disable=SC2054
 FORGET=(--tag xc-db --host xc-offsite --group-by host,tags --prune --quiet)
 [ "$KEEP_LAST" != 0 ] && FORGET+=(--keep-last "$KEEP_LAST")
 [ "$KEEP_DAILY" != 0 ] && FORGET+=(--keep-daily "$KEEP_DAILY")
