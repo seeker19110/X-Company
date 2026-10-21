@@ -6,6 +6,7 @@ import type { Queryable } from "../db/index.ts";
 import { computeLines } from "../attendance/period.ts";
 import { employeeResource } from "../attendance/scope.ts";
 import { addDays } from "../attendance/compute.ts";
+import { BUSINESS_TZ } from "../nen/time.ts";
 import { projectProgress } from "../work/progress.ts";
 import { projectAccess } from "../work/tasks.ts";
 import { MS_PER_DAY } from "../nen/units.ts";
@@ -95,8 +96,8 @@ export async function dashboard(
     }>(
       `SELECT id, title, project_id, blocked_at, blocked_reason FROM task
        WHERE project_id = ANY($1::uuid[]) AND status = 'blocked'
-         AND blocked_at < ($2::date - make_interval(days => $3))::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh'`,
-      [ids, today, BLOCKED_DAYS],
+         AND blocked_at < ($2::date - make_interval(days => $3))::timestamp AT TIME ZONE $4`,
+      [ids, today, BLOCKED_DAYS, BUSINESS_TZ],
     );
     for (const t of blocked.rows)
       alerts.push({
@@ -172,8 +173,8 @@ export async function dashboard(
   }>(
     `SELECT a.id, a.employee_id, e.full_name, a.review_reason, a.device_time FROM attendance_event a JOIN employee e ON e.id = a.employee_id
      WHERE a.company_id = $1 AND a.status = 'needs_review' AND a.voided_by_adjustment_id IS NULL
-       AND a.device_time > ($2::date - 30)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh' ORDER BY a.device_time`,
-    [actor.companyId, today],
+       AND a.device_time > ($2::date - 30)::timestamp AT TIME ZONE $3 ORDER BY a.device_time`,
+    [actor.companyId, today, BUSINESS_TZ],
   );
   const scopeCache = new Map<string, boolean>();
   const inScope = async (employeeId: string) => {

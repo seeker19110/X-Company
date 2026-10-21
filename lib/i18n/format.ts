@@ -2,9 +2,10 @@
 // Mặc định locale `vi-VN` và múi `Asia/Ho_Chi_Minh`. Giá trị thiếu (null/undefined) → EMPTY, KHÔNG thành "0"
 // (BASE-DATA-003: thiếu ≠ 0). Tiền là số nguyên đơn vị nhỏ nhất của VND (không có phần lẻ).
 import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from "../nen/units.ts";
+import { BUSINESS_TZ } from "../nen/time.ts";
 
 export const DEFAULT_LOCALE = "vi-VN";
-export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh";
+export const DEFAULT_TIME_ZONE = BUSINESS_TZ;
 /** Hiển thị cho giá trị chưa có (không phải 0). */
 export const EMPTY = "—";
 

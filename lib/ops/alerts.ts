@@ -15,6 +15,7 @@ import { MS_PER_HOUR, SECONDS_PER_HOUR, msToSeconds, secondsToMs } from "../nen/
 import { dsarAnyOverdueSql } from "../privacy/deadlines.ts";
 import type { AlertNotification, AlertSink } from "./sinks.ts";
 import type { AlertRule, SignalName } from "./rules.ts";
+import { BUSINESS_TZ } from "../nen/time.ts";
 
 export interface AlertConfig {
   enabled: boolean;
@@ -364,8 +365,8 @@ export class AlertEngine {
         return this.db(
           rule,
           `SELECT count(*)::int AS n FROM attendance_period
-            WHERE status <> 'locked' AND end_date < ($1::timestamptz AT TIME ZONE 'Asia/Ho_Chi_Minh')::date - $2::int`,
-          [nowDate, Math.trunc(p.grace_days ?? 7)],
+            WHERE status <> 'locked' AND end_date < ($1::timestamptz AT TIME ZONE $3)::date - $2::int`,
+          [nowDate, Math.trunc(p.grace_days ?? 7), BUSINESS_TZ],
         );
       case "backup_age_seconds":
         return this.deps.backupDir === undefined ? null : backupAgeSeconds(this.deps.backupDir, nowMs);

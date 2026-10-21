@@ -3,13 +3,13 @@
 -- Truy vấn:
 --   SELECT id, employee_id FROM attendance_event WHERE company_id = $1 AND status = 'needs_review'
 --        AND voided_by_adjustment_id IS NULL
---        AND (device_time AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date
--- Tham số: ["c1e41554-c755-43e2-99cd-1140127ad76e","2026-01-01","2027-12-31"]
+--        AND (device_time AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+-- Tham số: ["30e255b2-3ce5-49c3-a61c-a07f6377f808","2026-01-01","2027-12-31","Asia/Ho_Chi_Minh"]
 -- Lệnh: EXPLAIN (ANALYZE, BUFFERS) <truy vấn> — sinh lại bằng XT_WRITE_EXPLAIN=1 npm run test:file -- tests/db/reliability.test.ts
 
-Index Scan using attendance_event_review_idx on attendance_event  (cost=0.15..872.67 rows=3 width=32) (actual time=0.019..0.733 rows=600 loops=1)
-  Index Cond: (company_id = 'c1e41554-c755-43e2-99cd-1140127ad76e'::uuid)
+Index Scan using attendance_event_review_idx on attendance_event  (cost=0.15..851.02 rows=3 width=32) (actual time=0.017..0.556 rows=600 loops=1)
+  Index Cond: (company_id = '30e255b2-3ce5-49c3-a61c-a07f6377f808'::uuid)
   Filter: ((voided_by_adjustment_id IS NULL) AND (((device_time AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date >= '2026-01-01'::date) AND (((device_time AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date <= '2027-12-31'::date))
   Buffers: shared hit=21
-Planning Time: 0.090 ms
-Execution Time: 0.778 ms
+Planning Time: 0.084 ms
+Execution Time: 0.593 ms

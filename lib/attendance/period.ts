@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { can, type ActorContext } from "../authz/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
-import { addDays, computeShift, localDateOf, type ShiftEvent } from "./compute.ts";
+import { addDays, computeShift, type ShiftEvent } from "./compute.ts";
+import { BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { findAssignment } from "./events.ts";
 import { auditDecision, employeeResource, requireNotSelf, requireOn } from "./scope.ts";
 import { t as tr } from "../i18n/index.ts";
@@ -45,7 +46,7 @@ function requireHr(actor: ActorContext, id: string): void {
 /** Sự kiện cần xác minh trong kỳ — xuất ra để test EXPLAIN (DB-PERF-001). */
 export const NEEDS_REVIEW_SQL = `SELECT id, employee_id FROM attendance_event WHERE company_id = $1 AND status = 'needs_review'
      AND voided_by_adjustment_id IS NULL
-     AND (device_time AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date`;
+     AND (device_time AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date`;
 
 export async function createPeriod(
   tx: Queryable,
@@ -155,14 +156,16 @@ export async function computeLines(
      ${employeeId ? "AND employee_id = $4" : ""} GROUP BY 1, 2`,
     params,
   );
-  // Phút nghỉ phép tính vào ngày (giờ VN) bắt đầu của đơn đã duyệt.
+  // Phút nghỉ phép tính vào ngày (giờ nghiệp vụ) bắt đầu của đơn đã duyệt.
+  const lvParams: unknown[] = [companyId, start, end, BUSINESS_TZ];
+  if (employeeId) lvParams.push(employeeId);
   const lv = await db.query<{ employee_id: string; d: string; m: string }>(
-    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $4" hoặc rỗng); giá trị đi qua tham số $4.
-    `SELECT employee_id, (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date::text AS d, sum(minutes) AS m FROM leave_request
+    // sql-interp-allow: mảnh lọc là hằng nội bộ ("AND employee_id = $5" hoặc rỗng); giá trị đi qua tham số $5.
+    `SELECT employee_id, (start_at AT TIME ZONE $4)::date::text AS d, sum(minutes) AS m FROM leave_request
      WHERE company_id = $1 AND status = 'approved'
-       AND (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date
-     ${employeeId ? "AND employee_id = $4" : ""} GROUP BY 1, 2`,
-    params,
+       AND (start_at AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+     ${employeeId ? "AND employee_id = $5" : ""} GROUP BY 1, 2`,
+    lvParams,
   );
   const key = (e: string, d: string) => `${e}|${d}`;
   const otMap = new Map(ot.rows.map((r) => [key(r.employee_id, r.business_date), Number(r.m)]));
@@ -263,19 +266,20 @@ export async function periodExceptions(
     companyId,
     p.startDate,
     p.endDate,
+    BUSINESS_TZ,
   ]);
   for (const r of review.rows)
     out.push({ ref: `event:${r.id}`, kind: "NEEDS_REVIEW", employeeId: r.employee_id, note: null });
   const pending = await db.query<{ ref: string; employee_id: string }>(
     `SELECT 'leave:' || id AS ref, employee_id FROM leave_request WHERE company_id = $1 AND status = 'pending'
-       AND (start_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date BETWEEN $2::date AND $3::date
+       AND (start_at AT TIME ZONE $5)::date BETWEEN $2::date AND $3::date
      UNION ALL
      SELECT 'ot:' || id, employee_id FROM ot_request WHERE company_id = $1 AND status = 'pending'
        AND business_date BETWEEN $2::date AND $3::date
      UNION ALL
      SELECT 'adjustment:' || id, employee_id FROM attendance_adjustment WHERE company_id = $1 AND status = 'pending'
        AND period_id IS NOT DISTINCT FROM $4`,
-    [companyId, p.startDate, p.endDate, p.id],
+    [companyId, p.startDate, p.endDate, p.id, BUSINESS_TZ],
   );
   for (const r of pending.rows)
     out.push({ ref: r.ref, kind: "PENDING_REQUEST", employeeId: r.employee_id, note: null });
@@ -530,7 +534,7 @@ export async function businessDateOf(
   t: Date,
 ): Promise<string> {
   const a = await findAssignment(db, companyId, employeeId, t);
-  return a?.business_date ?? localDateOf(t, "Asia/Ho_Chi_Minh");
+  return a?.business_date ?? localDate(t);
 }
 
 /**

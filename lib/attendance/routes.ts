@@ -11,6 +11,7 @@ import {
 } from "../http/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { recordEvent } from "./events.ts";
+import { BUSINESS_TZ } from "../nen/time.ts";
 import { policyAt } from "./policy.ts";
 import { issueQr } from "./qr.ts";
 import { kb, secondsToMs } from "../nen/units.ts";
@@ -40,8 +41,8 @@ async function activeEmployee(ctx: ActorRequestContext): Promise<string> {
   const employeeId = ctx.actor.employeeId;
   if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const { rows } = await getPool().query<{ ended: boolean }>(
-    "SELECT terminated_on IS NOT NULL AND terminated_on <= (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS ended FROM employee WHERE id = $1",
-    [employeeId],
+    "SELECT terminated_on IS NOT NULL AND terminated_on <= (now() AT TIME ZONE $2)::date AS ended FROM employee WHERE id = $1",
+    [employeeId, BUSINESS_TZ],
   );
   if (!rows[0] || rows[0].ended)
     throw new AppError("EMPLOYMENT_ENDED", 403, t("err.attendance.hoSoNhanVienKhongCon"));

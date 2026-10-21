@@ -8,7 +8,8 @@ import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { env } from "../nen/env.ts";
 import { hasActiveConsent, PURPOSE_GEO_ATTENDANCE } from "../privacy/consent.ts";
-import { addDays, localDateOf, shiftBounds } from "./compute.ts";
+import { addDays, shiftBounds } from "./compute.ts";
+import { BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { policyAt, type AttendancePolicy } from "./policy.ts";
 import { qrExpired, verifyQrSignature } from "./qr.ts";
 import { minutesToMs, msToSeconds, secondsToMs } from "../nen/units.ts";
@@ -94,9 +95,9 @@ export async function findAssignment(
   companyId: string,
   employeeId: string,
   t: Date,
-  tz = "Asia/Ho_Chi_Minh",
+  tz = BUSINESS_TZ,
 ): Promise<Assignment | null> {
-  const d = localDateOf(t, tz);
+  const d = localDate(t, tz);
   const { rows } = await db.query<Assignment>(
     `SELECT a.id, a.worksite_id, a.business_date, to_char(s.start_time, 'HH24:MI') AS start_time,
             to_char(s.end_time, 'HH24:MI') AS end_time, s.break_minutes, s.early_grace_minutes, s.late_grace_minutes, s.tz
@@ -214,7 +215,7 @@ export async function recordEvent(
     const assignment = await findAssignment(tx, actor.companyId, actor.employeeId, input.deviceTime);
 
     // Log đến muộn thuộc kỳ đã khoá — theo NGÀY NGHIỆP VỤ của ca (ca qua đêm), không theo ngày lịch (review PR #8 #4).
-    const businessDate = assignment?.business_date ?? localDateOf(input.deviceTime, "Asia/Ho_Chi_Minh");
+    const businessDate = assignment?.business_date ?? localDate(input.deviceTime);
     const locked = await tx.query(
       `SELECT 1 FROM attendance_period WHERE company_id = $1 AND status = 'locked' AND $2::date BETWEEN start_date AND end_date`,
       [actor.companyId, businessDate],

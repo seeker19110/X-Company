@@ -2,6 +2,7 @@
 // Quyết định làm rõ (ghi ở SPEC): thời điểm cắt về phút nguyên (bỏ giây) để tổng và các đoạn theo ngày khớp tuyệt đối;
 // nghỉ cố định (không ghi sự kiện nghỉ) tính vào ngày lịch chứa điểm giữa ca.
 import { epochSeconds, secondsToMs } from "../nen/units.ts";
+import { localDate } from "../nen/time.ts";
 
 export type EventKind = "in" | "out" | "break_start" | "break_end";
 
@@ -86,15 +87,6 @@ export function addDays(date: string, n: number): string {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
-export function localDateOf(t: Date, tz: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(t);
-}
-
 // ---- Khoảng thời gian ------------------------------------------------------------------------------------------
 
 const truncMinute = (t: Date) => new Date(Math.floor(t.getTime() / MIN) * MIN);
@@ -176,7 +168,7 @@ function splitByDay(intervals: Interval[], tz: string): Map<string, number> {
   for (const i of intervals) {
     let from = i.from;
     while (from < i.to) {
-      const day = localDateOf(from, tz);
+      const day = localDate(from, tz);
       const midnight = zonedToUtc(addDays(day, 1), "00:00", tz);
       const to = midnight < i.to ? midnight : i.to;
       out.set(day, (out.get(day) ?? 0) + minutes({ from, to }));
@@ -258,7 +250,7 @@ export function computeShift(def: ShiftDefinition, events: readonly ShiftEvent[]
   const byDay = splitByDay(worked, def.tz);
   if (fixedDeduct > 0) {
     // Trừ dần: ngày chứa điểm giữa ca trước, phần còn lại sang các ngày khác theo số phút giảm dần; không để âm.
-    const mid = localDateOf(new Date((start.getTime() + end.getTime()) / 2), def.tz);
+    const mid = localDate(new Date((start.getTime() + end.getTime()) / 2), def.tz);
     const order = [...byDay.keys()].sort((a, b) =>
       a === mid ? -1 : b === mid ? 1 : byDay.get(b)! - byDay.get(a)!,
     );

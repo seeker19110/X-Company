@@ -72,6 +72,16 @@ const config = [
           message:
             "Không nuốt lỗi bằng .catch(() => undefined) — xử lý hoặc ghi log có ngữ cảnh (BASE-ERR-001).",
         },
+        // AUD-XFEAT-005: múi giờ nghiệp vụ một nguồn — BUSINESS_TZ ở lib/nen/time.ts (SQL nhận qua tham số).
+        {
+          selector: "Literal[value=/Asia\\/Ho_Chi_Minh/]",
+          message: "Không viết cứng múi giờ — dùng BUSINESS_TZ từ lib/nen/time.ts (AUD-XFEAT-005).",
+        },
+        {
+          selector: "TemplateElement[value.raw=/Asia\\/Ho_Chi_Minh/]",
+          message:
+            "Không viết cứng múi giờ trong SQL/chuỗi — truyền BUSINESS_TZ qua tham số (AUD-XFEAT-005).",
+        },
       ],
     },
   },
