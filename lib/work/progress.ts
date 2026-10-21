@@ -8,6 +8,7 @@ import { AppError } from "../nen/app-error.ts";
 import { projectAccess } from "./tasks.ts";
 
 import { computeProgress, type LeafInput, type Progress } from "./progress-compute.ts";
+import { BUSINESS_TZ } from "../nen/time.ts";
 import { t as tr } from "../i18n/index.ts";
 export { computeProgress } from "./progress-compute.ts";
 export type { LeafInput, Progress } from "./progress-compute.ts";
@@ -130,9 +131,9 @@ export async function assignmentWarnings(
   if (!dueDate) return [];
   const { rows } = await db.query(
     `SELECT 1 FROM leave_request WHERE employee_id = $1 AND status = 'approved'
-     AND tstzrange(start_at, end_at, '[)') && tstzrange(($2::date)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh',
-                                                       ($2::date + 1)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh', '[)')`,
-    [employeeId, dueDate],
+     AND tstzrange(start_at, end_at, '[)') && tstzrange(($2::date)::timestamp AT TIME ZONE $3,
+                                                       ($2::date + 1)::timestamp AT TIME ZONE $3, '[)')`,
+    [employeeId, dueDate, BUSINESS_TZ],
   );
   return rows.length > 0 ? [{ code: "ASSIGNEE_ON_LEAVE", employeeId, date: dueDate }] : [];
 }

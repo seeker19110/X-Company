@@ -4,7 +4,8 @@
 // 111 (nghỉ tuần ≥ 24 giờ liên tục), 98 (làm đêm +30%, OT đêm +20%), 98.1 (OT 150/200/300%) — bản đọc được mức A; NĐ 145/2020 chỉ có
 // nguồn thứ cấp (mức C). GIÁ TRỊ MẶC ĐỊNH THEO LUẬT, chờ HR chốt nội quy chặt hơn (không phải xác nhận pháp chế).
 // Phút/phần trăm là số nguyên; tiền không xuất hiện ở đây. Kỳ đã khoá giữ policy_version cũ (D-007): luôn tra `rulesAt(ngày)`.
-import { addDays, localDateOf, zonedToUtc } from "./compute.ts";
+import { addDays, zonedToUtc } from "./compute.ts";
+import { localDate } from "../nen/time.ts";
 import { BUSINESS_TZ } from "../nen/time.ts";
 import { hoursToMs, minutesToMs } from "../nen/units.ts";
 
@@ -161,8 +162,8 @@ const MIN = minutesToMs(1);
 /** Số phút của [start, end) rơi vào giờ đêm địa phương. */
 export function nightOverlapMinutes(r: LaborRules, start: Date, end: Date, tz: string = BUSINESS_TZ): number {
   let total = 0;
-  let day = addDays(localDateOf(start, tz), -1);
-  const lastDay = localDateOf(end, tz);
+  let day = addDays(localDate(start, tz), -1);
+  const lastDay = localDate(end, tz);
   while (day <= lastDay) {
     // đêm bắt đầu 22h ngày `day`, kết thúc 6h ngày kế
     const ns = zonedToUtc(day, `${String(r.nightStartHour).padStart(2, "0")}:00`, tz).getTime();

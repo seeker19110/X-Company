@@ -1,5 +1,6 @@
 // Ngày nghiệp vụ theo múi giờ (mặc định Asia/Ho_Chi_Minh) — instant lưu UTC, ngày tính theo giờ địa phương.
 import { MS_PER_DAY } from "./units.ts";
+// eslint-disable-next-line no-restricted-syntax -- nguồn duy nhất của múi giờ nghiệp vụ (AUD-XFEAT-005)
 export const BUSINESS_TZ = "Asia/Ho_Chi_Minh";
 
 /** YYYY-MM-DD của instant `d` theo múi giờ `tz`. */

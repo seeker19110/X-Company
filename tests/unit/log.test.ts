@@ -408,3 +408,20 @@ describe("luật lint chống nuốt lỗi và console (BASE-ERR-001, BASE-GATE-
     assert.deepEqual(await lint("export const a = () => Promise.resolve().catch(() => false);\n"), []);
   });
 });
+
+describe("luật lint múi giờ một nguồn (AUD-XFEAT-005)", () => {
+  test("ESLint báo chuỗi múi giờ viết cứng trong chuỗi thường và SQL template; BUSINESS_TZ qua tham số thì không", async () => {
+    const { ESLint } = await import("eslint");
+    const eslint = new ESLint();
+    const lint = async (code: string) =>
+      (await eslint.lintText(code, { filePath: "lib/work/progress.ts" }))[0]!.messages.map((m) => m.ruleId);
+    const tz = ["Asia", "Ho_Chi_Minh"].join("/");
+    assert.ok((await lint(`export const z = "${tz}";\n`)).includes("no-restricted-syntax"));
+    assert.ok(
+      (
+        await lint(`export const q = (n: number) => \`SELECT now() AT TIME ZONE '${tz}', \${n}\`;\n`)
+      ).includes("no-restricted-syntax"),
+    );
+    assert.deepEqual(await lint('export const q = "SELECT now() AT TIME ZONE $1";\n'), []);
+  });
+});

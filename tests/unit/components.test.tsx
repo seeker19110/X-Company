@@ -12,7 +12,7 @@ import {
   reasonError,
   resolveConfirm,
 } from "../../app/components/confirm-dialog.tsx";
-import { ContactFormView } from "../../app/components/contact-form.tsx";
+import { ContactFormView, contactResult } from "../../app/components/contact-form.tsx";
 import { ErrorView } from "../../app/components/error-view.tsx";
 import { ERROR_VIEW_TEXT, syncErrorMessage } from "../../app/components/messages.ts";
 import { FieldError, fieldA11y, SubmitButton, toFieldErrors } from "../../app/components/form-parts.tsx";
@@ -192,6 +192,28 @@ describe("FE-FORM-001/002: biểu mẫu lỗi theo từng ô", () => {
     assert.ok(!/aria-invalid/.test(idle));
     const done = html(<ContactFormView base="c" state={{ kind: "done", code: "LH-1" }} />);
     assert.match(done, /<p role="status">[^]*<strong>LH-1<\/strong>/);
+  });
+
+  test("liên hệ: phản hồi không phải JSON (502/5xx HTML) → lỗi máy chủ có mã, không báo mất mạng (AUD-XFEAT-007)", () => {
+    const bad = contactResult(502, "<html><body>Bad Gateway</body></html>");
+    assert.equal(bad.kind, "error");
+    assert.ok(
+      bad.kind === "error" && /502/.test(bad.message) && !/kết nối/i.test(bad.message),
+      JSON.stringify(bad),
+    );
+    const empty = contactResult(500, "");
+    assert.ok(empty.kind === "error" && /500/.test(empty.message));
+    // 2xx mà thân không đọc được (proxy cắt) → không khai "đã gửi" khi không có mã hồ sơ
+    assert.equal(contactResult(200, "<html>").kind, "error");
+    assert.deepEqual(contactResult(201, JSON.stringify({ code: "LH-9" })), { kind: "done", code: "LH-9" });
+    const v = contactResult(
+      400,
+      JSON.stringify({
+        error: { message: "Sai" },
+        fields: [{ path: "email", message: "Email không hợp lệ" }],
+      }),
+    );
+    assert.deepEqual(v, { kind: "error", message: "Sai", fields: { email: "Email không hợp lệ" } });
   });
 
   test("SubmitButton: busy khoá nút; không busy thì không", () => {

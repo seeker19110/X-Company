@@ -21,6 +21,7 @@ import {
 } from "../../lib/attendance/leave.ts";
 import { decideOt, requestOt } from "../../lib/attendance/ot.ts";
 import { NEEDS_REVIEW_SQL } from "../../lib/attendance/period.ts";
+import { BUSINESS_TZ } from "../../lib/nen/time.ts";
 import {
   closePool,
   getPool,
@@ -574,7 +575,7 @@ describe("EXPLAIN các truy vấn lõi: không Seq Scan trên bảng lớn", () 
       name: "attendance-needs-review",
       from: "lib/attendance/period.ts NEEDS_REVIEW_SQL — sự kiện cần xác minh trong kỳ",
       sql: NEEDS_REVIEW_SQL,
-      params: () => [companyId, "2026-01-01", "2027-12-31"],
+      params: () => [companyId, "2026-01-01", "2027-12-31", BUSINESS_TZ],
     },
     {
       name: "leave-balance",

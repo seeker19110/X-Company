@@ -23,6 +23,7 @@
     "submitting": "Đang gửi…",
     "thanksPrefix": "Cảm ơn bạn. Mã yêu cầu: ",
     "thanksSuffix": ". Chúng tôi sẽ liên hệ trong 1 ngày làm việc.",
-    "offline": "Không kết nối được. Nội dung vẫn còn trên form, vui lòng gửi lại."
+    "offline": "Không kết nối được. Nội dung vẫn còn trên form, vui lòng gửi lại.",
+    "serverError": "Máy chủ đang gặp lỗi ({status}). Nội dung vẫn còn trên form, vui lòng gửi lại sau ít phút."
   }
 }
