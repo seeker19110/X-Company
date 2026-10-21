@@ -25,7 +25,12 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="card" aria-describedby={error ? "login-error" : undefined}>
+    <form
+      method="post"
+      onSubmit={onSubmit}
+      className="card"
+      aria-describedby={error ? "login-error" : undefined}
+    >
       {error && (
         <p id="login-error" role="alert" className="err">
           {error}

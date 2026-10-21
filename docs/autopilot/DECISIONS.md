@@ -343,9 +343,24 @@
 - Lý do (tiêu chí chất lượng cuối): Đúng: changelog chỉ phản ánh thay đổi của sản phẩm; GO-NO-GO đang NO-GO nên 0.x đúng ngữ nghĩa SemVer (1.0.0 = API ổn định, sẵn production); bootstrap-sha chỉ áp cho bản đầu nên không cần gỡ; tránh đụng tag v2.0.0 cũ của khung (không xoá tag)
 - Đường lùi: Bỏ bootstrap-sha/bump-minor-pre-major khỏi release-please-config.json; muốn 1.0.0 thì commit có footer 'Release-As: 1.0.0'
 
+### D-047 · 2026-10-19T13:02:17+00:00 · ZAP 10202 (Absence of Anti-CSRF Tokens, Medium) trên /app/login và /lien-he sau khi form chuyển method=post (để chặn lộ mật khẩu/email lên URL khi chưa hydrate — ZAP 10024 qua https)
+
+- Phương án: (1) Giữ form GET (bỏ method=post): hết 10202 nhưng mật khẩu nằm trên URL khi bấm gửi trước khi JS chạy · (2) method=post + thêm ô ẩn csrf_token giả để ZAP nhận: token không được kiểm ở đâu (gửi gốc không có handler) — an ninh giả · (3) method=post + allowlist zap-gate cho 10202 GIỚI HẠN theo đường dẫn (^/app/login$, ^/lien-he$), mở rộng zap-gate để mục allowlist có paths; form khác vẫn đỏ
+- Chọn: method=post + allowlist zap-gate cho 10202 GIỚI HẠN theo đường dẫn (^/app/login$, ^/lien-he$), mở rộng zap-gate để mục allowlist có paths; form khác vẫn đỏ
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: chặn lỗ thật (dữ liệu nhạy cảm lên URL); 10202 ở hai trang này là dương tính giả — gửi gốc của form về chính trang, không handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (+ header CSRF khi đã đăng nhập, tests/http). Allowlist theo đường dẫn giữ cổng chặt cho mọi form khác.
+- Đường lùi: Xoá mục 10202 trong security/zap/allowlist.json (cổng đỏ lại) hoặc bỏ method=post
+- Đính chính (review PR #33): chỉ `/api/app/auth/login` kiểm Origin; `/api/public/inquiries` không kiểm Origin — là endpoint công khai không phiên nên CSRF không áp dụng (giới hạn tần suất theo IP). Kết luận dương tính giả không đổi.
+
 ### D-048 · 2026-10-19T21:11:02+00:00 · Duyệt kế hoạch sửa audit 2026-10-19 (6 đợt, AUDIT-REPORT §5)
 
 - Phương án: (1) Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa · (2) Chờ người duyệt
 - Chọn: Duyệt 6 đợt, 🟠 trước, test đỏ trước khi sửa
 - Lý do (tiêu chí chất lượng cuối): Đúng/an toàn trước: DATA/XFEAT/CODE 🟠 có tái hiện hoặc đọc mã; mục chạm auth/migration vẫn do người merge
 - Đường lùi: Đóng PR đợt chưa merge
+
+### D-049 · 2026-10-19T23:13:58+00:00 · ZAP 20012 (Anti-CSRF Tokens Check, quét chủ động) trên /app/login và /lien-he sau khi form chuyển POST: allowlist hay thêm token?
+
+- Phương án: (1) Thêm token CSRF vào hai form (đổi hợp đồng API đăng nhập/liên hệ) · (2) Allowlist 20012 giới hạn đúng hai đường dẫn, cùng lý do với 10202 (D-047)
+- Chọn: Allowlist 20012 giới hạn đúng hai đường dẫn, cùng lý do với 10202 (D-047)
+- Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: hai form chỉ gửi gốc về chính trang, không handler đổi trạng thái; gửi thật qua fetch có Origin check hoặc endpoint công khai không phiên. Giữ phạm vi hẹp theo đường dẫn nên form khác vẫn đỏ.
+- Đường lùi: Xoá mục 20012 trong security/zap/allowlist.json (cổng đỏ lại)

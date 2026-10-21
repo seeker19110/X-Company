@@ -24,6 +24,16 @@ export const MALFORMED_PATH_RE = `(?!(?:${VALID_UTF8_UNIT})*$).*`;
 /** Giá trị HSTS — PHẢI trùng `securityHeaders()` ở proxy.ts (tests/unit/next-config.test.ts khoá). Trình duyệt bỏ qua HSTS nhận qua http. */
 export const API_HSTS = "max-age=31536000; includeSubDomains";
 
+/** Đường dẫn tĩnh proxy.ts không chạy qua (khớp phần loại trừ của matcher, trừ `api` đã có khối riêng). */
+export const STATIC_SOURCES = [
+  "/_next/static/:path*",
+  "/_next/image",
+  "/favicon.ico",
+  "/icons/:path*",
+  "/sw.js",
+  "/manifest.webmanifest",
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
@@ -43,6 +53,15 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: API_HSTS },
         ],
       },
+      // Tệp tĩnh mà proxy.ts cũng bỏ qua (matcher) không nhận header của proxy → thiếu nosniff + HSTS (ZAP 10021/10035 khi
+      // quét qua https thật: staging:drill). Giữ khớp danh sách loại trừ trong `config.matcher` của proxy.ts.
+      ...STATIC_SOURCES.map((source) => ({
+        source,
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Strict-Transport-Security", value: API_HSTS },
+        ],
+      })),
     ];
   },
   async rewrites() {
