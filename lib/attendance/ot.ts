@@ -118,7 +118,7 @@ export async function requestOt(
   if (!employeeId) throw new AppError("NO_EMPLOYEE", 403, t("err.shared.taiKhoanKhongGanHoSo"));
   const self = employeeId === actor.employeeId;
   const res = await employeeResource(tx, actor.companyId, employeeId, r.businessDate);
-  await requireOn(tx, actor, self ? "leave.request" : "attendance.approve", res, {
+  await requireOn(tx, actor, self ? "ot.request" : "attendance.approve", res, {
     type: "employee",
     id: employeeId,
   });

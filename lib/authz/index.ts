@@ -63,6 +63,9 @@ export const PERMISSIONS = {
   "period.read_locked": { roles: ["hr", "accountant", "executive"], self: false },
   "export.sensitive": { roles: ["sensitive_exporter"], self: false },
   "leave.request": { roles: [], self: true },
+  // AUD-XFEAT-006: đơn OT / đề nghị sửa công của CHÍNH MÌNH — tách khỏi leave.request để audit "denied" đúng tên.
+  "ot.request": { roles: [], self: true },
+  "adjustment.request_own": { roles: [], self: true },
   "project.read": { roles: ["employee", "team_lead", "project_manager", "executive"], self: false },
   "project.manage": { roles: ["project_manager"], self: false },
   "project.create": { roles: ["project_manager", "executive"], self: false },

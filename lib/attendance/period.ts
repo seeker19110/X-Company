@@ -563,7 +563,7 @@ export async function requestAdjustment(
 ): Promise<string> {
   const self = a.employeeId === actor.employeeId;
   const res = await employeeResource(tx, actor.companyId, a.employeeId);
-  await requireOn(tx, actor, self ? "leave.request" : "attendance.approve", res, {
+  await requireOn(tx, actor, self ? "adjustment.request_own" : "attendance.approve", res, {
     type: "employee",
     id: a.employeeId,
   });
