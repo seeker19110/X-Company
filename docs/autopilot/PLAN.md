@@ -123,7 +123,7 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-054` Lát 10 — Prometheus + Alertmanager thật cục bộ: script cài binary ghim, `promtool check/test rules`, scrape /api/metrics, định tuyến tới webhook, bài thử end-to-end (OPS-SLO-001/006, OPS-OBS-*) — Gate: `npm run -s ops:stack:drill`
 - [x] `T-055` Lát 10 — staging có TLS: Caddy tls internal ở staging.localhost, chạy DAST + ZAP baseline qua https, cấu hình mẫu cho tên miền thật (SEC-WEB-016, PRF-WEB-009) — Gate: `npm run -s staging:drill`
 - [x] `T-056` Lát 10 — RUM web-vitals tự làm: beacon nhỏ, /api/public/rum giới hạn tần suất, gộp p75 theo trang, luật cảnh báo, JS trong ngân sách (PRF-WEB-005/008, FE-PERF-001) — Gate: `npm run -s test:file -- tests/db/rum.test.ts && npm run -s check:perf-budget`
-- [ ] `T-057` Lát 10 — chốt: GO-NO-GO, PROGRESS, blueprint, hồ sơ startup chưa có pháp nhân (D-043) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
+- [x] `T-057` Lát 10 — chốt: GO-NO-GO, PROGRESS, blueprint, hồ sơ startup chưa có pháp nhân (D-043) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
 
 ## Phụ thuộc ngoài
 | Việc | Bên ngoài | Ngày cam kết | Kế hoạch B |
