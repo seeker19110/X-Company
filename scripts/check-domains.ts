@@ -1,4 +1,5 @@
-// ARC-MOD-005/008: lib/* ⊆ miền đã khai; import chéo miền chỉ vào tệp công khai (docs/architecture/domains.md).
+// ARC-MOD-005/008: lib/* ⊆ miền đã khai và miền đã khai ⇒ có thư mục lib/<miền>; import chéo miền chỉ vào tệp công khai
+// (docs/architecture/domains.md). Quét lib/, app/, scripts/, adapters/, instrumentation.ts, proxy.ts.
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -62,8 +63,26 @@ export function check(rootDir: string, md: string): string[] {
       errors.push(`lib/${name} chưa khai trong docs/architecture/domains.md`);
     }
   }
-  for (const dir of ["lib", "app", "scripts"]) {
-    for (const f of walk(path.join(rootDir, dir))) {
+  // Chiều ngược: miền khai mà không có thư mục = bảng khai sai/lỗi thời (chỉ kiểm khi có lib/).
+  if (existsSync(libDir)) {
+    for (const name of domains.keys()) {
+      const d = path.join(libDir, name);
+      if (!existsSync(d) || !statSync(d).isDirectory()) {
+        errors.push(
+          `miền "${name}" khai trong docs/architecture/domains.md nhưng không có thư mục lib/${name}`,
+        );
+      }
+    }
+  }
+  const rootFiles = ["instrumentation.ts", "proxy.ts"]
+    .map((n) => path.join(rootDir, n))
+    .filter((f) => existsSync(f));
+  const sources = [
+    ...["lib", "app", "scripts", "adapters"].flatMap((d) => walk(path.join(rootDir, d))),
+    ...rootFiles,
+  ];
+  {
+    for (const f of sources) {
       const rel = path.relative(rootDir, f).split(path.sep).join("/");
       const own = rel.startsWith("lib/") ? (rel.split("/")[1] ?? null) : null;
       for (const spec of importsOf(readFileSync(f, "utf8"))) {

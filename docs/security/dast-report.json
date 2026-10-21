@@ -807,7 +807,7 @@
           "name": "sitemap/robots: không lộ bản nháp, /app bị chặn bot",
           "ok": true,
           "errors": [],
-          "evidence": "GET /robots.txt → 200 User-Agent: * Allow: / Disallow: /app Disallow: /api Sitemap: http://localhost:3…"
+          "evidence": "GET /robots.txt → 200 User-Agent: * Allow: / Disallow: /app Disallow: /api Sitemap:…"
         }
       ]
     },

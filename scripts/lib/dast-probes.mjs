@@ -508,7 +508,12 @@ export function redact(s) {
 
 export const clip = (s, n = 140) => {
   const t = redact(s).replace(/\s+/g, " ");
-  return t.length > n ? `${t.slice(0, n)}…` : t;
+  if (t.length <= n) return t;
+  let cut = t.slice(0, n);
+  // Không để lại URL bị cắt dở (lychee báo cổng/URL hỏng): nếu điểm cắt rơi giữa một token chứa `://`, bỏ cả token đó.
+  const lastSpace = cut.lastIndexOf(" ");
+  if (t[n] !== " " && cut.slice(lastSpace + 1).includes("://")) cut = cut.slice(0, Math.max(lastSpace, 0));
+  return `${cut.trimEnd()}…`;
 };
 
 /** Một dòng bằng chứng request → response. */
