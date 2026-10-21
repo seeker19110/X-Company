@@ -14,8 +14,91 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: quality
+  # Khung 3.12.0 (ADR-0034, WF-CI-024/025): job `quality` cũ chạy nối tiếp 8m02s (đường găng của CI) — typecheck+lint chạy hai
+  # lần (bước riêng + trong `dev-task.sh gate`), rồi coverage chạy lại cả bộ test. Tách thành job chạy CÙNG LÚC, mỗi job đúng
+  # lệnh của xt.yaml qua dev-task.sh; `quality` nay là job TỔNG HỢP (cuối file) `needs` mọi job — required check duy nhất của
+  # ci.yml. Test không đọc sản phẩm build (`.next`) nên tách build/test không làm test nào tự bỏ qua.
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: typecheck — đúng lệnh trong xt.yaml
+        run: .xtemplates/scripts/dev-task.sh typecheck
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: lint (gồm format:check) — đúng lệnh trong xt.yaml
+        run: .xtemplates/scripts/dev-task.sh lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: build — đúng lệnh trong xt.yaml
+        run: .xtemplates/scripts/dev-task.sh build
+
+  # Kiểm tĩnh của dự án và khung (nhanh, cần lịch sử để so với nhánh gốc).
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check:arch so ADR với nhánh gốc; progress-check cần SHA bàn giao
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
+        run: npm run -s check:arch
+      - name: Migration append-only, không thao tác phá vỡ (DB-MIG-008, OPS-DEPLOY-003)
+        run: npm run -s check:migrations
+      - name: Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
+        run: |
+          npm run -s check:docs
+          npm run -s check:repo-docs
+      - name: PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
+        run: python3 .xtemplates/scripts/xt.py progress-check
+      - name: Khung — PLAN/blueprint/CI hợp lệ
+        run: |
+          python3 .xtemplates/scripts/xt.py ci-check .github/workflows
+          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json > /dev/null
+
+  # `test` và `coverage` chạy cùng bộ test (coverage dưới c8) song song với nhau: `test` là đúng lệnh `test` của xt.yaml
+  # (WF-CI-002), `coverage` giữ ngưỡng baseline (QA-COV-002). Cả hai cần Postgres 17 + client 17 + OpenBao/restic thật.
+  test:
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -32,8 +115,6 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # check:arch so ADR với nhánh gốc
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
@@ -51,15 +132,42 @@ jobs:
       # (scripts/tools/install-tool.mjs; sai sha256 → dừng). Không cache để không thêm action chưa ghim SHA; ~85 MB mỗi lần chạy.
       - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
         run: node scripts/tools/install-tool.mjs install openbao restic
-      # FE-BUILD-003: typecheck + lint chạy TRƯỚC build (gate của khung xếp build đầu tiên).
-      - name: Typecheck và lint trước build
+      - name: test — đúng lệnh trong xt.yaml
+        run: .xtemplates/scripts/dev-task.sh test
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 # BASE-DEP-008: ghim digest; đổi digest khi nâng bản vá (xem docs/ops/VULN-SLA.md)
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: xc_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/xc_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check:coverage-baseline so .c8rc.json với nhánh gốc
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+          cache: npm
+      - name: Cài phụ thuộc theo lockfile
+        run: npm ci
+      - name: Cài postgresql-client-17 (khớp máy chủ)
         run: |
-          npm run -s typecheck
-          npm run -s lint
-      - name: Kiến trúc — miền, route, ADR bất biến, test hợp lệ (ARC-MOD, FE-RENDER, QA-COV)
-        run: npm run -s check:arch
-      - name: Cổng chuẩn — đúng lệnh trong xt.yaml (build · typecheck · lint · test)
-        run: .xtemplates/scripts/dev-task.sh gate
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
+        run: node scripts/tools/install-tool.mjs install openbao restic
       - name: Coverage theo baseline (.c8rc.json chỉ tăng — QA-COV-002)
         run: |
           npm run -s check:coverage-baseline
@@ -72,18 +180,20 @@ jobs:
           path: coverage/
           retention-days: 14
           if-no-files-found: warn
-      - name: Migration append-only, không thao tác phá vỡ (DB-MIG-008, OPS-DEPLOY-003)
-        run: npm run -s check:migrations
-      - name: Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
-        run: |
-          npm run -s check:docs
-          npm run -s check:repo-docs
-      - name: PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
-        run: python3 .xtemplates/scripts/xt.py progress-check
-      - name: Khung — PLAN/blueprint/CI hợp lệ
-        run: |
-          python3 .xtemplates/scripts/xt.py ci-check .github/workflows
-          python3 .xtemplates/scripts/xt.py blueprint-status BLUEPRINT.md --json > /dev/null
+
+  # Lỗ hổng phụ thuộc production trên mọi PR/push (trước ở dep-audit.yml như required check riêng; dep-audit.yml nay chỉ
+  # còn lịch tuần) — job con của `quality` để ruleset chỉ giữ check tối thiểu (khung 3.12.0, D-116).
+  dep-audit:
+    name: dep-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc # BASE-DEP-003, PRF-WEB-010: một nguồn phiên bản runtime
+      - name: Quét lỗ hổng phụ thuộc production (đỏ khi ≥ moderate)
+        run: npm audit --omit=dev --audit-level=moderate
 
   e2e:
     name: e2e
@@ -443,3 +553,46 @@ jobs:
             docs/security/staging-zap-baseline.json
           retention-days: 30
           if-no-files-found: ignore
+
+  # Required check `quality` (ruleset `.github/rulesets/main.json`): job TỔNG HỢP của MỌI job ở trên (WF-CI-001, khung 3.12.0).
+  # `always()` — không phải `!cancelled()`: run bị huỷ thì `quality` vẫn chạy và ĐỎ (job con `cancelled`/`skipped` ≠ `success`);
+  # `skipped` của required check được GitHub tính là ĐẠT nên không được để `quality` thành `skipped`.
+  quality:
+    name: quality
+    needs:
+      [
+        typecheck,
+        lint,
+        build,
+        checks,
+        test,
+        coverage,
+        dep-audit,
+        e2e,
+        readme-smoke,
+        protection-guard,
+        supply-chain,
+        lighthouse,
+        dast,
+        dast-probes,
+        ops-stack,
+        staging-tls,
+      ]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Mọi job con phải `success`
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["RESULTS"])
+          bad = {job: v.get("result") for job, v in needs.items() if v.get("result") != "success"}
+          for job, v in sorted(needs.items()):
+              print(f"{job}={v.get('result')}")
+          if not needs or bad:
+              print(f"::error::Job con không `success`: {bad or 'không có job con nào'}")
+              sys.exit(1)
+          PY

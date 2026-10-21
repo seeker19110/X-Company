@@ -45,7 +45,7 @@
 | Sao lưu off-site 3-2-1, KMS/HSM, lịch sao lưu tự động, diễn tập trên hạ tầng thật | mới chạy trên máy dev | khi chọn hạ tầng — chủ dự án |
 | Hạ tầng giám sát production, kênh trực có người, Sentry/OTel | Prometheus/Alertmanager mới chạy cục bộ (drill), kênh là webhook thử | khi có hạ tầng giám sát — vận hành |
 | Chứng chỉ ACME công khai, staging/production thật, WAF/CDN, pentest | staging TLS là Caddy `tls internal` (CA nội bộ) trên máy dev; mẫu ACME ở `ops/caddy/Caddyfile` mới kiểm cú pháp | tên miền + máy chủ thật — vận hành |
-| Ruleset nhánh (required checks, gồm `dast`, `ops-stack`, `staging-tls`) | `gh api rulesets` = `[]` | chủ repo import `.github/rulesets/main.json` |
+| Ruleset nhánh (required checks `quality` — gom `dast`, `ops-stack`, `staging-tls`… — `gitleaks`, `merge-gate`, `pr-policy`) | `gh api rulesets` = `[]` | chủ repo import `.github/rulesets/main.json` |
 | Giá trị pháp lý (hạn DSAR theo loại, thời hạn lưu, trần OT) | tra từ bản sao thương mại (mức B), chưa đối chiếu bản chính thức/Công báo; chủ dự án uỷ quyền tự quyết | luật sư đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020 |
 | Pháp nhân (bên kiểm soát dữ liệu) | dự án chưa thành lập công ty; hệ thống chỉ chạy dữ liệu mẫu, không xử lý dữ liệu thật của bên thứ ba (DPIA mục 0b, D-043) | chủ dự án thành lập pháp nhân → mốc 60 ngày nộp DPIA bắt đầu từ ngày xử lý thật đầu tiên |
 | GPS/QR/ảnh trên dữ liệu thật | cần DPIA nộp + xác nhận HR/pháp chế + UI đồng ý | trước khi bật `GEO_CAPTURE_ENABLED` |

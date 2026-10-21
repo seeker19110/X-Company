@@ -50,8 +50,30 @@ need(
   read(".github/workflows/pr-policy.yml").includes("node scripts/pr-policy.mjs"),
   "WF-REVIEW-002: workflow pr-policy",
 );
-for (const c of ["quality", "e2e", "pr-policy", "readme-smoke"])
+// Khung 3.12.0 (D-116): ruleset tối thiểu — `quality` gom mọi job của ci.yml; `pr-policy` đứng riêng vì chạy lại khi sửa mô tả PR.
+for (const c of ["quality", "gitleaks", "merge-gate", "pr-policy"])
   need(contexts.includes(c), `WF-CI-001: ruleset thiếu required check ${c}`);
+need(
+  !ruleset.rules.some(
+    (r) => r.type === "required_status_checks" && r.parameters.strict_required_status_checks_policy,
+  ),
+  "BASE-GATE-007 (b): ruleset không đòi up-to-date — PR merge song song, CI chạy lại trên push main",
+);
+const qualityNeeds = /^ {2}quality:\n[\s\S]*?^ {4}needs:\s*\[([^\]]*)\]/m.exec(ci)?.[1] ?? "";
+const jobsBlock = ci.split(/^jobs:\n/m)[1] ?? "";
+const ciJobs = [...jobsBlock.matchAll(/^ {2}([a-z0-9_-]+):\n/gm)]
+  .map((m) => m[1])
+  .filter((j) => j !== "quality");
+need(ciJobs.length > 5, "WF-CI-001: không đọc được danh sách job của ci.yml");
+for (const j of ciJobs)
+  need(
+    qualityNeeds
+      .split(",")
+      .map((s) => s.trim())
+      .includes(j),
+    `WF-CI-001: job ${j} của ci.yml không nằm trong quality.needs`,
+  );
+need(/^ {4}if: \$\{\{ always\(\) \}\}$/m.test(ci), "WF-CI-001: quality chạy if: always()");
 const tpl = read(".github/pull_request_template.md");
 for (const s of REQUIRED_SECTIONS)
   need(new RegExp(`^## ${s}$`, "m").test(tpl), `PR template thiếu "## ${s}"`);

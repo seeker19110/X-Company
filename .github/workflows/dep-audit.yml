@@ -2,11 +2,10 @@ name: Dependency audit
 
 # Lỗ hổng đã biết trong phụ thuộc production (npm audit --omit=dev). Phụ thuộc dev được theo dõi qua Dependabot;
 # ngoại lệ hiện có: braces (GHSA-vfj7-8cjw-p6xm) chỉ trong chuỗi eslint-config-next, mọi phiên bản, chưa có bản sửa — D-008.
+# Trên PR/push `main`, cùng lệnh chạy ở job `dep-audit` của ci.yml (job con của `quality` — khung 3.12.0); file này chỉ còn
+# lịch tuần (lỗ hổng mới công bố khi không có commit) và chạy tay.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch: {}
   schedule:
     - cron: "17 2 * * 1"
 
