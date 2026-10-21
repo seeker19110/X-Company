@@ -29,6 +29,7 @@ import { t } from "../i18n/index.ts";
 
 export { readCapped, readFormCapped } from "./body.ts";
 export type { GuardOptions } from "./idempotency.ts";
+export { isValidIdempotencyKey } from "./idempotency.ts";
 
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {

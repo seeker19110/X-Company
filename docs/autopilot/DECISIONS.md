@@ -371,3 +371,17 @@
 - Chọn: Đỏ với độ lệch MỚI; độ lệch đã biết chờ người nằm trong danh sách có tên (PENDING_EXAMPLE_KEYS) tự co; ruleset sống giữ cảnh báo
 - Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: phương án 1 khoá mọi PR (kể cả PR sửa) tới khi người import ruleset/ghi .env.example — agent không được ghi .env.*, API rules lỗi mạng cũng thành đỏ giả. Ruleset đã import (protection-guard run 39545193098 không cảnh báo). Phương án 2 vẫn chặn mọi độ lệch mới, danh sách chờ hiện tên từng khoá và báo lỗi khi đã thêm nên không mục nát.
 - Đường lùi: Xoá PENDING_EXAMPLE_KEYS (check:env đỏ tới khi .env.example đủ khoá); đổi ::warning thành ::error ở bước ruleset của protection-guard
+
+### D-051 · 2026-10-21T18:42:35+00:00 · Duyệt PLAN lát 11 (T-058…T-064): sửa 7 mục audit 🟢 còn mở agent tự làm được
+
+- Phương án: (1) Duyệt lát 11 gồm XFEAT-003/004/005/006/007, SEC-004, PERF-002; mỗi task một PR nhỏ theo thứ tự rủi ro thấp trước; PR chạm auth/quyền/migration để người merge (merge_hard_exceptions: human); để lại SEC-002/DOC-001/DOC-002/CFG-001 cho người quyết, SEC-005/A11Y-007/008/009/DATA-003/004/TEST-001/PERF-001/003 cho lát sau · (2) Chờ người chọn mục audit
+- Chọn: Duyệt lát 11 gồm XFEAT-003/004/005/006/007, SEC-004, PERF-002; mỗi task một PR nhỏ theo thứ tự rủi ro thấp trước; PR chạm auth/quyền/migration để người merge (merge_hard_exceptions: human); để lại SEC-002/DOC-001/DOC-002/CFG-001 cho người quyết, SEC-005/A11Y-007/008/009/DATA-003/004/TEST-001/PERF-001/003 cho lát sau
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: mỗi mục có đường tái hiện và Gate máy kiểm, test đỏ trước khi sửa; mục cần người quyết không bị đụng; A11Y-009 cần giảm JS trước nên chưa làm
+- Đường lùi: Đóng PR chưa merge; đánh [~] task chưa làm kèm lý do
+
+### D-052 · 2026-10-21T18:43:05+00:00 · Lát 11 nằm trong PLAN.md (57 task cũ phải chạy lại Gate vì máy mới không có bằng chứng cục bộ) hay PLAN riêng?
+
+- Phương án: (1) PLAN riêng docs/autopilot/PLAN-lat-11.md, PLAN.md trỏ tới; vòng chỉ kiểm task mới · (2) Giữ trong PLAN.md và chạy lại 57 Gate cũ (gồm e2e, drill cần tải OpenBao/restic/Prometheus/Caddy/ZAP)
+- Chọn: PLAN riêng docs/autopilot/PLAN-lat-11.md, PLAN.md trỏ tới; vòng chỉ kiểm task mới
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3: bằng chứng lát 1–10 đã có ở CI/PR đã merge; chạy lại không thêm độ tin cho việc mới mà tốn hàng giờ; CI vẫn chạy toàn bộ cổng ở mỗi PR
+- Đường lùi: Gộp task lát 11 về PLAN.md và loop init lại

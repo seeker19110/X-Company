@@ -125,6 +125,9 @@ duyệt, khoá kỳ và xuất (AT03–AT08); công việc–nghiệm thu–ti�
 - [x] `T-056` Lát 10 — RUM web-vitals tự làm: beacon nhỏ, /api/public/rum giới hạn tần suất, gộp p75 theo trang, luật cảnh báo, JS trong ngân sách (PRF-WEB-005/008, FE-PERF-001) — Gate: `npm run -s test:file -- tests/db/rum.test.ts && npm run -s check:perf-budget`
 - [x] `T-057` Lát 10 — chốt: GO-NO-GO, PROGRESS, blueprint, hồ sơ startup chưa có pháp nhân (D-043) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
 
+
+> Lát 11 trở đi (sửa audit 2026-10-19 còn mở): `docs/autopilot/PLAN-lat-11.md` (D-051, D-052).
+
 ## Phụ thuộc ngoài
 | Việc | Bên ngoài | Ngày cam kết | Kế hoạch B |
 |---|---|---|---|

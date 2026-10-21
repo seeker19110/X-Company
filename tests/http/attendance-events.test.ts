@@ -112,6 +112,12 @@ describe("sự kiện chấm công (T-012)", () => {
     assert.equal(r.status, 400);
     assert.equal((await r.json()).error.code, "IDEMPOTENCY_KEY_REQUIRED");
     assert.equal((await send(s, { kind: "in", device_time: iso(), source: "gps" }, "short")).status, 400);
+    // AUD-XFEAT-003: cùng luật ký tự với middleware (8–255 ký tự in được, không khoảng trắng); trần 100 theo CHECK của bảng.
+    for (const bad of ["co khoang trang", "tab\tbên-trong", "x".repeat(101)]) {
+      const r = await send(s, { kind: "in", device_time: iso(), source: "gps" }, bad);
+      assert.equal(r.status, 400, bad);
+      assert.equal((await r.json()).error.code, "IDEMPOTENCY_KEY_REQUIRED");
+    }
     assert.equal((await send(s, { kind: "nap", device_time: iso(), source: "gps" })).status, 400);
     assert.equal((await send(s, { kind: "in", device_time: "hôm qua", source: "gps" })).status, 400);
   });
