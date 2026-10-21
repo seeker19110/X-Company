@@ -5,6 +5,7 @@ import { withTx } from "../../lib/db/index.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import type { ActorContext } from "../../lib/authz/index.ts";
 import { assignEmployment, createEmployee } from "../../lib/org/index.ts";
+import { pendingApprovals } from "../../lib/attendance/approvals.ts";
 import { recordEvent } from "../../lib/attendance/events.ts";
 import {
   advancePeriod,
@@ -140,6 +141,37 @@ describe("kỳ công & sửa công (T-014, AT06)", () => {
         return true;
       },
     );
+  });
+
+  test("AUD-CODE-007: add_event không được ở tương lai; summary hộp duyệt nêu loại + thời điểm", async () => {
+    await assert.rejects(
+      withTx((tx) =>
+        requestAdjustment(tx, emp, {
+          employeeId: emp.employeeId!,
+          action: "add_event",
+          newKind: "out",
+          newAt: new Date(Date.now() + 30 * 86_400_000),
+          reason: "quên chấm ra",
+        }),
+      ),
+      isCode("VALIDATION"),
+    );
+    // tương lai gần trong dung sai đồng hồ (5 phút) vẫn qua
+    const soon = await withTx((tx) =>
+      requestAdjustment(tx, emp, {
+        employeeId: emp.employeeId!,
+        action: "add_event",
+        newKind: "out",
+        newAt: new Date(Date.now() + 60_000),
+        reason: "lệch đồng hồ",
+      }),
+    );
+    assert.notEqual(soon, "");
+    const items = await pendingApprovals(db.app, lead);
+    const it = items.find((x) => x.id === soon);
+    assert.ok(it);
+    assert.match(it.summary, /out/, "summary nêu loại sự kiện");
+    await db.admin.query("UPDATE attendance_adjustment SET status = 'rejected' WHERE id = $1", [soon]);
   });
 
   test("AT06: sửa công có trước/sau, lý do, người duyệt ≠ người đề nghị; đề nghị chờ cũng chặn khoá", async () => {

@@ -138,6 +138,8 @@
       "dieuChinhCanLyDo": "Điều chỉnh cần lý do",
       "butToanKhongHopLe": "Bút toán không hợp lệ",
       "thoiGianKetThucPhaiSau": "Thời gian kết thúc phải sau bắt đầu",
+      "soPhutNghiVuotKhoang": "Số phút nghỉ không được vượt khoảng từ lúc bắt đầu đến lúc kết thúc",
+      "thoiDiemSuKienTuongLai": "Thời điểm sự kiện không được ở tương lai",
       "khongTimThayDon": "Không tìm thấy đơn",
       "donDaDuocXuLy": "Đơn đã được xử lý",
       "trungThoiGianVoiDonNghi": "Trùng thời gian với đơn nghỉ đã duyệt",
@@ -368,10 +370,11 @@
       "adjustmentPeriodRef": "điều chỉnh {id}: {reason}"
     },
     "approvals": {
-      "summaryLeave": "{name} · {minutes} phút",
+      "summaryLeave": "{name} · {from} – {to} · {minutes} phút",
       "summaryOt": "OT {date} · {minutes} phút",
       "summaryOtAwaitingConsent": "OT {date} · {minutes} phút (chờ đồng ý)",
-      "summaryAdjustment": "Sửa công: {reason}"
+      "summaryAdjustment": "Sửa công: {reason}",
+      "summaryAdjustmentAdd": "Sửa công: thêm {kind} lúc {at} · {reason}"
     },
     "cms": {
       "imageMissingAlt": "Ảnh {src} thiếu văn bản thay thế"
