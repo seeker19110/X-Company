@@ -46,6 +46,6 @@ Mọi mục audit agent tự làm được đã đóng bằng mã + test; pha ha
 - [x] `T-075` AUD-TEST-001 phần còn lại: script chạy lặp test nhạy thời gian dưới tải CPU, 50 lượt health + reliability xanh (files: scripts/flaky-check.sh, tests/) — Gate: `scripts/flaky-check.sh 50 tests/http/health.test.ts tests/db/reliability.test.ts`
 
 ### Lát 13 — Harden trước production (G7)
-- [ ] `T-076` Chuyển `delivery_phase: harden` trong `xt.yaml` (lý do trong PR), doctor sạch (sau: T-075; files: xt.yaml) — Gate: `python3 .xtemplates/scripts/xt.py doctor && grep -q '^delivery_phase: harden' xt.yaml`
+- [x] `T-076` Chuyển `delivery_phase: harden` trong `xt.yaml` (lý do trong PR), doctor sạch (sau: T-075; files: xt.yaml) — Gate: `python3 .xtemplates/scripts/xt.py doctor && grep -q '^delivery_phase: harden' xt.yaml`
 - [ ] `T-077` Audit delta trên cây cuối (`xt.py audit plan --status docs/ops/AUDIT-STATUS.md`), 🔴/🟠 mới thành task; sổ hợp lệ (sau: T-076; files: docs/ops/) — Gate: `python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
 - [ ] `T-078` `release-check` trên cây cuối + `GO-NO-GO.md` mới (số đếm máy sinh, nhãn bằng chứng trung thực), PROGRESS (sau: T-077; files: GO-NO-GO.md, PROGRESS.md) — Gate: `npm run -s check:docs && npm run -s check:repo-docs && python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md --json > /dev/null`
