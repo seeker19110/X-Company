@@ -26,34 +26,39 @@ export default async function DashboardPage() {
         {d.milestones.length === 0 ? (
           <p className="muted">{t("dashboard.milestones.empty")}</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{t("dashboard.milestones.project")}</th>
-                <th scope="col">{t("dashboard.milestones.milestone")}</th>
-                <th scope="col">{t("dashboard.milestones.due")}</th>
-                <th scope="col">{t("dashboard.milestones.slip")}</th>
-                <th scope="col">{t("dashboard.milestones.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.milestones.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.projectName}</td>
-                  <td>{m.name}</td>
-                  <td>{formatDate(m.dueDate)}</td>
-                  <td>
-                    {m.slipDays === null
-                      ? EMPTY
-                      : t("dashboard.milestones.slipDays", { days: formatNumber(m.slipDays) })}
-                  </td>
-                  <td>
-                    {m.achieved ? t("dashboard.milestones.achieved") : t("dashboard.milestones.notAchieved")}
-                  </td>
+          <div className="table-scroll" role="region" aria-labelledby="mocs" tabIndex={0}>
+            <table>
+              <caption className="visually-hidden">{t("dashboard.milestones.heading")}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t("dashboard.milestones.project")}</th>
+                  <th scope="col">{t("dashboard.milestones.milestone")}</th>
+                  <th scope="col">{t("dashboard.milestones.due")}</th>
+                  <th scope="col">{t("dashboard.milestones.slip")}</th>
+                  <th scope="col">{t("dashboard.milestones.status")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {d.milestones.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.projectName}</td>
+                    <td>{m.name}</td>
+                    <td>{formatDate(m.dueDate)}</td>
+                    <td>
+                      {m.slipDays === null
+                        ? EMPTY
+                        : t("dashboard.milestones.slipDays", { days: formatNumber(m.slipDays) })}
+                    </td>
+                    <td>
+                      {m.achieved
+                        ? t("dashboard.milestones.achieved")
+                        : t("dashboard.milestones.notAchieved")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
       <section className="card" aria-labelledby="cb">

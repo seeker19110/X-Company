@@ -122,6 +122,13 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     name: "Dự án E2E",
     managerEmployeeId: users.exec!.employeeId,
   });
+  // Mốc bàn giao (AUD-A11Y-007): một mốc trễ có kế hoạch gốc (có cột trễ + cảnh báo), một mốc còn xa → bảng dashboard có dữ liệu.
+  await tx.query(
+    `INSERT INTO milestone (company_id, project_id, name, due_date, baseline_due_date) VALUES
+       ($1, $2, 'Bàn giao tủ điện tầng 3', CURRENT_DATE - 3, CURRENT_DATE - 10),
+       ($1, $2, 'Nghiệm thu toàn công trình', CURRENT_DATE + 60, NULL)`,
+    [companyId, projectId],
+  );
   const execAsPm = (await loadActor(tx, users.exec!.userId))!;
   await addMember(tx, execAsPm, projectId, users.nv!.employeeId);
   await addMember(tx, execAsPm, projectId, users.tl!.employeeId);

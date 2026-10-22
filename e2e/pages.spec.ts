@@ -13,6 +13,7 @@ failOnCspViolation();
 // Mọi trang/màn (UX-A11Y-001, STD-A11Y-002, UX-RESP-001): axe WCAG 2.2 AA 0 vi phạm + không cuộn ngang ở 320 CSS px.
 // Luồng chỉ bằng bàn phím (UX-A11Y-003): Tab/Enter/Escape, không click.
 const NARROW = { width: 320, height: 800 };
+const WIDE = { width: 1280, height: 800 }; // AUD-A11Y-007: axe cũng quét bố cục máy tính, không chỉ 320 px
 
 async function checkPage(page: Page, path: string) {
   const res = await page.goto(path);
@@ -21,29 +22,93 @@ async function checkPage(page: Page, path: string) {
   await expectNoHorizontalScroll(page);
 }
 
-test.describe("mọi trang ở 320 px (UX-RESP-001, UX-A11Y-001)", () => {
-  test.use({ viewport: NARROW });
+for (const vp of [NARROW, WIDE]) {
+  test.describe(`mọi trang ở ${vp.width} px (UX-RESP-001, UX-A11Y-001)`, () => {
+    test.use({ viewport: vp });
 
-  test("trang công khai: sitemap + liên hệ + đăng nhập", async ({ page }) => {
-    const xml = await (await page.request.get("/sitemap.xml")).text();
-    const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
-    expect(paths.length).toBeGreaterThanOrEqual(3);
-    for (const p of new Set([...paths, "/lien-he", "/app/login"])) await checkPage(page, p);
-  });
+    test("trang công khai: sitemap + liên hệ + đăng nhập", async ({ page }) => {
+      const xml = await (await page.request.get("/sitemap.xml")).text();
+      const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]!).pathname);
+      expect(paths.length).toBeGreaterThanOrEqual(3);
+      for (const p of new Set([...paths, "/lien-he", "/app/login"])) await checkPage(page, p);
+    });
 
-  test("màn nội bộ theo vai trò: nhân viên, trưởng nhóm, điều hành", async ({ page }) => {
-    const byRole: [string, string[]][] = [
-      ["nv", ["/app/today", "/app/tasks", "/app/attendance", "/app/me"]],
-      ["tl", ["/app/approvals"]],
-      ["exec", ["/app/dashboard"]],
-    ];
-    for (const [who, paths] of byRole) {
-      await login(page, who);
-      for (const p of paths) await checkPage(page, p);
-      await logout(page);
-      await expect(page).toHaveURL(/\/app\/login$/);
-    }
+    test("màn nội bộ theo vai trò: nhân viên, trưởng nhóm, điều hành", async ({ page }) => {
+      const byRole: [string, string[]][] = [
+        ["nv", ["/app/today", "/app/tasks", "/app/attendance", "/app/me"]],
+        ["tl", ["/app/approvals"]],
+        ["exec", ["/app/dashboard"]],
+      ];
+      for (const [who, paths] of byRole) {
+        await login(page, who);
+        for (const p of paths) await checkPage(page, p);
+        await logout(page);
+        await expect(page).toHaveURL(/\/app\/login$/);
+      }
+    });
   });
+}
+
+test.describe("trạng thái lỗi, hộp thoại và bảng dashboard (AUD-A11Y-007)", () => {
+  for (const vp of [NARROW, WIDE]) {
+    test.describe(`ở ${vp.width} px`, () => {
+      test.use({ viewport: vp });
+
+      test("form đơn ở trạng thái lỗi: axe 0 vi phạm, ô lỗi nhận focus", async ({ page }) => {
+        await login(page, "nv2");
+        await page.goto("/app/attendance");
+        const leave = page.locator("form").filter({ has: page.getByRole("heading", { name: "Xin nghỉ" }) });
+        await leave.getByRole("button", { name: "Gửi đơn nghỉ" }).click();
+        await expect(leave.locator('[aria-invalid="true"]').first()).toBeFocused();
+        await expect(leave.getByRole("status")).not.toBeEmpty();
+        await expectAccessible(page);
+        await expectNoHorizontalScroll(page);
+        await logout(page);
+      });
+
+      // page.route cần chặn service worker (check:tests): SW giành request thì mock trượt.
+      test.describe("hộp thoại", () => {
+        test.use({ serviceWorkers: "block" });
+
+        test("hộp xác nhận đăng xuất (còn bản chưa gửi): axe 0 vi phạm", async ({ page, context }) => {
+          await login(page, "hr");
+          await context.setOffline(true);
+          // Vào ca hoặc Ra ca tuỳ lượt chạy trước (cùng người dùng ở hai viewport).
+          await page.getByRole("button", { name: /^(Vào|Ra) ca$/ }).click();
+          await expect(page.getByRole("status").first()).toContainText("Đã lưu trên thiết bị");
+          // Có mạng lại nhưng chặn đồng bộ → bản ghi vẫn "chờ gửi" khi sang màn Cá nhân (đồng bộ tự chạy lúc mở màn).
+          await page.route("**/api/app/sync", (route) => route.abort("failed"));
+          await context.setOffline(false);
+          await page.getByRole("link", { name: "Cá nhân" }).click();
+          await expect(page).toHaveURL(/\/app\/me$/);
+          await page.getByRole("button", { name: "Đăng xuất" }).click();
+          const dialog = page.getByRole("dialog");
+          await expect(dialog).toBeVisible();
+          await expectAccessible(page);
+          // Huỷ lần 1 → hộp xác nhận xoá (mức nguy hiểm hơn) hiện ngay: quét luôn rồi huỷ lần 2.
+          await page.keyboard.press("Escape");
+          await expect(dialog.getByRole("heading")).toContainText(/xoá/i);
+          await expectAccessible(page);
+          await page.keyboard.press("Escape");
+          await expect(dialog).toBeHidden();
+          await page.unroute("**/api/app/sync");
+          await logout(page);
+        });
+      });
+
+      test("bảng dashboard có dữ liệu mốc: có <caption>, axe 0 vi phạm", async ({ page }) => {
+        await login(page, "exec");
+        await page.goto("/app/dashboard");
+        const table = page.getByRole("table");
+        await expect(table).toBeVisible();
+        await expect(table.locator("caption")).toHaveCount(1);
+        await expect(table.getByRole("row")).toHaveCount(3); // tiêu đề + 2 mốc seed
+        await expectAccessible(page);
+        await expectNoHorizontalScroll(page);
+        await logout(page);
+      });
+    });
+  }
 });
 
 test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {

@@ -3,7 +3,7 @@
 // - Trang /app/**: network-first, mất mạng → bản đã lưu của chính URL đó, không có → /offline.html.
 // - KHÔNG cache /api/** (dữ liệu cá nhân) — dữ liệu xem ngoại tuyến nằm ở IndexedDB theo người dùng.
 // - Nâng cấp: chỉ xoá Cache Storage phiên bản cũ; KHÔNG đụng IndexedDB (hàng chờ chưa gửi phải còn).
-const VERSION = "xc-v1";
+const VERSION = "xc-v2";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
@@ -17,6 +17,9 @@ function strategyFor(url, mode, method) {
   return "network";
 }
 self.__xcStrategy = strategyFor;
+
+// URL trang vừa phải lấy từ bộ đệm (mạng hỏng): trang hỏi qua postMessage để hiện dải "dữ liệu đã lưu" (AUD-A11Y-008).
+const staleUrls = new Set();
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -59,14 +62,27 @@ self.addEventListener("fetch", (event) => {
       fetch(req)
         .then((res) => {
           // Chỉ lưu trang nội bộ khi máy chủ cho phép (không no-store) — trang có dữ liệu riêng mặc định no-store.
+          staleUrls.delete(req.url);
           if (res.ok && !(res.headers.get("cache-control") || "").includes("no-store")) {
             const copy = res.clone();
             caches.open(PAGES).then((c) => c.put(req, copy));
           }
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit || caches.match(OFFLINE_URL))),
+        .catch(() =>
+          caches.match(req).then((hit) => {
+            if (hit) staleUrls.add(req.url);
+            return hit || caches.match(OFFLINE_URL);
+          }),
+        ),
     );
+  }
+});
+
+// Trang hỏi "bản này lấy từ bộ đệm?" → trả lời cho đúng client đã hỏi.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "stale?" && event.source) {
+    event.source.postMessage({ type: "stale", stale: staleUrls.has(event.data.url) });
   }
 });
 

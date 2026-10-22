@@ -7,6 +7,10 @@
     "approvals": "Duyệt",
     "me": "Cá nhân"
   },
+  "netStatus": {
+    "offline": "Đang ngoại tuyến",
+    "stale": "Đang xem dữ liệu đã lưu trên thiết bị, có thể đã cũ."
+  },
   "sync": {
     "heading": "Đồng bộ",
     "button": "Đồng bộ",
