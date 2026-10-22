@@ -19,13 +19,13 @@ import { approve, createPage, publish, submitForReview } from "../lib/cms/index.
 import { loadActor } from "../lib/authz/load.ts";
 import { addMember, createProject, createTask } from "../lib/work/tasks.ts";
 import { localDate } from "../lib/nen/time.ts";
-import type { Role, ScopeType } from "../lib/authz/index.ts";
+import { SYSTEM_ACTOR, type Role, type ScopeType } from "../lib/authz/index.ts";
 
 const PASSWORD = "E2e-mat-khau-dai-2026!";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 setPool(pool);
 registerKms(); // KMS_PROVIDER=transit (nếu bật) cần transport trước khi seed ghi dữ liệu mã hoá
-const sys = { userId: null };
+const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
 
 type Users = Record<string, { email: string; userId: string; employeeId: string }>;
 
@@ -122,6 +122,13 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     name: "Dự án E2E",
     managerEmployeeId: users.exec!.employeeId,
   });
+  // Mốc bàn giao (AUD-A11Y-007): một mốc trễ có kế hoạch gốc (có cột trễ + cảnh báo), một mốc còn xa → bảng dashboard có dữ liệu.
+  await tx.query(
+    `INSERT INTO milestone (company_id, project_id, name, due_date, baseline_due_date) VALUES
+       ($1, $2, 'Bàn giao tủ điện tầng 3', CURRENT_DATE - 3, CURRENT_DATE - 10),
+       ($1, $2, 'Nghiệm thu toàn công trình', CURRENT_DATE + 60, NULL)`,
+    [companyId, projectId],
+  );
   const execAsPm = (await loadActor(tx, users.exec!.userId))!;
   await addMember(tx, execAsPm, projectId, users.nv!.employeeId);
   await addMember(tx, execAsPm, projectId, users.tl!.employeeId);

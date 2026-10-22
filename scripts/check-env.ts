@@ -98,6 +98,8 @@ export const PENDING_EXAMPLE_KEYS = new Set([
   "KMS_DEK_MAX_USES",
   "KMS_MAX_CALLS_PER_MIN",
   "TRUST_PROXY",
+  // T-068 (AUD-DATA-003): retention toạ độ GPS — chờ người thêm dòng mẫu (D-050)
+  "RETENTION_GEO_DAYS",
 ]);
 
 /** Tên khoá trong tệp dạng `.env` (`KEY=…`, kể cả dòng `# KEY=…` chú thích mẫu). Không trả giá trị. */

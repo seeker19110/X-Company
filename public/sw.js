@@ -3,7 +3,7 @@
 // - Trang /app/**: network-first, mất mạng → bản đã lưu của chính URL đó, không có → /offline.html.
 // - KHÔNG cache /api/** (dữ liệu cá nhân) — dữ liệu xem ngoại tuyến nằm ở IndexedDB theo người dùng.
 // - Nâng cấp: chỉ xoá Cache Storage phiên bản cũ; KHÔNG đụng IndexedDB (hàng chờ chưa gửi phải còn).
-const VERSION = "xc-v1";
+const VERSION = "xc-v2";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";

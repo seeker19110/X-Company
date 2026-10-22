@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { withTx } from "../../lib/db/index.ts";
 import { grantRole } from "../../lib/authz/grants.ts";
-import type { Role, ScopeType } from "../../lib/authz/index.ts";
+import { SYSTEM_ACTOR, type Role, type ScopeType } from "../../lib/authz/index.ts";
 import { hashPassword } from "../../lib/identity/password.ts";
 import { createBranch, createCompany, createDepartment, createEmployee } from "../../lib/org/index.ts";
 
@@ -15,7 +15,7 @@ export function setTestEnv(): void {
   process.env.LOG_LEVEL ??= "silent"; // test log tự bật mức khi cần
 }
 
-const sys = { userId: null };
+const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
 let hashed: Promise<string> | undefined;
 
 export async function seedCompany(name = "Công ty Test") {

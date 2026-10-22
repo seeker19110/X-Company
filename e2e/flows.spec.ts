@@ -97,6 +97,27 @@ test.describe("ứng dụng nội bộ", () => {
     await logout(page);
   });
 
+  test("AUD-A11Y-008: mất mạng → dải 'Đang ngoại tuyến' (role=status); tải lại khi ngoại tuyến cũng có dải @smoke", async ({
+    page,
+    context,
+  }) => {
+    await login(page, "nv");
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+    await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toHaveCount(0);
+    await context.setOffline(true);
+    await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toBeVisible();
+    await context.setOffline(false);
+    await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toHaveCount(0);
+    await context.setOffline(true);
+    await page.reload();
+    // Trang /app/** là no-store nên SW trả /offline.html (có dải trạng thái riêng), không phải bản lưu của trang.
+    await expect(page.getByRole("heading", { name: "Bạn đang ngoại tuyến" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toBeVisible();
+    await context.setOffline(false);
+    await page.goto("/app/today");
+    await logout(page);
+  });
+
   test.describe("nghiệm thu (mock 409 lúc bắt đầu)", () => {
     // Mock bằng page.route: SW đã giành trang thì request đi qua SW, mock bị trượt (check:tests bắt buộc).
     test.use({ serviceWorkers: "block" });
@@ -161,6 +182,34 @@ test.describe("ứng dụng nội bộ", () => {
     });
   });
 
+  test.describe("lỗi server không kèm fields (AUD-A11Y-009)", () => {
+    // page.route cần chặn service worker (check:tests).
+    test.use({ serviceWorkers: "block" });
+
+    test("AUD-A11Y-009: lỗi server không kèm fields → focus về khối thông báo của form, không rơi về body", async ({
+      page,
+    }) => {
+      await login(page, "nv2");
+      await page.goto("/app/attendance");
+      await page.route("**/api/app/adjustments", (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: "application/problem+json",
+          body: JSON.stringify({ title: "Lỗi máy chủ", status: 500 }),
+        }),
+      );
+      const adj = page
+        .locator("form")
+        .filter({ has: page.getByRole("heading", { name: "Đề nghị sửa công (quên chấm)" }) });
+      await adj.getByLabel("Ngày").fill("2026-10-02");
+      await adj.getByLabel("Giờ").fill("17:00");
+      await adj.getByLabel("Lý do (bắt buộc)").fill("Quên bấm ra ca, có tổ trưởng xác nhận");
+      await adj.getByRole("button", { name: "Gửi đề nghị" }).click();
+      await expect(adj.getByRole("status")).not.toBeEmpty();
+      await expect(adj.getByRole("status")).toBeFocused();
+    });
+  });
+
   test("AT06/AT07: đề nghị sửa công và đơn nghỉ → trưởng nhóm thấy trong hộp duyệt, duyệt và từ chối có lý do @smoke", async ({
     page,
   }) => {
@@ -174,6 +223,8 @@ test.describe("ứng dụng nội bộ", () => {
     await adj.getByLabel("Lý do (bắt buộc)").fill("Quên bấm ra ca, có tổ trưởng xác nhận");
     await adj.getByRole("button", { name: "Gửi đề nghị" }).click();
     await expect(adj.getByRole("status")).toContainText("Đã gửi đơn");
+    // AUD-A11Y-009: nút gửi bị vô hiệu lúc gửi → focus phải về khối thông báo của form, không rơi về <body>.
+    await expect(adj.getByRole("status")).toBeFocused();
     await expectAccessible(page);
     const leave = page.locator("form").filter({ has: page.getByRole("heading", { name: "Xin nghỉ" }) });
     await leave.getByLabel("Ngày").fill("2026-12-01");

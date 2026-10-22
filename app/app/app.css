@@ -1,10 +1,40 @@
 /* Thanh .app-nav cố định ở đáy che ô đang focus khi trình duyệt cuộn tới (WCAG 2.4.11): chừa chỗ ≥ chiều cao nav + lề. */
 html {
   scroll-padding-bottom: 5rem;
+  scroll-padding-top: 3rem; /* chừa chỗ cho dải ngoại tuyến cố định ở đỉnh (WCAG 2.4.11) */
 }
 .app-shell {
   min-height: 100dvh;
   padding-bottom: 5rem;
+}
+.net-banner {
+  position: fixed; /* cuối DOM (sau nội dung) để không đổi thứ tự vùng role=status của trang */
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border-bottom: 2px solid var(--warn);
+  color: var(--warn);
+  font-weight: 600;
+}
+.net-banner:empty {
+  padding: 0;
+  border: 0;
+}
+/* Bảng rộng cuộn ngang trong khung riêng (WCAG 1.4.10: trang không cuộn ngang ở 320 px); khung focus được bằng bàn phím. */
+.table-scroll {
+  overflow-x: auto;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .app-top {
   display: flex;

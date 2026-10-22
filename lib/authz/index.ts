@@ -32,6 +32,24 @@ export interface ActorContext {
   grants: readonly Grant[];
 }
 
+const SYSTEM: unique symbol = Symbol("xt.system-actor");
+/**
+ * Actor hệ thống TƯỜNG MINH (bootstrap, seed, worker nội bộ) — không có người dùng nên không có grant.
+ * Chỉ đúng hằng `SYSTEM_ACTOR` (so sánh danh tính) được bỏ qua kiểm quyền; `{ userId: null }` tự dựng
+ * không qua được (khoá `symbol` không thể đến từ JSON/đầu vào HTTP).
+ */
+export interface SystemActor {
+  readonly [SYSTEM]: true;
+  readonly userId: null;
+  readonly requestId: null;
+}
+export const SYSTEM_ACTOR: SystemActor = Object.freeze({
+  [SYSTEM]: true as const,
+  userId: null,
+  requestId: null,
+});
+export const isSystemActor = (a: unknown): a is SystemActor => a === SYSTEM_ACTOR;
+
 /** Thuộc tính phạm vi của tài nguyên — chỉ những trục có ý nghĩa với tài nguyên đó. */
 export interface Resource {
   companyId: string;

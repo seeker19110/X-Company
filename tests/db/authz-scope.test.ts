@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { withTx } from "../../lib/db/index.ts";
-import { can } from "../../lib/authz/index.ts";
+import { can, SYSTEM_ACTOR } from "../../lib/authz/index.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import { grantRole, revokeGrant } from "../../lib/authz/grants.ts";
 import { createBranch, createCompany, createDepartment, createEmployee } from "../../lib/org/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 
-const sys = { userId: null };
+const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
 const isCode = (code: string) => (e: unknown) => e instanceof AppError && e.code === code;
 
 describe("loadActor + grant/revoke trên DB", () => {
@@ -110,6 +110,146 @@ describe("loadActor + grant/revoke trên DB", () => {
     );
   });
 
+  test("AUD-SEC-005: grantRole/revokeGrant tự kiểm access.manage ở server", async () => {
+    const mkUser = (email: string) =>
+      withTx(async (tx) => {
+        const { rows } = await tx.query(
+          "INSERT INTO app_user (email, display_name, company_id) VALUES ($1, 'U', $2) RETURNING id",
+          [email, c1],
+        );
+        return rows[0].id as string;
+      });
+    const admin = await mkUser("sec5-admin@example.test");
+    const plain = await mkUser("sec5-plain@example.test");
+    const target = await mkUser("sec5-target@example.test");
+    await withTx((tx) => grantRole(tx, sys, c1, { userId: admin, role: "sysadmin", scopeType: "company" }));
+    await withTx((tx) => grantRole(tx, sys, c1, { userId: plain, role: "hr", scopeType: "company" }));
+    const adminActor = (await loadActor(db.app, admin))!;
+    const plainActor = (await loadActor(db.app, plain))!;
+    const forbidden = (e: unknown) =>
+      e instanceof AppError &&
+      e.code === "FORBIDDEN" &&
+      e.status === 403 &&
+      e.details?.action === "access.manage";
+    const grantCount = async () =>
+      (await db.admin.query("SELECT count(*)::int AS n FROM role_grant WHERE user_id = $1", [target])).rows[0]
+        .n;
+
+    // Bị từ chối: actor thường (hr, không có access.manage) — cả khi tự nâng quyền cho chính mình.
+    await assert.rejects(
+      withTx((tx) =>
+        grantRole(tx, plainActor, c1, { userId: target, role: "sysadmin", scopeType: "company" }),
+      ),
+      forbidden,
+    );
+    await assert.rejects(
+      withTx((tx) =>
+        grantRole(tx, plainActor, c1, { userId: plain, role: "sysadmin", scopeType: "company" }),
+      ),
+      forbidden,
+    );
+    // Bị từ chối: `{ userId: null }` không tường minh không phải cửa sau.
+    await assert.rejects(
+      withTx((tx) =>
+        grantRole(tx, { userId: null } as never, c1, { userId: target, role: "hr", scopeType: "company" }),
+      ),
+      forbidden,
+    );
+    // Bị từ chối: sysadmin công ty khác (R7) cấp vào c1.
+    await assert.rejects(
+      withTx((tx) =>
+        grantRole(
+          tx,
+          { ...adminActor, companyId: c2, grants: adminActor.grants.map((g) => ({ ...g, companyId: c2 })) },
+          c1,
+          {
+            userId: target,
+            role: "hr",
+            scopeType: "company",
+          },
+        ),
+      ),
+      forbidden,
+    );
+    // Bản sao của SYSTEM_ACTOR (spread chép cả khoá symbol) cũng không qua — chỉ đúng hằng.
+    await assert.rejects(
+      withTx((tx) =>
+        grantRole(tx, { ...SYSTEM_ACTOR } as never, c1, { userId: target, role: "hr", scopeType: "company" }),
+      ),
+      forbidden,
+    );
+    assert.equal(await grantCount(), 0, "không ghi gì khi bị từ chối");
+    // Được phép: actor hệ thống tường minh; granted_by/audit không có người.
+    const sysGid = await withTx((tx) =>
+      grantRole(tx, SYSTEM_ACTOR, c1, { userId: target, role: "employee", scopeType: "self" }),
+    );
+    const sysRow = (await db.admin.query("SELECT granted_by FROM role_grant WHERE id = $1", [sysGid]))
+      .rows[0];
+    assert.equal(sysRow.granted_by, null);
+
+    // Được phép: actor có access.manage; người cấp ghi vào granted_by và audit.
+    const gid = await withTx((tx) =>
+      grantRole(tx, adminActor, c1, { userId: target, role: "hr", scopeType: "company" }),
+    );
+    const row = (await db.admin.query("SELECT granted_by FROM role_grant WHERE id = $1", [gid])).rows[0];
+    assert.equal(row.granted_by, admin);
+
+    // Thu hồi: actor thường và `{ userId: null }` bị từ chối; grant vẫn còn hiệu lực.
+    await assert.rejects(
+      withTx((tx) => revokeGrant(tx, plainActor, c1, gid, "thử")),
+      forbidden,
+    );
+    await assert.rejects(
+      withTx((tx) => revokeGrant(tx, { userId: null } as never, c1, gid, "thử")),
+      forbidden,
+    );
+    const live = await db.admin.query("SELECT revoked_at FROM role_grant WHERE id = $1", [gid]);
+    assert.equal(live.rows[0].revoked_at, null);
+    // Đồng thời: hai lần thu hồi song song cùng grant → đúng một thành công, lần kia NOT_FOUND.
+    const both = await Promise.allSettled([
+      withTx((tx) => revokeGrant(tx, adminActor, c1, gid, "hết nhiệm vụ")),
+      withTx((tx) => revokeGrant(tx, adminActor, c1, gid, "hết nhiệm vụ")),
+    ]);
+    assert.equal(both.filter((x) => x.status === "fulfilled").length, 1);
+    assert.ok(
+      isCode("NOT_FOUND")((both.find((x) => x.status === "rejected") as PromiseRejectedResult).reason),
+    );
+    const audit = await db.admin.query(
+      "SELECT actor_user_id FROM audit_event WHERE action = 'grant.revoke' AND object_id = $1",
+      [gid],
+    );
+    assert.equal(audit.rows[0].actor_user_id, admin);
+  });
+
+  test("AUD-SEC-005: grant phạm vi project — dự án phải tồn tại và thuộc công ty", async () => {
+    const [p1, pOther] = await withTx(async (tx) => {
+      const e2 = await createEmployee(tx, sys, c2, { code: "PM2", fullName: "PM khác" });
+      const a = await tx.query(
+        "INSERT INTO project (company_id, code, name, manager_employee_id) VALUES ($1, 'P1', 'Dự án 1', $2) RETURNING id",
+        [c1, emp],
+      );
+      const b = await tx.query(
+        "INSERT INTO project (company_id, code, name, manager_employee_id) VALUES ($1, 'P1', 'Dự án khác', $2) RETURNING id",
+        [c2, e2],
+      );
+      return [a.rows[0].id as string, b.rows[0].id as string];
+    });
+    for (const scopeId of [pOther, "00000000-0000-4000-8000-000000000000"])
+      await assert.rejects(
+        withTx((tx) =>
+          grantRole(tx, sys, c1, { userId: user, role: "project_manager", scopeType: "project", scopeId }),
+        ),
+        isCode("INVALID_SCOPE"),
+        scopeId,
+      );
+    await withTx((tx) =>
+      grantRole(tx, sys, c1, { userId: user, role: "project_manager", scopeType: "project", scopeId: p1 }),
+    );
+    const a = await loadActor(db.app, user);
+    assert.equal(can(a, "project.manage", { companyId: c1, projectId: p1 }), true);
+    assert.equal(can(a, "project.manage", { companyId: c1, projectId: pOther }), false);
+  });
+
   test("thu hồi grant: tăng auth_version, lần nạp sau không còn quyền; vô hiệu tài khoản → null", async () => {
     const before = await db.app.query("SELECT auth_version FROM app_user WHERE id = $1", [user]);
     const gid = await withTx((tx) =>
@@ -124,7 +264,10 @@ describe("loadActor + grant/revoke trên DB", () => {
       withTx((tx) => revokeGrant(tx, sys, c1, gid, "lần 2")),
       isCode("NOT_FOUND"),
     );
-    const audit = await db.admin.query("SELECT reason FROM audit_event WHERE action = 'grant.revoke'");
+    const audit = await db.admin.query(
+      "SELECT reason FROM audit_event WHERE action = 'grant.revoke' AND object_id = $1",
+      [gid],
+    );
     assert.equal(audit.rows[0].reason, "chuyển công tác");
 
     await db.admin.query("UPDATE app_user SET disabled_at = now() WHERE id = $1", [user]);

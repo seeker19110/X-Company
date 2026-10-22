@@ -406,3 +406,17 @@
 - Chọn: Lát 12: mọi audit 🟢 agent tự làm được (SEC-005, DATA-003/004, PERF-001/003, A11Y-007/008/009 sau khi giảm JS thật, TEST-001) + ghim gitleaks; lát 13: delivery_phase harden, audit delta, release-check, GO-NO-GO. Không làm DEP-001 (typescript-eslint 8.72.0 peer typescript <6.1.0, npm 2026-10-21), HAR-003, phần XFEAT-005 chờ lịch công ty
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: đóng lỗi đã biết trước khi đánh giá phát hành; giữ trần JS 230 KB và cách đo (giảm JS thật trước khi thêm tính năng a11y); TS7 làm gãy lint có kiểu nên chờ hệ sinh thái
 - Đường lùi: Đánh [~] task chưa làm kèm lý do; đóng PR chưa merge; xt.yaml về delivery_phase: build
+
+### D-056 · 2026-10-21T23:24:25+00:00 · T-068 AUD-DATA-003: xoá toạ độ GPS khi trigger guard chặn mọi role — thiết kế và mặc định lưu giữ
+
+- Phương án: (1) Hàm SECURITY DEFINER hẹp + guard (CREATE OR REPLACE, cách 0025 đã làm) nhận cờ xc.geo_erase chỉ khi current_user là owner; chỉ hàm retention theo lô; RETENTION_GEO_DAYS=90 theo server_received_at · (2) Như 1 nhưng thêm hàm xoá theo id cho DSAR ngay (chưa có caller) · (3) Tắt trigger / session_replication_role khi xoá
+- Chọn: Hàm SECURITY DEFINER hẹp + guard (CREATE OR REPLACE, cách 0025 đã làm) nhận cờ xc.geo_erase chỉ khi current_user là owner; chỉ hàm retention theo lô; RETENTION_GEO_DAYS=90 theo server_received_at
+- Lý do (tiêu chí chất lượng cuối): (1) an toàn: role ứng dụng tự SET cờ vẫn bị chặn, tắt trigger cần quyền cao và khoá bảng; không giữ hàm đặc quyền chưa có caller. Lệch 'chỉ thêm hàm/quyền' của PLAN: guard phải đổi vì SECURITY DEFINER không bỏ qua trigger. 90 ngày là GIẢ ĐỊNH tối thiểu hoá (đủ chốt kỳ tháng + khiếu nại), chờ pháp chế; mốc server_received_at vì client không giả mạo được
+- Đường lùi: RETENTION_GEO_DAYS đổi bằng env (1..3650); RETENTION_ENABLED=false tắt cả job; gỡ: DROP FUNCTION attendance_event_erase_geo + index, khôi phục thân guard 0025 bằng migration mới
+
+### D-057 · 2026-10-22T00:57:27+00:00 · T-077 audit delta pha harden: xử lý 4 phát hiện 🟠 mới và 14 🟢 thế nào?
+
+- Phương án: (1) Sửa ngay trong PR #68 các 🟠 có đường tái hiện (A11Y-010 mã chết SW + e2e, DOC-008 tài liệu lệch ruleset/retention) và 🟢 rẻ có test (DATA-005); hạ SEC-006 xuống 🟢 (đánh đổi đã chấp nhận ở D-053, ghi THREAT-MODEL); 🟢 còn lại ghi sổ mở · (2) Mở lát 14 sửa mọi 🟢 trước release-check · (3) Chỉ ghi sổ, không sửa gì
+- Chọn: Sửa ngay trong PR #68 các 🟠 có đường tái hiện (A11Y-010 mã chết SW + e2e, DOC-008 tài liệu lệch ruleset/retention) và 🟢 rẻ có test (DATA-005); hạ SEC-006 xuống 🟢 (đánh đổi đã chấp nhận ở D-053, ghi THREAT-MODEL); 🟢 còn lại ghi sổ mở
+- Lý do (tiêu chí chất lượng cuối): (1) đúng/an toàn: 🟠 tuyên bố sửa quá mức và tài liệu dẫn chủ dự án import sai ruleset phải đóng trước GO-NO-GO; 🟢 còn lại không chặn production (RUM tắt, chưa có route quản trị quyền, chưa bật GPS) — ghi sổ có điều kiện kích hoạt; (3) giữ PR nhỏ, không phình phạm vi pha harden
+- Đường lùi: Các 🟢 mở có Gate tay trong sổ; mở lát mới bằng PLAN khi chủ dự án muốn

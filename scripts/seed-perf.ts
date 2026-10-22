@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import pg from "pg";
 import { setPool, withTx } from "../lib/db/index.ts";
 import { grantRole } from "../lib/authz/grants.ts";
+import { SYSTEM_ACTOR } from "../lib/authz/index.ts";
 import { assignEmployment, createEmployee } from "../lib/org/index.ts";
 // @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu (dùng chung với perf-load.mjs)
 import { PERF_ATTENDANCE_USERS, perfAttendanceEmail } from "./lib/perf-users.mjs";
@@ -16,7 +17,7 @@ interface SeedFile {
 const seed = JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as SeedFile;
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 setPool(pool);
-const sys = { userId: null };
+const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
 
 await withTx(async (tx) => {
   const nv = seed.users.nv!;

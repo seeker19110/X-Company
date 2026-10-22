@@ -281,7 +281,7 @@ pii:
     subject: nhan_vien
     purpose: "đối chiếu vị trí chấm công (GPS tắt mặc định tới khi có DPIA)"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — pháp chế; chưa thu thật"
+    retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB; period_export.content nếu xuất"
     recipients: "HR theo quyền"
     status: implemented
@@ -291,7 +291,7 @@ pii:
     subject: nhan_vien
     purpose: "đối chiếu vị trí chấm công"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — pháp chế; chưa thu thật"
+    retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
     status: implemented
@@ -301,7 +301,7 @@ pii:
     subject: nhan_vien
     purpose: "độ chính xác vị trí"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — pháp chế; chưa thu thật"
+    retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
     status: implemented
@@ -311,7 +311,7 @@ pii:
     subject: nhan_vien
     purpose: "thời điểm lấy vị trí"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
-    retention: "chưa chốt — pháp chế; chưa thu thật"
+    retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
     status: implemented

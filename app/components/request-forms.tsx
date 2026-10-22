@@ -3,12 +3,13 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { t } from "@/lib/i18n/client-app";
 import type * as RequestSchemas from "@/lib/attendance/request-schema.pure";
-import { api, textOrNull } from "./api";
+import { api } from "./api";
 import {
   FieldError,
   fieldA11y,
   useFocusFirstInvalid,
   SubmitButton,
+  textOrNull,
   toFieldErrors,
   type FieldErrors,
   type FieldMap,
@@ -96,6 +97,11 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
     if (!r.ok && r.fields !== undefined && r.fields.length > 0) {
       setFormErrors(key, toFieldErrors(r.fields, map).fields);
       focusFirstInvalid(form);
+    } else {
+      // Nút gửi vừa bị vô hiệu → focus đang ở <body> (AUD-A11Y-009): đưa về khối thông báo của form (trừ khi người dùng đã sang chỗ khác).
+      const a = document.activeElement;
+      if (a === null || a === document.body || form.contains(a))
+        form.querySelector<HTMLElement>("[role=status]")?.focus();
     }
     setMsg(
       key,
@@ -192,7 +198,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         <SubmitButton className="btn btn-primary" busy={busy.leave}>
           {t("requests.leave.submit")}
         </SubmitButton>
-        <p role="status" aria-live="polite" className={M.leave?.cls}>
+        <p role="status" aria-live="polite" tabIndex={-1} className={M.leave?.cls}>
           {M.leave?.text}
         </p>
       </form>
@@ -251,7 +257,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             {t("requests.ot.submit")}
           </SubmitButton>
         </p>
-        <p role="status" aria-live="polite" className={M.ot?.cls}>
+        <p role="status" aria-live="polite" tabIndex={-1} className={M.ot?.cls}>
           {M.ot?.text}
         </p>
       </form>
@@ -309,7 +315,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         <SubmitButton className="btn btn-primary" busy={busy.adj}>
           {t("requests.adjustment.submit")}
         </SubmitButton>
-        <p role="status" aria-live="polite" className={M.adj?.cls}>
+        <p role="status" aria-live="polite" tabIndex={-1} className={M.adj?.cls}>
           {M.adj?.text}
         </p>
       </form>

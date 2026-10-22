@@ -3,6 +3,7 @@
 // khi chốt kết quả, trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực (khi đó 12 tháng); ứng viên chưa chốt quá lâu → lưới an
 // toàn. Nhân viên đã chấm dứt hợp đồng → xoá liên hệ không phải giữ; hết 10 năm → ẩn danh họ tên (chấm công/lương giữ 10 năm).
 // Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ, rum_sample quá hạn (T-056), public_rate_event quá 1 ngày → xoá.
+// Toạ độ GPS chấm công quá RETENTION_GEO_DAYS → xoá toạ độ (sự kiện giữ) qua hàm có kiểm soát của migration 0029 (AUD-DATA-003).
 // Mỗi nhóm một giao dịch + một bản ghi audit (chỉ đếm, không PII). Tắt: RETENTION_ENABLED=false (đường lùi D-016).
 import type pg from "pg";
 import { appendAudit } from "../audit/index.ts";
@@ -34,6 +35,8 @@ export interface RetentionConfig {
   idempotencyHours: number;
   /** Mẫu RUM (rum_sample): ngày kể từ lúc nhận. */
   rumDays: number;
+  /** Toạ độ GPS chấm công: ngày kể từ lúc server nhận sự kiện. */
+  geoDays: number;
 }
 
 export function retentionConfig(source?: Record<string, string | undefined>): RetentionConfig {
@@ -51,6 +54,7 @@ export function retentionConfig(source?: Record<string, string | undefined>): Re
     outboxDoneDays: env("RETENTION_OUTBOX_DONE_DAYS", source),
     idempotencyHours: env("RETENTION_IDEMPOTENCY_HOURS", source),
     rumDays: env("RETENTION_RUM_DAYS", source),
+    geoDays: env("RETENTION_GEO_DAYS", source),
   };
 }
 
@@ -67,6 +71,8 @@ export interface RetentionReport {
   idempotencyDeleted: number;
   rumSampleDeleted: number;
   rateEventDeleted: number;
+  /** Số sự kiện chấm công được xoá toạ độ (bản mã + bản rõ) lần chạy này. */
+  geoErased: number;
 }
 
 // i18n-ignore: giá trị dữ liệu ổn định ghi vào cột tên sau ẩn danh (so khớp/kiểm bằng truy vấn), không đổi theo ngôn ngữ
@@ -95,8 +101,17 @@ export const RETENTION_SELECTORS = [
   { table: "public_rate_event", where: "at < $1" },
   { table: "outbox_event", where: "status = 'done' AND processed_at < $1" },
   { table: "inquiry", where: "anonymized_at IS NULL AND created_at < $1" },
+  // Cùng biểu thức với index một phần và hàm attendance_event_erase_geo (0029) — job gọi hàm, không UPDATE trực tiếp.
+  {
+    table: "attendance_event",
+    where:
+      "num_nonnulls(geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at) > 0 AND server_received_at < $1",
+  },
 ] as const;
-type PurgeTable = Exclude<(typeof RETENTION_SELECTORS)[number]["table"], "inquiry" | "outbox_event">;
+type PurgeTable = Exclude<
+  (typeof RETENTION_SELECTORS)[number]["table"],
+  "inquiry" | "outbox_event" | "attendance_event"
+>;
 const selector = (table: (typeof RETENTION_SELECTORS)[number]["table"]): string =>
   RETENTION_SELECTORS.find((x) => x.table === table)!.where;
 
@@ -301,6 +316,30 @@ async function purgeOutboxDone(pool: pg.Pool, before: Date, batch: number): Prom
   }
 }
 
+/**
+ * Toạ độ GPS quá hạn (AUD-DATA-003): guard của attendance_event chặn mọi UPDATE xoá bản mã, nên chỉ đi qua hàm SECURITY DEFINER
+ * hẹp `attendance_event_erase_geo` (0029: chỉ đặt năm cột toạ độ về NULL, SKIP LOCKED). Theo lô; mỗi lô một giao dịch + audit
+ * đếm theo công ty (không toạ độ). Hàng đã xoá rời bộ chọn nên vòng dừng; chạy lại = 0.
+ */
+async function eraseGeo(pool: pg.Pool, before: Date, batch: number): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const n = await inTx(pool, async (tx) => {
+      const r = await tx.query<{ company_id: string }>(
+        "SELECT attendance_event_erase_geo($1, $2) AS company_id",
+        [before, batch],
+      );
+      const per = new Map<string, number>();
+      for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
+      for (const [companyId, k] of per)
+        await audited(tx, companyId, "retention.geo_erase", "attendance_event", before, k);
+      return r.rowCount ?? 0;
+    });
+    total += n;
+    if (n < batch) return total;
+  }
+}
+
 /** idempotency_record (T-028) có thể chưa tồn tại ở nhánh này → bỏ qua; cột thời gian `created_at`. */
 async function purgeIdempotency(pool: pg.Pool, before: Date, batch: number): Promise<number> {
   const t = await pool.query<{ ok: boolean }>(
@@ -331,51 +370,66 @@ export async function runRetention(
     idempotencyDeleted: 0,
     rumSampleDeleted: 0,
     rateEventDeleted: 0,
+    geoErased: 0,
   };
   if (!cfg.enabled) return report;
+  // AUD-DATA-005: mỗi nhóm chạy độc lập — một nhóm lỗi không chặn các nhóm sau (nhất là xoá toạ độ GPS); lỗi gom lại và
+  // ném một lần ở cuối để job vẫn exit ≠ 0, kèm báo cáo các nhóm đã chạy.
+  const errors: unknown[] = [];
+  const step = async (key: Exclude<keyof RetentionReport, "skipped">, fn: () => Promise<number>) => {
+    try {
+      report[key] = await fn();
+    } catch (err) {
+      errors.push(err);
+    }
+  };
   const inquiryBefore = ago(now, cfg.inquiryDays * DAY);
-  report.inquiryAnonymized = await anonymize(
-    pool,
-    "inquiry",
-    "created_at < $1",
-    { a: inquiryBefore, b: inquiryBefore },
-    now,
-    batch,
+  await step("inquiryAnonymized", () =>
+    anonymize(pool, "inquiry", "created_at < $1", { a: inquiryBefore, b: inquiryBefore }, now, batch),
   );
   const decidedBefore = ago(now, cfg.applicationDecidedDays * DAY);
   const talentBefore = ago(now, cfg.talentPoolDays * DAY);
   const staleBefore = ago(now, cfg.applicationDays * DAY);
-  report.applicationAnonymized =
-    (await anonymize(
-      pool,
-      "job_application",
-      APPLICATION_DECIDED_WHERE,
-      { a: decidedBefore, b: talentBefore },
-      now,
-      batch,
-    )) +
-    (await anonymize(
-      pool,
-      "job_application",
-      APPLICATION_STALE_WHERE,
-      { a: staleBefore, b: staleBefore },
-      now,
-      batch,
-    ));
-  const contactCutoff = localDate(ago(now, cfg.employeeTerminatedDays * DAY));
-  report.employeeContactCleared = await clearEmployeeContacts(pool, contactCutoff, now);
-  const recordBefore = yearsAgo(now, cfg.timesheetYears);
-  report.employeeAnonymized = await anonymizeEmployees(pool, localDate(recordBefore), now, recordBefore);
-  report.sessionDeleted = await purge(pool, "session", ago(now, cfg.sessionDays * DAY), batch);
-  report.loginAttemptDeleted = await purge(
-    pool,
-    "login_attempt",
-    ago(now, cfg.loginAttemptDays * DAY),
-    batch,
+  await step(
+    "applicationAnonymized",
+    async () =>
+      (await anonymize(
+        pool,
+        "job_application",
+        APPLICATION_DECIDED_WHERE,
+        { a: decidedBefore, b: talentBefore },
+        now,
+        batch,
+      )) +
+      (await anonymize(
+        pool,
+        "job_application",
+        APPLICATION_STALE_WHERE,
+        { a: staleBefore, b: staleBefore },
+        now,
+        batch,
+      )),
   );
-  report.outboxDoneDeleted = await purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY), batch);
-  report.idempotencyDeleted = await purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR), batch);
-  report.rumSampleDeleted = await purge(pool, "rum_sample", ago(now, cfg.rumDays * DAY), batch);
-  report.rateEventDeleted = await purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch);
+  const contactCutoff = localDate(ago(now, cfg.employeeTerminatedDays * DAY));
+  await step("employeeContactCleared", () => clearEmployeeContacts(pool, contactCutoff, now));
+  const recordBefore = yearsAgo(now, cfg.timesheetYears);
+  await step("employeeAnonymized", () =>
+    anonymizeEmployees(pool, localDate(recordBefore), now, recordBefore),
+  );
+  await step("sessionDeleted", () => purge(pool, "session", ago(now, cfg.sessionDays * DAY), batch));
+  await step("loginAttemptDeleted", () =>
+    purge(pool, "login_attempt", ago(now, cfg.loginAttemptDays * DAY), batch),
+  );
+  await step("outboxDoneDeleted", () => purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY), batch));
+  await step("idempotencyDeleted", () =>
+    purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR), batch),
+  );
+  await step("rumSampleDeleted", () => purge(pool, "rum_sample", ago(now, cfg.rumDays * DAY), batch));
+  await step("rateEventDeleted", () =>
+    purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch),
+  );
+  await step("geoErased", () => eraseGeo(pool, ago(now, cfg.geoDays * DAY), batch));
+  if (errors.length > 0)
+    throw Object.assign(new AggregateError(errors, `retention: ${errors.length} nhóm lỗi`), { report });
   return report;
 }

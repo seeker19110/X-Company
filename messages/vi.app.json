@@ -7,6 +7,9 @@
     "approvals": "Duyệt",
     "me": "Cá nhân"
   },
+  "netStatus": {
+    "offline": "Đang ngoại tuyến"
+  },
   "sync": {
     "heading": "Đồng bộ",
     "button": "Đồng bộ",

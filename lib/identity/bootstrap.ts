@@ -3,6 +3,7 @@
 import type pg from "pg";
 import { appendAudit } from "../audit/index.ts";
 import { grantRole } from "../authz/grants.ts";
+import { SYSTEM_ACTOR } from "../authz/index.ts";
 import { withTx } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { createCompany } from "../org/index.ts";
@@ -68,7 +69,7 @@ export async function createFirstAdmin(
       [email, displayName, hash, companyId],
     );
     const userId = rows[0]!.id;
-    await grantRole(tx, { userId: null }, companyId, { userId, role: "sysadmin", scopeType: "company" });
+    await grantRole(tx, SYSTEM_ACTOR, companyId, { userId, role: "sysadmin", scopeType: "company" });
     await appendAudit(tx, {
       actorUserId: null,
       companyId,

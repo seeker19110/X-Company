@@ -51,6 +51,24 @@ export function evaluateBudget(sum, budget, minSamples = 50) {
   return v;
 }
 
+/**
+ * Kịch bản chốt kỳ (AUD-PERF-001): mỗi lần chốt là một mẫu {code, lines, expectedLines, ms, queries, error?}.
+ * Ngân sách {maxMs, maxQueries}. Không có mẫu, lỗi, thiếu dòng, ms null → vi phạm (không xanh giả).
+ */
+export function evaluateLockBudget(runs, budget) {
+  if (runs.length === 0) return ["không có lần chốt kỳ nào — không đủ để kết luận"];
+  const v = [];
+  for (const r of runs) {
+    if (r.error !== undefined) v.push(`${r.code}: lỗi ${r.error}`);
+    else if (r.ms === null || r.ms > budget.maxMs)
+      v.push(`${r.code}: ${r.ms ?? "n/a"} ms > ${budget.maxMs} ms`);
+    if (r.error === undefined && r.lines !== r.expectedLines)
+      v.push(`${r.code}: ${r.lines} dòng ≠ ${r.expectedLines} mong đợi`);
+    if (r.queries > budget.maxQueries) v.push(`${r.code}: ${r.queries} câu SQL > ${budget.maxQueries}`);
+  }
+  return v;
+}
+
 /** Số kết nối DB lớn nhất trong các lần lấy mẫu (null nếu không có mẫu). */
 export const maxOf = (xs) => (xs.length === 0 ? null : Math.max(...xs));
 

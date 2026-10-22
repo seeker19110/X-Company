@@ -64,7 +64,7 @@
     "check:alerts": "node scripts/check-alerts.mjs",
     "alerts:drill": "scripts/with-test-db.sh tsx scripts/alerts-drill.ts",
     "ops:stack:drill": "scripts/with-test-db.sh node scripts/ops-stack-drill.mjs",
-    "reports:refresh": "XC_REPORT_DIR=. npm run -s dast:probes && XC_REPORT_DIR=. npm run -s perf:load && XC_REPORT_DIR=. npm run -s ops:stack:drill && XC_REPORT_DIR=. npm run -s staging:drill",
+    "reports:refresh": "XC_REPORT_DIR=. npm run -s perf:load && XC_REPORT_DIR=. npm run -s dast:probes && XC_REPORT_DIR=. npm run -s ops:stack:drill && XC_REPORT_DIR=. npm run -s staging:drill",
     "staging:drill": "scripts/with-test-db.sh node scripts/staging-drill.mjs",
     "backup": "scripts/backup.sh",
     "backup:drill": "scripts/restore-drill.sh",

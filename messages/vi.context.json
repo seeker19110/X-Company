@@ -35,6 +35,9 @@
     "offline": "Lý do lỗi lưu trong hàng chờ ngoại tuyến khi gửi lô thất bại vì mạng.",
     "noResult": "Lý do lỗi lưu trong hàng chờ ngoại tuyến khi phản hồi lô không có kết quả cho bản ghi."
   },
+  "netStatus": {
+    "offline": "Dải thông báo đầu trang khu nội bộ khi thiết bị mất mạng; có thao tác chấm công vẫn lưu trên máy."
+  },
   "sync": {
     "heading": "Tiêu đề thẻ trạng thái đồng bộ hàng chờ ngoại tuyến ở màn hình Cá nhân.",
     "button": "Nút đồng bộ thủ công các thao tác đang chờ gửi.",

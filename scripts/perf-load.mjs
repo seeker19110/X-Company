@@ -3,6 +3,7 @@
 // Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Báo cáo docs/perf/load-report-<ngày>.md + .json ghi ra thư mục tạm (vào repo khi XC_REPORT_DIR=. / npm run -s reports:refresh);
 // exit 1 khi một kịch bản vượt ngân sách. Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/thực địa.
 // Chỉ nhắm localhost (QA-PERF-007): BASE_URL không có ở đây, bộ tải không bao giờ gửi tới host ngoài máy này.
+import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -18,9 +19,15 @@ import {
   out,
   prepare,
   reportFile,
+  repoReportRefusal,
 } from "./lib/prod-harness.mjs";
-import { evaluateBudget, maxOf, renderLoadReport, summarize } from "./lib/perf-stats.mjs";
-import { PERF_ATTENDANCE_USERS, perfAttendanceEmail } from "./lib/perf-users.mjs";
+import { evaluateBudget, evaluateLockBudget, maxOf, renderLoadReport, summarize } from "./lib/perf-stats.mjs";
+import {
+  PERF_ATTENDANCE_USERS,
+  PERIOD_EMPLOYEES,
+  PERIOD_MONTHS,
+  perfAttendanceEmail,
+} from "./lib/perf-users.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PORT = Number(process.env.PERF_PORT ?? 3300);
@@ -35,6 +42,7 @@ const NOT_PROVEN = [
   "Tải đa máy/đa instance, autoscale, và hành vi khi Postgres ở máy khác (độ trễ mạng DB).",
   "Độ bền dài (soak ≥ 30 phút), spike đột ngột, rò bộ nhớ/kết nối theo thời gian (QA-PERF-011/012).",
   "Bộ phát tải và máy chủ chia sẻ CPU của một máy 4 nhân: RPS là cận dưới, p99 chịu ảnh hưởng của bộ phát tải.",
+  "Chốt kỳ đồng thời với ghi chấm công/duyệt đơn của cùng công ty (tranh khoá kỳ) — kịch bản chốt kỳ chạy một mình sau các kịch bản HTTP.",
   "Dữ liệu ở quy mô production (chỉ ~1 500 liên hệ + seed e2e); kế hoạch truy vấn trên dữ liệu lớn xem docs/db/explain/.",
 ];
 
@@ -74,6 +82,12 @@ const BUDGETS = {
     p95Ms: 500,
     maxErrorRate: 0.01,
     why: "danh sách phân trang (limit 50–200, offset lệch) trên ≥ 1 500 hàng: p95 ≤ 500 ms.",
+  },
+  periodLock: {
+    p95Ms: 10_000,
+    maxErrorRate: 0,
+    maxQueries: 50,
+    why: "chốt kỳ 200 nhân viên × 31 ngày trong MỘT giao dịch giữ khoá kỳ: mỗi lần ≤ 10 s (một phần ba statement_timeout 30 s của role ứng dụng, migration 0018 — còn dư khi dữ liệu lớn gấp ba) và ≤ 50 câu SQL (gom lô, không một INSERT mỗi dòng — AUD-PERF-001); không lần nào lỗi, đủ dòng.",
   },
 };
 const DB_CONN_BUDGET = 12; // DB_POOL_MAX mặc định = 10 (+ kết nối quản trị/đếm); vượt = rò kết nối hoặc cấu hình pool sai.
@@ -206,6 +220,11 @@ function lighthouseSection() {
 }
 
 async function main() {
+  const refusal = repoReportRefusal(gitCommit(), process.env.XC_REPORT_DIR);
+  if (refusal !== null) {
+    err(`perf:load từ chối: ${refusal}`);
+    return 2;
+  }
   const h = prepare({ prefix: "PERF", extraSeeds: ["scripts/seed-perf.ts"] });
   const server = await h.start(PORT, { TRUST_PROXY_HOPS: "1" });
   try {
@@ -436,6 +455,45 @@ async function main() {
           },
         }),
     );
+    // Chốt kỳ (AUD-PERF-001): tiến trình tsx riêng gọi thẳng lib (chưa có route), role ứng dụng; kỳ quá khứ, sau mọi kịch bản HTTP.
+    {
+      const before = db.samples.length;
+      const r = spawnSync("npx", ["--no-install", "tsx", "scripts/perf-period.ts"], {
+        cwd: ROOT,
+        env: { ...process.env, DATABASE_URL: h.adminUrl, PERF_APP_DATABASE_URL: h.appDbUrl },
+        encoding: "utf8",
+        maxBuffer: 1 << 20,
+      });
+      if (r.status !== 0)
+        throw new Error(`perf-period lỗi (exit ${r.status}):\n${(r.stderr ?? "").slice(-1500)}`);
+      const runs = JSON.parse(r.stdout.trim().split("\n").at(-1));
+      const budget = BUDGETS.periodLock;
+      const sum = summarize({
+        latencies: runs.filter((x) => x.ms !== null).map((x) => x.ms),
+        statuses: runs.map((x) => (x.error === undefined ? 200 : 500)),
+        networkErrors: 0,
+        durationMs: runs.reduce((a, x) => a + (x.ms ?? 0), 0),
+        expected: [200],
+      });
+      const violations = evaluateLockBudget(runs, { maxMs: budget.p95Ms, maxQueries: budget.maxQueries });
+      rows.push({
+        name: `Chốt kỳ công ${PERIOD_EMPLOYEES} nhân viên × 31 ngày (lockPeriod)`,
+        description: `${runs.length} kỳ quá khứ (${PERIOD_MONTHS.map((m) => m.code).join(", ")}) chốt lần lượt, mỗi kỳ ${PERIOD_EMPLOYEES} nhân viên có ca mọi ngày (10% có sự kiện vào/ra); đo cả giao dịch khoá kỳ.`,
+        connections: 1,
+        durationLabel: `${runs.length} lần chốt`,
+        warmupLabel: "0s",
+        summary: sum,
+        dbConnMax: maxOf(db.samples.slice(before)),
+        budget,
+        budgetWhy: budget.why,
+        violations,
+        expected: [200],
+        note: `Từng lần: ${runs.map((x) => `${x.code} ${x.ms ?? "n/a"} ms, ${x.queries} câu SQL, ${x.lines}/${x.expectedLines} dòng${x.error ? `, lỗi ${x.error}` : ""}`).join("; ")}. Mã 200/500 là quy ước của báo cáo (thành công/lỗi), không phải request HTTP.`,
+      });
+      out(
+        `${violations.length === 0 ? "ĐẠT " : "VƯỢT "} chốt kỳ: ${runs.map((x) => `${x.code} ${x.ms ?? "n/a"} ms/${x.queries} SQL`).join(" · ")}${violations.length > 0 ? ` · ${violations.join("; ")}` : ""}`,
+      );
+    }
     await db.stop();
     const dbMax = maxOf(db.samples);
     const dbViol =
@@ -451,7 +509,7 @@ async function main() {
       commit: gitCommit(),
       env: `máy dev (${env.os}); Node ${env.node}; Next ${env.next} \`next start\` bản build production; ${env.psql ?? "PostgreSQL tạm (initdb, fsync=off)"}; app chạy bằng role không superuser; DB_POOL_MAX=10 (mặc định)`,
       device: `${env.cpus}, ${env.memGiB} GiB RAM; bộ phát tải cùng máy; mạng loopback 127.0.0.1 (không mô phỏng băng thông/độ trễ)`,
-      load: `${CONNS} kết nối keep-alive (ghi: 8), ${DURATION_S} s đo + ${WARMUP_S} s khởi động mỗi kịch bản (OT: ${otN} request cố định); dữ liệu seed e2e + ${INQUIRY_SEED} liên hệ`,
+      load: `${CONNS} kết nối keep-alive (ghi: 8), ${DURATION_S} s đo + ${WARMUP_S} s khởi động mỗi kịch bản (OT: ${otN} request cố định); dữ liệu seed e2e + ${INQUIRY_SEED} liên hệ; chốt ${PERIOD_MONTHS.length} kỳ × ${PERIOD_EMPLOYEES} nhân viên × 31 ngày`,
       slo: "SLI-2 ghi chấm công p95 < 1 s (95% ≤ 1 s/30 ngày); SLI-1 khả dụng 99,9% ⇒ tỉ lệ lỗi 5xx ≤ 0,1% (cổng ở đây dùng ≤ 1% theo `http_req_failed rate<0.01` của QA-PERF-002 vì mẫu ngắn).",
       budgetNotes: [
         "Ngân sách đặt TRƯỚC khi chạy trong `scripts/perf-load.mjs` (hằng `BUDGETS`) kèm lý do; ngưỡng ghi chấm công/OT dùng nguyên SLO, các ngưỡng còn lại là mục tiêu dev cho máy 4 nhân dùng chung với bộ phát tải. Nới ngưỡng sau khi thấy đỏ phải ghi lý do vào chính hằng này và báo cáo.",
