@@ -3,6 +3,20 @@
 Mọi thay đổi đáng chú ý của dự án ghi ở đây. Định dạng theo [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 phiên bản theo [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html). Chưa có bản phát hành nào.
 
+## [0.2.1](https://github.com/seeker19110/X-Company/compare/v0.2.0...v0.2.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **app:** focus sau thao tác vào khối của mục, không vào nút ([#53](https://github.com/seeker19110/X-Company/issues/53)) ([2a1ec8c](https://github.com/seeker19110/X-Company/commit/2a1ec8cce5439f6c659a4be4e864b04e04f7f741))
+* **app:** log lỗi sync, focus không bị che, thông báo trong tầm nhìn ([#50](https://github.com/seeker19110/X-Company/issues/50)) ([66880aa](https://github.com/seeker19110/X-Company/commit/66880aa46698bbc3e4efdaac0bfa8c2e8400bb14))
+* **attendance:** luật khoá và giới hạn tần suất cho ghi chấm công ([#62](https://github.com/seeker19110/X-Company/issues/62)) ([0be875d](https://github.com/seeker19110/X-Company/commit/0be875d2e37b62827098e384d7a6b706eb639f7b))
+* chặn sửa tiến độ việc đã xong, chốt kỳ ghi theo lô, dọn mã ([#56](https://github.com/seeker19110/X-Company/issues/56)) ([cbf0b4d](https://github.com/seeker19110/X-Company/commit/cbf0b4dab9762f47d891357182bea9dfb76b881c))
+* **e2e:** chặn service worker cho test mock bằng page.route ([#59](https://github.com/seeker19110/X-Company/issues/59)) ([9f5a35a](https://github.com/seeker19110/X-Company/commit/9f5a35ae44e4a7341aaa119844383644af78b76e))
+* form liên hệ đọc lỗi máy chủ; múi giờ nghiệp vụ một nguồn ([#63](https://github.com/seeker19110/X-Company/issues/63)) ([219f931](https://github.com/seeker19110/X-Company/commit/219f9317731a7695c44cb6f28de2f7b5c3eb6aa4))
+* quyền đơn của mình, chặn dò mật khẩu rải, retention theo lô ([#64](https://github.com/seeker19110/X-Company/issues/64)) ([852792f](https://github.com/seeker19110/X-Company/commit/852792f21e0ba67357142fba2d7968277a717e03))
+* **security:** APP_ORIGIN https ở production; hộp duyệt OT theo ngày ([#49](https://github.com/seeker19110/X-Company/issues/49)) ([d964f11](https://github.com/seeker19110/X-Company/commit/d964f11066c6691087ecc4e7ebcf2d96132a02c5))
+
 ## [0.2.0](https://github.com/seeker19110/X-Company/compare/v0.1.0...v0.2.0) (2026-10-21)
 
 
