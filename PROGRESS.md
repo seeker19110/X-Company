@@ -1,23 +1,23 @@
 # PROGRESS.md — X-Company
 ## Đang làm
-- 2026-10-21: lát 12–13 (`docs/autopilot/PLAN-lat-12.md`, D-055) — hoàn tất phát triển rồi pha harden trước production: T-065 gitleaks ghim, T-066 DATA-004 xong; tiếp T-067…T-078.
-- 2026-10-21: lát 11 (`docs/autopilot/PLAN-lat-11.md`, D-051…D-054) xong 7/7: T-058, T-059 (#62), T-060, T-061 (#63) đã merge; T-062 XFEAT-006, T-063 SEC-004 (D-053), T-064 PERF-002 (migration 0027, 0028) ở PR cuối — ngoại lệ cứng, người merge.
-- 2026-10-21: khung 3.12.0 (CI/ruleset tối thiểu, song song tối đa): `quality` nối tiếp 8m02s tách thành typecheck · lint · build · checks · test · coverage chạy cùng lúc, `quality` thành job tổng hợp mọi job (kể cả `dast-probes`, `dep-audit`); ruleset 13 → 4 check (`quality`, `gitleaks`, `merge-gate`, `pr-policy`), không strict — chủ dự án import lại ruleset.
-- Audit 2026-10-19 (`docs/ops/AUDIT-STATUS.md`): 6 đợt đã merge (#40 #41 #44 #49 #50 #53 #54 #55 #56) — 🟠 12 đã sửa, 4 mở (SEC-002, DOC-001, DOC-002 chờ người quyết; CFG-001 chờ người thêm khoá); 🟢 28 đã sửa, 12 mở.
-- `GO-NO-GO.md` = NO-GO production; MUST đạt 309 · miễn 73 · chưa 91 (chờ người/hạ tầng thật). Chưa có pháp nhân: hệ thống chỉ chạy dữ liệu mẫu (DPIA mục 0b, D-043).
+- 2026-10-22: lát 12–13 (`docs/autopilot/PLAN-lat-12.md`, D-055…D-057) — T-065…T-077 xong, có bằng chứng `loop record`; ở PR #68 (ngoại lệ cứng: quyền, migration 0029 → người merge). T-078 (`release-check` + GO-NO-GO) chạy được nhưng NO-GO vì MUST chờ người/hạ tầng thật → `loop defer`.
+  - Lát 12: SEC-005 grant tự kiểm `access.manage` + `SYSTEM_ACTOR`; DATA-003 xoá toạ độ GPS có kiểm soát (0029, `RETENTION_GEO_DAYS` 90 giả định); PERF-001 kịch bản chốt kỳ 200×31 (4,2–6,4 s, 25 SQL); PERF-003 báo cáo tải chỉ từ cây sạch; JS tĩnh 229,7 → 225,6 KB; A11Y-007/008/009; TEST-001 50/50 lượt dưới tải.
+  - Lát 13 (harden): `delivery_phase: harden`; audit delta 3 reviewer (D-057) — 0 🔴, 4 🟠 (A11Y-010 nhánh SW chết, DOC-008 tài liệu lệch ruleset, SEC-006 hạ 🟢, DATA-005 cô lập lỗi retention) đã sửa; 🟢 mới ghi sổ.
+- Ruleset thật (`.github/rulesets/main.json`): required check chỉ `quality` (job tổng hợp mọi job ci.yml) + `gitleaks`, không strict; `pr-policy`, `codeql`, `merge-gate` là advisory theo ADR-0039 của khung (AUD-CI-004).
+- `GO-NO-GO.md` = NO-GO production (số máy sinh ở đó). Chưa có pháp nhân: chỉ dữ liệu mẫu (DPIA mục 0b, D-043).
 
 ## Tiếp theo
-1. Agent: AUD-PERF-003 (đo tải lại cây sạch) + kịch bản lock kỳ trong `perf:load` (PERF-001); TEST-001 chạy 50 lượt dưới tải; AUD-A11Y-009 (cần giảm JS trước, ngân sách 230 KB còn ~0,4); 🟢 còn lại trong AUDIT-STATUS
-2. Chủ dự án: thêm 14 khoá ở `PENDING_EXAMPLE_KEYS` (`scripts/check-env.ts`) vào `.env.example` rồi xoá khỏi danh sách (hook chặn agent đọc/ghi tệp này, D-050); import lại `.github/rulesets/main.json` (thêm `codeql`, `osv-scanner`); bật Private Vulnerability Reporting; LICENSE; quyết SEC-002 (TOTP trước pilot), DOC-001 (form ứng tuyển hay hoãn), DOC-002 (kênh thông báo thật); thành lập pháp nhân trước khi xử lý dữ liệu thật; DPIA trong 60 ngày từ ngày xử lý thật
-3. Luật sư: đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020 (mức B); HR chốt nội quy ca/OT
-4. Hạ tầng thật: KMS/HSM, đích off-site, giám sát production + kênh trực, tên miền + ACME (mẫu `ops/caddy/Caddyfile`) rồi `loop resume`
+1. Chủ dự án: rà và merge PR #68 (ngoại lệ cứng); quyết D-056 (90 ngày lưu toạ độ GPS — pháp chế); thêm 15 khoá ở `PENDING_EXAMPLE_KEYS` (`scripts/check-env.ts`, gồm `TRUST_PROXY`, `RETENTION_GEO_DAYS`) vào `.env.example` rồi xoá khỏi danh sách (hook chặn agent, D-050); import `.github/rulesets/main.json` (`quality`, `gitleaks`); bật Private Vulnerability Reporting; LICENSE; quyết SEC-002 (TOTP trước pilot), DOC-001, DOC-002; các đề xuất "Khi chạy thật" trong DECISIONS.
+2. Pháp lý/HR: thành lập pháp nhân trước dữ liệu thật; DPIA trong 60 ngày từ ngày xử lý thật; luật sư đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020; HR chốt nội quy ca/OT, lịch lễ (H02).
+3. Hạ tầng thật: KMS/HSM, đích off-site, giám sát production + kênh trực, tên miền + ACME (mẫu `ops/caddy/Caddyfile`), diễn tập rollback deploy; rồi `loop resume`.
+4. Agent (khi mở lát mới): 🟢 mở trong `docs/ops/AUDIT-STATUS.md` (SEC-007 sysadmin cuối, DATA-006 sàn tuổi hàm xoá GPS, A11Y-011, TEST-002, PERF-004, CODE-010…); DEP-001 TypeScript 7 khi typescript-eslint hỗ trợ.
 
 ## Quyết định
-- D-014…D-050 ở `docs/autopilot/DECISIONS.md`; D-046 mốc release-please; D-047/D-049 allowlist ZAP 10202/20012 theo đường dẫn; D-048 duyệt kế hoạch sửa audit 6 đợt; D-050 độ lệch đã biết chờ người nằm trong danh sách có tên
-- Bằng chứng lát 9–10 mang nhãn faithful-fixture (máy dev), không phải production
-- Công cụ vận hành ghim hash ở `scripts/tools/install-tool.mjs` (OpenBao, restic, Prometheus, Alertmanager, Caddy, ZAP)
+- D-014…D-057 ở `docs/autopilot/DECISIONS.md`; D-055 PLAN lát 12–13; D-056 thiết kế xoá GPS; D-057 xử lý audit delta.
+- Bằng chứng hạ tầng mang nhãn faithful-fixture (máy dev), không phải production.
+- Công cụ vận hành ghim hash ở `scripts/tools/install-tool.mjs` → `.tools/bin` (gitleaks, OpenBao, restic, Prometheus, Alertmanager, Caddy, ZAP); lệnh Kiểm blueprint cần `PATH=$PWD/.tools/bin:$PATH`.
 
 ## Bàn giao phiên
-- Commit cuối trên nhánh chính: `cbf0b4d` (#56) · PR mở: Release 0.2.1 #52
-- Lệnh kiểm nhanh: `.xtemplates/scripts/dev-task.sh gate` · `npm run -s ops:stack:drill` · `npm run -s staging:drill` · e2e cần `PW_CHROMIUM_PATH` khi máy chưa có Chromium đúng bản Playwright
-- Đang chặn: không · Câu hỏi cần người: `.env.example` (14 khoá); import lại ruleset; SEC-002/DOC-001/DOC-002; pháp nhân + xác nhận pháp chế; hạ tầng production
+- Nhánh `claude/intelligent-hamilton-d4jyet` · PR mở: #68 (lát 12–13), Release 0.2.1 #52 · nhánh chính: `779926a` (#67).
+- Lệnh kiểm: `.xtemplates/scripts/dev-task.sh gate` · `PATH=$PWD/.tools/bin:$PATH python3 .xtemplates/scripts/xt.py loop verify --all` (~45 phút, chạy lại mọi Gate + 316 lệnh Kiểm) · e2e cần `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+- Đang chặn: không (agent) · 3 lệnh Kiểm LOOP-* bị guard chặn trong phiên (FB-088) · Câu hỏi cần người: như mục Tiếp theo 1–3.
