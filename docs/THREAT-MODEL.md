@@ -97,7 +97,7 @@ Quyết định ∈ mitigate / eliminate / transfer / accept. Bằng chứng: t�
 
 | ID | STRIDE | Mối đe doạ | KN | TĐ | Mức | Quyết định | Biện pháp | Bằng chứng | Trạng thái |
 |---|---|---|---|---|---|---|---|---|---|
-| T1 | Spoofing | Đoán/nhồi mật khẩu | 2 | 3 | Cao | mitigate | Argon2id, 5 lần/15 phút/(email, IP) + 30/IP + 50/email chống dò rải (D-053), TOTP cho vai trò nhạy cảm (chưa có — AUD-SEC-002) | `tests/http/auth.test.ts` S-ID-07, AUD-SEC-004 (có) | mở |
+| T1 | Spoofing | Đoán/nhồi mật khẩu | 2 | 3 | Cao | mitigate | Argon2id, 5 lần/15 phút/(email, IP) + 30/IP + 50/email chống dò rải (D-053; rủi ro còn lại chấp nhận: kẻ có ≥ 10 IP khoá được đăng nhập của một email trong 15 phút — AUD-SEC-006), TOTP cho vai trò nhạy cảm (chưa có — AUD-SEC-002) | `tests/http/auth.test.ts` S-ID-07, AUD-SEC-004 (có) | mở |
 | T2 | Spoofing | Chấm công hộ / QR chụp lại | 3 | 2 | Cao | mitigate | QR ký HMAC TTL 60 s gắn ca + địa điểm, ngoại lệ cần xác minh; không cam kết tuyệt đối | `tests/http/attendance-events.test.ts` S-AT-09 (có) | mở |
 | T3 | Tampering | Sửa công/kỳ khoá trực tiếp | 2 | 3 | Cao | mitigate | sự kiện gốc chỉ thêm, adjustment có duyệt, kỳ khoá bất biến, audit chuỗi băm | `tests/db/audit.test.ts` S-ID-08 (có); `tests/db/period.test.ts` S-AT-07 (có) | một phần |
 | T4 | Tampering | Gửi lặp / phát lại hàng chờ | 3 | 2 | Cao | mitigate | `idempotency_key` UNIQUE, so nội dung, khoá lạc quan `version` | `tests/http/attendance-events.test.ts` S-AT-03 (có); `tests/db/tasks.test.ts` S-WK-06 (có) | mở |

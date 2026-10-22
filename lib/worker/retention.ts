@@ -373,50 +373,63 @@ export async function runRetention(
     geoErased: 0,
   };
   if (!cfg.enabled) return report;
+  // AUD-DATA-005: mỗi nhóm chạy độc lập — một nhóm lỗi không chặn các nhóm sau (nhất là xoá toạ độ GPS); lỗi gom lại và
+  // ném một lần ở cuối để job vẫn exit ≠ 0, kèm báo cáo các nhóm đã chạy.
+  const errors: unknown[] = [];
+  const step = async (key: Exclude<keyof RetentionReport, "skipped">, fn: () => Promise<number>) => {
+    try {
+      report[key] = await fn();
+    } catch (err) {
+      errors.push(err);
+    }
+  };
   const inquiryBefore = ago(now, cfg.inquiryDays * DAY);
-  report.inquiryAnonymized = await anonymize(
-    pool,
-    "inquiry",
-    "created_at < $1",
-    { a: inquiryBefore, b: inquiryBefore },
-    now,
-    batch,
+  await step("inquiryAnonymized", () =>
+    anonymize(pool, "inquiry", "created_at < $1", { a: inquiryBefore, b: inquiryBefore }, now, batch),
   );
   const decidedBefore = ago(now, cfg.applicationDecidedDays * DAY);
   const talentBefore = ago(now, cfg.talentPoolDays * DAY);
   const staleBefore = ago(now, cfg.applicationDays * DAY);
-  report.applicationAnonymized =
-    (await anonymize(
-      pool,
-      "job_application",
-      APPLICATION_DECIDED_WHERE,
-      { a: decidedBefore, b: talentBefore },
-      now,
-      batch,
-    )) +
-    (await anonymize(
-      pool,
-      "job_application",
-      APPLICATION_STALE_WHERE,
-      { a: staleBefore, b: staleBefore },
-      now,
-      batch,
-    ));
-  const contactCutoff = localDate(ago(now, cfg.employeeTerminatedDays * DAY));
-  report.employeeContactCleared = await clearEmployeeContacts(pool, contactCutoff, now);
-  const recordBefore = yearsAgo(now, cfg.timesheetYears);
-  report.employeeAnonymized = await anonymizeEmployees(pool, localDate(recordBefore), now, recordBefore);
-  report.sessionDeleted = await purge(pool, "session", ago(now, cfg.sessionDays * DAY), batch);
-  report.loginAttemptDeleted = await purge(
-    pool,
-    "login_attempt",
-    ago(now, cfg.loginAttemptDays * DAY),
-    batch,
+  await step(
+    "applicationAnonymized",
+    async () =>
+      (await anonymize(
+        pool,
+        "job_application",
+        APPLICATION_DECIDED_WHERE,
+        { a: decidedBefore, b: talentBefore },
+        now,
+        batch,
+      )) +
+      (await anonymize(
+        pool,
+        "job_application",
+        APPLICATION_STALE_WHERE,
+        { a: staleBefore, b: staleBefore },
+        now,
+        batch,
+      )),
   );
-  report.outboxDoneDeleted = await purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY), batch);
-  report.idempotencyDeleted = await purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR), batch);
-  report.rumSampleDeleted = await purge(pool, "rum_sample", ago(now, cfg.rumDays * DAY), batch);
-  report.rateEventDeleted = await purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch);
-  report.geoErased = await eraseGeo(pool, ago(now, cfg.geoDays * DAY), batch);
+  const contactCutoff = localDate(ago(now, cfg.employeeTerminatedDays * DAY));
+  await step("employeeContactCleared", () => clearEmployeeContacts(pool, contactCutoff, now));
+  const recordBefore = yearsAgo(now, cfg.timesheetYears);
+  await step("employeeAnonymized", () =>
+    anonymizeEmployees(pool, localDate(recordBefore), now, recordBefore),
+  );
+  await step("sessionDeleted", () => purge(pool, "session", ago(now, cfg.sessionDays * DAY), batch));
+  await step("loginAttemptDeleted", () =>
+    purge(pool, "login_attempt", ago(now, cfg.loginAttemptDays * DAY), batch),
+  );
+  await step("outboxDoneDeleted", () => purgeOutboxDone(pool, ago(now, cfg.outboxDoneDays * DAY), batch));
+  await step("idempotencyDeleted", () =>
+    purgeIdempotency(pool, ago(now, cfg.idempotencyHours * HOUR), batch),
+  );
+  await step("rumSampleDeleted", () => purge(pool, "rum_sample", ago(now, cfg.rumDays * DAY), batch));
+  await step("rateEventDeleted", () =>
+    purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch),
+  );
+  await step("geoErased", () => eraseGeo(pool, ago(now, cfg.geoDays * DAY), batch));
+  if (errors.length > 0)
+    throw Object.assign(new AggregateError(errors, `retention: ${errors.length} nhóm lỗi`), { report });
   return report;
 }

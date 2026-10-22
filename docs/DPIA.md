@@ -74,6 +74,7 @@ Mọi số là cấu hình ở `lib/nen/env.ts` (nguồn + mức tin cậy ở c
 | Hồ sơ vi phạm dữ liệu | 5 năm sau khắc phục (`RETENTION_BREACH_RECORD_YEARS`; chưa có bảng) | NĐ 356/2025 Đ29.1c — B |
 | Phiên 30 ngày, login_attempt 90 ngày, outbox đã gửi 30 ngày | xoá | D-016 |
 | Mẫu RUM `rum_sample` (không định danh trực tiếp) 30 ngày (`RETENTION_RUM_DAYS`); `public_rate_event` (băm IP đếm tần suất) 1 ngày | xoá | lựa chọn thiết kế (D-042; tối thiểu hoá lưu trữ) |
+| Toạ độ GPS chấm công (`attendance_event.geo_*`, chỉ khi bật thu GPS) | xoá toạ độ (bản mã + bản rõ) sau 90 ngày kể từ lúc server nhận (`RETENTION_GEO_DAYS`; sự kiện chấm công giữ) | GIẢ ĐỊNH tối thiểu hoá (D-056) — pháp chế chốt trước khi bật GPS |
 | Bản sao lưu | theo `BACKUP_KEEP` | — |
 
 Hạn chế đã biết: dòng chấm công/lương không xoá được (cấm DELETE) nên sau 10 năm chỉ ẩn danh họ tên, chưa xoá dòng; ứng viên trúng tuyển (`hired`) không bị job ứng viên đụng tới và chưa có liên kết hồ sơ ứng tuyển → nhân viên nên chưa ẩn danh khi chấm dứt hợp đồng; tài khoản đăng nhập (`app_user`) của người đã nghỉ chưa có job xoá email.

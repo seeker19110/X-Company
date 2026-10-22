@@ -447,6 +447,52 @@ describe("retention", () => {
     assert.equal(short.geoErased, 2);
   });
 
+  test("AUD-DATA-005: một nhóm retention lỗi không chặn các nhóm sau (xoá toạ độ GPS vẫn chạy); lỗi gom và ném ở cuối kèm báo cáo", async () => {
+    const emp = (await seedUser(companyId)).employeeId!;
+    await db.admin.query(
+      `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+         server_received_at, source, status, geo_enc) VALUES ($1, $2, $3, 'h', 'in', $4, $4, 'gps', 'accepted', 'v1:g1:x')`,
+      [companyId, emp, randomUUID(), daysAgo(300)],
+    );
+    // Pool giả: mọi câu SQL chạm bảng inquiry ném lỗi (nhóm đầu tiên) — các nhóm khác đi qua pool thật.
+    const boom = (sql: unknown) => typeof sql === "string" && /\binquiry\b/.test(sql);
+    const wrapClient = <C extends { query: (...a: never[]) => unknown }>(c: C): C =>
+      new Proxy(c, {
+        get(t, k, r) {
+          if (k !== "query") return Reflect.get(t, k, r) as unknown;
+          return (...a: unknown[]) => {
+            const sql = typeof a[0] === "object" && a[0] !== null ? (a[0] as { text?: unknown }).text : a[0];
+            if (boom(sql)) return Promise.reject(new Error("lỗi giả lập nhóm inquiry"));
+            return (t.query as (...x: unknown[]) => unknown).apply(t, a);
+          };
+        },
+      });
+    const faulty = new Proxy(db.app, {
+      get(t, k, r) {
+        if (k === "connect") return async () => wrapClient(await t.connect());
+        if (k === "query") return wrapClient(t).query;
+        return Reflect.get(t, k, r) as unknown;
+      },
+    });
+    const err = await runRetention({ config: CFG, now: NOW, pool: faulty }).then(
+      () => assert.fail("phải ném lỗi gom"),
+      (e: unknown) => e as AggregateError & { report: { geoErased: number; inquiryAnonymized: number } },
+    );
+    assert.ok(err instanceof AggregateError);
+    assert.equal(err.errors.length, 1);
+    assert.equal(err.report.inquiryAnonymized, 0);
+    assert.ok(err.report.geoErased >= 1, `geoErased = ${err.report.geoErased}`);
+    assert.equal(
+      (
+        await db.admin.query(
+          "SELECT count(*)::int AS n FROM attendance_event WHERE employee_id = $1 AND geo_enc IS NOT NULL",
+          [emp],
+        )
+      ).rows[0].n,
+      0,
+    );
+  });
+
   test("AUD-DATA-003: hai lượt retention đồng thời không xoá/đếm trùng toạ độ", async () => {
     const emp = (await seedUser(companyId)).employeeId!;
     for (let i = 0; i < 20; i++)

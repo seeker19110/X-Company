@@ -8,8 +8,7 @@
     "me": "Cá nhân"
   },
   "netStatus": {
-    "offline": "Đang ngoại tuyến",
-    "stale": "Đang xem dữ liệu đã lưu trên thiết bị, có thể đã cũ."
+    "offline": "Đang ngoại tuyến"
   },
   "sync": {
     "heading": "Đồng bộ",

@@ -110,6 +110,8 @@ test.describe("ứng dụng nội bộ", () => {
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toHaveCount(0);
     await context.setOffline(true);
     await page.reload();
+    // Trang /app/** là no-store nên SW trả /offline.html (có dải trạng thái riêng), không phải bản lưu của trang.
+    await expect(page.getByRole("heading", { name: "Bạn đang ngoại tuyến" })).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toBeVisible();
     await context.setOffline(false);
     await page.goto("/app/today");
