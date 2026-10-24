@@ -148,6 +148,48 @@ describe("API quyền chủ thể dữ liệu (T-040)", () => {
     assert.equal((await exp(hr, restrict)).status, 409);
   });
 
+  test("api1-bola GET /api/app/privacy/requests/[id]/[action] — xuất nhân viên gồm thông báo của chính tài khoản, không chứa thông báo người khác (AUD-DATA-007)", async () => {
+    const a = await seedUser(companyId, { grants: [{ role: "employee", scopeType: "self" }] });
+    const b = await seedUser(companyId, { grants: [{ role: "employee", scopeType: "self" }] });
+    const ids = async (email: string) =>
+      (await db.admin.query("SELECT id, employee_id FROM app_user WHERE email = $1", [email])).rows[0];
+    const ua = await ids(a.email);
+    const ub = await ids(b.email);
+    const refA = randomUUID();
+    const refB = randomUUID();
+    const ins = (u: string, ref: string, code: string, ev: number, read: boolean) =>
+      db.admin.query(
+        `INSERT INTO notification (company_id, user_id, topic, ref_type, ref_id, code, source_event_id, read_at)
+         VALUES ($1, $2, 'inquiry.created', 'inquiry', $3, $4, $5, CASE WHEN $6 THEN now() END)`,
+        [companyId, u, ref, code, ev, read],
+      );
+    await ins(ua.id, refA, "LH-AAA", 9001, false);
+    await ins(ua.id, randomUUID(), "LH-AA2", 9002, true);
+    await ins(ub.id, refB, "LH-BBB", 9003, false);
+    const empCode = (await db.admin.query("SELECT code FROM employee WHERE id = $1", [ua.employee_id]))
+      .rows[0].code;
+    const created = await (
+      await create(hr, { subject_type: "employee", subject_ref: empCode, kind: "access" })
+    ).json();
+    const rid = created.request.id as string;
+    const res = await getRequestExport(req("GET", `${BASE}/${rid}/export`, { cookie: hr.cookie }));
+    assert.equal(res.status, 200);
+    const j = await res.json();
+    const list = j.data.notifications as Record<string, unknown>[];
+    assert.equal(list.length, 2);
+    assert.deepEqual(list.map((n) => n.code).sort(), ["LH-AA2", "LH-AAA"]);
+    assert.deepEqual(Object.keys(list[0]!).sort(), [
+      "code",
+      "created_at",
+      "read_at",
+      "ref_id",
+      "ref_type",
+      "topic",
+    ]);
+    const text = JSON.stringify(j.data);
+    assert.ok(!text.includes("LH-BBB") && !text.includes(refB), "không lộ thông báo của người khác");
+  });
+
   test("luồng HR: tạo → bắt đầu → hoàn tất yêu cầu xoá qua HTTP; danh sách phản ánh, phản hồi phát lại theo khoá", async () => {
     const r2 = await submitInquiry(
       db.app,

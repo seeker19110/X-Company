@@ -592,6 +592,13 @@ export async function exportSubject(
            FROM attendance_event WHERE company_id = $1 AND employee_id = $2 GROUP BY 1 ORDER BY 1`,
         [c, sid, BUSINESS_TZ],
       ),
+      // Thông báo trong ứng dụng của tài khoản gắn nhân viên (AUD-DATA-007): chỉ chủ đề/loại/id đối tượng/mã tra cứu.
+      notifications: await many(
+        `SELECT n.topic, n.ref_type, n.ref_id, n.code, n.created_at, n.read_at
+           FROM notification n JOIN app_user u ON u.company_id = n.company_id AND u.id = n.user_id
+          WHERE n.company_id = $1 AND u.employee_id = $2 ORDER BY n.created_at, n.id`,
+        [c, sid],
+      ),
       consents: await listConsents(tx, type, sid),
     };
   }
