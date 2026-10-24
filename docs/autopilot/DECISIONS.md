@@ -477,3 +477,10 @@
 - Chọn: Làm DATA-009, DATA-007, SEC-009, DATA-008, TEST-004, TEST-003, SEC-008, SEC-011 (doc); không làm ARCH-005 (chỉ khi có kênh thật, D-059), HAR-003 (số dòng bằng chứng), PERF-004 phần còn lại (đúng thiết kế), DEP-001 (typescript-eslint chưa hỗ trợ TS7), CI-004 (khung), CFG-* (người)
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: các mục này là lỗi/thiếu thật có đường tái hiện (dữ liệu rác MFA, DSAR thiếu, thông báo tới người hết quyền, RUM bị đầu độc khi bật) — rẻ, có test; các mục không làm có điều kiện kích hoạt hoặc phụ thuộc bên ngoài
 - Đường lùi: Đánh [~] task chưa làm kèm lý do
+
+### D-066 · 2026-10-24T09:57:38+00:00 · Vòng còn 91 MUST blueprint mở — làm mục nào, defer mục nào?
+
+- Phương án: (1) Lát 17 đóng các mục làm trọn được trong repo (DB-PERF-008, QA-PERF-007, LOOP-FB-003 nay đã áp dụng) + phần làm được của PRF-WEB-005, BASE-REPO-013; defer các mục còn lại theo nhóm (ruleset GitHub, hạ tầng thật, pháp lý/HR, số liệu thực địa, quyết định chủ dự án) kèm lý do · (2) Defer tất cả như phiên trước
+- Chọn: Lát 17 đóng các mục làm trọn được trong repo (DB-PERF-008, QA-PERF-007, LOOP-FB-003 nay đã áp dụng) + phần làm được của PRF-WEB-005, BASE-REPO-013; defer các mục còn lại theo nhóm (ruleset GitHub, hạ tầng thật, pháp lý/HR, số liệu thực địa, quyết định chủ dự án) kèm lý do
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: không defer việc agent tự làm được (DB-PERF-008/QA-PERF-007 có Kiểm chạy được cục bộ); mục cần GitHub settings, máy chủ thật, pháp chế hoặc người dùng thật thì agent không thể đạt — defer có lý do là đúng giao thức
+- Đường lùi: Bỏ task lát 17 chưa làm

@@ -2,7 +2,8 @@
 // node:http keep-alive đánh vào bản build production (`next start`, cổng riêng) + Postgres tạm + dữ liệu seed.
 // Gọi qua `npm run -s perf:load` (bọc bởi scripts/with-test-db.sh). Báo cáo docs/perf/load-report-<ngày>.md + .json ghi ra thư mục tạm (vào repo khi XC_REPORT_DIR=. / npm run -s reports:refresh);
 // exit 1 khi một kịch bản vượt ngân sách. Nhãn bằng chứng: faithful-fixture — máy dev, KHÔNG phải production/thực địa.
-// Chỉ nhắm localhost (QA-PERF-007): BASE_URL không có ở đây, bộ tải không bao giờ gửi tới host ngoài máy này.
+// Chỉ nhắm loopback (QA-PERF-007): `PERF_BASE_URL` (tuỳ chọn) qua resolvePerfTarget — host ngoài máy này bị từ chối;
+// `npm run -s check:perf-target` chặn CI/script đặt đích khác.
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -11,6 +12,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import pg from "pg";
 import { login, makeAgent, request, writeHeaders } from "./lib/http-client.mjs";
+import { resolvePerfTarget } from "./lib/perf-target.mjs";
 import {
   environmentInfo,
   err,
@@ -238,7 +240,7 @@ async function main() {
   const h = prepare({ prefix: "PERF", extraSeeds: ["scripts/seed-perf.ts"] });
   const server = await h.start(PORT, { TRUST_PROXY_HOPS: "1" });
   try {
-    const base = server.baseUrl;
+    const base = resolvePerfTarget(process.env.PERF_BASE_URL, server.baseUrl);
     const origin = server.origin;
     const agent = makeAgent(CONNS * 2);
     const U = (k) => h.seed.users[k];
