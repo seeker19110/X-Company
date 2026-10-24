@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\"",
-    "test:file": "scripts/with-test-db.sh node --import tsx --test --test-concurrency=1",
+    "test:file": "scripts/test-file.sh",
     "coverage": "scripts/coverage.sh",
     "e2e": "scripts/with-test-db.sh scripts/e2e.sh",
     "db:migrate": "tsx scripts/migrate.ts",

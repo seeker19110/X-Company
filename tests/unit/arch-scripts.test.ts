@@ -1,5 +1,6 @@
 // Kiểm các script cổng kiến trúc (scripts/check-*.ts) bằng cây thư mục giả.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -210,4 +211,16 @@ test("check:units cột số (XC-UNITS-009): thiếu hậu tố đơn vị → �
   assert.match(bad[0] ?? "", /m\.sql:2: cột số "timeout"/);
   assert.match(bad[2] ?? "", /m\.sql:5: .*"grace"/);
   assert.deepEqual(columnViolations("m.sql", ""), []);
+});
+
+test("test:file đỏ khi đối số trỏ tệp không tồn tại (node --test bỏ qua im lặng — Gate T-084)", () => {
+  const r = spawnSync(
+    "scripts/test-file.sh",
+    ["tests/unit/arch-scripts.test.ts", "tests/unit/khong-co.test.ts"],
+    {
+      encoding: "utf8",
+    },
+  );
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /không có tệp: tests\/unit\/khong-co\.test\.ts/);
 });
