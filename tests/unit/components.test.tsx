@@ -14,6 +14,12 @@ import {
 } from "../../app/components/confirm-dialog.tsx";
 import { ApplicationFormView, applicationResult } from "../../app/components/application-form.tsx";
 import { ContactFormView, contactResult } from "../../app/components/contact-form.tsx";
+import {
+  notificationHref,
+  notificationText,
+  NotificationsView,
+  type NotificationRow,
+} from "../../app/components/notification-list.tsx";
 import { ErrorView } from "../../app/components/error-view.tsx";
 import { ERROR_VIEW_TEXT, syncErrorMessage } from "../../app/components/messages.ts";
 import { FieldError, fieldA11y, SubmitButton, toFieldErrors } from "../../app/components/form-parts.tsx";
@@ -518,5 +524,66 @@ describe("F-003: form ứng tuyển (ApplicationFormView + schema dùng chung)",
       }),
     );
     assert.ok(v.kind === "error" && v.fields.email === "E" && !("job_slug" in v.fields));
+  });
+});
+
+describe("AUD-DOC-002: danh sách thông báo (View thuần)", () => {
+  const row = (over: Partial<NotificationRow>): NotificationRow => ({
+    id: "n1",
+    topic: "task.assigned",
+    ref_type: "task",
+    ref_id: "t1",
+    code: null,
+    created_at: new Date("2026-03-01T03:00:00Z"),
+    read_at: null,
+    ...over,
+  });
+
+  test("câu theo chủ đề; mã chỉ chèn khi có; chủ đề lạ có câu dự phòng", () => {
+    assert.equal(notificationText("inquiry.assigned", "LH-1"), "Bạn được giao liên hệ LH-1");
+    assert.equal(notificationText("inquiry.assigned", null), "Bạn được giao một liên hệ mới");
+    assert.equal(notificationText("application.received", "UV-9"), "Hồ sơ ứng tuyển mới UV-9");
+    assert.equal(notificationText("task.assigned", null), "Bạn được giao một việc mới");
+    assert.equal(notificationText("task.submit", null), "Việc của bạn có cập nhật");
+    assert.equal(notificationText("khac.la", null), "Có thông báo mới");
+  });
+
+  test("chỉ việc có trang đích; liên hệ/hồ sơ không có liên kết", () => {
+    assert.equal(notificationHref("task"), "/app/tasks");
+    assert.equal(notificationHref("inquiry"), null);
+    assert.equal(notificationHref("job_application"), null);
+  });
+
+  test("rỗng: thông điệp rỗng, không nút 'tất cả'", () => {
+    const m = html(<NotificationsView items={[]} unread={0} markAll={<button>TẤT CẢ</button>} />);
+    assert.match(m, /Chưa có thông báo nào\./);
+    assert.match(m, /Bạn đã đọc hết thông báo\./);
+    assert.doesNotMatch(m, /TẤT CẢ/);
+  });
+
+  test("chưa đọc có nhãn chữ + nút; đã đọc có nhãn ẩn và không nút; liên kết việc; phân trang", () => {
+    const m = html(
+      <NotificationsView
+        items={[
+          row({ id: "a" }),
+          row({ id: "b", read_at: new Date(), topic: "inquiry.assigned", ref_type: "inquiry", code: "LH-2" }),
+        ]}
+        unread={1}
+        markAll={<button>TẤT CẢ</button>}
+        markOne={(n) => <button>ĐỌC-{n.id}</button>}
+        prevHref="/app/thong-bao"
+        nextHref="/app/thong-bao?offset=40"
+      />,
+    );
+    assert.match(m, /<span class="badge">Chưa đọc<\/span>/);
+    assert.match(m, /<span class="visually-hidden">Đã đọc<\/span>/);
+    assert.match(m, /ĐỌC-a/);
+    assert.doesNotMatch(m, /ĐỌC-b/);
+    assert.match(m, /TẤT CẢ/);
+    assert.match(m, /href="\/app\/tasks"/);
+    assert.equal(m.match(/href="\/app\/tasks"/g)?.length, 1);
+    assert.match(m, /1 thông báo chưa đọc/);
+    assert.match(m, /href="\/app\/thong-bao\?offset=40"/);
+    assert.match(m, /Trang trước/);
   });
 });

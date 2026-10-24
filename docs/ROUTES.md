@@ -29,6 +29,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/app/dashboard`                       | `app/app/(secure)/dashboard/page.tsx`                | động   | Dữ liệu theo người dùng và phạm vi quyền                   |
 | `/app/me`                              | `app/app/(secure)/me/page.tsx`                       | động   | Dữ liệu theo người dùng                                    |
 | `/app/tasks`                           | `app/app/(secure)/tasks/page.tsx`                    | động   | Dữ liệu theo người dùng                                    |
+| `/app/thong-bao`                        | `app/app/(secure)/thong-bao/page.tsx`                | động   | Dữ liệu theo người dùng                                    |
 | `/app/today`                           | `app/app/(secure)/today/page.tsx`                    | động   | Dữ liệu theo người dùng                                    |
 | `/api/app/adjustments`                 | `app/api/app/adjustments/route.ts`                   | động   | API có xác thực, `no-store`                                |
 | `/api/app/applications`                | `app/api/app/applications/route.ts`                  | động   | API có xác thực, `no-store`                                |

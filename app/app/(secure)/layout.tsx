@@ -5,6 +5,8 @@ import { SessionProvider } from "@/app/components/session-context";
 import { AppNav } from "@/app/components/app-nav";
 import { RumIfEnabled } from "@/app/server/rum";
 import { ServiceWorkerRegister } from "@/app/components/sw-register";
+import { getPool } from "@/lib/db";
+import { unreadCount } from "@/lib/notify";
 import { can, PERMISSIONS, type Role } from "@/lib/authz";
 import { t } from "@/lib/i18n";
 import "../app.css";
@@ -24,6 +26,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
     // Menu Phê duyệt theo danh mục quyền (AUD-XFEAT-006), không danh sách vai trò viết cứng; phạm vi kiểm ở server.
     s.actor.grants.some((g) => APPROVER_ROLES.includes(g.role)) ||
     can(s.actor, "period.manage", { companyId: s.actor.companyId });
+  const unread = await unreadCount(getPool(), s.actor.companyId, s.actor.userId);
   return (
     <SessionProvider csrf={s.csrf} userId={s.actor.userId}>
       <div className="app-shell">
@@ -34,7 +37,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
         <main className="app-main" id="noi-dung">
           {children}
         </main>
-        <AppNav approver={approver} />
+        <AppNav approver={approver} unread={unread} />
         <ServiceWorkerRegister />
         <RumIfEnabled />
       </div>

@@ -11,6 +11,7 @@
     "/app/attendance": { "max_js_gzip_kb": 200, "max_requests": 14 },
     "/app/approvals": { "max_js_gzip_kb": 200, "max_requests": 14 },
     "/app/dashboard": { "max_js_gzip_kb": 200, "max_requests": 14 },
-    "/app/me": { "max_js_gzip_kb": 200, "max_requests": 14 }
+    "/app/me": { "max_js_gzip_kb": 200, "max_requests": 14 },
+    "/app/thong-bao": { "max_js_gzip_kb": 200, "max_requests": 14 }
   }
 }

@@ -78,6 +78,18 @@ body:has(.net-banner:not(:empty)) {
   min-height: 56px;
   text-decoration: none;
   font-weight: 600;
+  gap: 0.25rem;
+  padding-inline: 0.125rem;
+  font-size: 0.875rem;
+  text-align: center;
+}
+.nav-count {
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
 }
 .app-nav a[aria-current="page"] {
   color: var(--brand-fg);

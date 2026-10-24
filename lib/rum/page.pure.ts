@@ -9,6 +9,7 @@ export const KNOWN_APP_SECTIONS: readonly string[] = [
   "dashboard",
   "me",
   "tasks",
+  "thong-bao",
   "today",
 ] as const;
 

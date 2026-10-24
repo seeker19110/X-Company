@@ -5,6 +5,8 @@
     "tasks": "Công việc",
     "attendance": "Chấm công",
     "approvals": "Duyệt",
+    "notifications": "Thông báo",
+    "notificationsUnread": "Thông báo, {count} chưa đọc",
     "me": "Cá nhân"
   },
   "netStatus": {
@@ -142,6 +144,30 @@
       "endAfterStart": "Giờ kết thúc phải sau giờ bắt đầu",
       "date": "Vui lòng chọn ngày hợp lệ",
       "otConsent": "Cần đồng ý làm thêm giờ để gửi đơn"
+    }
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "empty": "Chưa có thông báo nào.",
+    "unreadSummary": "{count} thông báo chưa đọc",
+    "allRead": "Bạn đã đọc hết thông báo.",
+    "unreadLabel": "Chưa đọc",
+    "readLabel": "Đã đọc",
+    "markAll": "Đánh dấu tất cả đã đọc",
+    "markOne": "Đánh dấu đã đọc",
+    "markOneFor": "Đánh dấu đã đọc: {text}",
+    "openTask": "Xem công việc",
+    "prev": "Trang trước",
+    "next": "Trang sau",
+    "listLabel": "Danh sách thông báo",
+    "pagerLabel": "Phân trang thông báo",
+    "text": {
+      "inquiryAssigned": "Bạn được giao liên hệ {code}",
+      "inquiryAssignedNoCode": "Bạn được giao một liên hệ mới",
+      "applicationReceived": "Hồ sơ ứng tuyển mới {code}",
+      "taskAssigned": "Bạn được giao một việc mới",
+      "taskUpdated": "Việc của bạn có cập nhật",
+      "other": "Có thông báo mới"
     }
   }
 }

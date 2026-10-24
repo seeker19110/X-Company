@@ -142,7 +142,13 @@ test.describe("ứng dụng nội bộ", () => {
         (route) => route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
         { times: 1 },
       );
-      await item.getByRole("button", { name: "Bắt đầu" }).click();
+      // Chờ đúng phản hồi mock và nút bật lại trước khi đăng ký route kế (route đăng ký sau được ưu tiên: đăng ký sớm thì
+      // request của cú bấm này rơi vào route 409).
+      await Promise.all([
+        page.waitForResponse((r) => r.url().endsWith("/start") && r.status() === 200),
+        item.getByRole("button", { name: "Bắt đầu" }).click(),
+      ]);
+      await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeEnabled();
       await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeFocused();
       // Thao tác thất bại → focus về nút vừa bấm, không rơi về <body> (review PR #50).
       await page.route(

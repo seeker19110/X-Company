@@ -435,3 +435,10 @@
 - Chọn: Giữ một handler mỗi topic; ghi điều kiện: trước task kênh SMTP/Web Push phải tách thành nhiều consumer mỗi topic (Registry nhiều handler)
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 3 (đơn giản, theo chuẩn) + 1 không bị ảnh hưởng hôm nay: kênh phụ duy nhất là log, luôn bật, nên không có đường nào hoãn thông báo; tách ngay đổi Registry/processOne và test worker cho một lỗi chưa thể xảy ra, làm phình PR. Ghi 🟢 trong AUDIT-STATUS kèm điều kiện kích hoạt
 - Đường lùi: Tách Registry thành nhiều consumer mỗi topic khi thêm kênh thật; dữ liệu notification không đổi
+
+### D-060 · 2026-10-24T02:30:56+00:00 · T-086: phản hồi login khi cần TOTP — đổi 200 thành oneOf(LoginResult, MfaChallengeResult) (phá hợp đồng) hay trả 202?
+
+- Phương án: (1) Giữ 200 oneOf + x-breaking-approved; client duy nhất (UI login của repo) sửa ở T-087 trong cùng PR lát 15 · (2) Trả 202 cho thử thách (không phá hợp đồng trên giấy)
+- Chọn: Giữ 200 oneOf + x-breaking-approved; client duy nhất (UI login của repo) sửa ở T-087 trong cùng PR lát 15
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: client cũ coi mọi 2xx là đăng nhập thành công, nên 202 cũng làm vỡ luồng mà còn che giấu thay đổi; không có client ngoài (API nội bộ, PWA cùng repo), UI sửa cùng PR nên không có phiên bản nào chạy với hợp đồng lệch
+- Đường lùi: Revert PR lát 15 khôi phục hợp đồng cũ
