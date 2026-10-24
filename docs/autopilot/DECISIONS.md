@@ -449,3 +449,10 @@
 - Chọn: Mở rộng allowlist theo đường dẫn ^/tuyen-dung(/slug)?$ cho 10202 và 20012, cùng lập luận D-047/D-049
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: form gửi bằng fetch tới /api/public/applications — endpoint công khai không phiên, không có gì để CSRF lợi dụng (giới hạn tần suất theo IP); method=post chỉ để dữ liệu ứng viên không lên URL khi JS chưa chạy. Token giả là an ninh giả (D-047 đã loại); bỏ POST làm lộ email/SĐT lên URL. Allowlist giới hạn đúng đường dẫn, form ở chỗ khác vẫn đỏ
 - Đường lùi: Xoá đường dẫn khỏi security/zap/allowlist.json
+
+### D-062 · 2026-10-24T03:56:24+00:00 · Lát 15 (TOTP, SEC-007 — ngoại lệ cứng) đẩy thế nào khi phiên chỉ được đẩy một nhánh và PR #73 (lát 14) đang chờ người merge?
+
+- Phương án: (1) Đẩy lát 15 lên cùng nhánh: PR #73 thành PR lát 14–15, giữ mỗi task một commit, mô tả tách mục; reviewer-alt rà riêng phần lát 15 trước khi đẩy · (2) Giữ lát 15 ở máy tới khi #73 merge, rồi mở PR riêng
+- Chọn: Đẩy lát 15 lên cùng nhánh: PR #73 thành PR lát 14–15, giữ mỗi task một commit, mô tả tách mục; reviewer-alt rà riêng phần lát 15 trước khi đẩy
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 2 (giữ đường lùi) + 1: container phiên là tạm — mã chỉ ở máy sẽ mất khi phiên kết thúc mà #73 chưa merge (người merge, không biết khi nào); cả hai lát đều là ngoại lệ cứng do người merge nên gộp không đổi làn; commit theo task giúp người review từng phần (tiền lệ D-054)
+- Đường lùi: Người review có thể yêu cầu tách: revert/cherry-pick các commit lát 15 sang nhánh mới
