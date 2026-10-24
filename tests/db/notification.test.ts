@@ -104,8 +104,36 @@ describe("thông báo trong ứng dụng (worker)", () => {
     assert.equal(ch.sent.length, 1, "kênh phụ (log) vẫn nhận sự kiện");
   });
 
+  test("AUD-SEC-009: inquiry.assigned kiểm lại quyền inquiry.manage lúc worker xử lý — grant bị thu hồi/hết hạn/chỉ phạm vi phòng ban/không có grant → không báo; còn quyền → báo", async () => {
+    const ok = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
+    const revoked = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
+    const expired = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
+    const deptScoped = await seedUser(companyId, {
+      grants: [{ role: "sales", scopeType: "department", scopeId: deptId }],
+    });
+    const noGrant = await seedUser(companyId);
+    const ids = [];
+    for (const u of [ok, revoked, expired, deptScoped, noGrant])
+      ids.push(
+        await add(companyId, "inquiry.assigned", { inquiryId: randomUUID(), assigneeUserId: u.userId }),
+      );
+    // Thu hồi SAU khi phân công, trước khi worker chạy.
+    await db.admin.query("UPDATE role_grant SET revoked_at = now() WHERE user_id = $1", [revoked.userId]);
+    await db.admin.query(
+      "UPDATE role_grant SET valid_from = now() - interval '2 day', valid_to = now() - interval '1 day' WHERE user_id = $1",
+      [expired.userId],
+    );
+    const s = await run();
+    assert.equal(s.done, 5, "mọi sự kiện đều đóng (kể cả không có người nhận)");
+    for (const id of ids) assert.equal(await status(id), "done");
+    assert.deepEqual(
+      (await notes()).map((r) => r.user_id),
+      [ok.userId],
+    );
+  });
+
   test("inquiry.assigned không mã (gán lại thủ công) → code NULL", async () => {
-    const a = await seedUser(companyId);
+    const a = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
     await add(companyId, "inquiry.assigned", { inquiryId: randomUUID(), assigneeUserId: a.userId });
     await run();
     const rows = await notes();
@@ -114,7 +142,7 @@ describe("thông báo trong ứng dụng (worker)", () => {
   });
 
   test("lũy đẳng: chạy lại cùng sự kiện (redrive sau khi mất dấu processed_message) không tạo bản trùng", async () => {
-    const a = await seedUser(companyId);
+    const a = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
     const id = await add(companyId, "inquiry.assigned", {
       inquiryId: randomUUID(),
       assigneeUserId: a.userId,
@@ -154,7 +182,7 @@ describe("thông báo trong ứng dụng (worker)", () => {
   });
 
   test("đồng thời: hai worker chạy song song trên nhiều sự kiện → mỗi (sự kiện, người) đúng một hàng", async () => {
-    const a = await seedUser(companyId);
+    const a = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
     for (let i = 0; i < 8; i++)
       await add(companyId, "inquiry.assigned", { inquiryId: randomUUID(), assigneeUserId: a.userId });
     const [r1, r2] = await Promise.all([run(), run()]);
@@ -237,7 +265,7 @@ describe("thông báo trong ứng dụng (worker)", () => {
 
   test("chủ thể đã rút đồng ý → không báo (cả trong ứng dụng lẫn kênh phụ), sự kiện vẫn đóng", async () => {
     const hr = await seedUser(companyId, { grants: [{ role: "hr", scopeType: "company" }] });
-    const assignee = await seedUser(companyId);
+    const assignee = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
     const applicationId = randomUUID();
     const inquiryId = randomUUID();
     await withTx(async (tx) => {
@@ -294,7 +322,7 @@ describe("thông báo trong ứng dụng (worker)", () => {
   });
 
   test("kênh phụ tắt → giao dịch hoãn: chưa có thông báo; bật lại → có đúng một", async () => {
-    const a = await seedUser(companyId);
+    const a = await seedUser(companyId, { grants: [{ role: "sales", scopeType: "company" }] });
     const ch = new FakeChannel();
     ch.on = false;
     const id = await add(companyId, "inquiry.assigned", {

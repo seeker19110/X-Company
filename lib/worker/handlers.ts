@@ -3,13 +3,7 @@
 // luôn bật, ghi trong giao dịch worker — lib/notify) cho người bị ảnh hưởng, (2) kênh phụ `Channel` (mặc định ghi log).
 import { z } from "zod";
 import type { Tx } from "../db/index.ts";
-import {
-  activeUsers,
-  addNotifications,
-  usersOfEmployees,
-  usersWhoCan,
-  type RefType,
-} from "../notify/index.ts";
+import { addNotifications, usersOfEmployees, usersWhoCan, type RefType } from "../notify/index.ts";
 import { isProcessingBlocked } from "../privacy/consent.ts";
 import { ChannelDisabledError, logChannel, type Channel } from "./channels.ts";
 
@@ -81,7 +75,10 @@ function inApp(topic: string, payload: unknown): InApp | null {
       refType: "inquiry",
       refId: p.inquiryId,
       code: p.code ?? null,
-      recipients: (tx, companyId) => activeUsers(tx, companyId, [p.assigneeUserId]),
+      // AUD-SEC-009: người được phân công phải CÒN quyền inquiry.manage lúc worker xử lý (grant có thể đã bị thu hồi/hết hạn
+      // sau khi phân công) — cùng quyết định với usersWhoCan, rồi lọc theo người được phân công (vô hiệu/khác công ty cũng rơi ở đây).
+      recipients: async (tx, companyId) =>
+        (await usersWhoCan(tx, "inquiry.manage", { companyId })).filter((id) => id === p.assigneeUserId),
     };
   }
   if (topic === "application.received") {
