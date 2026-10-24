@@ -76,7 +76,14 @@ export function prepare({ prefix, extraSeeds = [], build = true }) {
   const adminUrl = process.env.DATABASE_URL;
   if (adminUrl === undefined || adminUrl === "")
     throw new Error("cần DATABASE_URL (chạy qua scripts/with-test-db.sh)");
-  const base = { ...process.env, MIGRATE_DATABASE_URL: adminUrl, NEXT_TELEMETRY_DISABLED: "1" };
+  // Seed mã hoá cột (bí mật TOTP, AUD-SEC-002) bằng CÙNG khoá với ứng dụng do `start` khởi động.
+  const base = {
+    ...process.env,
+    MIGRATE_DATABASE_URL: adminUrl,
+    NEXT_TELEMETRY_DISABLED: "1",
+    DATA_ENCRYPTION_KEYS: `h1:${DATA_KEY}`,
+    DATA_INDEX_KEY,
+  };
   run("npx", ["--no-install", "tsx", "scripts/migrate.ts"], base, "migrate");
   run("npx", ["--no-install", "tsx", "scripts/seed-e2e.ts"], base, "seed-e2e");
   for (const s of extraSeeds) run("npx", ["--no-install", "tsx", s], base, s);

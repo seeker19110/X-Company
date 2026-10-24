@@ -6,6 +6,9 @@ set -euo pipefail
 export MIGRATE_DATABASE_URL="$DATABASE_URL"
 export NEXT_TELEMETRY_DISABLED=1
 npx --no-install tsx scripts/migrate.ts
+# Khoá mã hoá lúc lưu (T-048, bắt buộc ở production, ngẫu nhiên mỗi lần chạy) đặt TRƯỚC seed: seed mã hoá cột (bí mật TOTP của người dùng e2e, AUD-SEC-002) phải cùng khoá với app.
+export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-lh1:$(openssl rand -base64 32)}"
+export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
 npx --no-install tsx scripts/seed-e2e.ts
 # Ứng dụng chạy bằng role đăng nhập riêng (không superuser) như production.
 DATABASE_URL="$(npx --no-install tsx scripts/e2e-role.ts)"
@@ -15,9 +18,6 @@ SITE_COMPANY_ID="$(node -e "process.stdout.write(require('./e2e/.seed.json').com
 export APP_ORIGIN="http://localhost:3100"
 export SESSION_SECRET="${SESSION_SECRET:-lh-session-secret-0123456789abcdef-xyz}"
 export QR_SIGNING_KEYS="${QR_SIGNING_KEYS:-k1:lh-qr-key-0123456789abcdef0123456789abcdef}"
-# Khoá mã hoá dữ liệu lúc lưu (T-048): bắt buộc ở production → sinh ngẫu nhiên mỗi lần chạy.
-export DATA_ENCRYPTION_KEYS="${DATA_ENCRYPTION_KEYS:-lh1:$(openssl rand -base64 32)}"
-export DATA_INDEX_KEY="${DATA_INDEX_KEY:-$(openssl rand -base64 32)}"
 export TRUST_PROXY="${TRUST_PROXY:-0}" # production bắt buộc khai tường minh; harness không có proxy
 FILE_STORAGE_DIR="$(mktemp -d)"
 export FILE_STORAGE_DIR
