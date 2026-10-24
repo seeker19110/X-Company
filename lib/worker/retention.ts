@@ -3,6 +3,7 @@
 // khi chốt kết quả, trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực (khi đó 12 tháng); ứng viên chưa chốt quá lâu → lưới an
 // toàn. Nhân viên đã chấm dứt hợp đồng → xoá liên hệ không phải giữ; hết 10 năm → ẩn danh họ tên (chấm công/lương giữ 10 năm).
 // Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ, rum_sample quá hạn (T-056), public_rate_event quá 1 ngày → xoá.
+// Thông báo trong ứng dụng (T-080): đã đọc quá NOTIFICATION_READ_DAYS, chưa đọc quá NOTIFICATION_UNREAD_DAYS → xoá theo lô.
 // Toạ độ GPS chấm công quá RETENTION_GEO_DAYS → xoá toạ độ (sự kiện giữ) qua hàm có kiểm soát của migration 0029 (AUD-DATA-003).
 // Mỗi nhóm một giao dịch + một bản ghi audit (chỉ đếm, không PII). Tắt: RETENTION_ENABLED=false (đường lùi D-016).
 import type pg from "pg";
@@ -73,6 +74,8 @@ export interface RetentionReport {
   rateEventDeleted: number;
   /** Số sự kiện chấm công được xoá toạ độ (bản mã + bản rõ) lần chạy này. */
   geoErased: number;
+  /** Thông báo trong ứng dụng đã xoá (đã đọc quá hạn + chưa đọc quá hạn). */
+  notificationDeleted: number;
 }
 
 // i18n-ignore: giá trị dữ liệu ổn định ghi vào cột tên sau ẩn danh (so khớp/kiểm bằng truy vấn), không đổi theo ngôn ngữ
@@ -92,6 +95,16 @@ const HOUR = 3_600_000;
 /** Số hàng mỗi lô xoá/ẩn danh (AUD-PERF-002): mỗi lô một giao dịch ngắn, không khoá cả bảng một lúc. */
 export const RETENTION_BATCH = 5000;
 
+/**
+ * Thông báo trong ứng dụng (T-080, D-058): hằng số, KHÔNG phải biến môi trường — chỉ là lời nhắc trỏ tới đối tượng (không PII,
+ * đối tượng gốc có thời hạn riêng). Đã đọc: 90 ngày kể từ lúc đọc; chưa đọc: 365 ngày kể từ lúc tạo (không ai mở trong một năm
+ * thì lời nhắc đã hết giá trị). Đổi → sửa ở đây kèm lý do.
+ */
+export const NOTIFICATION_READ_DAYS = 90;
+export const NOTIFICATION_UNREAD_DAYS = 365;
+const NOTIFICATION_READ_WHERE = "read_at < $1";
+const NOTIFICATION_UNREAD_WHERE = "read_at IS NULL AND created_at < $1";
+
 /** Bộ chọn hàng quá hạn ($1 = mốc thời gian) — một nguồn cho job và test EXPLAIN (mỗi cái có index, migration 0028). */
 export const RETENTION_SELECTORS = [
   { table: "session", where: "absolute_expires_at < $1" },
@@ -99,6 +112,9 @@ export const RETENTION_SELECTORS = [
   { table: "idempotency_record", where: "created_at < $1" },
   { table: "rum_sample", where: "received_at < $1" },
   { table: "public_rate_event", where: "at < $1" },
+  // Hai bộ chọn cho cùng bảng (hai mốc khác nhau) — mỗi cái một index một phần (0030).
+  { table: "notification", where: NOTIFICATION_READ_WHERE },
+  { table: "notification", where: NOTIFICATION_UNREAD_WHERE },
   { table: "outbox_event", where: "status = 'done' AND processed_at < $1" },
   { table: "inquiry", where: "anonymized_at IS NULL AND created_at < $1" },
   // Cùng biểu thức với index một phần và hàm attendance_event_erase_geo (0029) — job gọi hàm, không UPDATE trực tiếp.
@@ -110,7 +126,7 @@ export const RETENTION_SELECTORS = [
 ] as const;
 type PurgeTable = Exclude<
   (typeof RETENTION_SELECTORS)[number]["table"],
-  "inquiry" | "outbox_event" | "attendance_event"
+  "inquiry" | "outbox_event" | "attendance_event" | "notification"
 >;
 const selector = (table: (typeof RETENTION_SELECTORS)[number]["table"]): string =>
   RETENTION_SELECTORS.find((x) => x.table === table)!.where;
@@ -276,13 +292,23 @@ async function anonymizeEmployees(pool: pg.Pool, cutoff: string, now: Date, befo
 }
 
 async function purge(pool: pg.Pool, table: PurgeTable, before: Date, batch: number): Promise<number> {
-  const where = selector(table);
+  return purgeWhere(pool, table, selector(table), before, batch);
+}
+
+/** Xoá theo lô các hàng của `table` thoả `where` ($1 = mốc) — `where` là một bộ chọn trong RETENTION_SELECTORS. */
+async function purgeWhere(
+  pool: pg.Pool,
+  table: PurgeTable | "notification",
+  where: string,
+  before: Date,
+  batch: number,
+): Promise<number> {
   let total = 0;
   for (;;) {
     // Theo lô (AUD-PERF-002): mỗi lô một giao dịch ngắn + audit đếm của lô; lô thiếu = đã hết hàng quá hạn.
     const n = await inTx(pool, async (tx) => {
       const r = await tx.query(
-        // sql-interp-allow: `table` là PurgeTable, `where` là hằng RETENTION_SELECTORS; `before` qua $1, cỡ lô qua $2.
+        // sql-interp-allow: `table` là PurgeTable | "notification", `where` là hằng RETENTION_SELECTORS; `before` qua $1, cỡ lô qua $2.
         `DELETE FROM ${table} WHERE ctid IN (SELECT ctid FROM ${table} WHERE ${where} LIMIT $2 FOR UPDATE SKIP LOCKED)`,
         [before, batch],
       );
@@ -371,6 +397,7 @@ export async function runRetention(
     rumSampleDeleted: 0,
     rateEventDeleted: 0,
     geoErased: 0,
+    notificationDeleted: 0,
   };
   if (!cfg.enabled) return report;
   // AUD-DATA-005: mỗi nhóm chạy độc lập — một nhóm lỗi không chặn các nhóm sau (nhất là xoá toạ độ GPS); lỗi gom lại và
@@ -429,6 +456,24 @@ export async function runRetention(
     purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch),
   );
   await step("geoErased", () => eraseGeo(pool, ago(now, cfg.geoDays * DAY), batch));
+  await step(
+    "notificationDeleted",
+    async () =>
+      (await purgeWhere(
+        pool,
+        "notification",
+        NOTIFICATION_READ_WHERE,
+        ago(now, NOTIFICATION_READ_DAYS * DAY),
+        batch,
+      )) +
+      (await purgeWhere(
+        pool,
+        "notification",
+        NOTIFICATION_UNREAD_WHERE,
+        ago(now, NOTIFICATION_UNREAD_DAYS * DAY),
+        batch,
+      )),
+  );
   if (errors.length > 0)
     throw Object.assign(new AggregateError(errors, `retention: ${errors.length} nhóm lỗi`), { report });
   return report;

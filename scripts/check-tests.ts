@@ -64,6 +64,19 @@ function blocksServiceWorkers(stmts: ts.NodeArray<ts.Statement>): boolean {
   });
 }
 
+const ROUTE_METHODS = new Set(["route", "routeFromHAR"]);
+
+/** `page`/`context` của Playwright, hoặc `<x>.context()`. */
+function isPageOrContext(e: ts.Expression): boolean {
+  if (ts.isIdentifier(e)) return e.text === "page" || e.text === "context";
+  return (
+    ts.isCallExpression(e) &&
+    ts.isPropertyAccessExpression(e.expression) &&
+    e.expression.name.text === "context" &&
+    e.arguments.length === 0
+  );
+}
+
 /** Có khối tổ tiên (describe hoặc cấp tệp) chặn service worker? */
 function underServiceWorkerBlock(n: ts.Node): boolean {
   for (let p: ts.Node | undefined = n.parent; p !== undefined; p = p.parent) {
@@ -102,15 +115,16 @@ export function checkSource(file: string, src: string): string[] {
     }
     // Service worker (public/sw.js: skipWaiting + clients.claim) giành trang không đồng bộ; khi đã giành, fetch đi qua SW
     // và page.route không thấy request → mock lúc ăn lúc trượt (AT09 đỏ trên PR #58).
+    // AUD-TEST-002: context.route, page.context().route và routeFromHAR bị SW nuốt y như page.route.
     if (
       ts.isCallExpression(n) &&
       ts.isPropertyAccessExpression(n.expression) &&
-      n.expression.name.text === "route" &&
-      ts.isIdentifier(n.expression.expression) &&
-      n.expression.expression.text === "page" &&
+      ROUTE_METHODS.has(n.expression.name.text) &&
+      isPageOrContext(n.expression.expression) &&
       !underServiceWorkerBlock(n)
     ) {
-      errors.push(`${pos(n)}: page.route cần test.use({ serviceWorkers: "block" }) ở describe chứa nó`);
+      const what = `${n.expression.expression.getText(sf)}.${n.expression.name.text}`;
+      errors.push(`${pos(n)}: ${what} cần test.use({ serviceWorkers: "block" }) ở describe chứa nó`);
     }
     ts.forEachChild(n, visit);
   };

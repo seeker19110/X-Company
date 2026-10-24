@@ -24,6 +24,10 @@ html {
   padding: 0;
   border: 0;
 }
+/* Dải đang hiện: chừa đúng một dòng dải để không che thanh trên (AUD-A11Y-011; e2e kiểm không chồng ở 320 px). */
+body:has(.net-banner:not(:empty)) {
+  padding-top: var(--net-banner-h, 2.75rem);
+}
 /* Bảng rộng cuộn ngang trong khung riêng (WCAG 1.4.10: trang không cuộn ngang ở 320 px); khung focus được bằng bàn phím. */
 .table-scroll {
   overflow-x: auto;
@@ -74,6 +78,18 @@ html {
   min-height: 56px;
   text-decoration: none;
   font-weight: 600;
+  gap: 0.25rem;
+  padding-inline: 0.125rem;
+  font-size: 0.875rem;
+  text-align: center;
+}
+.nav-count {
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
 }
 .app-nav a[aria-current="page"] {
   color: var(--brand-fg);

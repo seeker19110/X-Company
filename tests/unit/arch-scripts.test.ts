@@ -1,5 +1,6 @@
 // Kiểm các script cổng kiến trúc (scripts/check-*.ts) bằng cây thư mục giả.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -156,6 +157,24 @@ test("check-tests: page.route chỉ hợp lệ trong phạm vi test.use({ servic
   assert.deepEqual(checkSource("e2e/d.spec.ts", nested), []);
   const fileLevel = `test.use({ serviceWorkers: "block" });\ntest("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); });`;
   assert.deepEqual(checkSource("e2e/e.spec.ts", fileLevel), []);
+  // AUD-TEST-002: context.route / page.context().route / routeFromHAR cũng chặn qua SW → cùng luật.
+  for (const call of [
+    `context.route("**/x", (r) => r.abort())`,
+    `page.context().route("**/x", (r) => r.abort())`,
+    `page.routeFromHAR("x.har")`,
+    `context.routeFromHAR("x.har")`,
+  ]) {
+    const src = `test("a", async ({ page, context }) => { await ${call}; expect(1).toBe(1); });`;
+    assert.equal(checkSource("e2e/f.spec.ts", src).length, 1, call);
+    assert.deepEqual(
+      checkSource("e2e/g.spec.ts", `test.use({ serviceWorkers: "block" });\n${src}`),
+      [],
+      call,
+    );
+  }
+  // Không nhầm: router.route của mã khác, hay thuộc tính `route` không phải lời gọi.
+  const unrelated = `test("a", async () => { const x = router.route("/a"); expect(api.route).toBe(x); });`;
+  assert.deepEqual(checkSource("tests/unit/h.test.ts", unrelated), []);
 });
 
 test("check-adr: chỉ dòng Trạng thái/liên kết được đổi", () => {
@@ -192,4 +211,26 @@ test("check:units cột số (XC-UNITS-009): thiếu hậu tố đơn vị → �
   assert.match(bad[0] ?? "", /m\.sql:2: cột số "timeout"/);
   assert.match(bad[2] ?? "", /m\.sql:5: .*"grace"/);
   assert.deepEqual(columnViolations("m.sql", ""), []);
+});
+
+test("test:file đỏ khi đối số trỏ tệp không tồn tại (node --test bỏ qua im lặng — Gate T-084)", () => {
+  const r = spawnSync(
+    "scripts/test-file.sh",
+    ["tests/unit/arch-scripts.test.ts", "tests/unit/khong-co.test.ts"],
+    {
+      encoding: "utf8",
+    },
+  );
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /không có tệp: tests\/unit\/khong-co\.test\.ts/);
+  // Giá trị của cờ viết tách rời và glob có nháy không bị coi là tên tệp (review PR #73).
+  const ok = spawnSync(
+    "scripts/test-file.sh",
+    ["--test-name-pattern", "check-adr", "tests/unit/arch-scripts.test.ts", "tests/unit/zz-*.test.ts"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL ?? "postgres://x@127.0.0.1:1/x" },
+    },
+  );
+  assert.doesNotMatch(ok.stderr, /không có tệp/);
 });

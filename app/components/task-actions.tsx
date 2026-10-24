@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { t } from "@/lib/i18n/client-app";
 import { api } from "./api";
 import { focusContainer, focusPageHeading, useRestoreFocus } from "./focus";
@@ -66,6 +66,7 @@ export function TaskActions({
   const sending = useRef(false);
   const box = useRef<HTMLDivElement>(null);
   const refocus = useRef(false);
+  const [refreshing, startRefresh] = useTransition();
 
   const pressed = useRef<HTMLButtonElement | null>(null);
   useRestoreFocus(busy, pressed, refocus); // thất bại → focus về nút vừa bấm (thành công thì effect dưới lo)
@@ -80,6 +81,16 @@ export function TaskActions({
     if (holder) focusContainer(holder);
     else focusPageHeading();
   }, [status, version]);
+  // AUD-CODE-010: làm mới xong mà status/version không đổi (lỗi tải, ngoại tuyến) → hạ cờ ngay, không để lần đổi version
+  // sau (do người khác) giật focus; focus về nút vừa bấm nếu nó đang rơi về <body>. Khai báo SAU effect trên: cùng một
+  // lượt commit, effect trên đã hạ cờ khi dữ liệu đổi.
+  useEffect(() => {
+    if (refreshing || !refocus.current) return;
+    refocus.current = false;
+    const el = pressed.current;
+    const active = document.activeElement;
+    if (el?.isConnected && (active === null || active === document.body)) el.focus();
+  }, [refreshing]);
   useEffect(
     () => () => {
       if (refocus.current) focusPageHeading(); // bị gỡ khỏi danh sách (vd. đã nghiệm thu) trước khi kịp focus
@@ -107,7 +118,7 @@ export function TaskActions({
     setBusy(false);
     if (r.ok) {
       refocus.current = true;
-      router.refresh();
+      startRefresh(() => router.refresh());
     } else setError(r.error ?? t("common.actionFailed"));
   }
 

@@ -29,6 +29,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/app/dashboard`                       | `app/app/(secure)/dashboard/page.tsx`                | động   | Dữ liệu theo người dùng và phạm vi quyền                   |
 | `/app/me`                              | `app/app/(secure)/me/page.tsx`                       | động   | Dữ liệu theo người dùng                                    |
 | `/app/tasks`                           | `app/app/(secure)/tasks/page.tsx`                    | động   | Dữ liệu theo người dùng                                    |
+| `/app/thong-bao`                        | `app/app/(secure)/thong-bao/page.tsx`                | động   | Dữ liệu theo người dùng                                    |
 | `/app/today`                           | `app/app/(secure)/today/page.tsx`                    | động   | Dữ liệu theo người dùng                                    |
 | `/api/app/adjustments`                 | `app/api/app/adjustments/route.ts`                   | động   | API có xác thực, `no-store`                                |
 | `/api/app/applications`                | `app/api/app/applications/route.ts`                  | động   | API có xác thực, `no-store`                                |
@@ -44,6 +45,8 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/app/inquiries`                   | `app/api/app/inquiries/route.ts`                     | động   | API có xác thực, `no-store`                                |
 | `/api/app/leave-requests`              | `app/api/app/leave-requests/route.ts`                | động   | API có xác thực, `no-store`                                |
 | `/api/app/me`                          | `app/api/app/me/route.ts`                            | động   | Thông tin phiên hiện tại, `no-store`                       |
+| `/api/app/notifications/read` | `app/api/app/notifications/read/route.ts` | động | Đánh dấu đã đọc thông báo của chính mình, `no-store` |
+| `/api/app/notifications` | `app/api/app/notifications/route.ts` | động | Thông báo trong ứng dụng của chính mình, `no-store` |
 | `/api/app/ot-requests`                 | `app/api/app/ot-requests/route.ts`                   | động   | API có xác thực, `no-store`                                |
 | `/api/app/privacy/requests/[id]/[action]` | `app/api/app/privacy/requests/[id]/[action]/route.ts` | động | Xử lý/xuất dữ liệu yêu cầu chủ thể (quyền `privacy.manage`), `no-store` |
 | `/api/app/privacy/requests` | `app/api/app/privacy/requests/route.ts` | động | Danh sách/tạo yêu cầu chủ thể (quyền `privacy.manage`), `no-store` |

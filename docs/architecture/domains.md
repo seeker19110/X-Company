@@ -23,6 +23,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
 | `crypto` | `index.ts`, `columns.ts`, `file.ts`, `rotate.ts`, `kms.ts` | mã hoá dữ liệu lúc lưu (T-048): AES-256-GCM có AAD + phong bì `v1:<keyId>:…`, chỉ mục mù HMAC, mã hoá tệp theo luồng (khoá tệp bọc bằng khoá chủ), sổ cột PII đã mã hoá (`columns.ts`), backfill/xoay khoá (`rotate.ts`, chạy bằng script). Chỉ dùng `node:crypto`; không import `next/*` |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
+| `notify` | `index.ts`, `routes.ts` | thông báo trong ứng dụng (T-080, D-058): worker ghi một hàng/người nhận trong giao dịch xử lý outbox (lũy đẳng), API đọc/đánh dấu đã đọc của chính mình — không PII |
 | `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
 | `dashboard`  | `index.ts`            | tổng hợp cho trang điều hành                                     |
 | `today`      | `index.ts`            | màn hình "hôm nay" của nhân viên                                 |

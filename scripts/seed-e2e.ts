@@ -18,6 +18,7 @@ import { hashPassword } from "../lib/identity/password.ts";
 import { approve, createPage, publish, submitForReview } from "../lib/cms/index.ts";
 import { loadActor } from "../lib/authz/load.ts";
 import { addMember, createProject, createTask } from "../lib/work/tasks.ts";
+import { runOnce } from "../lib/worker/index.ts";
 import { localDate } from "../lib/nen/time.ts";
 import { SYSTEM_ACTOR, type Role, type ScopeType } from "../lib/authz/index.ts";
 
@@ -58,6 +59,12 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
   };
   await mk("nv", "Nguyễn Văn Nhân", [{ role: "employee", scopeType: "self" }]);
   await mk("nv2", "Lê Thị Hai", [{ role: "employee", scopeType: "self" }]);
+  // Riêng cho ca hộp thoại đăng xuất của e2e/pages.spec.ts, mỗi viewport một người (AUD-TEST-002): trạng thái ca không phụ
+  // thuộc lượt chạy trước.
+  await mk("nv3", "Đinh Văn Ba", [{ role: "employee", scopeType: "self" }]);
+  await mk("nv4", "Bùi Thị Tư", [{ role: "employee", scopeType: "self" }]);
+  // Riêng cho e2e thông báo (AUD-DOC-002): nhận hai việc được giao → worker thật ghi hai thông báo chưa đọc; không ai khác đăng nhập.
+  await mk("nv5", "Mai Thị Năm", [{ role: "employee", scopeType: "self" }]);
   await mk("tl", "Trần Trưởng Nhóm", [{ role: "team_lead", scopeType: "department", scopeId: deptId }]);
   await mk("ed", "Phạm Biên Tập", [{ role: "editor", scopeType: "company" }]);
   await mk("ed2", "Hoàng Duyệt Bài", [{ role: "editor", scopeType: "company" }]);
@@ -91,6 +98,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     );
     await pub("about", "", "Giới thiệu X-Company", "Thành lập năm 2010.");
     await pub("service", "tu-van-thiet-ke", "Tư vấn thiết kế", "Khảo sát, thiết kế, dự toán.");
+    await pub("job", "ky-su-co-dien", "Kỹ sư cơ điện", "Thiết kế và giám sát thi công hệ thống cơ điện.");
     await pub("page", "chinh-sach-du-lieu", "Chính sách dữ liệu cá nhân", "Mục đích, căn cứ, thời hạn lưu.");
     await createPage(
       tx,
@@ -111,7 +119,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     "INSERT INTO shift_template (company_id, code, name, start_time, end_time, break_minutes) VALUES ($1, 'NGAY', 'Ca ngày', '00:05', '23:55', 0) RETURNING id",
     [companyId],
   );
-  for (const k of ["nv", "nv2"])
+  for (const k of ["nv", "nv2", "nv3", "nv4"])
     await tx.query(
       "INSERT INTO shift_assignment (company_id, employee_id, business_date, shift_template_id) VALUES ($1, $2, $3, $4)",
       [companyId, users[k]!.employeeId, localDate(new Date()), tpl.rows[0]!.id],
@@ -139,6 +147,16 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     reviewerEmployeeId: users.tl!.employeeId,
     acceptanceCriteria: "Biên bản đo cách điện",
   });
+  // Hai việc giao cho nv5 (người giao là exec): sự kiện outbox `task.assigned`, thông báo do worker tạo ở cuối file.
+  await addMember(tx, execAsPm, projectId, users.nv5!.employeeId);
+  for (const title of ["Đo điện trở nối đất", "Kiểm tra hệ thống chiếu sáng"])
+    await createTask(tx, execAsPm, {
+      projectId,
+      title,
+      responsibleEmployeeId: users.nv5!.employeeId,
+      reviewerEmployeeId: users.tl!.employeeId,
+      acceptanceCriteria: "Biên bản đo",
+    });
   return { companyId, users };
 }
 
@@ -147,6 +165,13 @@ const out = await withTx(async (tx) => {
   const mobile = await seedCompany(tx, "X-Company (E2E mobile)", ".m", false);
   return { companyId: desktop.companyId, password: PASSWORD, users: desktop.users, mobile };
 });
+// Chạy worker outbox THẬT (cùng registry mặc định như `npm run worker`) tới khi hết việc: thông báo trong ứng dụng được tạo
+// đúng đường production, không chèn tay vào bảng notification. Máy chủ e2e không chạy worker nên cần bước này.
+for (let guard = 0; guard < 50; guard++) {
+  const st = await runOnce({ pool, batchSize: 100 });
+  if (st.claimed === 0) break;
+  if (st.dead > 0 || st.retried > 0) throw new Error(`worker seed e2e lỗi: ${JSON.stringify(st)}`);
+}
 writeFileSync("e2e/.seed.json", JSON.stringify(out, null, 2));
 await pool.end();
 console.log(`Seed E2E xong: công ty ${out.companyId}`);

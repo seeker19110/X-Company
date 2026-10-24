@@ -157,3 +157,16 @@ export function renderLoadReport(meta, rows, extra = {}) {
   L.push("");
   return L.join("\n");
 }
+
+/**
+ * Lỗi của tiến trình con chạy bằng `spawnSync` (AUD-PERF-004): hết `timeout` (bị giết, `error.code === "ETIMEDOUT"`),
+ * không chạy được, hoặc exit ≠ 0 → thông điệp; thành công → null. Không treo vô hạn chờ một bước đo.
+ */
+export function childFailure(label, r, timeoutMs) {
+  if (r.error?.code === "ETIMEDOUT")
+    return `${label} quá ${timeoutMs} ms, đã dừng (signal ${r.signal ?? "?"})`;
+  if (r.error) return `${label} không chạy được: ${r.error.message}`;
+  if (r.status !== 0)
+    return `${label} lỗi (exit ${r.status}${r.signal ? `, signal ${r.signal}` : ""}):\n${(r.stderr ?? "").slice(-1500)}`;
+  return null;
+}

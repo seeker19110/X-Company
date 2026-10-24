@@ -185,6 +185,24 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
       job_slug: "khong-co",
     });
     assert.equal(missing.status, 404);
+    // Ca biên của schema dùng chung: thiếu email / consent=false / thư quá dài → 400.
+    for (const bad of [
+      { email: undefined },
+      { email: "" },
+      { consent: false },
+      { cover_letter: "x".repeat(8001) },
+    ])
+      assert.equal(
+        (
+          await post(postApplication as typeof postInquiry, "/api/public/applications", {
+            ...app,
+            submission_id: randomUUID(),
+            ...bad,
+          })
+        ).status,
+        400,
+        JSON.stringify(bad),
+      );
   });
 
   test("S-WEB-05: sales đọc hộp yêu cầu, KHÔNG đọc hồ sơ ứng viên; HR thì ngược lại", async () => {

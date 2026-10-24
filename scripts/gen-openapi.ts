@@ -19,6 +19,8 @@ import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index
 import { RumInput } from "../lib/rum/index.ts";
 import { ACTIONS as PRIVACY_ACTIONS, ActionBody, STATUSES } from "../lib/privacy/routes.ts";
 import { ACTIONS as TASK_ACTIONS, Body as TaskActionBody } from "../lib/work/routes.ts";
+import { REF_TYPES as NOTIFICATION_REF_TYPES } from "../lib/notify/index.ts";
+import { ReadBody as NotificationReadBody } from "../lib/notify/routes.ts";
 import { PAGE_DEFAULT_LIMIT, PAGE_MAX_LIMIT, PAGE_MAX_OFFSET } from "../lib/nen/pagination.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -165,6 +167,30 @@ const SCHEMAS: Record<string, Json> = {
   }),
   TaskPage: pageOf("TaskItem"),
   TaskTransitionResult: obj({ id: uuid, version: { type: "integer", minimum: 1 } }),
+  NotificationItem: obj({
+    id: uuid,
+    topic: {
+      type: "string",
+      description: "Chủ đề sự kiện (inquiry.assigned, application.received, task.<hành động>).",
+    },
+    ref_type: { type: "string", enum: [...NOTIFICATION_REF_TYPES] },
+    ref_id: uuid,
+    code: nullable({ type: "string", description: "Mã tra cứu của đối tượng (không phải tên/email)." }),
+    created_at: dateTime,
+    read_at: nullable(dateTime),
+  }),
+  NotificationPage: {
+    ...pageOf("NotificationItem"),
+    properties: {
+      ...(pageOf("NotificationItem").properties as Json),
+      unread: { type: "integer", minimum: 0, description: "Tổng số thông báo chưa đọc của người gọi." },
+    },
+    required: ["items", "limit", "offset", "next_offset", "unread"],
+  },
+  NotificationReadResult: obj({
+    updated: { type: "integer", minimum: 0, description: "Số thông báo vừa chuyển sang đã đọc." },
+    unread: { type: "integer", minimum: 0 },
+  }),
   ApprovalItem: obj({
     type: { type: "string", enum: ["leave", "ot", "adjustment"] },
     id: uuid,
@@ -328,6 +354,7 @@ function requestSchemas(): Record<string, Json> {
     AdjustmentRequestInput: fromZod(AdjustmentInput),
     ApprovalDecisionRequest: fromZod(DecisionBody),
     TaskActionRequest: fromZod(TaskActionBody),
+    NotificationReadRequest: fromZod(NotificationReadBody),
     CommentCreateRequest: {
       type: "object",
       required: ["object_type", "object_id", "body"],
@@ -644,6 +671,34 @@ export const REGISTRY: Registry = {
       permission: "Phiên hợp lệ.",
       idempotency: "none",
       ok: { 200: { description: "Người dùng, vai trò, token CSRF.", schema: "MeResult" } },
+    },
+  },
+  "/api/app/notifications": {
+    GET: {
+      source: "lib/notify/routes.ts#getNotifications",
+      operationId: "listMyNotifications",
+      tag: "Thông báo",
+      summary: "Thông báo trong ứng dụng của tôi",
+      description:
+        "Mới nhất trước; kèm `unread` = tổng số chưa đọc. Chỉ chủ đề + đối tượng + mã — mở đối tượng qua API của nó.",
+      permission: "Phiên hợp lệ; chỉ thông báo gửi cho chính người gọi.",
+      idempotency: "none",
+      paged: true,
+      ok: { 200: { description: "Một trang thông báo.", schema: "NotificationPage" } },
+    },
+  },
+  "/api/app/notifications/read": {
+    POST: {
+      source: "lib/notify/routes.ts#postNotificationsRead",
+      operationId: "markNotificationsRead",
+      tag: "Thông báo",
+      summary: "Đánh dấu đã đọc",
+      description:
+        "`{ ids: uuid[] (1–100) }` hoặc `{ all: true }`. Id không thuộc người gọi bị bỏ qua (không lộ tồn tại). Lũy đẳng tự nhiên: không cần Idempotency-Key.",
+      permission: "Phiên hợp lệ; chỉ thông báo của chính người gọi.",
+      idempotency: "none",
+      body: { kind: "json", schema: "NotificationReadRequest" },
+      ok: { 200: { description: "Kết quả đánh dấu.", schema: "NotificationReadResult" } },
     },
   },
   "/api/app/ot-requests": {

@@ -205,3 +205,20 @@ describe("báo cáo vào repo chỉ từ cây sạch (AUD-PERF-003)", () => {
     );
   });
 });
+
+describe("childFailure (AUD-PERF-004)", () => {
+  test("hết timeout, không chạy được, exit ≠ 0 → thông điệp; exit 0 → null", () => {
+    const timedOut = S.childFailure(
+      "x",
+      { status: null, signal: "SIGTERM", error: Object.assign(new Error("t"), { code: "ETIMEDOUT" }) },
+      5,
+    );
+    assert.match(timedOut ?? "", /quá 5 ms.*SIGTERM/);
+    assert.match(
+      S.childFailure("x", { status: null, error: new Error("ENOENT") }, 5) ?? "",
+      /không chạy được: ENOENT/,
+    );
+    assert.match(S.childFailure("x", { status: 2, stderr: "boom" }, 5) ?? "", /exit 2\):\nboom/);
+    assert.equal(S.childFailure("x", { status: 0, stdout: "{}" }, 5), null);
+  });
+});

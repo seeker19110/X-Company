@@ -191,6 +191,8 @@
     "tasks": "Mục điều hướng: công việc.",
     "attendance": "Mục điều hướng: chấm công.",
     "approvals": "Mục điều hướng (rút gọn cho vừa thanh dưới): phê duyệt; chỉ hiện với người duyệt.",
+    "notifications": "Mục điều hướng: thông báo trong ứng dụng.",
+    "notificationsUnread": "Tên đọc cho trình đọc màn hình của mục Thông báo khi có thông báo chưa đọc; {count} là số chưa đọc.",
     "me": "Mục điều hướng: cá nhân."
   },
   "login": {
@@ -310,6 +312,10 @@
       "endAfterStart": "Lỗi khi giờ kết thúc không sau giờ bắt đầu.",
       "date": "Lỗi khi ngày của đơn làm thêm không hợp lệ.",
       "otConsent": "Lỗi khi chưa tích đồng ý làm thêm giờ."
+    },
+    "application": {
+      "email": "Lỗi ô email của form ứng tuyển khi trống hoặc sai định dạng.",
+      "coverLetter": "Lỗi ô thư giới thiệu của form ứng tuyển khi dài quá 8000 ký tự."
     }
   },
   "err": {
@@ -619,5 +625,42 @@
     "title": "Tiêu đề trang 404 khi đường dẫn không tồn tại.",
     "body": "Câu giải thích dưới tiêu đề trang 404.",
     "home": "Liên kết từ trang 404 về trang chủ website."
+  },
+  "apply": {
+    "heading": "Tiêu đề form ứng tuyển ở trang một tin tuyển dụng.",
+    "headingGeneral": "Tiêu đề form ứng tuyển chung ở cuối trang mục tuyển dụng (không gắn vị trí).",
+    "name": "Nhãn ô họ tên ứng viên; bắt buộc.",
+    "email": "Nhãn ô email ứng viên; bắt buộc.",
+    "phone": "Nhãn ô điện thoại ứng viên; không bắt buộc.",
+    "coverLetter": "Nhãn ô thư giới thiệu; không bắt buộc.",
+    "consent": "Đầu câu đồng ý xử lý hồ sơ ứng tuyển; kết thúc bằng khoảng trắng vì kế tiếp là liên kết chính sách dữ liệu.",
+    "talentPool": "Nhãn hộp kiểm đồng ý RIÊNG lưu hồ sơ vào kho nhân tài; không bắt buộc, không tích sẵn.",
+    "submit": "Nút gửi hồ sơ ứng tuyển.",
+    "thanksPrefix": "Phần đầu lời cảm ơn sau khi nộp hồ sơ; theo sau là mã hồ sơ UV-… in đậm.",
+    "thanksSuffix": "Phần cuối lời cảm ơn sau khi nộp hồ sơ ứng tuyển."
+  },
+  "notifications": {
+    "title": "Tiêu đề trang danh sách thông báo.",
+    "empty": "Trạng thái rỗng khi người dùng chưa có thông báo.",
+    "unreadSummary": "Tóm tắt đầu trang: số thông báo chưa đọc; {count} là số nguyên.",
+    "allRead": "Tóm tắt đầu trang khi không còn thông báo chưa đọc.",
+    "unreadLabel": "Nhãn chữ cạnh thông báo chưa đọc (không chỉ dựa vào màu).",
+    "readLabel": "Nhãn chữ cạnh thông báo đã đọc.",
+    "markAll": "Nút đánh dấu mọi thông báo là đã đọc.",
+    "markOne": "Nút đánh dấu một thông báo là đã đọc.",
+    "markOneFor": "Tên đọc của nút đánh dấu một thông báo; {text} là nội dung thông báo.",
+    "openTask": "Liên kết tới danh sách công việc từ một thông báo về việc.",
+    "prev": "Liên kết sang trang thông báo trước.",
+    "next": "Liên kết sang trang thông báo kế.",
+    "listLabel": "Tên vùng danh sách thông báo.",
+    "pagerLabel": "Tên vùng điều hướng phân trang thông báo.",
+    "text": {
+      "inquiryAssigned": "Câu thông báo khi được giao liên hệ; {code} là mã tra cứu.",
+      "inquiryAssignedNoCode": "Câu thông báo giao liên hệ khi không có mã.",
+      "applicationReceived": "Câu thông báo có hồ sơ ứng tuyển mới; {code} là mã hồ sơ.",
+      "taskAssigned": "Câu thông báo được giao việc mới.",
+      "taskUpdated": "Câu thông báo việc liên quan có cập nhật (đổi trạng thái, sửa).",
+      "other": "Câu thông báo dự phòng cho chủ đề chưa biết."
+    }
   }
 }

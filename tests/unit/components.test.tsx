@@ -12,7 +12,14 @@ import {
   reasonError,
   resolveConfirm,
 } from "../../app/components/confirm-dialog.tsx";
+import { ApplicationFormView, applicationResult } from "../../app/components/application-form.tsx";
 import { ContactFormView, contactResult } from "../../app/components/contact-form.tsx";
+import {
+  notificationHref,
+  notificationText,
+  NotificationsView,
+  type NotificationRow,
+} from "../../app/components/notification-list.tsx";
 import { ErrorView } from "../../app/components/error-view.tsx";
 import { ERROR_VIEW_TEXT, syncErrorMessage } from "../../app/components/messages.ts";
 import { FieldError, fieldA11y, SubmitButton, toFieldErrors } from "../../app/components/form-parts.tsx";
@@ -23,8 +30,11 @@ import {
   OtFormInput,
   OtInput,
 } from "../../lib/attendance/request-schema.pure.ts";
-import { InquiryInput } from "../../lib/inquiry/index.ts";
-import { InquiryInput as SharedInquiryInput } from "../../lib/inquiry/schema.pure.ts";
+import { ApplicationInput, InquiryInput } from "../../lib/inquiry/index.ts";
+import {
+  ApplicationInput as SharedApplicationInput,
+  InquiryInput as SharedInquiryInput,
+} from "../../lib/inquiry/schema.pure.ts";
 // @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
 import * as tokenScript from "../../scripts/check-tokens.mjs";
 // @ts-expect-error -- script .mjs thuần JS
@@ -428,5 +438,152 @@ describe("UX-DS-001..003, UX-A11Y-002: token màu + tương phản", () => {
         "#ffffff",
       ) >= 3,
     );
+  });
+});
+
+describe("F-003: form ứng tuyển (ApplicationFormView + schema dùng chung)", () => {
+  const ok = {
+    submission_id: "6f1c2a3e-0000-4000-8000-000000000001",
+    name: "Ứng viên A",
+    email: "uv@example.test",
+    consent: true,
+  };
+
+  test("render đủ ô; email + đồng ý bắt buộc; kho nhân tài là ô riêng, KHÔNG tích sẵn, không bắt buộc", () => {
+    const m = html(<ApplicationFormView base="a" jobSlug="ky-su-dien" state={{ kind: "idle" }} />);
+    for (const n of ["name", "email", "phone", "cover_letter", "website", "consent", "talent_pool"])
+      assert.notEqual(field(m, n), "", n);
+    assert.match(field(m, "email"), /required/);
+    assert.match(field(m, "consent"), /required/);
+    const pool = field(m, "talent_pool");
+    assert.ok(!/checked/.test(pool) && !/required/.test(pool), pool);
+    assert.ok(!/checked/.test(field(m, "consent")));
+    assert.match(m, /href="\/chinh-sach-du-lieu"/);
+    assert.match(m, /<h2>Ứng tuyển<\/h2>/);
+    assert.match(
+      html(<ApplicationFormView base="a" jobSlug={null} state={{ kind: "idle" }} />),
+      /Ứng tuyển chung/,
+    );
+  });
+
+  test("lỗi theo ô có aria-invalid + aria-describedby; ô khác không bị đánh dấu", () => {
+    const parsed = ApplicationInput.safeParse({ ...ok, email: null, consent: false, name: "  " });
+    assert.ok(!parsed.success);
+    const { fields } = toFieldErrors(parsed.error.issues);
+    assert.deepEqual(Object.keys(fields).sort(), ["consent", "email", "name"]);
+    assert.equal(fields.email, "Vui lòng nhập email hợp lệ");
+    const m = html(
+      <ApplicationFormView base="a" jobSlug={null} state={{ kind: "error", message: "Sai", fields }} />,
+    );
+    for (const [name, msg] of Object.entries(fields)) {
+      assert.match(field(m, name), /aria-invalid="true"/, name);
+      assert.match(field(m, name), new RegExp(`aria-describedby="a-${name}-err"`), name);
+      assert.equal(byId(m, `a-${name}-err`)?.[1], msg);
+    }
+    assert.match(m, /<p id="a-form-error" role="alert"/);
+    assert.ok(!/aria-invalid/.test(field(m, "phone")));
+  });
+
+  test("xong: role=status hiện mã UV-; đang gửi khoá nút", () => {
+    const done = html(
+      <ApplicationFormView base="a" jobSlug={null} state={{ kind: "done", code: "UV-20261024-0001" }} />,
+    );
+    assert.match(done, /<p role="status">[^]*<strong>UV-20261024-0001<\/strong>/);
+    const sending = html(<ApplicationFormView base="a" jobSlug={null} state={{ kind: "sending" }} />);
+    assert.match(sending, /disabled="" aria-busy="true">Đang gửi…<\/button>/);
+  });
+
+  test("schema: talent_pool vắng → false; cover_letter 8000 qua, 8001 lỗi; phone/cover_letter null được; consent=false bị từ chối", () => {
+    assert.equal(ApplicationInput.parse(ok).talent_pool, false);
+    assert.equal(ApplicationInput.parse({ ...ok, talent_pool: true }).talent_pool, true);
+    assert.ok(ApplicationInput.safeParse({ ...ok, cover_letter: "x".repeat(8000), phone: null }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, cover_letter: "x".repeat(8001) }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, consent: false }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, email: "" }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, job_slug: "Sai Slug" }).success);
+    assert.ok(ApplicationInput.safeParse({ ...ok, job_slug: null }).success);
+    assert.strictEqual(ApplicationInput, SharedApplicationInput);
+  });
+
+  test("phản hồi: JSON mã UV → done; HTML 502 → lỗi máy chủ; fields API gắn vào ô", () => {
+    assert.deepEqual(applicationResult(201, JSON.stringify({ code: "UV-1" })), {
+      kind: "done",
+      code: "UV-1",
+    });
+    const bad = applicationResult(502, "<html>");
+    assert.ok(bad.kind === "error" && /502/.test(bad.message));
+    assert.equal(applicationResult(200, "<html>").kind, "error");
+    const v = applicationResult(
+      400,
+      JSON.stringify({
+        error: { message: "Sai" },
+        fields: [
+          { path: "email", message: "E" },
+          { path: "job_slug", message: "J" },
+        ],
+      }),
+    );
+    assert.ok(v.kind === "error" && v.fields.email === "E" && !("job_slug" in v.fields));
+  });
+});
+
+describe("AUD-DOC-002: danh sách thông báo (View thuần)", () => {
+  const row = (over: Partial<NotificationRow>): NotificationRow => ({
+    id: "n1",
+    topic: "task.assigned",
+    ref_type: "task",
+    ref_id: "t1",
+    code: null,
+    created_at: new Date("2026-03-01T03:00:00Z"),
+    read_at: null,
+    ...over,
+  });
+
+  test("câu theo chủ đề; mã chỉ chèn khi có; chủ đề lạ có câu dự phòng", () => {
+    assert.equal(notificationText("inquiry.assigned", "LH-1"), "Bạn được giao liên hệ LH-1");
+    assert.equal(notificationText("inquiry.assigned", null), "Bạn được giao một liên hệ mới");
+    assert.equal(notificationText("application.received", "UV-9"), "Hồ sơ ứng tuyển mới UV-9");
+    assert.equal(notificationText("task.assigned", null), "Bạn được giao một việc mới");
+    assert.equal(notificationText("task.submit", null), "Việc của bạn có cập nhật");
+    assert.equal(notificationText("khac.la", null), "Có thông báo mới");
+  });
+
+  test("chỉ việc có trang đích; liên hệ/hồ sơ không có liên kết", () => {
+    assert.equal(notificationHref("task"), "/app/tasks");
+    assert.equal(notificationHref("inquiry"), null);
+    assert.equal(notificationHref("job_application"), null);
+  });
+
+  test("rỗng: thông điệp rỗng, không nút 'tất cả'", () => {
+    const m = html(<NotificationsView items={[]} unread={0} markAll={<button>TẤT CẢ</button>} />);
+    assert.match(m, /Chưa có thông báo nào\./);
+    assert.match(m, /Bạn đã đọc hết thông báo\./);
+    assert.doesNotMatch(m, /TẤT CẢ/);
+  });
+
+  test("chưa đọc có nhãn chữ + nút; đã đọc có nhãn ẩn và không nút; liên kết việc; phân trang", () => {
+    const m = html(
+      <NotificationsView
+        items={[
+          row({ id: "a" }),
+          row({ id: "b", read_at: new Date(), topic: "inquiry.assigned", ref_type: "inquiry", code: "LH-2" }),
+        ]}
+        unread={1}
+        markAll={<button>TẤT CẢ</button>}
+        markOne={(n) => <button>ĐỌC-{n.id}</button>}
+        prevHref="/app/thong-bao"
+        nextHref="/app/thong-bao?offset=40"
+      />,
+    );
+    assert.match(m, /<span class="badge">Chưa đọc<\/span>/);
+    assert.match(m, /<span class="visually-hidden">Đã đọc<\/span>/);
+    assert.match(m, /ĐỌC-a/);
+    assert.doesNotMatch(m, /ĐỌC-b/);
+    assert.match(m, /TẤT CẢ/);
+    assert.match(m, /href="\/app\/tasks"/);
+    assert.equal(m.match(/href="\/app\/tasks"/g)?.length, 1);
+    assert.match(m, /1 thông báo chưa đọc/);
+    assert.match(m, /href="\/app\/thong-bao\?offset=40"/);
+    assert.match(m, /Trang trước/);
   });
 });

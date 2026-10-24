@@ -475,6 +475,10 @@ describe("khoá ngoại: ON DELETE tường minh + index (catalog)", () => {
   const NO_ACTION_ALLOWED = new Map<string, string>();
   const CASCADE_ALLOWED = new Map<string, string>([
     ["session_user_id_fkey", "phiên đăng nhập thuần phụ thuộc vòng đời tài khoản"],
+    [
+      "notification_user_fkey",
+      "thông báo trong ứng dụng thuần phụ thuộc vòng đời tài khoản người nhận (T-080)",
+    ],
   ]);
 
   async function foreignKeys() {
@@ -511,7 +515,7 @@ describe("khoá ngoại: ON DELETE tường minh + index (catalog)", () => {
     const cascades = fks.filter((f) => f.del === "c").map((f) => f.conname);
     for (const c of cascades) assert.ok(CASCADE_ALLOWED.has(c), `CASCADE chưa được duyệt: ${c}`);
     assert.ok(!fks.some((f) => f.del === "c" && (f.tbl === "audit_event" || f.refd === "audit_event")));
-    assert.deepEqual(cascades, ["session_user_id_fkey"], "allowlist không có mục thừa");
+    assert.deepEqual(cascades.sort(), [...CASCADE_ALLOWED.keys()].sort(), "allowlist không có mục thừa");
   });
 
   test("RESTRICT thật: xoá bản ghi cha còn con bị chặn; xoá user thì phiên đi theo (CASCADE)", async () => {

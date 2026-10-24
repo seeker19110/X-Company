@@ -21,7 +21,14 @@ import {
   reportFile,
   repoReportRefusal,
 } from "./lib/prod-harness.mjs";
-import { evaluateBudget, evaluateLockBudget, maxOf, renderLoadReport, summarize } from "./lib/perf-stats.mjs";
+import {
+  childFailure,
+  evaluateBudget,
+  evaluateLockBudget,
+  maxOf,
+  renderLoadReport,
+  summarize,
+} from "./lib/perf-stats.mjs";
 import {
   PERF_ATTENDANCE_USERS,
   PERIOD_EMPLOYEES,
@@ -47,6 +54,9 @@ const NOT_PROVEN = [
 ];
 
 /** Ngân sách theo kịch bản. Đặt TRƯỚC khi chạy, theo SLO và mục tiêu UX; lý do ở `why`. Không nới sau khi thấy đỏ nếu không ghi ở đây. */
+// Trần thời gian cho tiến trình chốt kỳ (seed 200×31 + 3 lần lockPeriod ~ 1 phút trên máy dev): quá thì dừng, không treo.
+const PERIOD_TIMEOUT_MS = 10 * 60_000;
+
 const BUDGETS = {
   public: {
     p95Ms: 400,
@@ -463,9 +473,10 @@ async function main() {
         env: { ...process.env, DATABASE_URL: h.adminUrl, PERF_APP_DATABASE_URL: h.appDbUrl },
         encoding: "utf8",
         maxBuffer: 1 << 20,
+        timeout: PERIOD_TIMEOUT_MS,
       });
-      if (r.status !== 0)
-        throw new Error(`perf-period lỗi (exit ${r.status}):\n${(r.stderr ?? "").slice(-1500)}`);
+      const failed = childFailure("perf-period", r, PERIOD_TIMEOUT_MS);
+      if (failed) throw new Error(failed);
       const runs = JSON.parse(r.stdout.trim().split("\n").at(-1));
       const budget = BUDGETS.periodLock;
       const sum = summarize({

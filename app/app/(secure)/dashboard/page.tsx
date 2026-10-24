@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   return (
     <>
       <h1>{t("dashboard.title")}</h1>
-      <section className="card" aria-labelledby="mocs">
+      <section className="card">
         <h2 id="mocs">{t("dashboard.milestones.heading")}</h2>
         {d.milestones.length === 0 ? (
           <p className="muted">{t("dashboard.milestones.empty")}</p>

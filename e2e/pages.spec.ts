@@ -71,10 +71,10 @@ test.describe("trạng thái lỗi, hộp thoại và bảng dashboard (AUD-A11Y
         test.use({ serviceWorkers: "block" });
 
         test("hộp xác nhận đăng xuất (còn bản chưa gửi): axe 0 vi phạm", async ({ page, context }) => {
-          await login(page, "hr");
+          // Mỗi viewport một nhân viên chưa vào ca (AUD-TEST-002): nút xác định, không chấp nhận cả hai trạng thái.
+          await login(page, vp.width === NARROW.width ? "nv3" : "nv4");
           await context.setOffline(true);
-          // Vào ca hoặc Ra ca tuỳ lượt chạy trước (cùng người dùng ở hai viewport).
-          await page.getByRole("button", { name: /^(Vào|Ra) ca$/ }).click();
+          await page.getByRole("button", { name: "Vào ca", exact: true }).click();
           await expect(page.getByRole("status").first()).toContainText("Đã lưu trên thiết bị");
           // Có mạng lại nhưng chặn đồng bộ → bản ghi vẫn "chờ gửi" khi sang màn Cá nhân (đồng bộ tự chạy lúc mở màn).
           await page.route("**/api/app/sync", (route) => route.abort("failed"));
@@ -144,6 +144,44 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
       await logout(page);
     });
   });
+});
+
+// F-003: tin tuyển dụng → form ứng tuyển → mã hồ sơ UV-… (honeypot trống; form chờ ≥ 3 s mới tránh bị đánh dấu spam).
+test.describe("ứng tuyển trên website (F-003)", () => {
+  for (const vp of [NARROW, WIDE]) {
+    test.describe(`ở ${vp.width} px`, () => {
+      test.use({ viewport: vp });
+
+      test("tin tuyển dụng: lỗi theo ô + axe, rồi điền form → thấy mã UV-", async ({ page }) => {
+        await page.goto("/tuyen-dung/ky-su-co-dien");
+        await expect(page.getByRole("heading", { level: 1, name: "Kỹ sư cơ điện" })).toBeVisible();
+        const form = page.locator("form.contact-form");
+        await expect(form.getByRole("heading", { name: "Ứng tuyển" })).toBeVisible();
+        await expect(form.getByLabel(/kho nhân tài/)).not.toBeChecked();
+        await expectNoHorizontalScroll(page);
+
+        await form.getByRole("button", { name: "Gửi hồ sơ" }).click();
+        await expect(form.locator('[aria-invalid="true"]').first()).toBeFocused();
+        await expect(form.getByRole("alert")).not.toBeEmpty();
+        await expectAccessible(page);
+
+        await form.getByLabel("Họ tên (bắt buộc)").fill("Ứng Viên E2E");
+        await form.getByLabel("Email (bắt buộc)").fill(`uv-${Date.now()}@example.test`);
+        await form.getByLabel("Thư giới thiệu").fill("Tôi quan tâm vị trí này.");
+        await form.getByLabel(/Tôi đồng ý để X-Company xử lý/).check();
+        await form.getByRole("button", { name: "Gửi hồ sơ" }).click();
+        await expect(page.getByRole("status")).toContainText(/UV-\d{8}-\d{4}/);
+        await expectAccessible(page);
+      });
+
+      test("/tuyen-dung: có form ứng tuyển chung", async ({ page }) => {
+        await page.goto("/tuyen-dung");
+        await expect(page.getByRole("heading", { name: "Ứng tuyển chung" })).toBeVisible();
+        await expectAccessible(page);
+        await expectNoHorizontalScroll(page);
+      });
+    });
+  }
 });
 
 /** Tab tới khi `target` nhận focus (tối đa `max` lần); đỏ nếu không tới được bằng bàn phím. */

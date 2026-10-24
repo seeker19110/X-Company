@@ -14,6 +14,7 @@
     { "name": "Ngoại tuyến" },
     { "name": "Phê duyệt" },
     { "name": "Quyền riêng tư" },
+    { "name": "Thông báo" },
     { "name": "Tuyển dụng" },
     { "name": "Tệp và bình luận" },
     { "name": "Vận hành" },
@@ -531,6 +532,62 @@
           "503": { "$ref": "#/components/responses/Problem503" }
         },
         "security": [{ "cookieAuth": [] }]
+      }
+    },
+    "/api/app/notifications": {
+      "get": {
+        "operationId": "listMyNotifications",
+        "tags": ["Thông báo"],
+        "summary": "Thông báo trong ứng dụng của tôi",
+        "description": "Mới nhất trước; kèm `unread` = tổng số chưa đọc. Chỉ chủ đề + đối tượng + mã — mở đối tượng qua API của nó.\n\nQuyền: Phiên hợp lệ; chỉ thông báo gửi cho chính người gọi.",
+        "x-permission": "Phiên hợp lệ; chỉ thông báo gửi cho chính người gọi.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Một trang thông báo.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/NotificationPage" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "401": { "$ref": "#/components/responses/Problem401" },
+          "500": { "$ref": "#/components/responses/Problem500" },
+          "503": { "$ref": "#/components/responses/Problem503" }
+        },
+        "security": [{ "cookieAuth": [] }]
+      }
+    },
+    "/api/app/notifications/read": {
+      "post": {
+        "operationId": "markNotificationsRead",
+        "tags": ["Thông báo"],
+        "summary": "Đánh dấu đã đọc",
+        "description": "`{ ids: uuid[] (1–100) }` hoặc `{ all: true }`. Id không thuộc người gọi bị bỏ qua (không lộ tồn tại). Lũy đẳng tự nhiên: không cần Idempotency-Key.\n\nQuyền: Phiên hợp lệ; chỉ thông báo của chính người gọi.",
+        "x-permission": "Phiên hợp lệ; chỉ thông báo của chính người gọi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/NotificationReadRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kết quả đánh dấu.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/NotificationReadResult" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "401": { "$ref": "#/components/responses/Problem401" },
+          "403": { "$ref": "#/components/responses/Problem403" },
+          "413": { "$ref": "#/components/responses/Problem413" },
+          "500": { "$ref": "#/components/responses/Problem500" },
+          "503": { "$ref": "#/components/responses/Problem503" }
+        },
+        "security": [{ "cookieAuth": [], "csrfToken": [] }]
       }
     },
     "/api/app/ot-requests": {
@@ -1223,6 +1280,55 @@
         },
         "required": ["id", "version"]
       },
+      "NotificationItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "topic": {
+            "type": "string",
+            "description": "Chủ đề sự kiện (inquiry.assigned, application.received, task.<hành động>)."
+          },
+          "ref_type": { "type": "string", "enum": ["inquiry", "job_application", "task"] },
+          "ref_id": { "type": "string", "format": "uuid" },
+          "code": {
+            "type": ["string", "null"],
+            "description": "Mã tra cứu của đối tượng (không phải tên/email)."
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "read_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["id", "topic", "ref_type", "ref_id", "code", "created_at", "read_at"]
+      },
+      "NotificationPage": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationItem" } },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+          "offset": { "type": "integer", "minimum": 0, "maximum": 10000 },
+          "next_offset": {
+            "type": ["integer", "null"],
+            "description": "Offset của trang kế; null khi đã hết."
+          },
+          "unread": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Tổng số thông báo chưa đọc của người gọi."
+          }
+        },
+        "required": ["items", "limit", "offset", "next_offset", "unread"]
+      },
+      "NotificationReadResult": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Số thông báo vừa chuyển sang đã đọc."
+          },
+          "unread": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["updated", "unread"]
+      },
       "ApprovalItem": {
         "type": "object",
         "properties": {
@@ -1563,6 +1669,29 @@
           "reason": { "anyOf": [{ "type": "string", "maxLength": 1000 }, { "type": "null" }] }
         },
         "required": ["version"]
+      },
+      "NotificationReadRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ids": {
+                "minItems": 1,
+                "maxItems": 100,
+                "type": "array",
+                "items": { "type": "string", "format": "uuid" }
+              }
+            },
+            "required": ["ids"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": { "all": { "type": "boolean", "const": true } },
+            "required": ["all"],
+            "additionalProperties": false
+          }
+        ]
       },
       "CommentCreateRequest": {
         "type": "object",

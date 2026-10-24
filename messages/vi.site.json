@@ -7,6 +7,10 @@
       "message": "Vui lòng nhập nhu cầu",
       "consent": "Cần đồng ý xử lý dữ liệu để gửi",
       "contactRequired": "Cần email hoặc điện thoại"
+    },
+    "application": {
+      "email": "Vui lòng nhập email hợp lệ",
+      "coverLetter": "Thư giới thiệu tối đa 8000 ký tự"
     }
   },
   "contact": {
@@ -25,5 +29,18 @@
     "thanksSuffix": ". Chúng tôi sẽ liên hệ trong 1 ngày làm việc.",
     "offline": "Không kết nối được. Nội dung vẫn còn trên form, vui lòng gửi lại.",
     "serverError": "Máy chủ đang gặp lỗi ({status}). Nội dung vẫn còn trên form, vui lòng gửi lại sau ít phút."
+  },
+  "apply": {
+    "heading": "Ứng tuyển",
+    "headingGeneral": "Ứng tuyển chung",
+    "name": "Họ tên (bắt buộc)",
+    "email": "Email (bắt buộc)",
+    "phone": "Điện thoại",
+    "coverLetter": "Thư giới thiệu",
+    "consent": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm xét tuyển, theo ",
+    "talentPool": "Tôi đồng ý để X-Company lưu hồ sơ trong kho nhân tài và liên hệ khi có vị trí phù hợp (không bắt buộc).",
+    "submit": "Gửi hồ sơ",
+    "thanksPrefix": "Cảm ơn bạn đã ứng tuyển. Mã hồ sơ: ",
+    "thanksSuffix": ". Bộ phận nhân sự sẽ liên hệ khi có kết quả xét tuyển."
   }
 }

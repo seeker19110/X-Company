@@ -28,6 +28,8 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "/api/app/inquiries",
   "/api/app/leave-requests",
   "/api/app/me",
+  "/api/app/notifications/read",
+  "/api/app/notifications",
   "/api/app/ot-requests",
   "/api/app/privacy/requests/[id]/[action]",
   "/api/app/privacy/requests",

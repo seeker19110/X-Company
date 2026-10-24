@@ -420,3 +420,32 @@
 - Chọn: Sửa ngay trong PR #68 các 🟠 có đường tái hiện (A11Y-010 mã chết SW + e2e, DOC-008 tài liệu lệch ruleset/retention) và 🟢 rẻ có test (DATA-005); hạ SEC-006 xuống 🟢 (đánh đổi đã chấp nhận ở D-053, ghi THREAT-MODEL); 🟢 còn lại ghi sổ mở
 - Lý do (tiêu chí chất lượng cuối): (1) đúng/an toàn: 🟠 tuyên bố sửa quá mức và tài liệu dẫn chủ dự án import sai ruleset phải đóng trước GO-NO-GO; 🟢 còn lại không chặn production (RUM tắt, chưa có route quản trị quyền, chưa bật GPS) — ghi sổ có điều kiện kích hoạt; (3) giữ PR nhỏ, không phình phạm vi pha harden
 - Đường lùi: Các 🟢 mở có Gate tay trong sổ; mở lát mới bằng PLAN khi chủ dự án muốn
+
+### D-058 · 2026-10-24T01:50:42+00:00 · Duyệt PLAN lát 14–15 (T-079…T-088): đóng 🟠 SEC-002/DOC-001/DOC-002 mà phiên trước để chờ người, cùng 🟢 rẻ
+
+- Phương án: (1) Tự duyệt: lát 14 (làn chuẩn) DOC-001 form ứng tuyển, DOC-002 thông báo trong ứng dụng tự host (bảng notification + handler outbox), DATA-006, CODE-010, A11Y-011, PERF-004, TEST-002; lát 15 (ngoại lệ cứng, người merge) TOTP RFC 6238 bằng node:crypto + SEC-007; không làm CFG-* (hook chặn), DEP-001 (typescript-eslint peer <6.1.0), SEC-008, HAR-003, CI-004 · (2) Tiếp tục để SEC-002/DOC-001/DOC-002 chờ chủ dự án quyết, chỉ làm 🟢 · (3) Chỉ ghi GO-NO-GO §2b các thiếu hụt, không làm mã
+- Chọn: Tự duyệt: lát 14 (làn chuẩn) DOC-001 form ứng tuyển, DOC-002 thông báo trong ứng dụng tự host (bảng notification + handler outbox), DATA-006, CODE-010, A11Y-011, PERF-004, TEST-002; lát 15 (ngoại lệ cứng, người merge) TOTP RFC 6238 bằng node:crypto + SEC-007; không làm CFG-* (hook chặn), DEP-001 (typescript-eslint peer <6.1.0), SEC-008, HAR-003, CI-004
+- Lý do (tiêu chí chất lượng cuối): AGENTS.md §5: spec/thiết kế/phạm vi/bảo mật là điểm quyết định phiên chính tự duyệt — SPEC-identity-org đã ghi TOTP bắt buộc trước pilot, F-003/F-010 là Must; (1) đúng/an toàn: TOTP giảm T1, thông báo thật tới người dùng; (2) đường lùi: PR riêng mỗi lát, migration chỉ thêm; (3) tự host không cần SMTP/Web Push/khoá ngoài; HMAC-SHA1 của node:crypto + vector RFC 4226/6238, không tự chế nguyên thuỷ mật mã (custom_crypto=false), không thêm phụ thuộc
+- Đường lùi: Đóng PR chưa merge; revert từng commit theo task; DROP bảng notification/cột totp bằng migration contract; đánh [~] task chưa làm kèm lý do
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi chạy thật: thêm kênh email/Web Push cho thông báo (cần SMTP/VAPID của chủ dự án) bên cạnh kênh trong ứng dụng
+
+### D-059 · 2026-10-24T02:23:12+00:00 · T-080: thông báo trong ứng dụng và kênh phụ chung một handler — kênh phụ tắt làm hoãn cả thông báo trong ứng dụng; tách ngay hay để sau?
+
+- Phương án: (1) Giữ một handler mỗi topic; ghi điều kiện: trước task kênh SMTP/Web Push phải tách thành nhiều consumer mỗi topic (Registry nhiều handler) · (2) Tách ngay: Registry nhiều handler mỗi topic, mỗi handler một consumer
+- Chọn: Giữ một handler mỗi topic; ghi điều kiện: trước task kênh SMTP/Web Push phải tách thành nhiều consumer mỗi topic (Registry nhiều handler)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3 (đơn giản, theo chuẩn) + 1 không bị ảnh hưởng hôm nay: kênh phụ duy nhất là log, luôn bật, nên không có đường nào hoãn thông báo; tách ngay đổi Registry/processOne và test worker cho một lỗi chưa thể xảy ra, làm phình PR. Ghi 🟢 trong AUDIT-STATUS kèm điều kiện kích hoạt
+- Đường lùi: Tách Registry thành nhiều consumer mỗi topic khi thêm kênh thật; dữ liệu notification không đổi
+
+### D-060 · 2026-10-24T02:30:56+00:00 · T-086: phản hồi login khi cần TOTP — đổi 200 thành oneOf(LoginResult, MfaChallengeResult) (phá hợp đồng) hay trả 202?
+
+- Phương án: (1) Giữ 200 oneOf + x-breaking-approved; client duy nhất (UI login của repo) sửa ở T-087 trong cùng PR lát 15 · (2) Trả 202 cho thử thách (không phá hợp đồng trên giấy)
+- Chọn: Giữ 200 oneOf + x-breaking-approved; client duy nhất (UI login của repo) sửa ở T-087 trong cùng PR lát 15
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: client cũ coi mọi 2xx là đăng nhập thành công, nên 202 cũng làm vỡ luồng mà còn che giấu thay đổi; không có client ngoài (API nội bộ, PWA cùng repo), UI sửa cùng PR nên không có phiên bản nào chạy với hợp đồng lệch
+- Đường lùi: Revert PR lát 15 khôi phục hợp đồng cũ
+
+### D-061 · 2026-10-24T03:31:37+00:00 · PR #73 CI đỏ (drills/dast): ZAP 10202/20012 Absence of Anti-CSRF Tokens trên form ứng tuyển mới (/tuyen-dung, tin tuyển dụng)
+
+- Phương án: (1) Mở rộng allowlist theo đường dẫn ^/tuyen-dung(/slug)?$ cho 10202 và 20012, cùng lập luận D-047/D-049 · (2) Thêm ô csrf_token giả vào form · (3) Bỏ method=post khỏi form ứng tuyển
+- Chọn: Mở rộng allowlist theo đường dẫn ^/tuyen-dung(/slug)?$ cho 10202 và 20012, cùng lập luận D-047/D-049
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: form gửi bằng fetch tới /api/public/applications — endpoint công khai không phiên, không có gì để CSRF lợi dụng (giới hạn tần suất theo IP); method=post chỉ để dữ liệu ứng viên không lên URL khi JS chưa chạy. Token giả là an ninh giả (D-047 đã loại); bỏ POST làm lộ email/SĐT lên URL. Allowlist giới hạn đúng đường dẫn, form ở chỗ khác vẫn đỏ
+- Đường lùi: Xoá đường dẫn khỏi security/zap/allowlist.json
