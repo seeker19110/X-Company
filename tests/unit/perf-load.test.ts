@@ -249,6 +249,9 @@ describe("đích bộ tải chỉ loopback (QA-PERF-007)", () => {
     assert.deepEqual(CPT.violations("ci.yml", "env:\n  PERF_BASE_URL: http://127.0.0.1:3200\n"), []);
     assert.equal(CPT.violations("ci.yml", "env:\n  PERF_BASE_URL: https://app.x-company.vn\n").length, 1);
     assert.equal(CPT.violations("a.sh", 'PERF_BASE_URL="${{ secrets.PROD }}" npm run perf:load').length, 1);
+    // Gán rỗng trong shell không phải vi phạm (review PR #76); export với giá trị ngoài loopback thì có.
+    assert.deepEqual(CPT.violations("a.sh", "PERF_BASE_URL= node scripts/perf-load.mjs"), []);
+    assert.equal(CPT.violations("a.sh", "export PERF_BASE_URL=https://app.x-company.vn").length, 1);
     assert.deepEqual(CPT.check(process.cwd()), []);
   });
 });

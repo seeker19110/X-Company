@@ -1,17 +1,20 @@
 // check:perf-target (QA-PERF-007): cấm cấu hình CI/script đặt đích bộ tải ngoài loopback, và bắt buộc perf-load đi qua
-// resolvePerfTarget. Đọc .github/workflows/*.yml, package.json, scripts/** (trừ chính tệp này và perf-target.mjs).
+// resolvePerfTarget. Đọc .github/workflows/*.yml, package.json, scripts/** (trừ chính tệp này và perf-target.mjs) — không
+// quét .env*/docs: biến chỉ được đọc trong perf-load.mjs và luôn qua resolvePerfTarget lúc chạy (chặn lần hai).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { isLoopbackUrl } from "./lib/perf-target.mjs";
 
-const ASSIGN = /PERF_BASE_URL\s*[:=]\s*["']?([^"'\s}]+)/g;
+// `=` của shell không có khoảng trắng phía sau (`PERF_BASE_URL= node x` là gán rỗng); `:` của YAML thì có.
+const ASSIGN = /PERF_BASE_URL(?:=|\s*:\s*)["']?([^"'\s}]*)/g;
 
 /** Lỗi trong một tệp: mỗi gán PERF_BASE_URL có giá trị cụ thể ngoài loopback. Giá trị là biến (`$X`, `${{ … }}`) cũng bị chặn. */
 export function violations(file, text) {
   const out = [];
   for (const m of text.matchAll(ASSIGN)) {
     const v = m[1];
+    if (v === "") continue; // gán rỗng → resolvePerfTarget dùng máy chủ harness
     if (!isLoopbackUrl(v)) out.push(`${file}: PERF_BASE_URL="${v}" không phải loopback`);
   }
   return out;

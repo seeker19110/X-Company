@@ -174,7 +174,7 @@
     },
     {
       "id": "XCLocalXidWraparound",
-      "summary": "Tuổi XID của một database vượt 1,5 tỷ (giới hạn 2^31): autovacuum không đóng băng kịp, còn ~600 triệu XID trước khi PostgreSQL cảnh báo và tới gần mức từ chối ghi (DB-PERF-008)",
+      "summary": "Tuổi XID của một database vượt 1,5 tỷ (giới hạn 2^31): autovacuum không đóng băng kịp, còn ~647 triệu XID tới giới hạn 2^31 (PostgreSQL cảnh báo khi còn 40 triệu, từ chối ghi khi còn 3 triệu) và tới gần mức từ chối ghi (DB-PERF-008)",
       "severity": "page",
       "owner": "seeker19110",
       "runbook": "docs/ops/RUNBOOK.md#tuổi-xid-wraparound",
