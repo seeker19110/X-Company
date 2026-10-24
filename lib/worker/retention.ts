@@ -366,7 +366,9 @@ async function eraseGeo(pool: pg.Pool, before: Date, batch: number): Promise<num
   for (;;) {
     const n = await inTx(pool, async (tx) => {
       const r = await tx.query<{ company_id: string }>(
-        "SELECT attendance_event_erase_geo($1, $2) AS company_id",
+        // AUD-DATA-008: hàm SQL từ chối mốc > now() của DB − 1 ngày (0031); đồng hồ ứng dụng nhanh hơn DB (hoặc geoDays = 1)
+        // sẽ làm lượt xoá lỗi → kẹp mốc về sàn của DB ngay trong giao dịch (cùng now() với hàm). Mốc cũ hơn sàn giữ nguyên.
+        "SELECT attendance_event_erase_geo(LEAST($1::timestamptz, now() - interval '1 day'), $2) AS company_id",
         [before, batch],
       );
       const per = new Map<string, number>();

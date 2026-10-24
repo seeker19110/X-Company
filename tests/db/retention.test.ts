@@ -550,4 +550,27 @@ describe("retention", () => {
     assert.equal(again.mfaChallengeDeleted, 0);
     assert.equal(again.mfaFailureDeleted, 0);
   });
+  test("AUD-DATA-008: đồng hồ app nhanh hơn DB (now tiêm = DB now + 2 giờ, geoDays=1) → không lỗi; xoá đúng hàng cũ hơn sàn của DB", async () => {
+    const emp = (await seedUser(companyId)).employeeId!;
+    const dbNow = (await one("SELECT now() AS n")).n as Date;
+    const ev = async (receivedAt: Date) =>
+      (
+        await one(
+          `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time,
+             server_received_at, source, status, geo_enc) VALUES ($1, $2, $3, 'h', 'in', $4, $4, 'gps', 'accepted', 'v1:g1:x')
+           RETURNING id`,
+          [companyId, emp, randomUUID(), receivedAt],
+        )
+      ).id as string;
+    const old = await ev(new Date(dbNow.getTime() - 25 * 3_600_000));
+    const recent = await ev(new Date(dbNow.getTime() - 23 * 3_600_000)); // mới hơn sàn 1 ngày của DB: giữ
+    const skewed = new Date(dbNow.getTime() + 2 * 3_600_000);
+    const rep = await runRetention({ config: { ...CFG, geoDays: 1 }, now: skewed, pool: db.app });
+    assert.ok(rep.geoErased >= 1);
+    assert.equal((await one("SELECT geo_enc FROM attendance_event WHERE id = $1", [old])).geo_enc, null);
+    assert.equal(
+      (await one("SELECT geo_enc FROM attendance_event WHERE id = $1", [recent])).geo_enc,
+      "v1:g1:x",
+    );
+  });
 });
