@@ -6,9 +6,8 @@ import { renderMetrics, resetMetrics } from "../../lib/http/metrics.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { postSync, processBatch } from "../../lib/offline/sync-route.ts";
 import { flush, memoryStore, newItem, type ItemResult, type QueueItem } from "../../lib/offline/queue.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 interface S {
@@ -16,7 +15,7 @@ interface S {
   csrf: string;
 }
 async function login(email: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token };
 }
 const sync = (s: S, items: unknown) =>

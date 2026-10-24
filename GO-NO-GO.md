@@ -1,44 +1,46 @@
-# GO/NO-GO — X-Company · phát hành `v0 (lát 8–13, chạy local)` · 2026-10-22
+# GO/NO-GO — X-Company · phát hành `v0 (lát 8–15, chạy local)` · 2026-10-24
 
-> Commit: nhánh `claude/intelligent-hamilton-d4jyet` `4ac02eb` (PR #68, lát 12–13, chưa merge) trên `main` `779926a` · Blueprint: MUST mở 91 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #68: xanh trên head (gate, test, e2e, dast, drills, readme-smoke, gitleaks, CodeQL, pr-policy).
+> Commit: nhánh `claude/hopeful-lamport-e9qgyk` `927ee82` (PR #74, lát 15 — TOTP + SEC-007/010, chưa merge) trên `main` `33e7e1a` (#73, lát 14 đã merge) · Blueprint: MUST mở 91 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #74 trên head: gate, test, e2e, dast, drills, lighthouse, readme-smoke, gitleaks, codeql, pr-policy xanh; kết quả CodeQL báo 1 cảnh báo — báo nhầm, xử lý ở commit kế (mục 15).
 > Người kiểm: agent autopilot (report-only, pha harden — ADR-0031) · Phạm vi: website + webapp nội bộ + PWA; hạ tầng dựng **cục bộ** (nhãn `faithful-fixture`, máy dev), chưa có production.
 
-## 0. Máy: `xt.py release-check` @ `4ac02eb` — **NO-GO**
-Lệnh: `PATH=$PWD/.tools/bin:$PATH python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md` (sau `loop verify --all`: 12 Gate + 313/316 lệnh Kiểm blueprint xanh).
+## 0. Máy: `xt.py release-check` @ `927ee82` — **NO-GO**
+Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md` (sau `loop verify --all`: 8 Gate lát 14–15 + 313/316 lệnh Kiểm blueprint xanh).
 
 | Hàng | Mức | Kết quả | Bằng chứng máy |
 |---|---|---|---|
 | blueprint | BLOCKER | FAIL | MUST mở 91 · lệnh Kiểm đỏ 3: LOOP-ORCH-003, LOOP-STOP-001, LOOP-STOP-002 (guard chặn chạy lệnh `loop` lồng trong phiên — FB-088; xanh khi chạy ngoài phiên) · 2 MUST tick không có lệnh kiểm |
-| audit | BLOCKER | FAIL | `audit check --strict`: 4 🟠 mở — SEC-002 (TOTP), DOC-001, DOC-002, CFG-001 — đều chờ người quyết/thêm khoá |
-| verify | BLOCKER | FAIL | chỉ 3 lệnh LOOP-* ở trên đỏ; mọi Gate T-065…T-077 xanh lại trên `4ac02eb` |
+| audit | BLOCKER | FAIL | `audit check --strict`: 1 🟠 mở — CFG-001 (`.env.example` lệch mã; hook chặn agent ghi tệp này, D-050 — chờ người). SEC-002 (TOTP), DOC-001, DOC-002 đã đóng ở lát 14–15 |
+| verify | BLOCKER | FAIL | chỉ 3 lệnh LOOP-* ở trên đỏ; mọi Gate T-079…T-087 xanh lại trên `927ee82` |
 | tree | BLOCKER | PASS | cây sạch |
-| prod_switch | BLOCKER | N/A (người) | 19 đề xuất "Khi chạy thật" trong `docs/autopilot/DECISIONS.md` |
+| prod_switch | BLOCKER | N/A (người) | 20 đề xuất "Khi chạy thật" trong `docs/autopilot/DECISIONS.md` (thêm D-058: kênh email/Web Push cho thông báo) |
 | phase | BLOCKER | PASS | `delivery_phase: harden` |
-| review_debt | BLOCKER | FAIL | 38 file của PR #68 đổi sau SHA quét `779926a` — audit delta đã quét chúng (D-057) nhưng sổ phải ghi SHA trên nhánh chính: sau khi PR #68 merge, cập nhật SHA nhóm sang commit merge rồi chạy lại `release-check` |
+| review_debt | BLOCKER | FAIL | 55 file của PR #74 đổi sau SHA quét `33e7e1a` — đã được `reviewer-alt` đọc (0 🔴, 2 🟠 đã sửa có test); sau khi #74 merge: dời SHA nhóm sang commit merge rồi chạy lại `release-check` |
+| attack | BLOCKER | FAIL (môi trường) | `npm run -s dast` cần Docker (ZAP 2.17) — máy dev phiên này không có Docker daemon; CI `dast` (ZAP baseline + quét chủ động) và `drills` (ZAP qua https staging) **xanh** trên head PR #74; `dast:probes` cục bộ 9/9 nhóm PASS |
+| perf | BLOCKER | PASS | `npm run -s perf:load` exit 0 |
 
 ## 1. Đếm (BLOCKER)
 | Mức | PASS | FAIL | N/A |
 |---|---|---|---|
-| BLOCKER | 10 | 4 | 0 |
+| BLOCKER | 3 | 5 | 1 |
 
 ## 2. Danh mục kiểm
 | # | Mục | Kết quả | Nhãn | Bằng chứng |
 |---|---|---|---|---|
 | 1 | Build tái lập, type/lint sạch | PASS | real-path | `dev-task.sh gate` exit 0; CI `quality` xanh |
-| 2 | Test xanh (unit/DB/HTTP/E2E) | PASS | real-path | 898/898 unit/DB/HTTP; E2E 61/61 desktop + mobile (axe 320 + 1280 px); health + reliability 50/50 lượt dưới tải CPU (`scripts/flaky-check.sh`); coverage dòng 97,9% / nhánh 92,4% (ngưỡng giữ nguyên) |
+| 2 | Test xanh (unit/DB/HTTP/E2E) | PASS | real-path | `dev-task.sh gate` 964/964 unit/DB/HTTP; E2E 89/89 desktop + mobile (axe 320 + 1280 px, gồm form ứng tuyển, thông báo, bước mã TOTP); FE-TEST-003 `--repeat-each=3` xanh; coverage giữ ngưỡng |
 | 3 | Blueprint 0 MUST mở | FAIL | real-path | 91 MUST chưa đạt, đều đã hoãn có lý do (hạ tầng/KMS/RUM/ruleset/HR); 313/316 lệnh Kiểm xanh (mục 0) |
 | 4 | Không secret trong repo/lịch sử | PASS | real-path | `gitleaks git --log-opts="HEAD --remotes"` 0 phát hiện; CI `gitleaks` xanh |
 | 5 | Phụ thuộc: 0 lỗ hổng cao chưa xử lý; license allowlist | PASS | real-path | CI `osv-scanner`, `dep-audit`, `supply-chain` xanh; ngoại lệ có hạn (D-018) |
-| 6 | Kiểm quyền server; test vượt quyền | PASS | real-path | ma trận 401/403/BOLA/BFLA mọi route; DAST nhóm I (chéo người dùng/công ty) PASS |
+| 6 | Kiểm quyền server; test vượt quyền | PASS | real-path | ma trận 401/403/BOLA/BFLA mọi route (gồm `/api/app/notifications*`, `/api/app/auth/mfa`); DAST nhóm I PASS; TOTP bắt buộc sysadmin/hr/executive (AUD-SEC-002); không bỏ được sysadmin công ty cuối (SEC-007/010) |
 | 7 | Threat model: mối đe doạ Cao có biện pháp + bằng chứng | PASS | real-path | `check:docs` OK; thêm T23 (mã hoá lúc lưu) |
 | 8 | Migration có đường lùi; **rollback deploy đã diễn tập** | FAIL | faithful-fixture | migration chỉ thêm, `check:migrations` xanh, khôi phục DB đã diễn tập; chưa diễn tập rollback deploy (RUNBOOK `last_drilled = chưa diễn tập`) |
 | 9 | Backup bật và đã khôi phục thử | PASS | faithful-fixture | `scripts/backup.sh` + `restore-drill.sh`: khôi phục 1,1 triệu dòng (CSDL 461 MB) trong 11,2 s, khớp số dòng và chuỗi audit; off-site bằng restic (kho mã hoá, `restic check`, khôi phục từ kho sau khi xoá bản cục bộ — `tests/db/backup-offsite.test.ts`); khoá dữ liệu qua KMS OpenBao Transit chạy thật (`tests/db/kms-transit.test.ts`). Chỉ trên máy dev: chưa có đích off-site/KMS thuê thật |
 | 10 | Giám sát + cảnh báo đã thử kích hoạt, tới đúng kênh | PASS | faithful-fixture | `npm run -s alerts:drill`: 14/14 luật cục bộ (chạy lại 2026-10-21) firing → đúng 3 kênh → resolved; `npm run -s ops:stack:drill`: Prometheus 3.14 + Alertmanager 0.34 thật — `promtool test rules` mọi rule (ca bắn/không bắn), scrape `/api/metrics` có bearer, firing/resolved tới webhook (`docs/ops/ops-stack-drill.md`); chưa kênh trực có người |
 | 11 | Dữ liệu cá nhân: DPIA, đồng ý, chính sách | FAIL | faithful-fixture | DPIA đã lập theo Mẫu 10 nhưng CHƯA nộp cơ quan chuyên trách (60 ngày kể từ ngày xử lý thật — việc của chủ dự án); chưa có xác nhận pháp chế; GPS có cổng server (cờ + đồng ý riêng), mặc định tắt; chưa có UI cấp/rút đồng ý GPS |
 | 12 | Hiệu năng đạt ngưỡng, đo | PASS | faithful-fixture | `perf:load` 8/8 kịch bản trong ngân sách (thêm chốt kỳ 200 nhân viên × 31 ngày: 4,2–6,4 s, 25 câu SQL; `docs/perf/load-report-2026-10-21.md` trên commit sạch `0c553b4`), Lighthouse cục bộ 97–99 điểm, LCP 1,6–2,3 s; JS tĩnh ≤ 225,9/230 KB (giảm từ 229,7 — T-071). Không phải số thực địa (xem 2b) |
-| 13 | Tiếp cận: 0 vi phạm axe WCAG 2.2 AA | PASS | real-path | E2E quét mọi trang công khai + 9 màn nội bộ ở 320 px, 0 vi phạm |
+| 13 | Tiếp cận: 0 vi phạm axe WCAG 2.2 AA | PASS | real-path | E2E quét mọi trang công khai + màn nội bộ (thêm /app/thong-bao, bước mã/đăng ký TOTP, dải ngoại tuyến) ở 320 và 1280 px, 0 vi phạm; chưa kiểm NVDA/VoiceOver |
 | 14 | Release notes + CHANGELOG | PASS (SHOULD) | real-path | `CHANGELOG.md`, release-please |
-| 15 | DAST | PASS (SHOULD) | faithful-fixture | `npm run -s dast:probes` 9/9 nhóm, 155 kiểm tra (XSS có Chromium thật); ZAP 2.17 baseline qua **https** của staging Caddy (`npm run -s staging:drill`, #33 đã merge: sửa form GET lộ mật khẩu lên URL, thiếu HSTS/nosniff ở tệp tĩnh); CI `dast` chạy ZAP baseline + quét chủ động (http) |
+| 15 | DAST | PASS (SHOULD) | faithful-fixture | `dast:probes` 9/9 nhóm (đăng nhập người dùng có TOTP); CI `dast` (ZAP baseline + chủ động) và `drills` (ZAP qua https staging) xanh — form ứng tuyển thêm vào allowlist 10202/20012 theo đường dẫn (D-061, cùng lập luận D-047); CodeQL PR #74 báo "băm mật khẩu yếu" ở `sha256(challenge)` — báo nhầm: `challenge` là token ngẫu nhiên 256 bit (như token phiên), luồng taint bắt đầu từ tên hàm test `passwordStep` (đã đổi tên) |
 | 16 | Mã hoá dữ liệu lúc lưu | PASS (SHOULD) | faithful-fixture | AES-256-GCM cột nhạy cảm + tệp tải lên, xoay khoá, `pg_dump` không chứa bản rõ; khoá chủ ở env, chưa KMS/HSM |
 | 18 | Đề xuất "Khi chạy thật" đã được chủ dự án quyết | FAIL | — | `docs/autopilot/DECISIONS.md` D-016, D-018, D-020, D-027, D-029…D-044, D-047 có mục "Khi chạy thật" chờ chủ dự án |
 
@@ -70,13 +72,16 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH python3 .xtemplates/scripts/xt.py release-ch
 | 3 | BLOCKER | 91 MUST chưa đạt | người xử lý nhóm đã `loop defer`, rồi `loop resume` |
 | 8 | BLOCKER | rollback deploy chưa diễn tập | diễn tập theo `docs/ops/RUNBOOK.md`, ghi `last_drilled` |
 | 11 | BLOCKER | DPIA chưa nộp, chưa xác nhận pháp chế | chủ dự án nộp trong 60 ngày từ ngày xử lý thật; luật sư rà |
-| 18 | BLOCKER | quyết định "Khi chạy thật" (19 mục) | chủ dự án quyết từng mục |
-| 0/audit | BLOCKER | 4 🟠 mở chờ người (SEC-002, DOC-001, DOC-002, CFG-001) | chủ dự án quyết/ thêm khoá `.env.example` |
-| 0/review_debt | BLOCKER | sổ audit ghi SHA trước PR #68 | sau merge #68: cập nhật SHA nhóm sang commit merge, chạy lại `release-check` |
+| 18 | BLOCKER | quyết định "Khi chạy thật" (20 mục) | chủ dự án quyết từng mục |
+| 0/audit | BLOCKER | 1 🟠 mở: CFG-001 | chủ dự án thêm các khoá ở `PENDING_EXAMPLE_KEYS` (`scripts/check-env.ts`) vào `.env.example` rồi xoá khỏi danh sách (D-050) |
+| 0/review_debt | BLOCKER | sổ audit ghi SHA trước PR #74 | sau merge #74: dời SHA nhóm sang commit merge, chạy lại `release-check` |
+| 0/attack | BLOCKER | `dast` cục bộ cần Docker | chạy `release-check` trên máy có Docker, hoặc dựa CI `dast`/`drills` (xanh) |
 
 ## 4. Kết luận
 **NO-GO cho production.** Mọi thứ làm được trên máy dev đã làm và có bằng chứng (nhãn faithful-fixture): sao lưu/khôi phục (cả off-site restic), KMS OpenBao, cảnh báo (cả Prometheus/Alertmanager thật), DAST (cả ZAP qua https), staging TLS, đo tải, mã hoá lúc lưu, cổng GPS. Còn lại là việc người/hạ tầng thật (mục 2b và 3). Đủ điều kiện dùng nội bộ/staging.
 Rủi ro còn lại được chấp nhận: review ≥ 1 đặt ở 0 vì chỉ một maintainer (D-027); giá trị pháp lý mức B (D-029…D-035) — người chấp nhận: chủ dự án uỷ quyền tự quyết cho phiên chính, chưa có xác nhận pháp chế — 2026-10-19. Lát 12–13 (2026-10-22): audit delta pha harden 0 🔴; 🟢 mở ghi sổ có điều kiện kích hoạt (D-057).
+
+Lát 14–15 (2026-10-24): đóng 3 🟠 phiên trước để chờ người — form ứng tuyển, thông báo trong ứng dụng tự host, TOTP hai bước (D-058…D-063); review khác họ model mỗi lát; còn 1 🟠 (CFG-001, chờ người).
 
 ## 5. Ký (con người, không phải agent)
 | Vai trò | Tên | Quyết định | Ngày |

@@ -87,7 +87,14 @@ async function main() {
     const S = (o) => req(secure, o);
     const loginAs = async (inst, key) => {
       requestTotal += 1;
-      return login(inst.baseUrl, inst.origin, U(key).email, seed.password, { "x-forwarded-for": nextIp() });
+      return login(
+        inst.baseUrl,
+        inst.origin,
+        U(key).email,
+        seed.password,
+        { "x-forwarded-for": nextIp() },
+        { totpSecret: seed.totpSecret },
+      );
     };
     const sessions = {};
     for (const k of ["nv", "nv2", "tl", "sales", "hr", "exec"]) sessions[k] = await loginAs(plain, k);

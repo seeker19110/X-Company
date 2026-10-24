@@ -74,14 +74,33 @@ export function request(baseUrl, o) {
 }
 
 /** Phiên đăng nhập: cookie + CSRF token (trong bộ nhớ). */
-export async function login(baseUrl, origin, email, password, extraHeaders = {}) {
-  const r = await request(baseUrl, {
+export async function login(baseUrl, origin, email, password, extraHeaders = {}, opts = {}) {
+  let r = await request(baseUrl, {
     method: "POST",
     path: "/api/app/auth/login",
     headers: { "content-type": "application/json", origin, ...extraHeaders },
     body: JSON.stringify({ email, password }),
   });
   if (r.status !== 200) throw new Error(`đăng nhập thất bại (${r.status})`);
+  const first = JSON.parse(r.body);
+  // Vai trò bắt buộc TOTP (AUD-SEC-002): đi tiếp bước mã bằng bí mật cố định của seed E2E (`opts.totpSecret`).
+  // Dùng chung lõi thuần lib/identity/totp.pure.ts (Node ≥ 22.18 tự bỏ kiểu TS khi import).
+  if (first.mfa) {
+    if (!opts.totpSecret) throw new Error(`đăng nhập cần TOTP (${first.mfa}) nhưng không có totpSecret`);
+    const { base32Decode, hotp, totpStep } = await import("../../lib/identity/totp.pure.ts");
+    const secret = base32Decode(opts.totpSecret);
+    // Bước hiện tại có thể đã dùng (chống phát lại) → thử bước kế (cửa sổ ±1).
+    for (const off of [0, 1]) {
+      r = await request(baseUrl, {
+        method: "POST",
+        path: "/api/app/auth/mfa",
+        headers: { "content-type": "application/json", origin, ...extraHeaders },
+        body: JSON.stringify({ challenge: first.challenge, code: hotp(secret, totpStep(Date.now()) + off) }),
+      });
+      if (r.status === 200) break;
+    }
+    if (r.status !== 200) throw new Error(`bước TOTP thất bại (${r.status})`);
+  }
   const cookie = r.setCookie.map((c) => c.split(";")[0]).join("; ");
   const j = JSON.parse(r.body);
   return { cookie, csrf: j.csrf_token, userId: j.user_id, setCookie: r.setCookie };

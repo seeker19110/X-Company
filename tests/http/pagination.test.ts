@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
 import { getApprovals } from "../../lib/attendance/request-routes.ts";
 import { getComments } from "../../lib/files/routes.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { listApplications, listInquiries, postInquiry } from "../../lib/inquiry/routes.ts";
 import {
   fetchLimit,
@@ -18,7 +17,7 @@ import { AppError } from "../../lib/nen/app-error.ts";
 import { getRequests } from "../../lib/privacy/routes.ts";
 import { getTasks } from "../../lib/work/routes.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 
@@ -99,11 +98,7 @@ describe("API danh sách (DB thật)", () => {
       "INSERT INTO inquiry_route (company_id, service_slug, assignee_user_id) VALUES ($1, NULL, $2)",
       [companyId, u.userId],
     );
-    cookie = cookieFrom(
-      await loginHandler(
-        req("POST", "/api/app/auth/login", { body: { email: u.email, password: PASSWORD } }),
-      ),
-    );
+    cookie = cookieFrom(await loginThrough(u.email));
     for (let i = 0; i < 3; i++) {
       const res = await postInquiry(
         req("POST", "/api/public/inquiries", {

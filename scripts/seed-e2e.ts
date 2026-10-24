@@ -15,6 +15,8 @@ import {
 } from "../lib/org/index.ts";
 import { grantRole } from "../lib/authz/grants.ts";
 import { hashPassword } from "../lib/identity/password.ts";
+import { MFA_REQUIRED_ROLES } from "../lib/identity/mfa.ts";
+import { sealTextAsync, textColumn } from "../lib/crypto/columns.ts";
 import { approve, createPage, publish, submitForReview } from "../lib/cms/index.ts";
 import { loadActor } from "../lib/authz/load.ts";
 import { addMember, createProject, createTask } from "../lib/work/tasks.ts";
@@ -23,6 +25,9 @@ import { localDate } from "../lib/nen/time.ts";
 import { SYSTEM_ACTOR, type Role, type ScopeType } from "../lib/authz/index.ts";
 
 const PASSWORD = "E2e-mat-khau-dai-2026!";
+// Bí mật TOTP CỐ ĐỊNH chỉ cho dữ liệu E2E (AUD-SEC-002): người dùng vai trò bắt buộc (hr, exec) đã bật TOTP sẵn để test tính
+// được mã (e2e/helpers.ts `totpCode`, scripts/lib/http-client.mjs). Không bao giờ dùng cho production.
+const E2E_TOTP_SECRET = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
 setPool(pool);
 registerKms(); // KMS_PROVIDER=transit (nếu bật) cần transport trước khi seed ghi dữ liệu mã hoá
@@ -40,6 +45,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     key: string,
     name: string,
     grants: { role: Role; scopeType: ScopeType; scopeId?: string }[],
+    opts: { totp?: boolean } = {},
   ) => {
     const employeeId = await createEmployee(tx, sys, companyId, { code: key.toUpperCase(), fullName: name });
     await assignEmployment(tx, sys, companyId, employeeId, { departmentId: deptId, validFrom: "2026-01-01" });
@@ -55,6 +61,13 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
         scopeType: g.scopeType,
         scopeId: g.scopeId ?? null,
       });
+    if (opts.totp !== false && grants.some((g) => MFA_REQUIRED_ROLES.includes(g.role))) {
+      const sealed = await sealTextAsync(textColumn("app_user", "totp_secret"), rows[0]!.id, E2E_TOTP_SECRET);
+      await tx.query("UPDATE app_user SET totp_secret_enc = $2, totp_enabled_at = now() WHERE id = $1", [
+        rows[0]!.id,
+        sealed.enc,
+      ]);
+    }
     users[key] = { email, userId: rows[0]!.id, employeeId };
   };
   await mk("nv", "Nguyễn Văn Nhân", [{ role: "employee", scopeType: "self" }]);
@@ -71,6 +84,8 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
   await mk("sales", "Đỗ Kinh Doanh", [{ role: "sales", scopeType: "company" }]);
   await mk("hr", "Ngô Nhân Sự", [{ role: "hr", scopeType: "company" }]);
   await mk("exec", "Vũ Giám Đốc", [{ role: "executive", scopeType: "company" }]);
+  // Quản trị viên CHƯA đăng ký TOTP: e2e luồng đăng ký lần đầu (T-087) — mỗi project một người, chỉ đăng nhập một lần.
+  await mk("sys", "Lý Quản Trị", [{ role: "sysadmin", scopeType: "company" }], { totp: false });
   if (withSite) {
     const ed = { userId: users.ed!.userId, companyId };
     const ed2 = { userId: users.ed2!.userId, companyId };
@@ -163,7 +178,13 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
 const out = await withTx(async (tx) => {
   const desktop = await seedCompany(tx, "X-Company (E2E)", "", true);
   const mobile = await seedCompany(tx, "X-Company (E2E mobile)", ".m", false);
-  return { companyId: desktop.companyId, password: PASSWORD, users: desktop.users, mobile };
+  return {
+    companyId: desktop.companyId,
+    password: PASSWORD,
+    totpSecret: E2E_TOTP_SECRET,
+    users: desktop.users,
+    mobile,
+  };
 });
 // Chạy worker outbox THẬT (cùng registry mặc định như `npm run worker`) tới khi hết việc: thông báo trong ứng dụng được tạo
 // đúng đường production, không chèn tay vào bảng notification. Máy chủ e2e không chạy worker nên cần bước này.

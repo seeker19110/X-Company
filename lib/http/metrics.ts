@@ -21,6 +21,7 @@ export const ROUTE_PATTERNS: readonly string[] = [
   "/api/app/attendance/events",
   "/api/app/attendance/qr/[worksiteId]",
   "/api/app/auth/login",
+  "/api/app/auth/mfa",
   "/api/app/auth/logout",
   "/api/app/comments",
   "/api/app/files/[id]",

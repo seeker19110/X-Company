@@ -3,11 +3,10 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { InquiryInput, submitInquiry } from "../../lib/inquiry/index.ts";
 import { getRequestExport, getRequests, postRequest, postRequestAction } from "../../lib/privacy/routes.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 interface S {
@@ -15,7 +14,7 @@ interface S {
   csrf: string;
 }
 async function login(email: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   assert.equal(r.status, 200);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token };
 }

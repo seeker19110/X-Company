@@ -11,13 +11,22 @@ import { loadActor } from "../../lib/authz/load.ts";
 import { SYSTEM_ACTOR } from "../../lib/authz/index.ts";
 import { errorResponse } from "../../lib/http/index.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import {
+  cookieFrom,
+  loginThrough,
+  PASSWORD,
+  req,
+  seedCompany,
+  seedUser,
+  setTestEnv,
+} from "../helpers/fixtures.ts";
 
 setTestEnv();
 const isCode = (code: string) => (e: unknown) => e instanceof AppError && e.code === code;
 
+/** Đăng nhập qua route thật; tài khoản cần TOTP (hr/executive/sysadmin) đi tiếp bước mã đúng (AUD-SEC-002). */
 async function doLogin(email: string, password = PASSWORD) {
-  const res = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password } }));
+  const res = await loginThrough(email, password);
   const body = await res.json();
   return { res, body, cookie: cookieFrom(res) };
 }

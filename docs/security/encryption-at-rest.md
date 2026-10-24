@@ -18,7 +18,7 @@ Chọn theo `docs/privacy/data-map.yaml`: lớp `nhay_cam` (GPS, lý do nghỉ) 
 
 **Không mã hoá (có chủ ý):** `app_user.email`, `login_attempt.email` (khoá đăng nhập/tra cứu), `full_name`/`name` (hiển thị, sắp xếp), `inquiry.message`, `job_application.cover_letter` (văn bản tự do — ứng viên cho lát sau: cần tìm/hiển thị, ghi ở rủi ro còn lại), IP/UA (đã băm hoặc cần điều tra), `audit_event.before/after` (đã che theo tên khoá). Bản sao lưu: đã mã hoá bằng openssl ở T-045 (`scripts/backup.sh`) — không làm lại ở đây.
 
-Sổ đăng ký cột: `lib/crypto/columns.ts` (`ENCRYPTED_COLUMNS`). COMMENT trong DB: `PII: <loại>; class=<PII|SENSITIVE|SECRET>; enc=<yes|no>` cho **42 cột đã triển khai** của data-map (44 khai báo, 2 còn `planned` — `app_user.totp_secret`, `push_subscription.endpoint` — chưa có cột; migration thêm chúng phải kèm COMMENT, test bắt thiếu). `enc=yes` đúng bằng tập cột bản rõ trong sổ đăng ký (test khớp hai chiều với DB thật). Cột bản mã/chỉ mục mang nhãn `ENC:`/`BIDX:`.
+Sổ đăng ký cột: `lib/crypto/columns.ts` (`ENCRYPTED_COLUMNS`). COMMENT trong DB: `PII: <loại>; class=<PII|SENSITIVE|SECRET>; enc=<yes|no>` cho **44 cột đã triển khai** của data-map (45 khai báo, 1 còn `planned` — `push_subscription.endpoint` — chưa có cột; migration thêm nó phải kèm COMMENT, test bắt thiếu). `app_user.totp_secret` (D-058) chỉ có bản mã `totp_secret_enc`; cột bản rõ bị CHECK buộc luôn NULL. `enc=yes` đúng bằng tập cột bản rõ trong sổ đăng ký (test khớp hai chiều với DB thật). Cột bản mã/chỉ mục mang nhãn `ENC:`/`BIDX:`.
 
 ## 2. Thiết kế
 

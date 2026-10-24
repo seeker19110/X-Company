@@ -199,3 +199,10 @@ body:has(.net-banner:not(:empty)) {
 .error-view {
   padding: 1rem 0;
 }
+/* Khoá thiết lập TOTP (đăng ký lần đầu): chữ đơn cách, xuống dòng giữa các nhóm ở 320 px (UX-RESP-001). */
+.secret {
+  font-family: ui-monospace, monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
+}

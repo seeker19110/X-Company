@@ -380,7 +380,8 @@
       "vaiTroKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_ROLE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "phamViVaMaPhamVi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "phamViKhongThuocCongTy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
-      "khongTimThayQuyenDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
+      "khongTimThayQuyenDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTheThuHoiSysadminCuoi": "Thông báo lỗi nghiệp vụ trả client (AppError LAST_SYSADMIN 409); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
     },
     "cms": {
       "tieuDeKhongDuocTrong": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -440,7 +441,8 @@
       "title503": "Tiêu đề ngắn của phản hồi lỗi HTTP 503 (problem+json).",
       "titleDefault": "Tiêu đề phản hồi lỗi HTTP khi không có tiêu đề riêng cho mã trạng thái.",
       "validation": "Chi tiết phản hồi 400 khi dữ liệu gửi lên không qua kiểm tra schema (danh sách trường lỗi đi kèm).",
-      "internal": "Chi tiết phản hồi 500 cho lỗi chưa lường trước (không lộ nội bộ)."
+      "internal": "Chi tiết phản hồi 500 cho lỗi chưa lường trước (không lộ nội bộ).",
+      "canXacThucHaiBuoc": "Thông báo lỗi trả client (AppError MFA_REQUIRED 401) khi vai trò bắt buộc TOTP mà phiên chưa qua bước hai; nói rõ cần đăng nhập lại."
     },
     "identity": {
       "dangNhapSaiQuaNhieuLan": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -455,7 +457,10 @@
       "matKhauQuaDai": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "matKhauQuaPhoBien": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "matKhauKhongDuocChuaTen": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
-      "passwordTooShort": "Lỗi 422 WEAK_PASSWORD; {min} = độ dài tối thiểu."
+      "passwordTooShort": "Lỗi 422 WEAK_PASSWORD; {min} = độ dài tối thiểu.",
+      "maXacThucKhongDung": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_MFA_CODE 401) khi mã TOTP sai hoặc đã dùng; miền identity. Giữ nguyên ý, ngắn.",
+      "thuThachXacThucKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError MFA_CHALLENGE_INVALID 401) khi thử thách TOTP hết hạn/không tồn tại/đã dùng; một thông điệp chung, nói rõ cần đăng nhập lại.",
+      "nhapSaiMaQuaNhieuLan": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429) khi vượt 10 lần sai mã TOTP / 15 phút; miền identity."
     },
     "inquiry": {
       "banGuiQuaNhieuLanVui": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền inquiry. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -583,7 +588,8 @@
       "missingCheckoutNext": "Việc tiếp theo cho cảnh báo thiếu giờ ra."
     },
     "identity": {
-      "bootstrapReason": "Lý do ghi vào nhật ký kiểm toán khi tạo quản trị viên đầu tiên bằng lệnh vận hành."
+      "bootstrapReason": "Lý do ghi vào nhật ký kiểm toán khi tạo quản trị viên đầu tiên bằng lệnh vận hành.",
+      "mfaResetReason": "Lý do ghi vào nhật ký kiểm toán khi vận hành đặt lại TOTP bằng lệnh mfa:reset."
     },
     "inquiry": {
       "autoRouted": "Ghi chú lịch sử yêu cầu khi hệ thống tự giao người phụ trách theo quy tắc.",
@@ -662,5 +668,22 @@
       "taskUpdated": "Câu thông báo việc liên quan có cập nhật (đổi trạng thái, sửa).",
       "other": "Câu thông báo dự phòng cho chủ đề chưa biết."
     }
+  },
+  "mfa": {
+    "heading": "Tiêu đề bước hai của đăng nhập (nhập mã TOTP).",
+    "intro": "Hướng dẫn ngắn ở bước nhập mã TOTP: lấy mã từ ứng dụng xác thực.",
+    "code": "Nhãn ô nhập mã TOTP 6 chữ số.",
+    "submit": "Nút gửi mã TOTP.",
+    "submitting": "Chữ của nút gửi mã TOTP trong lúc đang kiểm tra.",
+    "back": "Nút bỏ bước mã, quay về bước nhập email/mật khẩu.",
+    "badFormat": "Lỗi theo ô khi mã nhập không đủ 6 chữ số (kiểm ở trình duyệt, chưa gửi).",
+    "wait": "Câu nối sau thông điệp lỗi giới hạn tần suất (429, đăng nhập/mã TOTP); {minutes} = số phút chờ theo Retry-After (làm tròn lên).",
+    "enrollHeading": "Tiêu đề phần đăng ký TOTP lần đầu ở màn đăng nhập.",
+    "enrollIntro": "Giải thích vì sao phải đăng ký và cần cài ứng dụng xác thực nào.",
+    "enrollOpen": "Liên kết otpauth:// mở ứng dụng xác thực trên điện thoại để thêm tài khoản.",
+    "enrollManual": "Dẫn vào khoá thiết lập base32 để nhập tay vào ứng dụng xác thực.",
+    "copy": "Nút chép khoá thiết lập vào bộ nhớ tạm.",
+    "copied": "Thông báo trạng thái sau khi chép khoá thành công.",
+    "enrollDone": "Hướng dẫn bước cuối của đăng ký: nhập mã 6 số để hoàn tất."
   }
 }

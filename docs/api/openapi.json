@@ -242,22 +242,22 @@
       "post": {
         "operationId": "login",
         "tags": ["Xác thực"],
-        "summary": "Đăng nhập, đặt cookie phiên",
-        "description": "Chống login CSRF: `Origin` phải khớp APP_ORIGIN (hoặc `Sec-Fetch-Site: same-origin`). Thành công đặt cookie phiên HttpOnly và trả `csrf_token` cho header `x-csrf-token`.",
+        "summary": "Đăng nhập, đặt cookie phiên (hoặc trả thử thách TOTP)",
+        "description": "Chống login CSRF: `Origin` phải khớp APP_ORIGIN (hoặc `Sec-Fetch-Site: same-origin`). Thành công đặt cookie phiên HttpOnly và trả `csrf_token` cho header `x-csrf-token`. Người có vai trò `sysadmin`/`hr`/`executive` hoặc đã bật TOTP (AUD-SEC-002): KHÔNG cấp phiên, trả `MfaChallengeResult` — đi tiếp POST /api/app/auth/mfa.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
         },
         "responses": {
           "200": {
-            "description": "Đã đăng nhập.",
+            "description": "Đã đăng nhập (cookie phiên) hoặc cần bước TOTP (không cookie).",
             "headers": {
               "Set-Cookie": {
                 "description": "Cookie phiên (HttpOnly, SameSite=Lax).",
                 "schema": { "type": "string" }
               }
             },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResult" } } }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } } }
           },
           "400": { "$ref": "#/components/responses/Problem400" },
           "401": { "$ref": "#/components/responses/Problem401" },
@@ -266,7 +266,8 @@
           "429": { "$ref": "#/components/responses/Problem429" },
           "500": { "$ref": "#/components/responses/Problem500" }
         },
-        "security": []
+        "security": [],
+        "x-breaking-approved": "D-058 (AUD-SEC-002): TOTP bắt buộc cho sysadmin/hr/executive — với các vai trò này 200 trả thử thách thay cho phiên; người dùng khác giữ nguyên LoginResult. Client duy nhất (app/app/login) cập nhật ở T-087."
       }
     },
     "/api/app/auth/logout": {
@@ -291,6 +292,37 @@
           "503": { "$ref": "#/components/responses/Problem503" }
         },
         "security": [{ "cookieAuth": [], "csrfToken": [] }]
+      }
+    },
+    "/api/app/auth/mfa": {
+      "post": {
+        "operationId": "verifyMfa",
+        "tags": ["Xác thực"],
+        "summary": "Bước hai đăng nhập: mã TOTP cho thử thách, đặt cookie phiên",
+        "description": "Cùng Origin như login. Mã 6 số, lệch ±1 bước 30 s; mã đã dùng không dùng lại. Sai → 401 `INVALID_MFA_CODE` (lần sai thứ 5 huỷ thử thách); thử thách hết hạn/không tồn tại/đã dùng → 401 `MFA_CHALLENGE_INVALID`; 10 lần sai / 15 phút / người dùng → 429 kèm `Retry-After`.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MfaRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Đã đăng nhập (phiên đã xác thực hai bước).",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie phiên (HttpOnly, SameSite=Lax).",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResult" } } }
+          },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "401": { "$ref": "#/components/responses/Problem401" },
+          "403": { "$ref": "#/components/responses/Problem403" },
+          "413": { "$ref": "#/components/responses/Problem413" },
+          "429": { "$ref": "#/components/responses/Problem429" },
+          "500": { "$ref": "#/components/responses/Problem500" }
+        },
+        "security": []
       }
     },
     "/api/app/comments": {
@@ -1221,6 +1253,36 @@
         },
         "required": ["user_id", "csrf_token"]
       },
+      "MfaChallengeResult": {
+        "type": "object",
+        "properties": {
+          "mfa": {
+            "type": "string",
+            "enum": ["totp", "totp_enroll"],
+            "description": "`totp`: nhập mã từ ứng dụng xác thực; `totp_enroll`: đăng ký lần đầu (tin lần đầu) rồi nhập mã."
+          },
+          "challenge": {
+            "type": "string",
+            "description": "Token thử thách 256 bit (hạn 5 phút, tối đa 5 lần sai); gửi lại ở POST /api/app/auth/mfa."
+          },
+          "secret": {
+            "type": "string",
+            "description": "Chỉ khi `totp_enroll`: bí mật base32 (RFC 4648, không padding)."
+          },
+          "otpauth_uri": {
+            "type": "string",
+            "description": "Chỉ khi `totp_enroll`: URI otpauth://totp/… cho ứng dụng xác thực."
+          }
+        },
+        "required": ["mfa", "challenge"]
+      },
+      "LoginResponse": {
+        "description": "Đã đăng nhập (`LoginResult`, có cookie) hoặc cần bước TOTP (`MfaChallengeResult`, KHÔNG cookie).",
+        "oneOf": [
+          { "$ref": "#/components/schemas/LoginResult" },
+          { "$ref": "#/components/schemas/MfaChallengeResult" }
+        ]
+      },
       "MeResult": {
         "type": "object",
         "properties": {
@@ -1597,6 +1659,14 @@
           "password": { "type": "string", "minLength": 1, "maxLength": 256 }
         },
         "required": ["email", "password"]
+      },
+      "MfaRequest": {
+        "type": "object",
+        "properties": {
+          "challenge": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "code": { "type": "string", "maxLength": 16 }
+        },
+        "required": ["challenge", "code"]
       },
       "AttendanceEventRequest": {
         "type": "object",

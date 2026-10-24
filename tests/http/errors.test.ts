@@ -9,7 +9,15 @@ import { loginHandler, meHandler } from "../../lib/identity/routes.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { securityEventSchema } from "../../lib/nen/security-event.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import {
+  cookieFrom,
+  PASSWORD,
+  req,
+  seedCompany,
+  seedUser,
+  setTestEnv,
+  loginThrough,
+} from "../helpers/fixtures.ts";
 
 setTestEnv();
 const LEAK = /(Traceback|at .*\.(js|ts|py|java)|SELECT |INSERT |\/home\/|\/var\/|node_modules|postgres:\/\/)/;
@@ -158,9 +166,7 @@ describe("lỗi HTTP theo RFC 9457 (D-017)", () => {
       await authorize(ctx, "org.manage", { companyId: org.companyId });
       return new Response("không bao giờ tới đây");
     });
-    const login = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: u.email, password: PASSWORD } }),
-    );
+    const login = await loginThrough(u.email);
     const cookie = cookieFrom(login);
     const csrf = (await login.json()).csrf_token;
     const { result: res, logs } = await captureLogs(() =>
@@ -189,9 +195,7 @@ describe("thất bại đóng khi backend xác thực lỗi (BASE-ERR-010)", () 
     const org = await seedCompany();
     const u = await seedUser(org.companyId);
     setPool(db.app);
-    const login = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: u.email, password: PASSWORD } }),
-    );
+    const login = await loginThrough(u.email);
     cookie = cookieFrom(login);
   });
   after(async () => {
@@ -290,9 +294,7 @@ describe("audit kèm IP/UA, chuỗi băm vẫn hợp lệ (CMP-AUDIT-002)", () =
       );
       assert.equal(bad.status, 401);
       assert.deepEqual(await lastRow(), { ip: "198.51.100.7", user_agent: "Mozilla/5.0 Test" });
-      const ok = await loginHandler(
-        req("POST", "/api/app/auth/login", { body: { email: u.email, password: PASSWORD }, headers: h }),
-      );
+      const ok = await loginThrough(u.email, PASSWORD, { headers: h });
       assert.equal(ok.status, 200);
       assert.deepEqual(await lastRow(), { ip: "198.51.100.7", user_agent: "Mozilla/5.0 Test" });
       assert.equal((await verifyAuditChain(db.admin)).ok, true);

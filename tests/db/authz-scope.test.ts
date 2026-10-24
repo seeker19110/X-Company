@@ -6,6 +6,7 @@ import { loadActor } from "../../lib/authz/load.ts";
 import { grantRole, revokeGrant } from "../../lib/authz/grants.ts";
 import { createBranch, createCompany, createDepartment, createEmployee } from "../../lib/org/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
+import { disableUser } from "../../lib/identity/auth.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 
 const sys = SYSTEM_ACTOR; // actor hệ thống tường minh (AUD-SEC-005)
@@ -272,5 +273,107 @@ describe("loadActor + grant/revoke trên DB", () => {
 
     await db.admin.query("UPDATE app_user SET disabled_at = now() WHERE id = $1", [user]);
     assert.equal(await loadActor(db.app, user), null);
+  });
+
+  test("AUD-SEC-007: không thu hồi được grant sysadmin hiệu lực cuối cùng của công ty (409, chống đua)", async () => {
+    const c3 = await withTx((tx) => createCompany(tx, sys, { name: "C3" }));
+    const mkUser = (email: string) =>
+      withTx(async (tx) => {
+        const { rows } = await tx.query(
+          "INSERT INTO app_user (email, display_name, company_id) VALUES ($1, 'U', $2) RETURNING id",
+          [email, c3],
+        );
+        return rows[0].id as string;
+      });
+    const a = await mkUser("sec7-a@example.test");
+    const b = await mkUser("sec7-b@example.test");
+    const ga = await withTx((tx) =>
+      grantRole(tx, sys, c3, { userId: a, role: "sysadmin", scopeType: "company" }),
+    );
+    // Grant hết hạn, chưa tới hạn và của tài khoản bị vô hiệu không tính là "còn sysadmin khác".
+    await withTx((tx) =>
+      grantRole(tx, sys, c3, {
+        userId: b,
+        role: "sysadmin",
+        scopeType: "company",
+        validFrom: new Date(Date.now() + 86_400_000),
+      }),
+    );
+    const disabled = await mkUser("sec7-disabled@example.test");
+    await withTx((tx) =>
+      grantRole(tx, sys, c3, { userId: disabled, role: "sysadmin", scopeType: "company" }),
+    );
+    await db.admin.query("UPDATE app_user SET disabled_at = now() WHERE id = $1", [disabled]);
+    const last = (e: unknown) => e instanceof AppError && e.code === "LAST_SYSADMIN" && e.status === 409;
+    await assert.rejects(
+      withTx((tx) => revokeGrant(tx, sys, c3, ga, "thử")),
+      last,
+    );
+    const live = await db.admin.query("SELECT revoked_at FROM role_grant WHERE id = $1", [ga]);
+    assert.equal(live.rows[0].revoked_at, null, "grant còn nguyên khi bị từ chối");
+
+    // Có sysadmin thứ hai đang hiệu lực: hai lần thu hồi SONG SONG hai grant → đúng một thành công, còn lại 409.
+    const gb = await withTx((tx) =>
+      grantRole(tx, sys, c3, { userId: b, role: "sysadmin", scopeType: "company" }),
+    );
+    const both = await Promise.allSettled([
+      withTx((tx) => revokeGrant(tx, sys, c3, ga, "đua")),
+      withTx((tx) => revokeGrant(tx, sys, c3, gb, "đua")),
+    ]);
+    assert.equal(both.filter((x) => x.status === "fulfilled").length, 1);
+    assert.ok(last((both.find((x) => x.status === "rejected") as PromiseRejectedResult).reason));
+    const n = await db.admin.query(
+      `SELECT count(*)::int AS n FROM role_grant
+       WHERE company_id = $1 AND role = 'sysadmin' AND revoked_at IS NULL AND valid_from <= now()`,
+      [c3],
+    );
+    assert.equal(n.rows[0].n, 2, "một sysadmin hiệu lực + grant của tài khoản bị vô hiệu");
+
+    // Grant không phải sysadmin, hoặc sysadmin chưa tới hạn, thu hồi bình thường.
+    const gh = await withTx((tx) => grantRole(tx, sys, c3, { userId: a, role: "hr", scopeType: "company" }));
+    await withTx((tx) => revokeGrant(tx, sys, c3, gh, "xong"));
+  });
+
+  test("AUD-SEC-007/010 (review PR #73): chỉ sysadmin phạm vi công ty được tính; vô hiệu sysadmin cuối → 409", async () => {
+    const c4 = await withTx((tx) => createCompany(tx, sys, { name: "C4" }));
+    const b4 = await withTx((tx) => createBranch(tx, sys, c4, { code: "B4", name: "B4" }));
+    const mk = (email: string) =>
+      withTx(async (tx) => {
+        const { rows } = await tx.query(
+          "INSERT INTO app_user (email, display_name, company_id) VALUES ($1, 'U', $2) RETURNING id",
+          [email, c4],
+        );
+        return rows[0].id as string;
+      });
+    const a = await mk("sec10-a@example.test");
+    const b = await mk("sec10-b@example.test");
+    const ga = await withTx((tx) =>
+      grantRole(tx, sys, c4, { userId: a, role: "sysadmin", scopeType: "company" }),
+    );
+    // Sysadmin phạm vi chi nhánh KHÔNG có access.manage cấp công ty → không tính là "còn người khác".
+    await withTx((tx) =>
+      grantRole(tx, sys, c4, { userId: b, role: "sysadmin", scopeType: "branch", scopeId: b4 }),
+    );
+    const last = (e: unknown) => e instanceof AppError && e.code === "LAST_SYSADMIN" && e.status === 409;
+    await assert.rejects(
+      withTx((tx) => revokeGrant(tx, sys, c4, ga, "thử")),
+      last,
+    );
+    await assert.rejects(
+      withTx((tx) => disableUser(tx, null, a, "nghỉ việc")),
+      last,
+    );
+    const live = await db.admin.query("SELECT disabled_at FROM app_user WHERE id = $1", [a]);
+    assert.equal(live.rows[0].disabled_at, null, "tài khoản còn hoạt động khi bị từ chối");
+    // Có sysadmin công ty thứ hai: vô hiệu được người đầu; khi đó người thứ hai thành người cuối.
+    await withTx((tx) => grantRole(tx, sys, c4, { userId: b, role: "sysadmin", scopeType: "company" }));
+    await withTx((tx) => disableUser(tx, null, a, "nghỉ việc"));
+    await assert.rejects(
+      withTx((tx) => disableUser(tx, null, b, "nghỉ việc")),
+      last,
+    );
+    // Người không phải sysadmin vô hiệu bình thường.
+    const c = await mk("sec10-c@example.test");
+    await withTx((tx) => disableUser(tx, null, c, "nghỉ việc"));
   });
 });

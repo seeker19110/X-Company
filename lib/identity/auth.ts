@@ -1,12 +1,14 @@
 // Đăng nhập / đăng xuất (SPEC-identity-org). Giới hạn lần sai trong 15 phút → 429: 5 / (email, IP); chống dò rải
 // (AUD-SEC-004, D-053): 30 / IP qua mọi email, 50 / email qua mọi IP (ngưỡng email cao để kẻ lạ khó khoá hộ tài khoản).
 import { appendAudit } from "../audit/index.ts";
+import { assertSysadminRemains } from "../authz/grants.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
 import { comparisonKey } from "../nen/text.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { createSession } from "./session.ts";
+import { MFA_REQUIRED_ROLES, prepareChallenge, storeChallenge, type MfaChallengeOut } from "./mfa.ts";
 import { hashPassword, validateNewPassword, verifyPassword } from "./password.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
 import { t } from "../i18n/index.ts";
@@ -20,11 +22,10 @@ export function normalizeEmail(email: string): string {
   return comparisonKey(email); // NFC + trim + lower: một địa chỉ = một khoá, dù gõ tổ hợp hay dựng sẵn
 }
 
-export interface LoginResult {
-  token: string;
-  userId: string;
-  companyId: string;
-}
+/** Đăng nhập xong (cookie phiên) hoặc cần bước TOTP (không cấp phiên — trả thử thách, AUD-SEC-002). */
+export type LoginResult =
+  | { kind: "session"; token: string; userId: string; companyId: string }
+  | ({ kind: "mfa"; userId: string; companyId: string } & MfaChallengeOut);
 
 /**
  * Đăng nhập. Nhận POOL (không nhận tx): lần sai phải được COMMIT trước khi ném lỗi — nếu chạy trong giao dịch của
@@ -96,13 +97,25 @@ export async function login(
       company_id: string;
       password_hash: string | null;
       disabled_at: Date | null;
-    }>("SELECT id, company_id, password_hash, disabled_at FROM app_user WHERE email = $1", [email]);
+      totp_enabled: boolean;
+      mfa_role: boolean;
+    }>(
+      // mfa_role: grant còn hiệu lực lúc $2 thuộc vai trò bắt buộc TOTP (cùng điều kiện hiệu lực với loadActor).
+      `SELECT u.id, u.company_id, u.password_hash, u.disabled_at, (u.totp_enabled_at IS NOT NULL) AS totp_enabled,
+              EXISTS (SELECT 1 FROM role_grant g WHERE g.user_id = u.id AND g.revoked_at IS NULL AND g.valid_from <= $2
+                        AND (g.valid_to IS NULL OR g.valid_to > $2) AND g.role = ANY($3::text[])) AS mfa_role
+         FROM app_user u WHERE u.email = $1`,
+      [email, now, MFA_REQUIRED_ROLES],
+    );
     return { attemptId: attempt.rows[0]!.id, user: u.rows[0] };
   }, pool);
 
   // Bước 2: băm ngoài giao dịch (không giữ kết nối pool).
   const user = pre.user;
   const ok = await verifyPassword(user && !user.disabled_at ? user.password_hash : null, input.password);
+  // Cần TOTP (vai trò bắt buộc hoặc đã bật): chuẩn bị thử thách ngoài giao dịch (mã hoá bí mật đăng ký có thể gọi KMS).
+  const challenge =
+    ok && user && (user.mfa_role || user.totp_enabled) ? await prepareChallenge(user.totp_enabled) : null;
 
   // Bước 3: ghi kết quả.
   const r = await withTx(async (tx) => {
@@ -121,6 +134,21 @@ export async function login(
       return null;
     }
     await tx.query("UPDATE login_attempt SET success = true WHERE id = $1", [pre.attemptId]);
+    if (challenge) {
+      // Mật khẩu đúng nhưng CHƯA cấp phiên: ghi thử thách (băm token) + audit, phiên chỉ cấp ở bước TOTP.
+      const out = await storeChallenge(tx, user.id, email, challenge, now);
+      await appendAudit(tx, {
+        actorUserId: user.id,
+        companyId: user.company_id,
+        action: "auth.mfa_challenge",
+        objectType: "app_user",
+        objectId: user.id,
+        requestId: input.requestId ?? null,
+        sourceIp: input.ip,
+        userAgent: input.userAgent,
+      });
+      return { kind: "mfa" as const, userId: user.id, companyId: user.company_id, ...out };
+    }
     const s = await createSession(tx, user.id, { userAgent: input.userAgent, ip: input.ip }, now);
     await appendAudit(tx, {
       actorUserId: user.id,
@@ -132,16 +160,26 @@ export async function login(
       sourceIp: input.ip,
       userAgent: input.userAgent,
     });
-    return { token: s.token, userId: user.id, companyId: user.company_id };
+    return { kind: "session" as const, token: s.token, userId: user.id, companyId: user.company_id };
   }, pool);
   // Sự kiện bảo mật: không ghi email (chỉ id khi biết tài khoản).
-  logSecurityEvent({
-    ...meta,
-    event: "auth.login",
-    outcome: r ? "success" : "denied",
-    actorId: r ? r.userId : null,
-    target: { type: "app_user", id: user?.id ?? null },
-  });
+  if (r?.kind === "mfa")
+    logSecurityEvent({
+      ...meta,
+      event: "auth.mfa",
+      outcome: "success",
+      actorId: r.userId,
+      target: { type: "app_user", id: r.userId },
+      detail: { step: "challenge", purpose: r.mfa },
+    });
+  else
+    logSecurityEvent({
+      ...meta,
+      event: "auth.login",
+      outcome: r ? "success" : "denied",
+      actorId: r ? r.userId : null,
+      target: { type: "app_user", id: user?.id ?? null },
+    });
   // Cùng một thông điệp cho sai email và sai mật khẩu.
   if (!r) throw new AppError("INVALID_CREDENTIALS", 401, t("err.identity.emailHoacMatKhauKhongDung"));
   return r;
@@ -172,6 +210,9 @@ export async function setPassword(db: Queryable, userId: string, password: strin
 
 /** Vô hiệu tài khoản: có hiệu lực ngay ở request kế tiếp (R8) và xoá phiên. */
 export async function disableUser(db: Queryable, actorUserId: string | null, userId: string, reason: string) {
+  const u = await db.query<{ company_id: string }>("SELECT company_id FROM app_user WHERE id = $1", [userId]);
+  // AUD-SEC-010: không vô hiệu sysadmin hiệu lực cuối của công ty (cùng khoá với thu hồi grant).
+  if (u.rows[0]) await assertSysadminRemains(db, u.rows[0].company_id, { userId });
   const { rows } = await db.query<{ company_id: string }>(
     "UPDATE app_user SET disabled_at = now(), auth_version = auth_version + 1 WHERE id = $1 AND disabled_at IS NULL RETURNING company_id",
     [userId],

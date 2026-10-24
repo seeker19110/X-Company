@@ -135,6 +135,16 @@ pii:
     copies: "sao lưu DB"
     recipients: "không ai"
     status: implemented
+  - table: mfa_challenge
+    column: token_hash
+    class: bi_mat
+    subject: nguoi_dung
+    purpose: "thử thách xác thực hai bước sau bước mật khẩu (lưu băm SHA-256, D-058)"
+    legal_basis: "an ninh hệ thống (pháp chế xác nhận)"
+    retention: "≤ 5 phút: xoá khi dùng, khi sai 5 lần hoặc khi hết hạn (dọn ở lần đăng nhập kế)"
+    copies: "sao lưu DB"
+    recipients: "không ai"
+    status: implemented
   - table: session
     column: ip
     class: thuong
@@ -389,12 +399,12 @@ pii:
     column: totp_secret
     class: bi_mat
     subject: nguoi_dung
-    purpose: "xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org)"
+    purpose: "xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org, D-058)"
     legal_basis: "thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận)"
-    retention: "theo vòng đời tài khoản; chưa chốt — HR/pháp chế"
-    copies: "chưa có"
+    retention: "theo vòng đời tài khoản; xoá khi `npm run -s mfa:reset`; chưa chốt — HR/pháp chế"
+    copies: "chỉ bản mã (app_user.totp_secret_enc; bản tạm mfa_challenge.secret_enc ≤ 5 phút) + sao lưu DB; cột bản rõ luôn NULL (CHECK)"
     recipients: "không ai"
-    status: planned
+    status: implemented
   - table: push_subscription
     column: endpoint
     class: thuong
@@ -483,6 +493,10 @@ reviewed_non_pii:
     column: phone_bidx
     reason: "chỉ mục mù HMAC-SHA256 (không đảo ngược được nếu không có khoá DATA_INDEX_KEY) của job_application.phone (T-048) — dữ liệu cá nhân gốc đã khai ở cột bản rõ tương ứng; cột này không chứa bản rõ"
 linked_tables:
+  - table: mfa_challenge
+    note: "thử thách xác thực hai bước theo người dùng (băm token, bí mật tạm mã hoá; ≤ 5 phút)"
+  - table: mfa_failure
+    note: "lần nhập sai mã TOTP theo người dùng (cửa sổ 15 phút, tự dọn)"
   - table: shift_assignment
     note: "ca làm của nhân viên (employee_id)"
   - table: attendance_event

@@ -5,10 +5,9 @@ import { after, before, describe, test } from "node:test";
 import { postLeave, postOt } from "../../lib/attendance/request-routes.ts";
 import { postComment } from "../../lib/files/routes.ts";
 import { canonicalJson, setRateClockForTest } from "../../lib/http/idempotency.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { postSync } from "../../lib/offline/sync-route.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 interface S {
@@ -17,7 +16,7 @@ interface S {
   userId: string;
 }
 async function login(email: string, userId: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token, userId };
 }
 

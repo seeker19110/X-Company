@@ -22,6 +22,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "check:env": "tsx scripts/check-env.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "mfa:reset": "tsx scripts/mfa-reset.ts",
     "worker": "tsx scripts/worker.ts",
     "retention:run": "tsx scripts/retention.ts",
     "crypto:rotate": "tsx scripts/crypto-rotate.ts",

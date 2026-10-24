@@ -96,6 +96,40 @@ export async function grantRole(
   return id;
 }
 
+/**
+ * Grant sysadmin còn hiệu lực ngay lúc này (cùng điều kiện với `loadActor`) của tài khoản chưa bị vô hiệu, phạm vi
+ * `company` — chỉ grant đó cho `access.manage` (`can(actor, "access.manage", { companyId })` không khớp phạm vi
+ * chi nhánh/phòng ban/dự án; review PR #73).
+ */
+const EFFECTIVE_SYSADMIN = `g.role = 'sysadmin' AND g.scope_type = 'company' AND g.revoked_at IS NULL
+  AND g.valid_from <= now() AND (g.valid_to IS NULL OR g.valid_to > now())
+  AND EXISTS (SELECT 1 FROM app_user u WHERE u.id = g.user_id AND u.disabled_at IS NULL)`;
+
+/**
+ * AUD-SEC-007/010: không để công ty mất người có `access.manage` (chỉ còn đường bootstrap) — khi thu hồi một grant
+ * (`grantId`) hoặc vô hiệu một tài khoản (`userId`). Khoá tư vấn theo công ty tuần tự hoá các thao tác: hai thao tác song
+ * song trên hai sysadmin cuối không thể cùng thấy "còn người kia". Phải gọi trong giao dịch.
+ */
+export async function assertSysadminRemains(
+  tx: Queryable,
+  companyId: string,
+  target: { grantId: string } | { userId: string },
+): Promise<void> {
+  await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('grant-revoke:' || $1, 0))", [companyId]);
+  const byGrant = "grantId" in target;
+  const id = byGrant ? target.grantId : target.userId;
+  const col = byGrant ? "g.id" : "g.user_id";
+  const { rows } = await tx.query<{ is_sysadmin: boolean; others: number }>(
+    // sql-interp-allow: EFFECTIVE_SYSADMIN và `col` là hằng SQL trong tệp này, không chứa đầu vào.
+    `SELECT EXISTS (SELECT 1 FROM role_grant g WHERE g.company_id = $1 AND ${col} = $2 AND ${EFFECTIVE_SYSADMIN}) AS is_sysadmin,
+            (SELECT count(*)::int FROM role_grant g WHERE g.company_id = $1 AND ${col} <> $2 AND ${EFFECTIVE_SYSADMIN}) AS others`,
+    [companyId, id],
+  );
+  const r = rows[0]!;
+  if (r.is_sysadmin && r.others === 0)
+    throw new AppError("LAST_SYSADMIN", 409, t("err.authz.khongTheThuHoiSysadminCuoi"));
+}
+
 export async function revokeGrant(
   tx: Queryable,
   actor: GrantActor,
@@ -104,6 +138,7 @@ export async function revokeGrant(
   reason: string,
 ) {
   requireAccessManage(actor, companyId, { type: "role_grant", id: grantId });
+  await assertSysadminRemains(tx, companyId, { grantId });
   const { rows } = await tx.query<{ user_id: string }>(
     `UPDATE role_grant SET revoked_at = now() WHERE company_id = $1 AND id = $2 AND revoked_at IS NULL RETURNING user_id`,
     [companyId, grantId],

@@ -40,6 +40,15 @@ import * as tokenScript from "../../scripts/check-tokens.mjs";
 // @ts-expect-error -- script .mjs thuần JS
 import * as buildScript from "../../scripts/build-tokens.mjs";
 import manifest from "../../app/manifest.ts";
+import {
+  codeOrNull,
+  groupSecret,
+  isMfaChallenge,
+  MfaStepView,
+  mfaFailure,
+  withWait,
+  type MfaText,
+} from "../../app/app/login/mfa-step.tsx";
 import { THEME_COLOR } from "../../lib/web/theme.ts";
 
 const { check, checkContrast, contrastRatio, hardcodedColors, parseHex } = tokenScript;
@@ -585,5 +594,121 @@ describe("AUD-DOC-002: danh sách thông báo (View thuần)", () => {
     assert.match(m, /1 thông báo chưa đọc/);
     assert.match(m, /href="\/app\/thong-bao\?offset=40"/);
     assert.match(m, /Trang trước/);
+  });
+});
+
+describe("AUD-SEC-002 (T-087): bước mã TOTP ở màn đăng nhập", () => {
+  const text: MfaText = {
+    heading: "H",
+    intro: "Intro",
+    code: "Mã",
+    submit: "Gửi",
+    submitting: "Đang gửi",
+    back: "Quay lại",
+    badFormat: "Sai dạng",
+    wait: "Chờ {minutes} phút.",
+    enrollHeading: "Đăng ký",
+    enrollIntro: "EI",
+    enrollOpen: "Mở app",
+    enrollManual: "Thủ công",
+    copy: "Chép",
+    copied: "Đã chép",
+    enrollDone: "Xong",
+  };
+  const totp = { mfa: "totp", challenge: "c" } as const;
+  const enroll = {
+    mfa: "totp_enroll",
+    challenge: "c",
+    secret: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+    otpauth_uri: "otpauth://totp/X-Company:a%40b?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+  } as const;
+
+  test("nhận diện thử thách; phản hồi phiên thường / rỗng / sai kiểu không phải thử thách", () => {
+    assert.ok(isMfaChallenge(totp));
+    assert.ok(isMfaChallenge(enroll));
+    assert.ok(!isMfaChallenge({ user_id: "u", csrf_token: "x" }));
+    assert.ok(!isMfaChallenge(null));
+    assert.ok(!isMfaChallenge(undefined));
+    assert.ok(!isMfaChallenge({ mfa: "sms", challenge: "c" }));
+    assert.ok(!isMfaChallenge({ mfa: "totp", challenge: 1 }));
+  });
+
+  test("mã: bỏ khoảng trắng, đúng 6 chữ số ASCII; rỗng/null/5-7 số/chữ số Unicode → null", () => {
+    assert.equal(codeOrNull("123456"), "123456");
+    assert.equal(codeOrNull(" 123 456 "), "123456");
+    assert.equal(codeOrNull("012345"), "012345");
+    for (const bad of ["", "12345", "1234567", "12345a", "１２３４５６", "١٢٣٤٥٦"])
+      assert.equal(codeOrNull(bad), null, bad);
+    assert.equal(codeOrNull(null), null);
+  });
+
+  test("khoá chia nhóm 4 ký tự; rỗng → rỗng", () => {
+    assert.equal(groupSecret("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"), "JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP");
+    assert.equal(groupSecret("ABCDEF"), "ABCD EF");
+    assert.equal(groupSecret(""), "");
+  });
+
+  test("429: kèm thời gian chờ (giây → phút làm tròn lên); không Retry-After / 0 → giữ nguyên", () => {
+    assert.equal(withWait("Sai quá nhiều lần.", text.wait, 125), "Sai quá nhiều lần. Chờ 3 phút.");
+    assert.equal(withWait("Sai", text.wait, 1), "Sai. Chờ 1 phút.");
+    assert.equal(withWait("Sai", text.wait), "Sai");
+    assert.equal(withWait("Sai", text.wait, 0), "Sai");
+  });
+
+  test("lỗi bước mã: thử thách hỏng → về bước mật khẩu; mã sai/429/mạng → lỗi theo ô", () => {
+    assert.deepEqual(mfaFailure({ code: "MFA_CHALLENGE_INVALID", error: "Hết hạn" }, "F", text.wait), {
+      kind: "restart",
+      message: "Hết hạn",
+    });
+    assert.deepEqual(mfaFailure({ code: "INVALID_MFA_CODE", error: "Sai mã" }, "F", text.wait), {
+      kind: "field",
+      message: "Sai mã",
+    });
+    assert.deepEqual(
+      mfaFailure({ code: "RATE_LIMITED", error: "Chậm lại", retryAfter: 60 }, "F", text.wait),
+      {
+        kind: "field",
+        message: "Chậm lại. Chờ 1 phút.",
+      },
+    );
+    assert.deepEqual(mfaFailure({}, "F", text.wait), { kind: "field", message: "F" });
+  });
+
+  test("ô mã: inputMode numeric, autocomplete one-time-code, có nhãn; lỗi → aria-invalid + describedby trỏ lỗi", () => {
+    const ok = html(<MfaStepView base="m" text={text} step={totp} error={null} busy={false} />);
+    const input = field(ok, "code");
+    assert.match(input, /inputMode="numeric"/);
+    assert.match(input, /autoComplete="one-time-code"/);
+    assert.match(input, /aria-describedby="m-hint"/);
+    assert.doesNotMatch(input, /aria-invalid/);
+    assert.match(ok, /<label[^>]*for="m-code"[^>]*>Mã/);
+    assert.doesNotMatch(ok, /otpauth:|Đăng ký/); // không phải đăng ký → không lộ khoá
+    const bad = html(<MfaStepView base="m" text={text} step={totp} error="Sai mã" busy={false} />);
+    const badInput = field(bad, "code");
+    assert.match(badInput, /aria-invalid="true"/);
+    assert.match(badInput, /aria-describedby="m-code-err m-hint"/);
+    assert.equal(byId(bad, "m-code-err")?.[1], "Sai mã");
+    assert.match(bad, /<button[^>]*type="button"[^>]*>Quay lại<\/button>/);
+  });
+
+  test("đăng ký lần đầu: khoá nhóm 4 + liên kết otpauth; nút chép chỉ khi có Clipboard API; không ảnh QR ngoài", () => {
+    const m = html(<MfaStepView base="m" text={text} step={enroll} error={null} busy={false} />);
+    assert.match(m, /<code class="secret">JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP<\/code>/);
+    assert.match(m, /<a href="otpauth:\/\/totp\/X-Company:a%40b\?secret=JBSW[^"]*">Mở app<\/a>/);
+    assert.doesNotMatch(m, />Chép</);
+    assert.doesNotMatch(m, /<img/);
+    const withCopy = html(
+      <MfaStepView
+        base="m"
+        text={text}
+        step={enroll}
+        error={null}
+        busy={false}
+        copied
+        onCopy={() => undefined}
+      />,
+    );
+    assert.match(withCopy, /<button[^>]*type="button"[^>]*>Chép<\/button>/);
+    assert.match(withCopy, /role="status"[^>]*>Đã chép/);
   });
 });

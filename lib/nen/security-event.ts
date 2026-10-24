@@ -8,6 +8,8 @@ import { currentLogContext, log, runWithLogContext, type Logger } from "./log.ts
 export const SECURITY_EVENTS = [
   "auth.login",
   "auth.logout",
+  "auth.mfa",
+  "auth.mfa_reset",
   "auth.rate_limited",
   "authz.denied",
   "input.validation_failed",

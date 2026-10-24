@@ -8,13 +8,12 @@ import {
   postLeave,
   postOt,
 } from "../../lib/attendance/request-routes.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { assignEmployment } from "../../lib/org/index.ts";
 import { addMember, createProject, createTask } from "../../lib/work/tasks.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 interface S {
@@ -22,7 +21,7 @@ interface S {
   csrf: string;
 }
 async function login(email: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token };
 }
 const post = (h: (r: Request) => Promise<Response>, s: S, path: string, body: unknown) =>

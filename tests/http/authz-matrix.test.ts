@@ -13,7 +13,6 @@ import { check, discoverAppRoutes } from "../../scripts/check-authz-tests.ts";
 import { AUTHZ_COVERAGE } from "./authz-coverage.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import { withTx } from "../../lib/db/index.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { assignEmployment, createWorksite } from "../../lib/org/index.ts";
 import { addMember, createProject, createTask } from "../../lib/work/tasks.ts";
 import { diskStorage, setStorage } from "../../lib/files/storage.ts";
@@ -22,12 +21,12 @@ import { tmpdir } from "node:os";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import {
   cookieFrom,
-  PASSWORD,
   req,
   seedCompany,
   seedUser,
   setTestEnv,
   TEST_ORIGIN,
+  loginThrough,
 } from "../helpers/fixtures.ts";
 
 setTestEnv();
@@ -40,7 +39,7 @@ interface S {
   csrf: string;
 }
 async function login(email: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   assert.equal(r.status, 200);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token };
 }
@@ -80,7 +79,8 @@ describe("ma trận route app/api/app (tự động từ cây tệp)", () => {
   });
 
   for (const r of routes) {
-    if (r.method === "POST" && r.url === "/api/app/auth/login") continue; // công khai theo thiết kế (auth.test.ts)
+    // Công khai theo thiết kế: đăng nhập (auth.test.ts) và bước TOTP (mfa.test.ts).
+    if (r.method === "POST" && (r.url === "/api/app/auth/login" || r.url === "/api/app/auth/mfa")) continue;
     const concrete = r.url.replace(/\[[^\]]+\]/g, () => randomUUID());
     const write = !["GET", "HEAD", "OPTIONS"].includes(r.method);
 
