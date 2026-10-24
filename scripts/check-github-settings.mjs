@@ -16,9 +16,18 @@ const canon = (v) =>
       : x,
   );
 
-/** Rule theo loại → tham số (null khi rule không có tham số). */
+/** Rule theo loại → tham số (null khi rule không có tham số); danh sách required check xếp theo `context`. */
 function byType(rules) {
-  return Object.fromEntries((rules ?? []).map((r) => [r.type, r.parameters ?? null]));
+  return Object.fromEntries(
+    (rules ?? []).map((r) => {
+      const p = r.parameters ?? null;
+      if (p && Array.isArray(p.required_status_checks)) {
+        const checks = [...p.required_status_checks].sort((a, b) => (a.context < b.context ? -1 : 1));
+        return [r.type, { ...p, required_status_checks: checks }];
+      }
+      return [r.type, p];
+    }),
+  );
 }
 
 /** So ruleset trên GitHub với file: trả danh sách lệch (rỗng = khớp). Hàm thuần. */
@@ -47,18 +56,42 @@ export function strictOrPushMain(file, ciYaml) {
   const rsc = byType(file.rules).required_status_checks;
   if (!rsc) return ["thiếu required_status_checks"];
   if (rsc.strict_required_status_checks_policy) return [];
-  return /^on:\s*\n\s+push:\s*\n\s+branches:\s*\[\s*main\s*\]/m.test(ciYaml)
+  const on = /^on:\s*\n((?:[ \t]+.*\n|\s*\n)*)/m.exec(ciYaml)?.[1] ?? "";
+  return /^[ \t]+push:\s*\n[ \t]+branches:\s*\[\s*main\s*\]/m.test(on)
     ? []
     : ["strict=false mà ci.yml không chạy trên push: branches: [main]"];
 }
 
-function api(repo, path) {
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  const args = ["-sSf", "-H", "Accept: application/vnd.github+json"];
-  if (token) args.push("-H", `Authorization: Bearer ${token}`);
-  return JSON.parse(
-    execFileSync("curl", [...args, `https://api.github.com/repos/${repo}${path}`], { encoding: "utf8" }),
-  );
+/**
+ * GET một đường dẫn REST của repo. Token (nếu có) đi qua stdin của curl (`-K -`), không nằm trong argv: lỗi của
+ * execFileSync in nguyên dòng lệnh, và argv lộ qua `ps`. Lỗi ném lại chỉ gồm đường dẫn + stderr của curl.
+ */
+export function api(
+  repo,
+  path,
+  token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN,
+  run = execFileSync,
+) {
+  const config = token ? `header = "Authorization: Bearer ${token}"\n` : "";
+  let body;
+  try {
+    body = run(
+      "curl",
+      [
+        "-sSf",
+        "-K",
+        "-",
+        "-H",
+        "Accept: application/vnd.github+json",
+        `https://api.github.com/repos/${repo}${path}`,
+      ],
+      { encoding: "utf8", input: config, stdio: ["pipe", "pipe", "pipe"] },
+    );
+  } catch (e) {
+    const stderr = String(e?.stderr ?? "").trim();
+    throw new Error(`GitHub API ${path} lỗi (exit ${e?.status ?? "?"})${stderr ? `: ${stderr}` : ""}`);
+  }
+  return JSON.parse(body);
 }
 
 function main() {

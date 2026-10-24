@@ -16,6 +16,8 @@ describe("diffRuleset", () => {
       ref_name: { exclude: file.conditions.ref_name.exclude, include: file.conditions.ref_name.include },
     };
     live.rules = [...live.rules].reverse();
+    const rsc = live.rules.find((r: { type: string }) => r.type === "required_status_checks");
+    rsc.parameters.required_status_checks = [...rsc.parameters.required_status_checks].reverse();
     assert.deepEqual(GS.diffRuleset(live, file), []);
   });
 
@@ -37,6 +39,32 @@ describe("diffRuleset", () => {
   });
 });
 
+describe("api — token không lọt ra argv/log", () => {
+  test("token đi qua stdin; lỗi curl ném lại không chứa token hay dòng lệnh", () => {
+    const token = "ghp_FAKESECRET123";
+    let seen: { args: string[]; input: string } | undefined;
+    const run = (_cmd: string, args: string[], opts: { input: string }) => {
+      seen = { args, input: opts.input };
+      throw Object.assign(new Error(`Command failed: curl ${args.join(" ")} ${opts.input}`), {
+        status: 22,
+        stderr: "curl: (22) The requested URL returned error: 404",
+      });
+    };
+    assert.throws(
+      () => GS.api("o/r", "/rulesets", token, run),
+      (e: Error) => !e.message.includes(token) && /\/rulesets lỗi \(exit 22\): curl: \(22\)/.test(e.message),
+    );
+    assert.ok(seen !== undefined && !seen.args.join(" ").includes(token) && seen.input.includes(token));
+  });
+  test("không có token → không gửi header Authorization; trả JSON", () => {
+    const run = (_c: string, _a: string[], opts: { input: string }) => {
+      assert.equal(opts.input, "");
+      return '{"enabled":true}';
+    };
+    assert.deepEqual(GS.api("o/r", "/private-vulnerability-reporting", "", run), { enabled: true });
+  });
+});
+
 describe("strictOrPushMain (BASE-GATE-007 cách b)", () => {
   const nonStrict = {
     rules: [{ type: "required_status_checks", parameters: { strict_required_status_checks_policy: false } }],
@@ -47,6 +75,12 @@ describe("strictOrPushMain (BASE-GATE-007 cách b)", () => {
       [],
     );
     assert.equal(GS.strictOrPushMain(nonStrict, "on:\n  pull_request:\n    branches: [main]\n").length, 1);
+    const prFirst = "on:\n  pull_request:\n    branches: [main]\n  push:\n    branches: [main]\n\njobs:\n";
+    assert.deepEqual(GS.strictOrPushMain(nonStrict, prFirst), []);
+    assert.equal(
+      GS.strictOrPushMain(nonStrict, "on:\n  pull_request:\njobs:\n  push:\n    branches: [main]\n").length,
+      1,
+    );
   });
   test("strict=true đủ; thiếu required_status_checks → lỗi; ci.yml thật đạt", () => {
     const strict = {
