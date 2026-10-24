@@ -1,6 +1,7 @@
 // Đăng nhập / đăng xuất (SPEC-identity-org). Giới hạn lần sai trong 15 phút → 429: 5 / (email, IP); chống dò rải
 // (AUD-SEC-004, D-053): 30 / IP qua mọi email, 50 / email qua mọi IP (ngưỡng email cao để kẻ lạ khó khoá hộ tài khoản).
 import { appendAudit } from "../audit/index.ts";
+import { assertSysadminRemains } from "../authz/grants.ts";
 import type pg from "pg";
 import { withTx, type Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";
@@ -209,6 +210,9 @@ export async function setPassword(db: Queryable, userId: string, password: strin
 
 /** Vô hiệu tài khoản: có hiệu lực ngay ở request kế tiếp (R8) và xoá phiên. */
 export async function disableUser(db: Queryable, actorUserId: string | null, userId: string, reason: string) {
+  const u = await db.query<{ company_id: string }>("SELECT company_id FROM app_user WHERE id = $1", [userId]);
+  // AUD-SEC-010: không vô hiệu sysadmin hiệu lực cuối của công ty (cùng khoá với thu hồi grant).
+  if (u.rows[0]) await assertSysadminRemains(db, u.rows[0].company_id, { userId });
   const { rows } = await db.query<{ company_id: string }>(
     "UPDATE app_user SET disabled_at = now(), auth_version = auth_version + 1 WHERE id = $1 AND disabled_at IS NULL RETURNING company_id",
     [userId],
