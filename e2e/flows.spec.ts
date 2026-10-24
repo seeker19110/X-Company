@@ -126,6 +126,15 @@ test.describe("ứng dụng nội bộ", () => {
       await login(page, "nv");
       await page.goto("/app/tasks");
       const item = page.getByRole("listitem").filter({ hasText: "Lắp đặt tủ điện tầng 3" });
+      // AUD-CODE-010: thao tác "thành công" nhưng làm mới không đổi trạng thái (mock 200, server không đổi gì) → cờ focus
+      // được hạ, focus về nút vừa bấm thay vì rơi về <body> và chờ giật ở lần đổi sau.
+      await page.route(
+        "**/api/app/tasks/*/start",
+        (route) => route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+        { times: 1 },
+      );
+      await item.getByRole("button", { name: "Bắt đầu" }).click();
+      await expect(item.getByRole("button", { name: "Bắt đầu" })).toBeFocused();
       // Thao tác thất bại → focus về nút vừa bấm, không rơi về <body> (review PR #50).
       await page.route(
         "**/api/app/tasks/*/start",
