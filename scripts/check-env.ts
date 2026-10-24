@@ -82,24 +82,16 @@ export const RUNTIME_KEYS = new Set(["NODE_ENV", "NEXT_PHASE", "NEXT_RUNTIME"]);
  * Khoá đã có trong mã nhưng `.env.example` chưa có, đang CHỜ NGƯỜI thêm (hook chặn agent đọc/ghi `.env.*` — AUD-CFG-001).
  * Khoá trong đây mà `.env.example` đã có → lỗi, để danh sách tự co về rỗng.
  */
-export const PENDING_EXAMPLE_KEYS = new Set([
-  "RUM_ENABLED",
-  "RETENTION_RUM_DAYS",
-  // phát hiện khi bật kiểm này (2026-10-21): KMS (T-052), pool DB, TRUST_PROXY (AUD-SEC-001) chưa có dòng mẫu
-  "DB_POOL_MAX",
-  "KMS_PROVIDER",
-  "KMS_TRANSIT_ADDR",
-  "KMS_TRANSIT_TOKEN",
-  "KMS_TRANSIT_MOUNT",
-  "KMS_TRANSIT_KEY",
-  "KMS_TIMEOUT_MS",
-  "KMS_RETRIES",
-  "KMS_DEK_TTL_S",
-  "KMS_DEK_MAX_USES",
-  "KMS_MAX_CALLS_PER_MIN",
-  "TRUST_PROXY",
-  // T-068 (AUD-DATA-003): retention toạ độ GPS — chờ người thêm dòng mẫu (D-050)
-  "RETENTION_GEO_DAYS",
+export const PENDING_EXAMPLE_KEYS = new Set<string>([]); // CFG-001: chủ dự án đã thêm đủ khoá mẫu (2026-10-24)
+
+/** Khoá chỉ script shell vận hành đọc (`scripts/backup.sh`, `restore-*.sh`) — có trong `.env.example` nhưng không thuộc module env. */
+export const SCRIPT_KEYS = new Set(["BACKUP_KEEP", "BACKUP_PASSPHRASE"]);
+/**
+ * Khoá cũ còn trong `.env.example` mà mã không còn đọc, đang CHỜ NGƯỜI xoá (agent không ghi được `.env.*`). Đã xoá khỏi mẫu mà
+ * còn trong đây → lỗi, để danh sách tự co về rỗng.
+ */
+export const PENDING_REMOVAL_KEYS = new Set<string>([
+  "DSAR_DAYS", // thay bằng DSAR_DAYS_* (D-029)
 ]);
 
 /** Tên khoá trong tệp dạng `.env` (`KEY=…`, kể cả dòng `# KEY=…` chú thích mẫu). Không trả giá trị. */
@@ -122,6 +114,24 @@ export function findExampleDrift(
   return out;
 }
 
+/** 4) Chiều ngược: khoá trong `.env.example` phải có trong module env hoặc là khoá của script vận hành — khoá cũ bị bỏ quên = lỗi. */
+export function findExampleExtra(
+  specKeys: readonly string[],
+  example: ReadonlySet<string>,
+  scriptKeys: ReadonlySet<string> = SCRIPT_KEYS,
+  pendingRemoval: ReadonlySet<string> = PENDING_REMOVAL_KEYS,
+): string[] {
+  const spec = new Set(specKeys);
+  const out: string[] = [];
+  for (const k of example) {
+    if (spec.has(k) || scriptKeys.has(k) || RUNTIME_KEYS.has(k) || pendingRemoval.has(k)) continue;
+    out.push(`.env.example có ${k} nhưng ${ENV_MODULE} không khai (khoá cũ? xoá khỏi mẫu)`);
+  }
+  for (const k of pendingRemoval)
+    if (!example.has(k)) out.push(`.env.example đã bỏ ${k} — xoá khỏi PENDING_REMOVAL_KEYS`);
+  return out;
+}
+
 function main(): void {
   const root = process.cwd();
   const top = readdirSync(root, { withFileTypes: true })
@@ -130,12 +140,12 @@ function main(): void {
   const dirs = ["lib", "app", "scripts", "e2e", ".github"].filter((d) => readdirSync(root).includes(d));
   // Tệp kiểm này nhắc tên mẫu trong chú thích/biểu thức — không tự quét chính nó.
   const files = [...top, ...collectFiles(root, dirs)].filter((f) => f.path !== "scripts/check-env.ts");
+  const specKeys = [...Object.keys(SERVER_SPEC), ...Object.keys(CLIENT_SPEC)];
+  const example = exampleKeys(readFileSync(path.join(root, ".env.example"), "utf8"));
   const violations = [
     ...findEnvViolations(files),
-    ...findExampleDrift(
-      [...Object.keys(SERVER_SPEC), ...Object.keys(CLIENT_SPEC)],
-      exampleKeys(readFileSync(path.join(root, ".env.example"), "utf8")),
-    ),
+    ...findExampleDrift(specKeys, example),
+    ...findExampleExtra(specKeys, example),
   ];
   if (violations.length > 0) {
     console.error(`check:env — ${violations.length} vi phạm:\n${violations.map((v) => `  ${v}`).join("\n")}`);

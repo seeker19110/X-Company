@@ -3,7 +3,13 @@ import { spawnSync } from "node:child_process";
 import { describe, test } from "node:test";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
-import { collectFiles, exampleKeys, findEnvViolations, findExampleDrift } from "../../scripts/check-env.ts";
+import {
+  collectFiles,
+  exampleKeys,
+  findEnvViolations,
+  findExampleDrift,
+  findExampleExtra,
+} from "../../scripts/check-env.ts";
 import {
   CLIENT_SPEC,
   EnvError,
@@ -487,6 +493,21 @@ describe("khoá env ⊆ .env.example (AUD-CFG-001)", () => {
     assert.deepEqual(findExampleDrift(["RUM_ENABLED"], ex, new Set(["RUM_ENABLED"])), []);
     assert.deepEqual(findExampleDrift(["LOG_LEVEL"], ex, new Set(["LOG_LEVEL"])), [
       ".env.example đã có LOG_LEVEL — xoá khỏi PENDING_EXAMPLE_KEYS",
+    ]);
+  });
+  test("chiều ngược: khoá trong mẫu mà module env không khai → lỗi; khoá script vận hành / runtime bỏ qua", () => {
+    const spec = ["APP_ORIGIN", "DATABASE_URL", "SESSION_SECRET"];
+    assert.deepEqual(findExampleExtra(spec, ex, new Set(), new Set()), [
+      ".env.example có LOG_LEVEL nhưng lib/nen/env.ts không khai (khoá cũ? xoá khỏi mẫu)",
+    ]);
+    assert.deepEqual(findExampleExtra(spec, ex, new Set(["LOG_LEVEL"]), new Set()), []);
+    assert.deepEqual(findExampleExtra([], new Set(["NODE_ENV"]), new Set(), new Set()), []);
+  });
+  test("khoá cũ đang chờ người xoá thì không lỗi; đã bỏ khỏi mẫu mà còn trong danh sách chờ → lỗi để danh sách co lại", () => {
+    const spec = ["APP_ORIGIN", "DATABASE_URL", "SESSION_SECRET"];
+    assert.deepEqual(findExampleExtra(spec, ex, new Set(), new Set(["LOG_LEVEL"])), []);
+    assert.deepEqual(findExampleExtra([...spec, "LOG_LEVEL"], ex, new Set(), new Set(["DSAR_DAYS"])), [
+      ".env.example đã bỏ DSAR_DAYS — xoá khỏi PENDING_REMOVAL_KEYS",
     ]);
   });
 });
