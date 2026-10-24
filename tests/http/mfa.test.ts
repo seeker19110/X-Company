@@ -33,7 +33,7 @@ type LoginBody = {
   csrf_token?: string;
 };
 
-async function passwordStep(email: string): Promise<{ res: Response; body: LoginBody }> {
+async function firstLoginStep(email: string): Promise<{ res: Response; body: LoginBody }> {
   const res = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
   return { res, body: (await res.json()) as LoginBody };
 }
@@ -78,7 +78,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("S-ID-10: HR đã bật TOTP — đúng mật khẩu → không cookie, có challenge; mã đúng → 200 + cookie phiên có mfa_at", async () => {
     const u = await enrolled("hr");
-    const { res, body } = await passwordStep(u.email);
+    const { res, body } = await firstLoginStep(u.email);
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("set-cookie"), null, "chưa qua TOTP thì không cấp phiên");
     assert.equal(res.headers.get("cache-control"), "no-store");
@@ -121,7 +121,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("S-ID-11: 5 mã sai huỷ thử thách (lần 6 → MFA_CHALLENGE_INVALID, kể cả mã đúng); phát lại mã đã dùng → 401", async () => {
     const u = await enrolled("executive");
-    const { body } = await passwordStep(u.email);
+    const { body } = await firstLoginStep(u.email);
     for (let i = 1; i <= 5; i++) {
       const r = await sendCode(body.challenge!, wrongCode(u.secret));
       assert.equal(r.status, 401, `lần ${i}`);
@@ -145,10 +145,10 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
     assert.equal(denied.rows[0].n, 5);
 
     // Phát lại: mã đúng đã dùng một lần, gửi lại cho thử thách mới trong cùng bước → 401.
-    const first = await passwordStep(u.email);
+    const first = await firstLoginStep(u.email);
     const code = await nextTotpCode(u.secret, (await totpStateOf(u.email)).lastStep);
     assert.equal((await sendCode(first.body.challenge!, code)).status, 200);
-    const second = await passwordStep(u.email);
+    const second = await firstLoginStep(u.email);
     const replay = await sendCode(second.body.challenge!, code);
     assert.equal(replay.status, 401);
     assert.equal(await codeOf(replay), "INVALID_MFA_CODE");
@@ -159,7 +159,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("S-ID-12: sysadmin chưa đăng ký — đăng nhập → totp_enroll + bí mật; xác nhận mã đúng → TOTP bật, có phiên", async () => {
     const u = await seedUser(org.companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
-    const { res, body } = await passwordStep(u.email);
+    const { res, body } = await firstLoginStep(u.email);
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("set-cookie"), null);
     assert.equal(body.mfa, "totp_enroll");
@@ -192,7 +192,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
     );
     assert.equal(enroll.rows[0].n, 1);
     // Lần sau: chỉ hỏi mã, không cấp bí mật mới.
-    assert.equal((await passwordStep(u.email)).body.mfa, "totp");
+    assert.equal((await firstLoginStep(u.email)).body.mfa, "totp");
     // CHECK: không ghi được bí mật bản rõ kể cả bằng role owner.
     await assert.rejects(
       db.admin.query("UPDATE app_user SET totp_secret = 'JBSWY3DPEHPK3PXP' WHERE id = $1", [u.userId]),
@@ -212,7 +212,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
         validFrom,
       }),
     );
-    const plain = await passwordStep(u.email);
+    const plain = await firstLoginStep(u.email);
     assert.equal(plain.body.mfa, undefined, "grant chưa hiệu lực → đăng nhập như cũ");
     const cookie = cookieFrom(plain.res);
     assert.equal((await meHandler(req("GET", "/api/app/me", { cookie }))).status, 200);
@@ -230,7 +230,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("người không cần MFA đăng nhập như cũ (cookie ngay, phiên không mfa_at)", async () => {
     const u = await seedUser(org.companyId, { grants: [{ role: "employee", scopeType: "self" }] });
-    const { res, body } = await passwordStep(u.email);
+    const { res, body } = await firstLoginStep(u.email);
     assert.equal(res.status, 200);
     assert.equal(body.mfa, undefined);
     assert.equal(body.user_id, u.userId);
@@ -242,7 +242,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
   test("thử thách hết hạn (> 5 phút) / rác / của người khác → từ chối, không cấp phiên", async () => {
     const a = await enrolled("hr");
     const b = await enrolled("hr");
-    const { body } = await passwordStep(a.email);
+    const { body } = await firstLoginStep(a.email);
     const code = await nextTotpCode(a.secret, (await totpStateOf(a.email)).lastStep);
     await assert.rejects(
       verifyMfa(
@@ -259,7 +259,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
     assert.equal(await codeOf(await sendCode(body.challenge!, code)), "MFA_CHALLENGE_INVALID");
     assert.equal(await codeOf(await sendCode("rac-khong-ton-tai", code)), "MFA_CHALLENGE_INVALID");
     // Thử thách của A + mã của B → mã sai cho A (không phiên của ai cả).
-    const ca = await passwordStep(a.email);
+    const ca = await firstLoginStep(a.email);
     const codeB = await nextTotpCode(b.secret, (await totpStateOf(b.email)).lastStep);
     const cross = await sendCode(ca.body.challenge!, codeB);
     if (codeB !== (await nextTotpCode(a.secret, (await totpStateOf(a.email)).lastStep))) {
@@ -274,11 +274,11 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
   test("10 lần sai / 15 phút theo người dùng (qua nhiều thử thách) → 429 + Retry-After, kể cả mã đúng; hết cửa sổ thì qua", async () => {
     const u = await enrolled("sysadmin");
     for (let round = 0; round < 2; round++) {
-      const { body } = await passwordStep(u.email);
+      const { body } = await firstLoginStep(u.email);
       for (let i = 0; i < 5; i++)
         assert.equal((await sendCode(body.challenge!, wrongCode(u.secret))).status, 401);
     }
-    const { body } = await passwordStep(u.email);
+    const { body } = await firstLoginStep(u.email);
     assert.ok(body.challenge, "giới hạn TOTP không chặn bước mật khẩu");
     const code = await nextTotpCode(u.secret, (await totpStateOf(u.email)).lastStep);
     const limited = await sendCode(body.challenge!, code);
@@ -298,7 +298,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("khác Origin / thiếu Origin → 403 CSRF (không đếm lần sai, thử thách còn dùng được)", async () => {
     const u = await enrolled("hr");
-    const { body } = await passwordStep(u.email);
+    const { body } = await firstLoginStep(u.email);
     const code = await nextTotpCode(u.secret, (await totpStateOf(u.email)).lastStep);
     const evil = await sendCode(body.challenge!, code, { origin: "https://evil.example" });
     assert.equal(evil.status, 403);
@@ -313,8 +313,8 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("đăng ký lần hai không ghi đè bí mật đã bật", async () => {
     const u = await seedUser(org.companyId, { grants: [{ role: "executive", scopeType: "company" }] });
-    const c1 = (await passwordStep(u.email)).body;
-    const c2 = (await passwordStep(u.email)).body;
+    const c1 = (await firstLoginStep(u.email)).body;
+    const c2 = (await firstLoginStep(u.email)).body;
     assert.equal(c1.mfa, "totp_enroll");
     assert.equal(c2.mfa, "totp_enroll");
     assert.notEqual(c1.secret, c2.secret);
@@ -327,8 +327,8 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
 
   test("song song: cùng mã đúng gửi 2 thử thách cùng lúc → đúng một phiên (chống phát lại dưới tranh chấp)", async () => {
     const u = await enrolled("hr");
-    const a = (await passwordStep(u.email)).body;
-    const b = (await passwordStep(u.email)).body;
+    const a = (await firstLoginStep(u.email)).body;
+    const b = (await firstLoginStep(u.email)).body;
     const code = await nextTotpCode(u.secret, (await totpStateOf(u.email)).lastStep);
     const rs = await Promise.all([
       sendCode(a.challenge!, code),
@@ -352,7 +352,7 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
     let code = "";
     let wrong = "";
     try {
-      const { body } = await passwordStep(u.email);
+      const { body } = await firstLoginStep(u.email);
       secret = body.secret!;
       wrong = wrongCode(secret);
       await sendCode(body.challenge!, wrong);
@@ -419,6 +419,6 @@ describe("TOTP hai bước (AUD-SEC-002)", () => {
     assert.equal(a.rows.length, 1);
     assert.equal(a.rows[0].actor_user_id, null);
     assert.match(String(a.rows[0].reason), /\S/);
-    assert.equal((await passwordStep(u.email)).body.mfa, "totp_enroll");
+    assert.equal((await firstLoginStep(u.email)).body.mfa, "totp_enroll");
   });
 });
