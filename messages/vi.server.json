@@ -190,7 +190,8 @@
       "vaiTroKhongHopLe": "Vai trò không hợp lệ",
       "phamViVaMaPhamVi": "Phạm vi và mã phạm vi không khớp",
       "phamViKhongThuocCongTy": "Phạm vi không thuộc công ty",
-      "khongTimThayQuyenDangHieu": "Không tìm thấy quyền đang hiệu lực"
+      "khongTimThayQuyenDangHieu": "Không tìm thấy quyền đang hiệu lực",
+      "khongTheThuHoiSysadminCuoi": "Không thể thu hồi quyền quản trị hệ thống cuối cùng của công ty — cấp cho người khác trước"
     },
     "cms": {
       "tieuDeKhongDuocTrong": "Tiêu đề không được trống",

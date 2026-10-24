@@ -380,7 +380,8 @@
       "vaiTroKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_ROLE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "phamViVaMaPhamVi": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "phamViKhongThuocCongTy": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_SCOPE 422); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
-      "khongTimThayQuyenDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
+      "khongTimThayQuyenDangHieu": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "khongTheThuHoiSysadminCuoi": "Thông báo lỗi nghiệp vụ trả client (AppError LAST_SYSADMIN 409); miền authz. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có."
     },
     "cms": {
       "tieuDeKhongDuocTrong": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",

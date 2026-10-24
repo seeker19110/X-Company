@@ -96,6 +96,29 @@ export async function grantRole(
   return id;
 }
 
+/** Grant sysadmin còn hiệu lực ngay lúc này (cùng điều kiện với `loadActor`) của tài khoản chưa bị vô hiệu. */
+const EFFECTIVE_SYSADMIN = `g.role = 'sysadmin' AND g.revoked_at IS NULL AND g.valid_from <= now()
+  AND (g.valid_to IS NULL OR g.valid_to > now())
+  AND EXISTS (SELECT 1 FROM app_user u WHERE u.id = g.user_id AND u.disabled_at IS NULL)`;
+
+/**
+ * AUD-SEC-007: không thu hồi grant sysadmin hiệu lực cuối cùng của công ty (mất người có `access.manage`, chỉ còn
+ * đường bootstrap). Khoá tư vấn theo công ty tuần tự hoá các lần thu hồi: hai lần thu hồi song song hai sysadmin cuối
+ * không thể cùng thấy "còn người kia".
+ */
+async function assertNotLastSysadmin(tx: Queryable, companyId: string, grantId: string): Promise<void> {
+  await tx.query("SELECT pg_advisory_xact_lock(hashtextextended('grant-revoke:' || $1, 0))", [companyId]);
+  const { rows } = await tx.query<{ is_sysadmin: boolean; others: number }>(
+    // sql-interp-allow: EFFECTIVE_SYSADMIN là hằng SQL trong tệp này, không chứa đầu vào.
+    `SELECT EXISTS (SELECT 1 FROM role_grant g WHERE g.company_id = $1 AND g.id = $2 AND ${EFFECTIVE_SYSADMIN}) AS is_sysadmin,
+            (SELECT count(*)::int FROM role_grant g WHERE g.company_id = $1 AND g.id <> $2 AND ${EFFECTIVE_SYSADMIN}) AS others`,
+    [companyId, grantId],
+  );
+  const r = rows[0]!;
+  if (r.is_sysadmin && r.others === 0)
+    throw new AppError("LAST_SYSADMIN", 409, t("err.authz.khongTheThuHoiSysadminCuoi"));
+}
+
 export async function revokeGrant(
   tx: Queryable,
   actor: GrantActor,
@@ -104,6 +127,7 @@ export async function revokeGrant(
   reason: string,
 ) {
   requireAccessManage(actor, companyId, { type: "role_grant", id: grantId });
+  await assertNotLastSysadmin(tx, companyId, grantId);
   const { rows } = await tx.query<{ user_id: string }>(
     `UPDATE role_grant SET revoked_at = now() WHERE company_id = $1 AND id = $2 AND revoked_at IS NULL RETURNING user_id`,
     [companyId, grantId],
