@@ -310,6 +310,10 @@
       "endAfterStart": "Lỗi khi giờ kết thúc không sau giờ bắt đầu.",
       "date": "Lỗi khi ngày của đơn làm thêm không hợp lệ.",
       "otConsent": "Lỗi khi chưa tích đồng ý làm thêm giờ."
+    },
+    "application": {
+      "email": "Lỗi ô email của form ứng tuyển khi trống hoặc sai định dạng.",
+      "coverLetter": "Lỗi ô thư giới thiệu của form ứng tuyển khi dài quá 8000 ký tự."
     }
   },
   "err": {
@@ -619,5 +623,18 @@
     "title": "Tiêu đề trang 404 khi đường dẫn không tồn tại.",
     "body": "Câu giải thích dưới tiêu đề trang 404.",
     "home": "Liên kết từ trang 404 về trang chủ website."
+  },
+  "apply": {
+    "heading": "Tiêu đề form ứng tuyển ở trang một tin tuyển dụng.",
+    "headingGeneral": "Tiêu đề form ứng tuyển chung ở cuối trang mục tuyển dụng (không gắn vị trí).",
+    "name": "Nhãn ô họ tên ứng viên; bắt buộc.",
+    "email": "Nhãn ô email ứng viên; bắt buộc.",
+    "phone": "Nhãn ô điện thoại ứng viên; không bắt buộc.",
+    "coverLetter": "Nhãn ô thư giới thiệu; không bắt buộc.",
+    "consent": "Đầu câu đồng ý xử lý hồ sơ ứng tuyển; kết thúc bằng khoảng trắng vì kế tiếp là liên kết chính sách dữ liệu.",
+    "talentPool": "Nhãn hộp kiểm đồng ý RIÊNG lưu hồ sơ vào kho nhân tài; không bắt buộc, không tích sẵn.",
+    "submit": "Nút gửi hồ sơ ứng tuyển.",
+    "thanksPrefix": "Phần đầu lời cảm ơn sau khi nộp hồ sơ; theo sau là mã hồ sơ UV-… in đậm.",
+    "thanksSuffix": "Phần cuối lời cảm ơn sau khi nộp hồ sơ ứng tuyển."
   }
 }

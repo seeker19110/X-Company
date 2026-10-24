@@ -91,6 +91,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     );
     await pub("about", "", "Giới thiệu X-Company", "Thành lập năm 2010.");
     await pub("service", "tu-van-thiet-ke", "Tư vấn thiết kế", "Khảo sát, thiết kế, dự toán.");
+    await pub("job", "ky-su-co-dien", "Kỹ sư cơ điện", "Thiết kế và giám sát thi công hệ thống cơ điện.");
     await pub("page", "chinh-sach-du-lieu", "Chính sách dữ liệu cá nhân", "Mục đích, căn cứ, thời hạn lưu.");
     await createPage(
       tx,

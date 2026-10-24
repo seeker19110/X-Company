@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { resolvePath, sectionPages } from "@/app/components/site-data";
 import { pathFor, type PageType } from "@/lib/cms";
+import { ApplicationForm } from "@/app/components/application-form";
 import { ContactForm } from "@/app/components/contact-form";
 import { t } from "@/lib/i18n";
 
@@ -61,6 +62,7 @@ export default async function CmsPage({ params }: Props) {
             ))}
           </ul>
         )}
+        {section.type === "job" && <ApplicationForm jobSlug={null} />}
       </>
     );
   }
@@ -80,6 +82,7 @@ export default async function CmsPage({ params }: Props) {
       ) : (
         <h1>{t("contact.title")}</h1>
       )}
+      {r.kind === "page" && r.page.type === "job" && <ApplicationForm jobSlug={r.page.slug} />}
       {isContact && <ContactForm />}
     </>
   );

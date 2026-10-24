@@ -12,6 +12,7 @@ import {
   reasonError,
   resolveConfirm,
 } from "../../app/components/confirm-dialog.tsx";
+import { ApplicationFormView, applicationResult } from "../../app/components/application-form.tsx";
 import { ContactFormView, contactResult } from "../../app/components/contact-form.tsx";
 import { ErrorView } from "../../app/components/error-view.tsx";
 import { ERROR_VIEW_TEXT, syncErrorMessage } from "../../app/components/messages.ts";
@@ -23,8 +24,11 @@ import {
   OtFormInput,
   OtInput,
 } from "../../lib/attendance/request-schema.pure.ts";
-import { InquiryInput } from "../../lib/inquiry/index.ts";
-import { InquiryInput as SharedInquiryInput } from "../../lib/inquiry/schema.pure.ts";
+import { ApplicationInput, InquiryInput } from "../../lib/inquiry/index.ts";
+import {
+  ApplicationInput as SharedApplicationInput,
+  InquiryInput as SharedInquiryInput,
+} from "../../lib/inquiry/schema.pure.ts";
 // @ts-expect-error -- script .mjs thuần JS, không có khai báo kiểu
 import * as tokenScript from "../../scripts/check-tokens.mjs";
 // @ts-expect-error -- script .mjs thuần JS
@@ -428,5 +432,91 @@ describe("UX-DS-001..003, UX-A11Y-002: token màu + tương phản", () => {
         "#ffffff",
       ) >= 3,
     );
+  });
+});
+
+describe("F-003: form ứng tuyển (ApplicationFormView + schema dùng chung)", () => {
+  const ok = {
+    submission_id: "6f1c2a3e-0000-4000-8000-000000000001",
+    name: "Ứng viên A",
+    email: "uv@example.test",
+    consent: true,
+  };
+
+  test("render đủ ô; email + đồng ý bắt buộc; kho nhân tài là ô riêng, KHÔNG tích sẵn, không bắt buộc", () => {
+    const m = html(<ApplicationFormView base="a" jobSlug="ky-su-dien" state={{ kind: "idle" }} />);
+    for (const n of ["name", "email", "phone", "cover_letter", "website", "consent", "talent_pool"])
+      assert.notEqual(field(m, n), "", n);
+    assert.match(field(m, "email"), /required/);
+    assert.match(field(m, "consent"), /required/);
+    const pool = field(m, "talent_pool");
+    assert.ok(!/checked/.test(pool) && !/required/.test(pool), pool);
+    assert.ok(!/checked/.test(field(m, "consent")));
+    assert.match(m, /href="\/chinh-sach-du-lieu"/);
+    assert.match(m, /<h2>Ứng tuyển<\/h2>/);
+    assert.match(
+      html(<ApplicationFormView base="a" jobSlug={null} state={{ kind: "idle" }} />),
+      /Ứng tuyển chung/,
+    );
+  });
+
+  test("lỗi theo ô có aria-invalid + aria-describedby; ô khác không bị đánh dấu", () => {
+    const parsed = ApplicationInput.safeParse({ ...ok, email: null, consent: false, name: "  " });
+    assert.ok(!parsed.success);
+    const { fields } = toFieldErrors(parsed.error.issues);
+    assert.deepEqual(Object.keys(fields).sort(), ["consent", "email", "name"]);
+    assert.equal(fields.email, "Vui lòng nhập email hợp lệ");
+    const m = html(
+      <ApplicationFormView base="a" jobSlug={null} state={{ kind: "error", message: "Sai", fields }} />,
+    );
+    for (const [name, msg] of Object.entries(fields)) {
+      assert.match(field(m, name), /aria-invalid="true"/, name);
+      assert.match(field(m, name), new RegExp(`aria-describedby="a-${name}-err"`), name);
+      assert.equal(byId(m, `a-${name}-err`)?.[1], msg);
+    }
+    assert.match(m, /<p id="a-form-error" role="alert"/);
+    assert.ok(!/aria-invalid/.test(field(m, "phone")));
+  });
+
+  test("xong: role=status hiện mã UV-; đang gửi khoá nút", () => {
+    const done = html(
+      <ApplicationFormView base="a" jobSlug={null} state={{ kind: "done", code: "UV-20261024-0001" }} />,
+    );
+    assert.match(done, /<p role="status">[^]*<strong>UV-20261024-0001<\/strong>/);
+    const sending = html(<ApplicationFormView base="a" jobSlug={null} state={{ kind: "sending" }} />);
+    assert.match(sending, /disabled="" aria-busy="true">Đang gửi…<\/button>/);
+  });
+
+  test("schema: talent_pool vắng → false; cover_letter 8000 qua, 8001 lỗi; phone/cover_letter null được; consent=false bị từ chối", () => {
+    assert.equal(ApplicationInput.parse(ok).talent_pool, false);
+    assert.equal(ApplicationInput.parse({ ...ok, talent_pool: true }).talent_pool, true);
+    assert.ok(ApplicationInput.safeParse({ ...ok, cover_letter: "x".repeat(8000), phone: null }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, cover_letter: "x".repeat(8001) }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, consent: false }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, email: "" }).success);
+    assert.ok(!ApplicationInput.safeParse({ ...ok, job_slug: "Sai Slug" }).success);
+    assert.ok(ApplicationInput.safeParse({ ...ok, job_slug: null }).success);
+    assert.strictEqual(ApplicationInput, SharedApplicationInput);
+  });
+
+  test("phản hồi: JSON mã UV → done; HTML 502 → lỗi máy chủ; fields API gắn vào ô", () => {
+    assert.deepEqual(applicationResult(201, JSON.stringify({ code: "UV-1" })), {
+      kind: "done",
+      code: "UV-1",
+    });
+    const bad = applicationResult(502, "<html>");
+    assert.ok(bad.kind === "error" && /502/.test(bad.message));
+    assert.equal(applicationResult(200, "<html>").kind, "error");
+    const v = applicationResult(
+      400,
+      JSON.stringify({
+        error: { message: "Sai" },
+        fields: [
+          { path: "email", message: "E" },
+          { path: "job_slug", message: "J" },
+        ],
+      }),
+    );
+    assert.ok(v.kind === "error" && v.fields.email === "E" && !("job_slug" in v.fields));
   });
 });

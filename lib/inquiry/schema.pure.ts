@@ -28,3 +28,20 @@ export const InquiryInput = z
     }),
   );
 export type InquiryInputT = z.infer<typeof InquiryInput>;
+
+// Hồ sơ ứng tuyển (F-003): cùng một nguồn cho app/components/application-form.tsx và POST /api/public/applications.
+export const ApplicationInput = z.object({
+  submission_id: z.uuid(),
+  job_slug: z.nullish(z.string().check(z.regex(/^[a-z0-9-]{1,80}$/))),
+  name: z.string().check(z.trim(), z.minLength(1, t("validation.inquiry.name")), z.maxLength(120)),
+  // Email bắt buộc (khác form liên hệ); mọi lỗi của ô (thiếu/sai kiểu/sai dạng) cùng một thông điệp.
+  email: z.email({ error: t("validation.application.email") }).check(z.maxLength(254)),
+  phone: z.nullish(z.string().check(z.trim(), z.regex(phoneRe, t("validation.inquiry.phoneInvalid")))),
+  cover_letter: z.nullish(z.string().check(z.maxLength(8000, t("validation.application.coverLetter")))),
+  consent: z.literal(true, { error: t("validation.inquiry.consent") }),
+  // Đồng ý RIÊNG "kho nhân tài" (D-030): không bắt buộc, mặc định false — không tích sẵn, không gộp với `consent`.
+  talent_pool: z._default(z.optional(z.boolean()), false),
+  website: z._default(z.optional(z.string().check(z.maxLength(200))), ""),
+  elapsed_ms: z.optional(z.number().check(z.int(), z.nonnegative())),
+});
+export type ApplicationInputT = z.infer<typeof ApplicationInput>;

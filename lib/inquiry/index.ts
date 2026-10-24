@@ -2,7 +2,6 @@
 // Chống spam nhiều lớp: honeypot (giả thành công, không lưu), điền quá nhanh (đánh dấu), giới hạn theo IP đã băm.
 import { createHmac, randomInt, randomUUID } from "node:crypto";
 import type pg from "pg";
-import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
 import { sealTextAsync, textColumn } from "../crypto/columns.ts";
 import { withTx, type Queryable } from "../db/index.ts";
@@ -11,7 +10,7 @@ import { sessionSecret } from "../nen/config.ts";
 import { addBusinessDays, BUSINESS_TZ, localDate } from "../nen/time.ts";
 import { enqueue } from "../outbox/index.ts";
 import { minutesToMs, msToSeconds } from "../nen/units.ts";
-import { InquiryInput, phoneRe, type InquiryInputT } from "./schema.pure.ts";
+import { ApplicationInput, InquiryInput, type ApplicationInputT, type InquiryInputT } from "./schema.pure.ts";
 import {
   CHANNEL_WEB_FORM,
   isProcessingBlocked,
@@ -24,24 +23,7 @@ export const CONSENT_NOTICE_VERSION = "2026-10-18";
 export const RATE_LIMIT = { max: 5, windowMs: minutesToMs(10) };
 export const MIN_FILL_MS = 3000;
 
-export { InquiryInput, type InquiryInputT };
-
-export const ApplicationInput = z.object({
-  submission_id: z.uuid(),
-  job_slug: z
-    .string()
-    .regex(/^[a-z0-9-]{1,80}$/)
-    .nullish(),
-  name: z.string().trim().min(1).max(120),
-  email: z.email().max(254),
-  phone: z.string().trim().regex(phoneRe).nullish(),
-  cover_letter: z.string().max(8000).nullish(),
-  consent: z.literal(true, { error: t("validation.inquiry.consent") }),
-  // Đồng ý RIÊNG "kho nhân tài" (D-030): không bắt buộc, mặc định false — không tích sẵn, không gộp với `consent`.
-  talent_pool: z.boolean().optional().default(false),
-  website: z.string().max(200).optional().default(""),
-  elapsed_ms: z.number().int().nonnegative().optional(),
-});
+export { ApplicationInput, InquiryInput, type ApplicationInputT, type InquiryInputT };
 
 export function hashIp(ip: string): string {
   return createHmac("sha256", sessionSecret()).update(`ip:${ip}`).digest("hex").slice(0, 32);
@@ -225,7 +207,7 @@ async function insertInquiry(
 export async function submitApplication(
   pool: pg.Pool,
   companyId: string,
-  input: z.infer<typeof ApplicationInput>,
+  input: ApplicationInputT,
   meta: { ip: string; requestId?: string | null },
   now: Date = new Date(),
 ): Promise<SubmitResult> {
@@ -243,7 +225,7 @@ export async function submitApplication(
 
 async function insertApplication(
   companyId: string,
-  input: z.infer<typeof ApplicationInput>,
+  input: ApplicationInputT,
   meta: { ip: string; requestId?: string | null },
   now: Date,
 ): Promise<SubmitResult> {
