@@ -27,8 +27,10 @@ status: faithful-fixture — bộ đánh giá cục bộ (lib/ops/alerts.ts) và
 | XCLocalOffsiteDrillStale | ticket | không diễn tập khôi phục off-site: đồng hồ giả chạy qua 31 ngày (3 ngày/tick); hết khi diễn tập lại | 11 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalPeriodCloseOverdue | ticket | kỳ công kết thúc 30 ngày trước vẫn ở trạng thái open | 1 | 1 | có | có | có | có | có | ĐẠT |
 | XCLocalAuditChainBroken | page | sửa trái phép một bản ghi audit (tắt trigger) rồi khôi phục | 1 | 1 | có | có | có | có | có | ĐẠT |
+| XCLocalXidWraparound | page | ngưỡng tạm = tuổi XID hiện tại + 500 rồi tiêu thụ 1.000 XID thật (pg_current_xact_id); hết khi ngưỡng về 1,5 tỷ (thay cho VACUUM FREEZE — không đẩy được tuổi thật tới 1,5 tỷ) | 1 | 1 | có | có | có | có | có | ĐẠT |
+| XCLocalDeadTuplesHigh | ticket | bảng thật 30.000 hàng (tắt autovacuum riêng bảng) bị DELETE 15.000 → 50% hàng chết; giữ 1 giờ (20 phút/tick); hết khi VACUUM | 4 | 1 | có | có | có | có | có | ĐẠT |
 
-"Bắn ở tick" / "Hết ở tick" = số tick (mỗi tick 5 phút giả, riêng `XCLocalAuditChainBroken` 62 phút giả) kể từ lúc gây/dọn sự cố tới khi luật gửi `firing`/`resolved`.
+Hai dòng cuối (DB-PERF-008, T-098) chạy lại ngày 2026-10-24 (UTC) cùng lệnh, 16/16 ĐẠT. "Bắn ở tick" / "Hết ở tick" = số tick (mỗi tick 5 phút giả, riêng `XCLocalAuditChainBroken` 62 phút giả, `XCLocalDeadTuplesHigh` 20 phút giả) kể từ lúc gây/dọn sự cố tới khi luật gửi `firing`/`resolved`.
 
 ## Rule Prometheus (`ops/prometheus/alerts.yml`) — 2026-10-19 (UTC), máy phát triển (T-054)
 
@@ -50,5 +52,6 @@ End-to-end cũng kiểm: 7 rule thật nạp vào Prometheus với health=ok và
 ## Chưa thử / giới hạn
 - 7 rule Prometheus được thử bằng `promtool test rules` (đồng hồ giả) và đường ống thật bằng rule diễn tập; chưa có lần bắn rule SLO thật trên lưu lượng thật theo thời gian thật (cửa sổ 1–6 giờ), chưa có Prometheus/Alertmanager production.
 - Kênh trực có người (trang/SMS/chat) chưa có: kênh đã thử là tệp, log và webhook tới máy chủ giả cục bộ. Webhook thật (Slack/Teams/PagerDuty…) chưa thử.
+- `XCLocalXidWraparound`: tín hiệu (tuổi XID thật, tăng thật khi tiêu thụ XID) và đường gửi được thử, nhưng ngưỡng 1,5 tỷ thì không — bài thử hạ ngưỡng tạm vì không thể tiêu thụ 1,5 tỷ XID; "hết" là khôi phục ngưỡng, không phải VACUUM FREEZE thật.
 - Trạng thái luật nằm trong bộ nhớ worker: khởi động lại worker thì một cảnh báo đang bắn được gửi lại một lần.
 - BASE-ERR-011 (thu thập lỗi ERROR/FATAL qua Sentry/GlitchTip/OTel Collector) chưa đạt: chưa có bộ thu lỗi thật.

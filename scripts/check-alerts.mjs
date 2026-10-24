@@ -121,6 +121,8 @@ const LOCAL_SIGNALS = new Set([
   "offsite_drill_age_seconds",
   "period_close_overdue",
   "audit_chain_broken",
+  "xid_age_max",
+  "dead_tuples_ratio_max",
 ]);
 
 /** Neo kiểu GitHub của một tiêu đề markdown. */

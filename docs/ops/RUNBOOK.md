@@ -231,6 +231,8 @@ Bộ đánh giá `lib/ops/alerts.ts` chạy trong tiến trình worker khi `ALER
 | `XCLocalOffsiteDrillStale` | ticket | chưa diễn tập khôi phục từ kho off-site > 31 ngày | `npm run -s backup:offsite:drill` (mục "Sao lưu off-site (restic)") |
 | `XCLocalPeriodCloseOverdue` | ticket | có kỳ công kết thúc > 7 ngày chưa khoá | mục "Khoá kỳ công quá hạn" bên dưới |
 | `XCLocalAuditChainBroken` | page | chuỗi audit không hợp lệ | mục "Chuỗi audit hỏng" bên dưới |
+| `XCLocalXidWraparound` | page | tuổi XID (`age(datfrozenxid)`) của một database > 1,5 tỷ — tới gần giới hạn 2^31 | mục "Tuổi XID (wraparound)" bên dưới |
+| `XCLocalDeadTuplesHigh` | ticket | một bảng ≥ 10.000 hàng sống có > 20% hàng chết quá 1 giờ | mục "Hàng chết (dead tuples) / phình bảng" bên dưới |
 
 #### DSAR quá hạn
 Liệt kê: `psql "$DATABASE_URL" -c "select id, kind, status, received_at, due_at, respond_due_at, responded_at from data_subject_request where (status in ('received','in_progress') and due_at < now()) or (responded_at is null and respond_due_at < now()) order by due_at"` (quá hạn thực hiện HOẶC quá hạn phản hồi "đã nhận" 2 ngày làm việc — D-029). Xử lý qua API `/api/app/privacy/requests/[id]/[action]` (`respond`, `extend` một lần kèm lý do khi chưa quá hạn, `complete`, `reject`; chưa có màn hình quản trị); không tự sửa `due_at`. Quá hạn pháp lý → báo DPO/chủ dự án và ghi vào timeline sự cố.
@@ -240,6 +242,19 @@ Liệt kê: `psql "$DATABASE_URL" -c "select code, status, end_date from attenda
 
 #### Chuỗi audit hỏng
 `npm run audit:verify` (exit 1 và in id hàng đầu tiên sai). Coi là sự cố bảo mật SEV1: **bảo toàn chứng cứ trước** (sao lưu ngay `npm run -s backup`, giữ nguyên DB), rồi theo [INCIDENT-RESPONSE.md](INCIDENT-RESPONSE.md) nhánh sự cố bảo mật. So với bản sao lưu cũ bằng `npm run -s backup:drill -- --file <manifest>` để biết hàng nào đổi.
+
+#### Tuổi XID (wraparound)
+Nghĩa: PostgreSQL đánh số giao dịch 32 bit; hàng chưa được đóng băng (freeze) quá ~2^31 giao dịch sẽ "biến mất". PostgreSQL cảnh báo trong log khi còn 40 triệu XID và **từ chối cấp XID mới (mọi lệnh ghi lỗi)** khi còn 3 triệu (tài liệu PostgreSQL §24.1.5). Bình thường autovacuum giữ tuổi quanh `autovacuum_freeze_max_age` (mặc định 200 triệu); 1,5 tỷ nghĩa là autovacuum đã bị chặn rất lâu — xử lý ngay, không đợi giờ hành chính.
+1. Database và bảng già nhất: `psql "$DATABASE_URL" -c "select datname, age(datfrozenxid) from pg_database order by 2 desc"` rồi trong database đó `psql "$DATABASE_URL" -c "select c.oid::regclass, age(c.relfrozenxid), pg_size_pretty(pg_total_relation_size(c.oid)) from pg_class c where c.relkind in ('r','m','t') order by 2 desc limit 10"`.
+2. Tìm thứ giữ horizon (nguyên nhân thường gặp): giao dịch dài/`idle in transaction` — `select pid, state, xact_start, backend_xmin, left(query, 80) from pg_stat_activity where backend_xmin is not null order by age(backend_xmin) desc limit 5`; giao dịch prepared bỏ quên — `select * from pg_prepared_xacts`; replication slot không ai đọc — `select slot_name, active, xmin, catalog_xmin from pg_replication_slots`; autovacuum tắt — `show autovacuum` phải là `on`; tiến độ — `select * from pg_stat_progress_vacuum`.
+3. Gỡ thứ giữ horizon (`select pg_terminate_backend(<pid>)` sau khi xác nhận; `ROLLBACK PREPARED '<gid>'`; xoá slot hỏng), rồi `VACUUM (FREEZE, VERBOSE) <bảng>` cho các bảng già nhất (VACUUM thường không khoá đọc/ghi). Theo dõi lại truy vấn bước 1 tới khi tuổi về dưới ~200 triệu thì luật tự `resolved`.
+4. Nếu đã tới mức từ chối ghi: làm theo đúng §24.1.5 tài liệu PostgreSQL (VACUUM trong database bị ảnh hưởng bằng tài khoản superuser), ghi sự cố SEV1 theo [INCIDENT-RESPONSE.md](INCIDENT-RESPONSE.md).
+
+#### Hàng chết (dead tuples) / phình bảng
+Bảng điều khiển (dashboard) hàng chết: `psql "$DATABASE_URL" -c "select relname, n_live_tup, n_dead_tup, round(n_dead_tup::numeric / nullif(n_live_tup + n_dead_tup, 0), 3) as ratio, last_autovacuum, last_autoanalyze, autovacuum_count from pg_stat_user_tables order by n_dead_tup desc limit 15"`. Bảng ghi nhiều đã có tham số autovacuum riêng (migration `0033_autovacuum_tuning.sql`: dọn khi ~5–10% hàng chết), nên tỷ lệ > 20% kéo dài 1 giờ là autovacuum không theo kịp hoặc bị chặn.
+1. `show autovacuum` phải là `on`; `last_autovacuum` của bảng đó có gần đây không; `select * from pg_stat_progress_vacuum` (đang chạy dở?).
+2. Thứ giữ horizon làm VACUUM không xoá được hàng chết: như bước 2 của mục "Tuổi XID (wraparound)" (giao dịch dài, prepared, replication slot).
+3. Gỡ nguyên nhân rồi `VACUUM (VERBOSE, ANALYZE) <bảng>` — không dùng `VACUUM FULL` trong giờ làm việc (khoá ACCESS EXCLUSIVE, chặn cả đọc). Lặp lại thường xuyên → hạ `autovacuum_vacuum_scale_factor` của bảng bằng migration mới (theo mẫu 0033), ghi lý do.
 
 Các hàng `(chưa có)` bên dưới là cảnh báo chưa có rule mẫu.
 

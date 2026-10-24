@@ -29,6 +29,7 @@ import {
   type AlertNotification,
   type AlertRule,
   type EvalResult,
+  XID_AGE_MAX_SQL,
 } from "../lib/ops/index.ts";
 import { enqueue } from "../lib/outbox/index.ts";
 import { runOnce } from "../lib/worker/index.ts";
@@ -60,6 +61,8 @@ interface Shared {
   webhookBase: string;
   webhookBodies: Map<string, AlertNotification[]>;
   companyId: string;
+  /** Luật gốc từ docs/ops/alerts.json (để khôi phục ngưỡng sau khi kịch bản hạ tạm). */
+  rules: AlertRule[];
 }
 
 /** Trạng thái có điều khiển được của một lần thử (đồng hồ giả, lưu lượng, probe). */
@@ -77,14 +80,17 @@ class Harness {
   readonly logLines: string[] = [];
   readonly engine: AlertEngine;
   readonly backupDir: string;
+  /** Bản sao luật của riêng lần thử này (kịch bản có thể hạ ngưỡng tạm — không ảnh hưởng kịch bản khác). */
+  readonly rules: AlertRule[];
   tickNo = 0;
   last: EvalResult[] = [];
 
   constructor(
     readonly sh: Shared,
-    readonly rules: AlertRule[],
+    rules: AlertRule[],
     readonly name: string,
   ) {
+    this.rules = rules.map((r) => ({ ...r }));
     this.readyPool = sh.admin;
     this.backupDir = path.join(sh.dir, `${name}-backups`);
     mkdirSync(this.backupDir, { recursive: true });
@@ -93,7 +99,7 @@ class Harness {
       level: () => "debug",
       service: "drill",
     });
-    this.engine = new AlertEngine(rules, {
+    this.engine = new AlertEngine(this.rules, {
       sinks: [
         fileSink(path.join(sh.dir, `${name}.jsonl`)),
         webhookSink(`${sh.webhookBase}/hook/${name}`, 2_000),
@@ -309,7 +315,72 @@ function scenarios(sh: Shared): Scenario[] {
         await sh.admin.query("ALTER TABLE audit_event ENABLE TRIGGER audit_event_no_update");
       },
     },
+    {
+      rule: "XCLocalXidWraparound",
+      scenario:
+        "ngưỡng tạm = tuổi XID hiện tại + 500 rồi tiêu thụ 1.000 XID thật (pg_current_xact_id); hết khi ngưỡng về 1,5 tỷ (thay cho VACUUM FREEZE — không đẩy được tuổi thật tới 1,5 tỷ)",
+      inject: async (h) => {
+        const r = ruleOf(h, "XCLocalXidWraparound");
+        const age = Number((await sh.admin.query<{ n: string }>(XID_AGE_MAX_SQL)).rows[0]!.n);
+        r.threshold = age + 500;
+        for (let i = 0; i < 1_000; i++) await sh.admin.query("SELECT pg_current_xact_id()");
+      },
+      clear: async (h) => {
+        const r = ruleOf(h, "XCLocalXidWraparound");
+        r.threshold = sh.rules.find((x) => x.id === r.id)!.threshold;
+      },
+    },
+    {
+      rule: "XCLocalDeadTuplesHigh",
+      scenario:
+        "bảng thật 30.000 hàng (tắt autovacuum riêng bảng) bị DELETE 15.000 → 50% hàng chết; giữ 1 giờ (20 phút/tick); hết khi VACUUM",
+      stepMs: 1_200_000,
+      inject: async () => {
+        await onOneConnection(sh.admin, [
+          "CREATE TABLE drill_bloat (id int PRIMARY KEY) WITH (autovacuum_enabled = false)",
+          "INSERT INTO drill_bloat SELECT generate_series(1, 30000)",
+          "DELETE FROM drill_bloat WHERE id > 15000",
+        ]);
+        await waitDeadTuples(sh.admin, (n) => n >= 15_000);
+      },
+      clear: async () => {
+        await onOneConnection(sh.admin, ["VACUUM drill_bloat"]);
+        await waitDeadTuples(sh.admin, (n) => n === 0);
+      },
+    },
   ];
+}
+
+const ruleOf = (h: Harness, id: string): AlertRule => {
+  const r = h.rules.find((x) => x.id === id);
+  if (!r) throw new Error(`luật không có trong docs/ops/alerts.json: ${id}`);
+  return r;
+};
+
+/**
+ * Số liệu thống kê (pg_stat_user_tables) được backend đẩy vào bộ nhớ chung không đồng bộ (PostgreSQL ≥ 15: tối đa mỗi giây,
+ * hoãn tới 10 giây). Chạy các lệnh trên CÙNG một kết nối rồi `pg_stat_force_next_flush()` để backend đó đẩy ngay khi rảnh.
+ */
+async function onOneConnection(pool: pg.Pool, sqls: string[]): Promise<void> {
+  const c = await pool.connect();
+  try {
+    for (const q of sqls) await c.query(q);
+    await c.query("SELECT pg_stat_force_next_flush()");
+  } finally {
+    c.release();
+  }
+}
+
+/** Chờ tới khi thống kê hàng chết của drill_bloat thoả `ok` (kịch bản không phụ thuộc thời điểm đẩy thống kê). */
+async function waitDeadTuples(pool: pg.Pool, ok: (n: number) => boolean): Promise<void> {
+  for (let i = 0; i < 150; i++) {
+    const r = await pool.query<{ n: string | null }>(
+      "SELECT n_dead_tup AS n FROM pg_stat_user_tables WHERE relname = 'drill_bloat'",
+    );
+    if (ok(Number(r.rows[0]?.n ?? -1))) return;
+    await new Promise((res) => setTimeout(res, 100));
+  }
+  throw new Error("alerts:drill — thống kê n_dead_tup của drill_bloat không cập nhật trong 15 giây");
 }
 
 const readdirManifestAll = (d: string): string[] => readdirSync(d).filter((f) => f.startsWith("xc-"));
@@ -493,6 +564,7 @@ export async function runDrill(
       webhookBase: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
       webhookBodies,
       companyId,
+      rules,
     };
     const rows: DrillRow[] = [];
     for (const sc of scenarios(sh)) rows.push(await runScenario(sh, rules, sc));
