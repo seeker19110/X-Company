@@ -91,8 +91,14 @@ test.describe("trạng thái lỗi, hộp thoại và bảng dashboard (AUD-A11Y
           await expectAccessible(page);
           await page.keyboard.press("Escape");
           await expect(dialog).toBeHidden();
+          // Xoá bản chưa gửi rồi đăng xuất (đồng bộ vẫn bị chặn): máy chủ không nhận lượt "Vào ca", nên chạy lặp
+          // (`--repeat-each`, FE-TEST-003) vẫn bắt đầu từ "Vào ca" — ca này không đổi trạng thái máy chủ.
+          await page.getByRole("button", { name: "Đăng xuất" }).click();
+          await expect(dialog).toBeVisible();
+          await page.keyboard.press("Escape");
+          await dialog.getByRole("button", { name: "Xoá và đăng xuất" }).click();
+          await expect(page).toHaveURL(/\/app\/login$/);
           await page.unroute("**/api/app/sync");
-          await logout(page);
         });
       });
 
@@ -152,7 +158,7 @@ test.describe("ứng tuyển trên website (F-003)", () => {
     test.describe(`ở ${vp.width} px`, () => {
       test.use({ viewport: vp });
 
-      test("tin tuyển dụng: lỗi theo ô + axe, rồi điền form → thấy mã UV-", async ({ page }) => {
+      test("tin tuyển dụng: form ứng tuyển, lỗi theo ô + focus + axe", async ({ page }) => {
         await page.goto("/tuyen-dung/ky-su-co-dien");
         await expect(page.getByRole("heading", { level: 1, name: "Kỹ sư cơ điện" })).toBeVisible();
         const form = page.locator("form.contact-form");
@@ -164,14 +170,6 @@ test.describe("ứng tuyển trên website (F-003)", () => {
         await expect(form.locator('[aria-invalid="true"]').first()).toBeFocused();
         await expect(form.getByRole("alert")).not.toBeEmpty();
         await expectAccessible(page);
-
-        await form.getByLabel("Họ tên (bắt buộc)").fill("Ứng Viên E2E");
-        await form.getByLabel("Email (bắt buộc)").fill(`uv-${Date.now()}@example.test`);
-        await form.getByLabel("Thư giới thiệu").fill("Tôi quan tâm vị trí này.");
-        await form.getByLabel(/Tôi đồng ý để X-Company xử lý/).check();
-        await form.getByRole("button", { name: "Gửi hồ sơ" }).click();
-        await expect(page.getByRole("status")).toContainText(/UV-\d{8}-\d{4}/);
-        await expectAccessible(page);
       });
 
       test("/tuyen-dung: có form ứng tuyển chung", async ({ page }) => {
@@ -182,6 +180,24 @@ test.describe("ứng tuyển trên website (F-003)", () => {
       });
     });
   }
+
+  // Gửi thật CHỈ ở một viewport: giới hạn 5 hồ sơ/10 phút/IP của endpoint công khai (cả hai project + chạy lặp
+  // `--repeat-each` của FE-TEST-003 cùng một IP) — ca 320 px ở trên không gửi.
+  test.describe(`gửi hồ sơ ở ${WIDE.width} px`, () => {
+    test.use({ viewport: WIDE });
+
+    test("điền form → thấy mã UV-", async ({ page }) => {
+      await page.goto("/tuyen-dung/ky-su-co-dien");
+      const form = page.locator("form.contact-form");
+      await form.getByLabel("Họ tên (bắt buộc)").fill("Ứng Viên E2E");
+      await form.getByLabel("Email (bắt buộc)").fill(`uv-${Date.now()}@example.test`);
+      await form.getByLabel("Thư giới thiệu").fill("Tôi quan tâm vị trí này.");
+      await form.getByLabel(/Tôi đồng ý để X-Company xử lý/).check();
+      await form.getByRole("button", { name: "Gửi hồ sơ" }).click();
+      await expect(page.getByRole("status")).toContainText(/UV-\d{8}-\d{4}/);
+      await expectAccessible(page);
+    });
+  });
 });
 
 /** Tab tới khi `target` nhận focus (tối đa `max` lần); đỏ nếu không tới được bằng bàn phím. */
