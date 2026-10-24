@@ -5,7 +5,8 @@
   - Lát 15 — PR ngoại lệ cứng (auth, người merge): SEC-007/010 không bỏ được sysadmin phạm vi công ty cuối (thu hồi lẫn vô hiệu); TOTP RFC 6238 hai bước cho sysadmin/hr/executive (0032, `/api/app/auth/mfa`, `mfa:reset`, hợp đồng login đổi — D-060); giao diện bước mã + đăng ký (khoá thủ công, không QR — JS 228,6/230 KB). Review reviewer-alt: 2 🟠 đã sửa có test.
   - Lát 15 ĐÃ MERGE #74 (`b35d051`). T-088 đóng sổ xong (SHA quét audit → `b35d051`); release-check GO tách sang T-097 chờ người (D-064).
   - Lát 16 (D-065, "hoàn thiện dự án"): mọi 🟢 agent tự làm được — dọn bảng MFA (DATA-009), DSAR gồm thông báo (DATA-007), thông báo phân công kiểm lại quyền (SEC-009), mốc xoá GPS theo đồng hồ DB (DATA-008), test xoay khoá TOTP (TEST-004), e2e không thử lại ca đổi seed (TEST-003), RUM trần ngày + bỏ ngoại lai (SEC-008), THREAT-MODEL T1 (SEC-011).
-  - GO-NO-GO = NO-GO: chỉ còn việc người/hạ tầng (CFG-001, 91 MUST, DPIA, "Khi chạy thật"); `dast` cục bộ cần Docker (CI xanh).
+  - Lát 16 ĐÃ MERGE #75. Lát 17 (D-066): DB-PERF-008 (autovacuum riêng 11 bảng + cảnh báo tuổi XID/hàng chết), QA-PERF-007 (bộ tải chỉ loopback + `check:perf-target`), Lighthouse 5 URL, CONTRIBUTING nhánh dùng chung, LOOP-FB-003. 89 MUST còn lại `loop defer` theo nhóm → vòng `done-pending-human`.
+  - GO-NO-GO = NO-GO: chỉ còn việc người/hạ tầng (CFG-001, 89 MUST, DPIA, "Khi chạy thật"); `dast` cục bộ cần Docker (CI xanh).
 - Ruleset thật (`.github/rulesets/main.json`): required check chỉ `quality` (job tổng hợp mọi job ci.yml) + `gitleaks`, không strict; `pr-policy`, `codeql`, `merge-gate` là advisory theo ADR-0039 của khung (AUD-CI-004).
 - `GO-NO-GO.md` = NO-GO production (số máy sinh ở đó). Chưa có pháp nhân: chỉ dữ liệu mẫu (DPIA mục 0b, D-043).
 
