@@ -336,6 +336,12 @@ describe("xoá toạ độ có kiểm soát (AUD-DATA-003)", () => {
 
   test("hàm xoá: tham số sai bị từ chối (mốc NULL/tương lai, lô ngoài 1..10000)", async () => {
     await assert.rejects(erase(db.app, new Date(Date.now() + 86_400_000)), /mốc/);
+    // AUD-DATA-006: sàn tuổi 1 ngày — p_before = now() (xoá mọi toạ độ, bỏ qua RETENTION_GEO_DAYS) bị từ chối.
+    const fresh = await addEvent(new Date(Date.now() - 3_600_000));
+    await assert.rejects(erase(db.app, new Date()), /ít nhất 1 ngày/);
+    await assert.rejects(erase(db.app, new Date(Date.now() - 23 * 3_600_000)), /ít nhất 1 ngày/);
+    assert.equal((await geoOf(fresh)).geo_enc, "v1:g1:ban-ma-gia");
+    assert.ok((await erase(db.app, new Date(Date.now() - 25 * 3_600_000))).rowCount! >= 0);
     await assert.rejects(db.app.query("SELECT attendance_event_erase_geo(NULL, 10)"), /mốc/);
     await assert.rejects(erase(db.app, NOW, 0), /lô/);
     await assert.rejects(erase(db.app, NOW, 10_001), /lô/);
