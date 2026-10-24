@@ -4,14 +4,13 @@ import { after, before, describe, test } from "node:test";
 import { getQr, postEvent } from "../../lib/attendance/routes.ts";
 import { issueQr, verifyQrSignature } from "../../lib/attendance/qr.ts";
 import { recordEvent } from "../../lib/attendance/events.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { disableUser } from "../../lib/identity/auth.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { createWorksite } from "../../lib/org/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { setRateClockForTest } from "../../lib/http/idempotency.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 process.env.QR_SIGNING_KEYS =
@@ -24,7 +23,7 @@ interface Session {
   csrf: string;
 }
 async function login(email: string): Promise<Session> {
-  const res = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const res = await loginThrough(email);
   return { cookie: cookieFrom(res), csrf: (await res.json()).csrf_token };
 }
 function send(s: Session, body: Record<string, unknown>, key: string | null = randomUUID()) {

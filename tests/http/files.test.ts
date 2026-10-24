@@ -8,7 +8,6 @@ import { getComments, getFile, postComment, postFile } from "../../lib/files/rou
 import { diskStorage, setStorage } from "../../lib/files/storage.ts";
 import { sniff } from "../../lib/files/sniff.ts";
 import { checkedFileName } from "../../lib/files/names.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { loadActor } from "../../lib/authz/load.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { addEvidence, addMember, createProject, createTask } from "../../lib/work/tasks.ts";
@@ -16,12 +15,12 @@ import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import {
   cookieFrom,
-  PASSWORD,
   req,
   seedCompany,
   seedUser,
   setTestEnv,
   TEST_ORIGIN,
+  loginThrough,
 } from "../helpers/fixtures.ts";
 
 setTestEnv();
@@ -36,7 +35,7 @@ interface S {
   csrf: string;
 }
 async function login(email: string): Promise<S> {
-  const r = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } }));
+  const r = await loginThrough(email);
   return { cookie: cookieFrom(r), csrf: (await r.json()).csrf_token };
 }
 function upload(s: S, fields: Record<string, string>, file?: { name: string; data: Buffer; type?: string }) {

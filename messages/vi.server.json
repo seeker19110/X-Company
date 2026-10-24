@@ -251,7 +251,8 @@
       "title503": "Dịch vụ tạm thời không khả dụng",
       "titleDefault": "Yêu cầu không thành công",
       "validation": "Dữ liệu gửi lên không hợp lệ",
-      "internal": "Lỗi hệ thống, vui lòng thử lại"
+      "internal": "Lỗi hệ thống, vui lòng thử lại",
+      "canXacThucHaiBuoc": "Vai trò của bạn cần xác thực hai bước — vui lòng đăng nhập lại"
     },
     "identity": {
       "dangNhapSaiQuaNhieuLan": "Đăng nhập sai quá nhiều lần, thử lại sau",
@@ -266,7 +267,10 @@
       "matKhauQuaDai": "Mật khẩu quá dài",
       "matKhauQuaPhoBien": "Mật khẩu quá phổ biến",
       "matKhauKhongDuocChuaTen": "Mật khẩu không được chứa tên đăng nhập",
-      "passwordTooShort": "Mật khẩu cần ít nhất {min} ký tự"
+      "passwordTooShort": "Mật khẩu cần ít nhất {min} ký tự",
+      "maXacThucKhongDung": "Mã xác thực không đúng",
+      "thuThachXacThucKhongHopLe": "Phiên xác thực hai bước không hợp lệ hoặc đã hết hạn — vui lòng đăng nhập lại",
+      "nhapSaiMaQuaNhieuLan": "Nhập sai mã xác thực quá nhiều lần, thử lại sau"
     },
     "inquiry": {
       "banGuiQuaNhieuLanVui": "Bạn gửi quá nhiều lần, vui lòng thử lại sau",
@@ -394,7 +398,8 @@
       "missingCheckoutNext": "Nhân viên gửi đề nghị sửa công; quản lý duyệt"
     },
     "identity": {
-      "bootstrapReason": "Tạo quản trị viên đầu tiên bằng lệnh vận hành"
+      "bootstrapReason": "Tạo quản trị viên đầu tiên bằng lệnh vận hành",
+      "mfaResetReason": "Đặt lại xác thực hai bước bằng lệnh vận hành (mất thiết bị)"
     },
     "inquiry": {
       "autoRouted": "định tuyến tự động",

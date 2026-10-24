@@ -37,7 +37,8 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/app/approvals`                   | `app/api/app/approvals/route.ts`                     | động   | API có xác thực, `no-store`                                |
 | `/api/app/attendance/events`           | `app/api/app/attendance/events/route.ts`             | động   | API có xác thực, `no-store`                                |
 | `/api/app/attendance/qr/[worksiteId]`  | `app/api/app/attendance/qr/[worksiteId]/route.ts`    | động   | Mã QR theo thời điểm, `no-store`                           |
-| `/api/app/auth/login`                  | `app/api/app/auth/login/route.ts`                    | động   | Đặt phiên, `no-store`                                      |
+| `/api/app/auth/login`                  | `app/api/app/auth/login/route.ts`                    | động   | Đặt phiên hoặc trả thử thách TOTP, `no-store`              |
+| `/api/app/auth/mfa`                    | `app/api/app/auth/mfa/route.ts`                      | động   | Bước TOTP → đặt phiên đã xác thực hai bước, `no-store`     |
 | `/api/app/auth/logout`                 | `app/api/app/auth/logout/route.ts`                   | động   | Huỷ phiên, `no-store`                                      |
 | `/api/app/comments`                    | `app/api/app/comments/route.ts`                      | động   | API có xác thực, `no-store`                                |
 | `/api/app/files/[id]`                  | `app/api/app/files/[id]/route.ts`                    | động   | Tải tệp private, `private, no-store`                       |

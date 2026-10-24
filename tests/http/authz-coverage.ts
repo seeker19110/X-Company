@@ -19,6 +19,9 @@ export const AUTHZ_COVERAGE: Readonly<Record<string, AuthzClass>> = {
   "POST /api/app/auth/login": {
     public: "đăng nhập: chưa có phiên; kiểm Origin + giới hạn thử ở tests/http/auth.test.ts",
   },
+  "POST /api/app/auth/mfa": {
+    public: "bước hai đăng nhập (TOTP): chưa có phiên; kiểm Origin + giới hạn thử ở tests/http/mfa.test.ts",
+  },
   "POST /api/app/auth/logout": { bola: true },
   "GET /api/app/comments": { bola: true },
   "POST /api/app/comments": { bola: true },

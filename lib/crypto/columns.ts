@@ -61,6 +61,8 @@ export const ENCRYPTED_COLUMNS: readonly EncryptedColumn[] = [
     plains: ["geo_lat", "geo_lng", "geo_accuracy_m", "geo_captured_at"],
     enc: "geo_enc",
   },
+  // Bí mật TOTP (D-058): chỉ có bản mã; cột bản rõ bị CHECK buộc luôn NULL (backfill không có gì làm, xoay khoá vẫn áp).
+  { kind: "text", table: "app_user", plain: "totp_secret", enc: "totp_secret_enc" },
 ];
 
 /** Tập "bảng.cột bản rõ" mà COMMENT phải ghi `enc=yes`. */

@@ -1,6 +1,9 @@
 // Dữ liệu dựng cho test: công ty, cơ cấu, tài khoản có mật khẩu và grant. Chỉ dùng trong test.
 import { randomUUID } from "node:crypto";
-import { withTx } from "../../lib/db/index.ts";
+import { getPool, withTx } from "../../lib/db/index.ts";
+import { openTextAsync, textColumn } from "../../lib/crypto/columns.ts";
+import { loginHandler, mfaHandler } from "../../lib/identity/routes.ts";
+import { base32Decode, hotp, totpStep } from "../../lib/identity/totp.pure.ts";
 import { grantRole } from "../../lib/authz/grants.ts";
 import { SYSTEM_ACTOR, type Role, type ScopeType } from "../../lib/authz/index.ts";
 import { hashPassword } from "../../lib/identity/password.ts";
@@ -110,4 +113,51 @@ export function req(
 export function cookieFrom(res: Response): string {
   const sc = res.headers.get("set-cookie") ?? "";
   return sc.split(";")[0] ?? "";
+}
+
+/** Mã TOTP hợp lệ kế tiếp cho bí mật: bước hiện tại nếu chưa dùng, không thì bước +1 (cửa sổ ±1); đã dùng cả hai → chờ bước mới. */
+export async function nextTotpCode(secretB32: string, lastStep: number | null): Promise<string> {
+  const secret = base32Decode(secretB32)!;
+  for (;;) {
+    const cur = totpStep(Date.now());
+    for (const s of [cur, cur + 1]) if (lastStep === null || s > lastStep) return hotp(secret, s);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+}
+
+/** Bí mật TOTP đã bật của tài khoản (giải mã từ DB) + bước đã dùng cuối — chỉ cho test. */
+export async function totpStateOf(
+  email: string,
+): Promise<{ secret: string | null; lastStep: number | null }> {
+  const { rows } = await getPool().query<{
+    id: string;
+    totp_secret_enc: string | null;
+    totp_last_step_seq: string | null;
+  }>("SELECT id, totp_secret_enc, totp_last_step_seq FROM app_user WHERE email = $1", [email.toLowerCase()]);
+  const r = rows[0];
+  if (!r) return { secret: null, lastStep: null };
+  return {
+    secret: await openTextAsync(textColumn("app_user", "totp_secret"), r.id, r),
+    lastStep: r.totp_last_step_seq === null ? null : Number(r.totp_last_step_seq),
+  };
+}
+
+/**
+ * Đăng nhập qua route THẬT; nếu tài khoản cần TOTP (AUD-SEC-002) thì đi tiếp bước /api/app/auth/mfa với mã đúng (đăng ký
+ * lần đầu dùng bí mật server trả về). Trả phản hồi cuối (cookie phiên + `{user_id, csrf_token}`), hoặc phản hồi login nếu lỗi.
+ */
+export async function loginThrough(
+  email: string,
+  password: string = PASSWORD,
+  opts: { origin?: string | null; headers?: Record<string, string> } = {},
+): Promise<Response> {
+  const res = await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password }, ...opts }));
+  if (res.status !== 200) return res;
+  const body = (await res.clone().json()) as { mfa?: string; challenge?: string; secret?: string };
+  if (!body.mfa) return res;
+  const st = await totpStateOf(email);
+  const secret = body.secret ?? st.secret;
+  if (!secret) throw new Error(`loginThrough: ${email} cần TOTP nhưng không có bí mật`);
+  const code = await nextTotpCode(secret, body.secret ? null : st.lastStep);
+  return mfaHandler(req("POST", "/api/app/auth/mfa", { body: { challenge: body.challenge, code }, ...opts }));
 }

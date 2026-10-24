@@ -1,4 +1,4 @@
-// Handler HTTP cho xác thực: /api/app/auth/login, /api/app/auth/logout, /api/app/me.
+// Handler HTTP cho xác thực: /api/app/auth/login, /api/app/auth/mfa, /api/app/auth/logout, /api/app/me.
 import { z } from "zod";
 import { getPool, withTx } from "../db/index.ts";
 import {
@@ -13,6 +13,7 @@ import {
 import { appendAudit } from "../audit/index.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
 import { login } from "./auth.ts";
+import { verifyMfa } from "./mfa.ts";
 import { ABSOLUTE_MS, csrfTokenFor, destroySession } from "./session.ts";
 import { kb, msToSeconds } from "../nen/units.ts";
 
@@ -29,9 +30,37 @@ export const loginHandler = publicRoute(async ({ req, requestId }) => {
     userAgent: req.headers.get("user-agent"),
     requestId,
   });
-  return json({ user_id: r.userId, csrf_token: csrfTokenFor(r.token) }, 200, {
-    "set-cookie": sessionCookie(r.token, msToSeconds(ABSOLUTE_MS)),
+  // Cần TOTP (AUD-SEC-002): không cấp phiên, trả thử thách (+ bí mật khi đăng ký lần đầu). no-store qua json().
+  if (r.kind === "mfa")
+    return json({
+      mfa: r.mfa,
+      challenge: r.challenge,
+      ...(r.secret ? { secret: r.secret, otpauth_uri: r.otpauthUri } : {}),
+    });
+  return sessionResponse(r.token, r.userId);
+});
+
+function sessionResponse(token: string, userId: string): Response {
+  return json({ user_id: userId, csrf_token: csrfTokenFor(token) }, 200, {
+    "set-cookie": sessionCookie(token, msToSeconds(ABSOLUTE_MS)),
   });
+}
+
+/** Thân POST /api/app/auth/mfa — xuất ra cho hợp đồng OpenAPI. */
+export const MfaBody = z.object({ challenge: z.string().min(1).max(100), code: z.string().max(16) });
+
+/** Bước hai đăng nhập: mã TOTP cho thử thách → cookie phiên đã xác thực hai bước (cùng dạng phản hồi với login). */
+export const mfaHandler = publicRoute(async ({ req, requestId }) => {
+  assertSameOrigin(req); // như login: chống CSRF đăng nhập
+  const body = MfaBody.parse(await readJson(req, kb(4)));
+  const r = await verifyMfa(getPool(), {
+    challenge: body.challenge,
+    code: body.code,
+    ip: clientIp(req),
+    userAgent: req.headers.get("user-agent"),
+    requestId,
+  });
+  return sessionResponse(r.token, r.userId);
 });
 
 export const logoutHandler = withActor(async ({ actor, sessionToken, requestId }) => {

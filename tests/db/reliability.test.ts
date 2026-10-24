@@ -479,6 +479,8 @@ describe("khoá ngoại: ON DELETE tường minh + index (catalog)", () => {
       "notification_user_fkey",
       "thông báo trong ứng dụng thuần phụ thuộc vòng đời tài khoản người nhận (T-080)",
     ],
+    ["mfa_challenge_user_id_fkey", "thử thách TOTP (≤ 5 phút) thuần phụ thuộc vòng đời tài khoản"],
+    ["mfa_failure_user_id_fkey", "đếm lần sai TOTP (cửa sổ 15 phút) thuần phụ thuộc vòng đời tài khoản"],
   ]);
 
   async function foreignKeys() {

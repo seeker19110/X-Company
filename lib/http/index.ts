@@ -8,6 +8,7 @@ import { can, type Action, type ActorContext, type Resource } from "../authz/ind
 import { loadActor } from "../authz/load.ts";
 import { getPool, withTx } from "../db/index.ts";
 import { checkCsrf, cookieName, resolveSession } from "../identity/session.ts";
+import { mfaSatisfied } from "../identity/mfa.ts";
 import { AppError } from "../nen/app-error.ts";
 import { appOrigin, isSecureOrigin } from "../nen/config.ts";
 import { env } from "../nen/env.ts";
@@ -235,7 +236,8 @@ export function publicRoute(handler: Handler<RequestContext>): (req: Request) =>
 }
 
 /**
- * Route nội bộ (R1, R8): phiên hợp lệ + tài khoản còn hiệu lực (nạp lại grant mỗi request) → actor; request ghi
+ * Route nội bộ (R1, R8): phiên hợp lệ + tài khoản còn hiệu lực (nạp lại grant mỗi request) + đã qua TOTP nếu vai trò
+ * bắt buộc (AUD-SEC-002) → actor; request ghi
  * thêm kiểm cùng origin + CSRF token gắn phiên. Thiếu phiên → 401. `guard`: bắt buộc Idempotency-Key và/hoặc giới hạn
  * tần suất theo user cho route ghi/đắt.
  */
@@ -258,6 +260,17 @@ export function withActor(
     }
     if (!session || !actor || !token)
       throw new AppError("UNAUTHENTICATED", 401, t("err.http.vuiLongDangNhap"));
+    // AUD-SEC-002: vai trò bắt buộc TOTP mà phiên chưa qua bước hai (vd grant vừa tới hiệu lực) → 401 ngay, như R8.
+    if (!mfaSatisfied(actor.grants, session.mfaAt)) {
+      logSecurityEvent({
+        event: "auth.mfa",
+        outcome: "denied",
+        actorId: actor.userId,
+        target: { type: "session" },
+        detail: { reason: "mfa_required" },
+      });
+      throw new AppError("MFA_REQUIRED", 401, t("err.http.canXacThucHaiBuoc"));
+    }
     if (!SAFE_METHODS.has(req.method)) {
       assertSameOrigin(req);
       if (!checkCsrf(token, req.headers.get("x-csrf-token")))

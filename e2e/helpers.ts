@@ -1,11 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { base32Decode, hotp, totpStep } from "../lib/identity/totp.pure.ts";
 
 type Users = Record<string, { email: string; userId: string; employeeId: string }>;
 interface SeedFile {
   companyId: string;
   password: string;
+  /** Bí mật TOTP cố định của người dùng E2E vai trò bắt buộc (hr, exec) — scripts/seed-e2e.ts. */
+  totpSecret: string;
   users: Users;
   mobile: { companyId: string; users: Users };
 }
@@ -22,6 +25,15 @@ export const seed = (): Seed => {
     ? { companyId: f.mobile.companyId, password: f.password, users: f.mobile.users }
     : { companyId: f.companyId, password: f.password, users: f.users };
 };
+
+/**
+ * Mã TOTP cho người dùng E2E vai trò bắt buộc (AUD-SEC-002). `offset` = bước lệch (+1 khi mã bước hiện tại vừa được dùng —
+ * server chống phát lại theo bước). Bước UI nhập mã trong `login` là việc của T-087.
+ */
+export function totpCode(offset = 0): string {
+  const f = JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as SeedFile;
+  return hotp(base32Decode(f.totpSecret)!, totpStep(Date.now()) + offset);
+}
 
 export async function login(page: Page, key: string) {
   const s = seed();

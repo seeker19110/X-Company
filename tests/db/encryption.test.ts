@@ -324,7 +324,7 @@ describe("cột PII mã hoá trong Postgres", () => {
         cls: /class: (\w+)/.exec(b)![1]!,
         status: /status: (\w+)/.exec(b)![1]!,
       }));
-    assert.equal(map.length, 44);
+    assert.equal(map.length, 45);
     const { rows } = await db.admin.query(
       `SELECT c.relname || '.' || a.attname AS key, d.description
          FROM pg_description d JOIN pg_class c ON c.oid = d.objoid JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -333,7 +333,7 @@ describe("cột PII mã hoá trong Postgres", () => {
     );
     const inDb = new Map(rows.map((r) => [r.key as string, r.description as string]));
     const implemented = map.filter((m) => m.status === "implemented");
-    assert.equal(implemented.length, 42);
+    assert.equal(implemented.length, 44);
     assert.deepEqual(
       [...inDb.keys()].sort(),
       implemented.map((m) => m.key).sort(),

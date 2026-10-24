@@ -9,6 +9,7 @@ x-company-postgres,employment_history,manager_employee_id,co_ban,quan hệ quả
 x-company-postgres,app_user,email,co_ban,"đăng nhập, thông báo",thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,implemented
 x-company-postgres,app_user,display_name,co_ban,hiển thị trong giao diện,thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,implemented
 x-company-postgres,app_user,password_hash,bi_mat,"xác thực (Argon2id, chuỗi PHC)",thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,implemented
+x-company-postgres,mfa_challenge,token_hash,bi_mat,"thử thách xác thực hai bước sau bước mật khẩu (lưu băm SHA-256, D-058)",an ninh hệ thống (pháp chế xác nhận),≤ 5 phút: xoá khi dùng/sai 5 lần/hết hạn,implemented
 x-company-postgres,session,token_hash,bi_mat,phiên đăng nhập (lưu băm SHA-256),an ninh hệ thống (pháp chế xác nhận),phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày,implemented
 x-company-postgres,session,ip,co_ban,"an ninh phiên, điều tra",an ninh hệ thống (pháp chế xác nhận),phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày,implemented
 x-company-postgres,session,user_agent,co_ban,"an ninh phiên, điều tra",an ninh hệ thống (pháp chế xác nhận),phiên hết hạn: 30 ngày (mặc định D-016); login_attempt: 90 ngày,implemented
@@ -35,7 +36,7 @@ x-company-postgres,audit_event,before,co_ban,truy vết (đã che trường theo
 x-company-postgres,audit_event,after,co_ban,truy vết (như trên),thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),chưa chốt — pháp chế (audit chỉ thêm),implemented
 x-company-postgres,outbox_event,payload,co_ban,"nội dung thông báo chờ gửi (có thể chứa mã hồ sơ, tên, email)","đồng ý của chủ thể (consent_at, phiên bản thông báo)",đã gửi: 30 ngày (mặc định D-016),implemented
 x-company-postgres,period_export,content,co_ban,"tệp CSV bảng công theo phiên bản (tên, mã nhân viên, phút công)",thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận),chưa chốt — pháp chế/kế toán,implemented
-x-company-postgres,app_user,totp_secret,bi_mat,xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org),thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,planned
+x-company-postgres,app_user,totp_secret,bi_mat,"xác thực bổ sung cho sysadmin/hr/executive (SPEC-identity-org, D-058)",thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; xoá khi mfa:reset; chưa chốt — HR/pháp chế,implemented
 x-company-postgres,push_subscription,endpoint,co_ban,"Web Push (VAPID, D-005)",thực hiện hợp đồng lao động; an ninh hệ thống (pháp chế xác nhận),theo vòng đời tài khoản; chưa chốt — HR/pháp chế,planned
 x-company-postgres,audit_event,source_ip,co_ban,"điều tra sự cố bảo mật, truy vết hành động nhạy cảm",lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận),≥ 12 tháng — pháp chế chốt,implemented
 x-company-postgres,audit_event,user_agent,co_ban,điều tra sự cố bảo mật (thiết bị/trình duyệt),lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn dữ liệu (pháp chế xác nhận),≥ 12 tháng — pháp chế chốt,implemented

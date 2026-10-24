@@ -55,7 +55,7 @@ test("mọi route dưới app/api có mặt, không thừa (test đỏ khi thi�
     .filter((f) => f.startsWith("app/api/") && f.endsWith("route.ts"))
     .map((f) => urlOf(f).replace(/\[([^\]]+)\]/g, "{$1}"))
     .sort();
-  assert.equal(real.length, 28);
+  assert.equal(real.length, 29);
   assert.deepEqual(Object.keys(doc().paths).sort(), real);
   assert.deepEqual(registryErrors(ROOT), []);
 });
@@ -110,6 +110,7 @@ test("registryErrors bắt route thiếu, thừa, sai hàm xử lý và cờ ide
 const NO_GUARD_POST = [
   "/api/app/auth/login",
   "/api/app/auth/logout",
+  "/api/app/auth/mfa",
   "/api/app/notifications/read",
   "/api/app/sync",
   "/api/public/applications",
@@ -489,5 +490,5 @@ test("PR policy chạy check-api-breaking, action ghim SHA, quyền tối thiể
   assert.match(pkg.scripts["check:arch"]!, /check:openapi/);
   assert.equal(pkg.scripts["gen:openapi"], "tsx scripts/gen-openapi.ts");
   assert.equal(pkg.scripts["check:api-breaking"], "node scripts/check-api-breaking.mjs");
-  assert.ok(Object.keys(REGISTRY).length === 28);
+  assert.ok(Object.keys(REGISTRY).length === 29);
 });

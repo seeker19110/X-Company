@@ -6,6 +6,7 @@ import { loadActor } from "@/lib/authz/load";
 import type { ActorContext } from "@/lib/authz";
 import { getPool } from "@/lib/db";
 import { cookieName, csrfTokenFor, resolveSession } from "@/lib/identity/session";
+import { mfaSatisfied } from "@/lib/identity/mfa";
 
 export interface PageSession {
   actor: ActorContext;
@@ -19,7 +20,8 @@ export async function getSession(): Promise<PageSession | null> {
   const pool = getPool();
   const s = await resolveSession(pool, token);
   const actor = s ? await loadActor(pool, s.userId) : null;
-  if (!actor) return null;
+  // Vai trò bắt buộc TOTP mà phiên chưa qua bước hai → coi như chưa đăng nhập (cùng điều kiện với withActor).
+  if (!s || !actor || !mfaSatisfied(actor.grants, s.mfaAt)) return null;
   const { rows } = await pool.query<{ display_name: string }>(
     "SELECT display_name FROM app_user WHERE id = $1",
     [actor.userId],

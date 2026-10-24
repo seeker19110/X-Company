@@ -5,11 +5,10 @@ import { withTx } from "../../lib/db/index.ts";
 import { listApplications, listInquiries, postApplication, postInquiry } from "../../lib/inquiry/routes.ts";
 import { submitInquiry, updateInquiry, InquiryInput } from "../../lib/inquiry/index.ts";
 import { addBusinessDays, localDate } from "../../lib/nen/time.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { approve, createPage, publish, submitForReview } from "../../lib/cms/index.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, PASSWORD, req, seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 const isCode = (code: string) => (e: unknown) => e instanceof AppError && e.code === code;
@@ -207,10 +206,7 @@ describe("liên hệ & tuyển dụng (T-010)", () => {
 
   test("S-WEB-05: sales đọc hộp yêu cầu, KHÔNG đọc hồ sơ ứng viên; HR thì ngược lại", async () => {
     const hr = await seedUser(companyId, { grants: [{ role: "hr", scopeType: "company" }] });
-    const login = async (email: string) =>
-      cookieFrom(
-        await loginHandler(req("POST", "/api/app/auth/login", { body: { email, password: PASSWORD } })),
-      );
+    const login = async (email: string) => cookieFrom(await loginThrough(email));
     const sc = await login(sales.email);
     const hc = await login(hr.email);
     assert.equal((await listInquiries(req("GET", "/api/app/inquiries", { cookie: sc }))).status, 200);

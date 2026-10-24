@@ -10,7 +10,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 
 | Miền         | Công khai             | Ghi chú                                                          |
 | ------------ | --------------------- | ---------------------------------------------------------------- |
-| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts` | tài khoản, phiên, đăng nhập                                      |
+| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts`, `mfa.ts`, `totp.pure.ts` | tài khoản, phiên, đăng nhập; xác thực hai bước TOTP (`mfa.ts`; `totp.pure.ts` = lõi thuần RFC 6238 dùng chung server/seed/e2e) |
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |

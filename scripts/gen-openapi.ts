@@ -12,7 +12,7 @@ import { EventBody } from "../lib/attendance/routes.ts";
 import { DecisionBody } from "../lib/attendance/request-routes.ts";
 import { AdjustmentInput, LeaveInput, OtInput } from "../lib/attendance/request-schema.pure.ts";
 import { ObjectRef } from "../lib/files/routes.ts";
-import { LoginBody } from "../lib/identity/routes.ts";
+import { LoginBody, MfaBody } from "../lib/identity/routes.ts";
 import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
 import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
@@ -136,6 +136,38 @@ const SCHEMAS: Record<string, Json> = {
   CodeResult: obj({ code: { type: "string", description: "Mã tra cứu (YC-… / UV-…)." } }),
   HealthResult: obj({ status: { type: "string", enum: ["ok", "shutting_down", "db_unavailable"] } }),
   LoginResult: obj({ user_id: uuid, csrf_token: { type: "string" } }),
+  MfaChallengeResult: obj(
+    {
+      mfa: {
+        type: "string",
+        enum: ["totp", "totp_enroll"],
+        description:
+          "`totp`: nhập mã từ ứng dụng xác thực; `totp_enroll`: đăng ký lần đầu (tin lần đầu) rồi nhập mã.",
+      },
+      challenge: {
+        type: "string",
+        description:
+          "Token thử thách 256 bit (hạn 5 phút, tối đa 5 lần sai); gửi lại ở POST /api/app/auth/mfa.",
+      },
+      secret: {
+        type: "string",
+        description: "Chỉ khi `totp_enroll`: bí mật base32 (RFC 4648, không padding).",
+      },
+      otpauth_uri: {
+        type: "string",
+        description: "Chỉ khi `totp_enroll`: URI otpauth://totp/… cho ứng dụng xác thực.",
+      },
+    },
+    ["mfa", "challenge"],
+  ),
+  LoginResponse: {
+    description:
+      "Đã đăng nhập (`LoginResult`, có cookie) hoặc cần bước TOTP (`MfaChallengeResult`, KHÔNG cookie).",
+    oneOf: [
+      { $ref: "#/components/schemas/LoginResult" },
+      { $ref: "#/components/schemas/MfaChallengeResult" },
+    ],
+  },
   MeResult: obj(
     {
       user_id: uuid,
@@ -348,6 +380,7 @@ function requestSchemas(): Record<string, Json> {
   const refProps = (fromZod(ObjectRef).properties ?? {}) as Record<string, Json>;
   return {
     LoginRequest: fromZod(LoginBody),
+    MfaRequest: fromZod(MfaBody),
     AttendanceEventRequest: fromZod(EventBody),
     LeaveRequestInput: fromZod(LeaveInput),
     OtRequestInput: fromZod(OtInput),
@@ -516,15 +549,43 @@ export const REGISTRY: Registry = {
       source: "lib/identity/routes.ts#loginHandler",
       operationId: "login",
       tag: "Xác thực",
-      summary: "Đăng nhập, đặt cookie phiên",
+      summary: "Đăng nhập, đặt cookie phiên (hoặc trả thử thách TOTP)",
       description:
-        "Chống login CSRF: `Origin` phải khớp APP_ORIGIN (hoặc `Sec-Fetch-Site: same-origin`). Thành công đặt cookie phiên HttpOnly và trả `csrf_token` cho header `x-csrf-token`.",
+        "Chống login CSRF: `Origin` phải khớp APP_ORIGIN (hoặc `Sec-Fetch-Site: same-origin`). Thành công đặt cookie phiên HttpOnly và trả `csrf_token` cho header `x-csrf-token`. Người có vai trò `sysadmin`/`hr`/`executive` hoặc đã bật TOTP (AUD-SEC-002): KHÔNG cấp phiên, trả `MfaChallengeResult` — đi tiếp POST /api/app/auth/mfa.",
       auth: "public",
       idempotency: "none",
       body: { kind: "json", schema: "LoginRequest" },
+      breakingApproved:
+        "D-058 (AUD-SEC-002): TOTP bắt buộc cho sysadmin/hr/executive — với các vai trò này 200 trả thử thách thay cho phiên; người dùng khác giữ nguyên LoginResult. Client duy nhất (app/app/login) cập nhật ở T-087.",
       ok: {
         200: {
-          description: "Đã đăng nhập.",
+          description: "Đã đăng nhập (cookie phiên) hoặc cần bước TOTP (không cookie).",
+          schema: "LoginResponse",
+          headers: {
+            "Set-Cookie": {
+              description: "Cookie phiên (HttpOnly, SameSite=Lax).",
+              schema: { type: "string" },
+            },
+          },
+        },
+      },
+      errors: [401, 403, 429],
+    },
+  },
+  "/api/app/auth/mfa": {
+    POST: {
+      source: "lib/identity/routes.ts#mfaHandler",
+      operationId: "verifyMfa",
+      tag: "Xác thực",
+      summary: "Bước hai đăng nhập: mã TOTP cho thử thách, đặt cookie phiên",
+      description:
+        "Cùng Origin như login. Mã 6 số, lệch ±1 bước 30 s; mã đã dùng không dùng lại. Sai → 401 `INVALID_MFA_CODE` (lần sai thứ 5 huỷ thử thách); thử thách hết hạn/không tồn tại/đã dùng → 401 `MFA_CHALLENGE_INVALID`; 10 lần sai / 15 phút / người dùng → 429 kèm `Retry-After`.",
+      auth: "public",
+      idempotency: "none",
+      body: { kind: "json", schema: "MfaRequest" },
+      ok: {
+        200: {
+          description: "Đã đăng nhập (phiên đã xác thực hai bước).",
           schema: "LoginResult",
           headers: {
             "Set-Cookie": {

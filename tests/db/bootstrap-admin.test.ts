@@ -4,10 +4,9 @@ import { after, before, describe, test } from "node:test";
 import { verifyAuditChain } from "../../lib/audit/index.ts";
 import { createFirstAdmin } from "../../lib/identity/bootstrap.ts";
 import { verifyPassword } from "../../lib/identity/password.ts";
-import { loginHandler } from "../../lib/identity/routes.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, req, seedCompany, setTestEnv } from "../helpers/fixtures.ts";
+import { cookieFrom, seedCompany, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
 
 setTestEnv();
 const STRONG = "Mat-khau-quan-tri-rat-dai-2026!";
@@ -70,9 +69,7 @@ describe("tạo quản trị viên đầu tiên (BASE-SEC-005)", () => {
       "Công ty Thử",
     );
 
-    const res = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: "admin@example.test", password: STRONG } }),
-    );
+    const res = await loginThrough("admin@example.test", STRONG);
     assert.equal(res.status, 200);
     assert.ok(cookieFrom(res).includes("="));
 
@@ -197,9 +194,7 @@ describe("scripts/create-admin.ts (CLI)", () => {
     assert.equal(ok.status, 0, ok.stderr);
     assert.match(ok.stdout, /cli@example\.test/);
     assert.equal(ok.stdout.includes(STRONG) || ok.stderr.includes(STRONG), false);
-    const res = await loginHandler(
-      req("POST", "/api/app/auth/login", { body: { email: "cli@example.test", password: STRONG } }),
-    );
+    const res = await loginThrough("cli@example.test", STRONG);
     assert.equal(res.status, 200);
 
     const again = run({ ...who, ADMIN_EMAIL: "khac@example.test" }, `${STRONG}\n`);
