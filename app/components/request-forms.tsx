@@ -198,7 +198,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         <SubmitButton className="btn btn-primary" busy={busy.leave}>
           {t("requests.leave.submit")}
         </SubmitButton>
-        <p role="status" aria-live="polite" tabIndex={-1} className={M.leave?.cls}>
+        <p role="status" tabIndex={-1} className={M.leave?.cls}>
           {M.leave?.text}
         </p>
       </form>
@@ -257,7 +257,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
             {t("requests.ot.submit")}
           </SubmitButton>
         </p>
-        <p role="status" aria-live="polite" tabIndex={-1} className={M.ot?.cls}>
+        <p role="status" tabIndex={-1} className={M.ot?.cls}>
           {M.ot?.text}
         </p>
       </form>
@@ -315,7 +315,7 @@ export function RequestForms({ leaveTypes }: { leaveTypes: { id: string; name: s
         <SubmitButton className="btn btn-primary" busy={busy.adj}>
           {t("requests.adjustment.submit")}
         </SubmitButton>
-        <p role="status" aria-live="polite" tabIndex={-1} className={M.adj?.cls}>
+        <p role="status" tabIndex={-1} className={M.adj?.cls}>
           {M.adj?.text}
         </p>
       </form>

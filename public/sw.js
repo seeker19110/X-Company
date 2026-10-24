@@ -3,10 +3,11 @@
 // - Trang /app/**: network-first, mất mạng → bản đã lưu của chính URL đó, không có → /offline.html.
 // - KHÔNG cache /api/** (dữ liệu cá nhân) — dữ liệu xem ngoại tuyến nằm ở IndexedDB theo người dùng.
 // - Nâng cấp: chỉ xoá Cache Storage phiên bản cũ; KHÔNG đụng IndexedDB (hàng chờ chưa gửi phải còn).
-const VERSION = "xc-v2";
+const VERSION = "xc-v3"; // v3: precache thêm /offline.css (AUD-A11Y-011)
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
+const OFFLINE_CSS = "/offline.css";
 
 function strategyFor(url, mode, method) {
   if (method !== "GET") return "network";
@@ -22,7 +23,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(STATIC)
-      .then((c) => c.addAll([OFFLINE_URL, "/icons/icon-192.png"]))
+      .then((c) => c.addAll([OFFLINE_URL, OFFLINE_CSS, "/icons/icon-192.png"]))
       .then(() => self.skipWaiting()),
   );
 });

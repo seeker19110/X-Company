@@ -74,5 +74,10 @@ describe("PWA: manifest + service worker (T-020, S-PWA-04)", () => {
     const html = readFileSync("public/offline.html", "utf8");
     assert.match(html, /<html lang="vi">/);
     assert.ok(!/(src|href)="https?:\/\//.test(html));
+    // AUD-A11Y-011: kiểu ở tệp riêng (CSP cấm <style> inline) và SW precache tệp đó cùng trang.
+    assert.ok(!/<style/i.test(html));
+    assert.match(html, /<link rel="stylesheet" href="\/offline\.css" \/>/);
+    assert.ok(existsSync("public/offline.css"));
+    assert.match(readFileSync("public/sw.js", "utf8"), /addAll\(\[OFFLINE_URL, OFFLINE_CSS,/);
   });
 });

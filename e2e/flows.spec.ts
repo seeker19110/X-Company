@@ -106,12 +106,21 @@ test.describe("ứng dụng nội bộ", () => {
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toHaveCount(0);
     await context.setOffline(true);
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toBeVisible();
+    // AUD-A11Y-011: dải cố định không che thanh trên (kể cả 320 px) và trang vẫn 0 vi phạm axe khi dải hiện.
+    for (const width of [320, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      const banner = await page.locator(".net-banner").boundingBox();
+      const top = await page.locator(".app-top").boundingBox();
+      expect(banner && top && banner.y + banner.height <= top.y + 0.5).toBe(true);
+    }
+    await expectAccessible(page);
     await context.setOffline(false);
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toHaveCount(0);
     await context.setOffline(true);
     await page.reload();
     // Trang /app/** là no-store nên SW trả /offline.html (có dải trạng thái riêng), không phải bản lưu của trang.
     await expect(page.getByRole("heading", { name: "Bạn đang ngoại tuyến" })).toBeVisible();
+    await expect(page.locator("main")).toHaveCSS("max-width", "640px"); // offline.css đã precache và áp dụng
     await expect(page.getByRole("status").filter({ hasText: "Đang ngoại tuyến" })).toBeVisible();
     await context.setOffline(false);
     await page.goto("/app/today");

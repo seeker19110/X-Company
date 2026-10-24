@@ -1,0 +1,38 @@
+/* Kiểu của /offline.html (AUD-A11Y-011): tệp riêng vì CSP cấm <style> inline; SW precache cùng offline.html. */
+:root {
+  --fg: #12202b;
+  --bg: #ffffff;
+  --brand: #0f3d5e;
+  --warn: #8a5300;
+  --focus: #0a58ca;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+body {
+  margin: 0;
+  line-height: 1.55;
+}
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.net-banner {
+  margin: 0 -1rem 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 2px solid var(--warn);
+  color: var(--warn);
+}
+a {
+  color: var(--brand);
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
