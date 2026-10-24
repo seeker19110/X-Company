@@ -152,11 +152,12 @@ describe("ngân sách bundle (FE-PERF-004, XC-PERF-003)", () => {
       assert.ok(p.js_gzip_kb > 0 && p.requests > 0);
   });
 
-  test("lighthouserc.json: 3 lần, median, assert error, ≥ 3 URL công khai, ngưỡng CWV", () => {
+  test("lighthouserc.json: 3 lần, median, assert error, ≥ 5 URL chính (PRF-WEB-005), ngưỡng CWV", () => {
     const lh = (JSON.parse(readFileSync(path.join(ROOT, "lighthouserc.json"), "utf8")) as { ci: Lhci }).ci;
     assert.equal(lh.collect.numberOfRuns, 3);
     assert.equal(lh.assert.aggregationMethod, "median");
-    for (const u of ["/", "/dich-vu", "/lien-he"])
+    assert.ok(lh.collect.url.length >= 5, "PRF-WEB-005: ≥ 5 URL chính");
+    for (const u of ["/", "/dich-vu", "/lien-he", "/tuyen-dung", "/app/login"])
       assert.ok((lh.collect.url as string[]).includes(`http://localhost:3100${u}`), u);
     const a = lh.assert.assertions;
     const opt = (k: string) => a[k]?.[1];

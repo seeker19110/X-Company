@@ -5,7 +5,13 @@
       "startServerCommand": "npx --no-install next start -p 3100",
       "startServerReadyPattern": "Ready",
       "startServerReadyTimeout": 60000,
-      "url": ["http://localhost:3100/", "http://localhost:3100/dich-vu", "http://localhost:3100/lien-he"],
+      "url": [
+        "http://localhost:3100/",
+        "http://localhost:3100/dich-vu",
+        "http://localhost:3100/lien-he",
+        "http://localhost:3100/tuyen-dung",
+        "http://localhost:3100/app/login"
+      ],
       "settings": {
         "formFactor": "mobile",
         "chromeFlags": "--no-sandbox --headless=new"
