@@ -30,9 +30,18 @@ function MarkRead({
   const btn = useRef<HTMLButtonElement>(null);
   const holder = useRef<HTMLElement | null>(null);
   const refocus = useRef(false);
-  const [, startRefresh] = useTransition();
+  const [refreshing, startRefresh] = useTransition();
   useRestoreFocus(busy, btn, refocus);
 
+  // Như TaskActions (AUD-CODE-010): làm mới xong mà nút vẫn còn (lỗi tải, ngoại tuyến) → hạ cờ, để lần gỡ nút về sau (điều
+  // hướng đi) không giật focus; focus về nút nếu đang rơi về <body>.
+  useEffect(() => {
+    if (refreshing || !refocus.current) return;
+    refocus.current = false;
+    const el = btn.current;
+    const active = document.activeElement;
+    if (el?.isConnected && (active === null || active === document.body)) el.focus();
+  }, [refreshing]);
   useEffect(
     () => () => {
       if (!refocus.current) return;
@@ -46,6 +55,7 @@ function MarkRead({
   async function run() {
     if (sending.current) return;
     sending.current = true;
+    setError(null);
     setBusy(true);
     holder.current = btn.current?.closest("li") ?? null;
     const r = await api("POST", "/api/app/notifications/read", { csrf, body });

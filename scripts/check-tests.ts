@@ -64,7 +64,6 @@ function blocksServiceWorkers(stmts: ts.NodeArray<ts.Statement>): boolean {
   });
 }
 
-/** Có khối tổ tiên (describe hoặc cấp tệp) chặn service worker? */
 const ROUTE_METHODS = new Set(["route", "routeFromHAR"]);
 
 /** `page`/`context` của Playwright, hoặc `<x>.context()`. */
@@ -78,6 +77,7 @@ function isPageOrContext(e: ts.Expression): boolean {
   );
 }
 
+/** Có khối tổ tiên (describe hoặc cấp tệp) chặn service worker? */
 function underServiceWorkerBlock(n: ts.Node): boolean {
   for (let p: ts.Node | undefined = n.parent; p !== undefined; p = p.parent) {
     if ((ts.isBlock(p) || ts.isSourceFile(p)) && blocksServiceWorkers(p.statements)) return true;
