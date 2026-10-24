@@ -428,3 +428,10 @@
 - Lý do (tiêu chí chất lượng cuối): AGENTS.md §5: spec/thiết kế/phạm vi/bảo mật là điểm quyết định phiên chính tự duyệt — SPEC-identity-org đã ghi TOTP bắt buộc trước pilot, F-003/F-010 là Must; (1) đúng/an toàn: TOTP giảm T1, thông báo thật tới người dùng; (2) đường lùi: PR riêng mỗi lát, migration chỉ thêm; (3) tự host không cần SMTP/Web Push/khoá ngoài; HMAC-SHA1 của node:crypto + vector RFC 4226/6238, không tự chế nguyên thuỷ mật mã (custom_crypto=false), không thêm phụ thuộc
 - Đường lùi: Đóng PR chưa merge; revert từng commit theo task; DROP bảng notification/cột totp bằng migration contract; đánh [~] task chưa làm kèm lý do
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi chạy thật: thêm kênh email/Web Push cho thông báo (cần SMTP/VAPID của chủ dự án) bên cạnh kênh trong ứng dụng
+
+### D-059 · 2026-10-24T02:23:12+00:00 · T-080: thông báo trong ứng dụng và kênh phụ chung một handler — kênh phụ tắt làm hoãn cả thông báo trong ứng dụng; tách ngay hay để sau?
+
+- Phương án: (1) Giữ một handler mỗi topic; ghi điều kiện: trước task kênh SMTP/Web Push phải tách thành nhiều consumer mỗi topic (Registry nhiều handler) · (2) Tách ngay: Registry nhiều handler mỗi topic, mỗi handler một consumer
+- Chọn: Giữ một handler mỗi topic; ghi điều kiện: trước task kênh SMTP/Web Push phải tách thành nhiều consumer mỗi topic (Registry nhiều handler)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 3 (đơn giản, theo chuẩn) + 1 không bị ảnh hưởng hôm nay: kênh phụ duy nhất là log, luôn bật, nên không có đường nào hoãn thông báo; tách ngay đổi Registry/processOne và test worker cho một lỗi chưa thể xảy ra, làm phình PR. Ghi 🟢 trong AUDIT-STATUS kèm điều kiện kích hoạt
+- Đường lùi: Tách Registry thành nhiều consumer mỗi topic khi thêm kênh thật; dữ liệu notification không đổi
