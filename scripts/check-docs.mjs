@@ -5,6 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { malformedCheckIds } from "./lib/blueprint-checks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = process.env.CHECK_NOW ? new Date(process.env.CHECK_NOW) : new Date();
@@ -690,6 +691,16 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     if (typeof must !== "object" || must === null) {
       must = null;
       fail("số liệu: không đọc được levels.MUST từ `xt.py blueprint-status BLUEPRINT.md --json`");
+    }
+    // Ghi chú `— Kiểm:` sai dạng → `loop verify` trả exit 2 mà không chạy lệnh; bắt ở đây thay vì chờ verify cuối vòng.
+    try {
+      const badIds = malformedCheckIds(p(dirname(xt)), p("BLUEPRINT.md"));
+      if (badIds.length > 0)
+        fail(
+          `blueprint: ghi chú \`— Kiểm:\` sai dạng (cần đúng một lệnh trong một cặp backtick): ${badIds.join(", ")}`,
+        );
+    } catch (e) {
+      fail(`blueprint: ${e.message}`);
     }
   } else out("CẢNH BÁO: không có xt.py/BLUEPRINT.md — bỏ qua kiểm số MUST");
   const nRules = has("docs/ops/alerts.json")
