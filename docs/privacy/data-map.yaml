@@ -495,6 +495,8 @@ linked_tables:
     note: "dòng bảng công theo nhân viên"
   - table: timesheet_entry
     note: "giờ dự án theo nhân viên"
+  - table: notification
+    note: "thông báo trong ứng dụng theo tài khoản (user_id, T-080): chỉ chủ đề + loại/id đối tượng + mã tra cứu, không tên/email/nội dung; đã đọc xoá sau 90 ngày, chưa đọc sau 365 ngày; xoá theo tài khoản (CASCADE)"
   - table: task_history
     note: "lịch sử việc có actor/người liên quan"
   - table: comment

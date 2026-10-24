@@ -1,7 +1,15 @@
 // Handler theo topic outbox có trong mã (lib/inquiry, lib/work/tasks) + schema zod cho payload (BE-JOB-007):
-// payload chỉ chứa ID/tham số tối thiểu; sai schema → dead ngay. Handler mặc định giao qua một `Channel`.
+// payload chỉ chứa ID/tham số tối thiểu; sai schema → dead ngay. Handler mặc định: (1) thông báo TRONG ỨNG DỤNG (D-058,
+// luôn bật, ghi trong giao dịch worker — lib/notify) cho người bị ảnh hưởng, (2) kênh phụ `Channel` (mặc định ghi log).
 import { z } from "zod";
 import type { Tx } from "../db/index.ts";
+import {
+  activeUsers,
+  addNotifications,
+  usersOfEmployees,
+  usersWhoCan,
+  type RefType,
+} from "../notify/index.ts";
 import { isProcessingBlocked } from "../privacy/consent.ts";
 import { ChannelDisabledError, logChannel, type Channel } from "./channels.ts";
 
@@ -57,7 +65,53 @@ async function subjectBlocked(tx: Tx, payload: unknown): Promise<boolean> {
   return false;
 }
 
-/** Registry mặc định: mọi topic hiện có giao qua `channel` (mặc định ghi log). */
+interface InApp {
+  refType: RefType;
+  refId: string;
+  code: string | null;
+  /** Người nhận (user id) đã lọc: cùng công ty, tài khoản chưa vô hiệu. */
+  recipients: (tx: Tx, companyId: string) => Promise<string[]>;
+}
+
+/** Thông báo trong ứng dụng theo topic: người bị ảnh hưởng + đối tượng (chỉ id/mã, không PII). */
+function inApp(topic: string, payload: unknown): InApp | null {
+  if (topic === "inquiry.assigned") {
+    const p = payload as z.output<typeof InquiryAssigned>;
+    return {
+      refType: "inquiry",
+      refId: p.inquiryId,
+      code: p.code ?? null,
+      recipients: (tx, companyId) => activeUsers(tx, companyId, [p.assigneeUserId]),
+    };
+  }
+  if (topic === "application.received") {
+    const p = payload as z.output<typeof ApplicationReceived>;
+    return {
+      refType: "job_application",
+      refId: p.applicationId,
+      code: p.code,
+      // Ai đang có quyền đọc hồ sơ ứng viên của công ty (cùng quyết định với GET /api/app/applications).
+      recipients: (tx, companyId) => usersWhoCan(tx, "application.read", { companyId }),
+    };
+  }
+  if (topic.startsWith("task.")) {
+    const p = payload as z.output<typeof TaskNotice>;
+    return {
+      refType: "task",
+      refId: p.taskId,
+      code: null,
+      // Không tự báo mình: lib/work/tasks.ts đã loại nhân viên của người thao tác; loại thêm theo user id cho chắc.
+      recipients: async (tx, companyId) =>
+        (await usersOfEmployees(tx, companyId, p.employeeIds)).filter((u) => u !== p.byUserId),
+    };
+  }
+  return null;
+}
+
+/**
+ * Registry mặc định: mọi topic hiện có ghi thông báo trong ứng dụng (cùng giao dịch worker) rồi giao qua `channel`
+ * (kênh phụ, mặc định ghi log). Kênh phụ tắt → cả giao dịch hoãn (giữ pending), thông báo trong ứng dụng ghi khi thử lại.
+ */
 export function defaultRegistry(channel: Channel = logChannel): Registry {
   const deliverTo = (consumer: string, match: string | RegExp) =>
     ({
@@ -67,6 +121,23 @@ export function defaultRegistry(channel: Channel = logChannel): Registry {
         // Chủ thể đã rút đồng ý / bị hạn chế xử lý → bỏ qua sự kiện (CMP-RIGHTS-004): không gửi, đóng việc.
         if (await subjectBlocked(tx, payload)) return;
         if (!channel.enabled()) throw new ChannelDisabledError(channel.name);
+        const n = inApp(e.topic, payload);
+        // Sự kiện không gắn công ty → không xác định được người nhận trong ứng dụng; vẫn giao kênh phụ như trước.
+        if (n && e.companyId) {
+          const users = await n.recipients(tx, e.companyId);
+          await addNotifications(
+            tx,
+            {
+              companyId: e.companyId,
+              topic: e.topic,
+              refType: n.refType,
+              refId: n.refId,
+              code: n.code,
+              sourceEventId: e.id,
+            },
+            users,
+          );
+        }
         await channel.deliver({ eventId: e.id, topic: e.topic, companyId: e.companyId, payload });
       },
     }) satisfies Omit<Handler, "schema">;
