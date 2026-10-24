@@ -44,10 +44,24 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 - [x] `T-085` AUD-SEC-007: `revokeGrant` từ chối (409) thu hồi grant `sysadmin` hiệu lực cuối cùng của công ty, dưới khoá chống đua (files: lib/authz/grants.ts, tests/db/authz-scope.test.ts) — Gate: `npm run -s test:file -- tests/db/authz-scope.test.ts tests/http/auth.test.ts`
 - [x] `T-086` AUD-SEC-002 (máy chủ): TOTP RFC 6238 (HMAC-SHA1 của `node:crypto`, vector chuẩn RFC), bí mật mã hoá cột, đăng nhập hai bước bằng thử thách ngắn hạn, đăng ký lần đầu cho vai trò bắt buộc, chống phát lại theo bước, giới hạn lần sai, audit (exec: deep; sau: T-085; files: migrations/, lib/identity/, lib/crypto/columns.ts, app/api/app/auth/, docs/api/, docs/privacy/data-map.yaml, scripts/seed-e2e.ts, tests/) — Gate: `npm run -s check:migrations && npm run -s check:arch && npm run -s test:file -- tests/unit/totp.test.ts tests/http/auth.test.ts tests/http/mfa.test.ts tests/db/bootstrap-admin.test.ts`
 - [x] `T-087` AUD-SEC-002 (giao diện): bước nhập mã và trang đăng ký (khoá thủ công + URI otpauth, không gọi dịch vụ QR ngoài) ở màn đăng nhập; e2e người dùng vai trò bắt buộc đăng nhập bằng TOTP (sau: T-086; files: app/, e2e/, lib/i18n/) — Gate: `npm run -s build && npm run -s check:perf-budget && npm run -s e2e`
-- [ ] `T-088` Đóng sổ: SPEC/THREAT-MODEL T1/AUDIT-STATUS khớp mã; `release-check` + `GO-NO-GO.md` mới; PROGRESS (sau: T-087; files: docs/, GO-NO-GO.md, PROGRESS.md) — Gate: `npm run -s check:docs && npm run -s check:repo-docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md && python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md --json > /dev/null`
+- [x] `T-088` Đóng sổ: SPEC/THREAT-MODEL T1/AUDIT-STATUS khớp mã (SHA quét dời sang commit merge #74); `GO-NO-GO.md` mới; PROGRESS — phần phát hành tách sang T-097 (D-064) (sau: T-087; files: docs/, GO-NO-GO.md, PROGRESS.md) — Gate: `npm run -s check:docs && npm run -s check:repo-docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
+
+### Lát 16 — 🟢 còn mở mà agent tự làm được ("hoàn thiện dự án", D-065)
+- [ ] `T-089` AUD-DATA-009: retention xoá `mfa_challenge` quá hạn và `mfa_failure` quá cửa sổ theo lô, audit đếm (files: lib/worker/retention.ts, tests/db/retention.test.ts) — Gate: `npm run -s test:file -- tests/db/retention.test.ts tests/http/mfa.test.ts`
+- [ ] `T-090` AUD-DATA-007: bản xuất DSAR của tài khoản gồm thông báo của chủ thể (files: lib/privacy/, tests/http/privacy.test.ts) — Gate: `npm run -s test:file -- tests/http/privacy.test.ts tests/db/notification.test.ts`
+- [ ] `T-091` AUD-SEC-009: thông báo `inquiry.assigned` chỉ tới người còn quyền `inquiry.manage` lúc worker xử lý (files: lib/worker/handlers.ts, lib/notify/, tests/db/notification.test.ts) — Gate: `npm run -s test:file -- tests/db/notification.test.ts tests/db/worker.test.ts`
+- [ ] `T-092` AUD-DATA-008: mốc xoá toạ độ tính bằng `now()` của DB, không đồng hồ ứng dụng (files: lib/worker/retention.ts, tests/db/retention.test.ts) — Gate: `npm run -s test:file -- tests/db/retention.test.ts tests/db/geo-consent.test.ts`
+- [ ] `T-093` AUD-TEST-004: test xoay khoá gồm bí mật TOTP và bí mật tạm của thử thách (files: tests/db/encryption.test.ts, lib/crypto/) — Gate: `npm run -s test:file -- tests/db/encryption.test.ts`
+- [ ] `T-094` AUD-TEST-003: e2e đổi trạng thái seed không thử lại trên cùng seed (retries 0 cho các describe đó) (files: e2e/) — Gate: `npm run -s check:tests && npm run -s e2e`
+- [ ] `T-095` AUD-SEC-008: beacon RUM có trần mẫu/ngày và cắt giá trị ngoại lai trước khi bật (files: lib/rum/, tests/) — Gate: `npm run -s test:file -- tests/db/rum.test.ts`
+- [ ] `T-096` AUD-SEC-011 + sổ: ghi đánh đổi khoá bước mã vào THREAT-MODEL T1; AUDIT-STATUS/PROGRESS sau lát 16 (sau: T-089, T-090, T-091, T-092, T-093, T-094, T-095; files: docs/, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
+
+### Phát hành (chờ người — D-064)
+- [ ] `T-097` `release-check` GO trên cây cuối (cần chủ dự án: CFG-001, MUST hạ tầng/pháp lý, DPIA, quyết "Khi chạy thật"; máy có Docker) (sau: T-096; files: GO-NO-GO.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md --json > /dev/null`
 
 ## Ước lượng
 | Lát | P50 | P90 |
 |---|---|---|
 | 14 | 1 ngày-agent | 2 ngày-agent |
 | 15 | 1 ngày-agent | 2 ngày-agent |
+| 16 | 0,5 ngày-agent | 1 ngày-agent |

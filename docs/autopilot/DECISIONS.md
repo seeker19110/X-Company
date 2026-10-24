@@ -463,3 +463,17 @@
 - Chọn: PR riêng cho lát 15: dựng lại nhánh từ main, cherry-pick 9 commit lát 15, mở PR mới (ngoại lệ cứng, người merge)
 - Lý do (tiêu chí chất lượng cuối): Điều kiện của D-062 (không đẩy được khi #73 còn mở) không còn; PR riêng nhỏ hơn, người review chỉ đọc phần xác thực — tiêu chí 3; D-062 thay bằng quyết định này
 - Đường lùi: Đóng PR lát 15, giữ commit ở nhánh
+
+### D-064 · 2026-10-24T09:12:56+00:00 · T-088: Gate gộp 'đóng sổ' (agent làm được) với 'release-check exit 0' (chỉ đạt khi người xong CFG-001, 91 MUST, DPIA, Khi chạy thật) — không bao giờ xanh trong phiên; xử lý thế nào?
+
+- Phương án: (1) Tách: T-088 Gate = check:docs + check:repo-docs + audit check (đóng sổ); thêm T-097 'release-check GO' với Gate release-check nguyên văn, defer cho người · (2) Giữ Gate gộp, để T-088 BLOCKED · (3) Đổi Gate thành chỉ kiểm release-check in được báo cáo
+- Chọn: Tách: T-088 Gate = check:docs + check:repo-docs + audit check (đóng sổ); thêm T-097 'release-check GO' với Gate release-check nguyên văn, defer cho người
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1+3: không nới cổng phát hành — Gate release-check giữ nguyên ở T-097, chỉ tách trách nhiệm người/agent cho đúng (tiền lệ T-078 lát 13 defer); phương án 3 làm cổng phát hành mất nghĩa; BLOCKED che mất phần agent đã làm xong
+- Đường lùi: Gộp lại Gate T-088 như cũ
+
+### D-065 · 2026-10-24T09:13:24+00:00 · Duyệt lát 16 (T-089…T-096) theo yêu cầu 'hoàn thiện dự án': làm mọi 🟢 còn mở agent tự làm được
+
+- Phương án: (1) Làm DATA-009, DATA-007, SEC-009, DATA-008, TEST-004, TEST-003, SEC-008, SEC-011 (doc); không làm ARCH-005 (chỉ khi có kênh thật, D-059), HAR-003 (số dòng bằng chứng), PERF-004 phần còn lại (đúng thiết kế), DEP-001 (typescript-eslint chưa hỗ trợ TS7), CI-004 (khung), CFG-* (người) · (2) Dừng ở lát 15, để 🟢 lại
+- Chọn: Làm DATA-009, DATA-007, SEC-009, DATA-008, TEST-004, TEST-003, SEC-008, SEC-011 (doc); không làm ARCH-005 (chỉ khi có kênh thật, D-059), HAR-003 (số dòng bằng chứng), PERF-004 phần còn lại (đúng thiết kế), DEP-001 (typescript-eslint chưa hỗ trợ TS7), CI-004 (khung), CFG-* (người)
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: các mục này là lỗi/thiếu thật có đường tái hiện (dữ liệu rác MFA, DSAR thiếu, thông báo tới người hết quyền, RUM bị đầu độc khi bật) — rẻ, có test; các mục không làm có điều kiện kích hoạt hoặc phụ thuộc bên ngoài
+- Đường lùi: Đánh [~] task chưa làm kèm lý do
