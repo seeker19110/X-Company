@@ -365,16 +365,22 @@ async function eraseGeo(pool: pg.Pool, before: Date, batch: number): Promise<num
   let total = 0;
   for (;;) {
     const n = await inTx(pool, async (tx) => {
+      // AUD-DATA-008: hàm SQL từ chối mốc > now() của DB − 1 ngày (0031); đồng hồ ứng dụng nhanh hơn DB (hoặc geoDays = 1)
+      // sẽ làm lượt xoá lỗi → kẹp mốc về sàn của DB ngay trong giao dịch (cùng now() với hàm). Mốc cũ hơn sàn giữ nguyên.
+      // Audit ghi mốc ĐÃ KẸP (mốc thật được áp), không phải mốc phía ứng dụng (review PR #75).
+      const cut = (
+        await tx.query<{ cut: Date }>("SELECT LEAST($1::timestamptz, now() - interval '1 day') AS cut", [
+          before,
+        ])
+      ).rows[0]!.cut;
       const r = await tx.query<{ company_id: string }>(
-        // AUD-DATA-008: hàm SQL từ chối mốc > now() của DB − 1 ngày (0031); đồng hồ ứng dụng nhanh hơn DB (hoặc geoDays = 1)
-        // sẽ làm lượt xoá lỗi → kẹp mốc về sàn của DB ngay trong giao dịch (cùng now() với hàm). Mốc cũ hơn sàn giữ nguyên.
-        "SELECT attendance_event_erase_geo(LEAST($1::timestamptz, now() - interval '1 day'), $2) AS company_id",
-        [before, batch],
+        "SELECT attendance_event_erase_geo($1, $2) AS company_id",
+        [cut, batch],
       );
       const per = new Map<string, number>();
       for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
       for (const [companyId, k] of per)
-        await audited(tx, companyId, "retention.geo_erase", "attendance_event", before, k);
+        await audited(tx, companyId, "retention.geo_erase", "attendance_event", cut, k);
       return r.rowCount ?? 0;
     });
     total += n;

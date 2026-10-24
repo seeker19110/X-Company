@@ -78,7 +78,7 @@ function inApp(topic: string, payload: unknown): InApp | null {
       // AUD-SEC-009: người được phân công phải CÒN quyền inquiry.manage lúc worker xử lý (grant có thể đã bị thu hồi/hết hạn
       // sau khi phân công) — cùng quyết định với usersWhoCan, rồi lọc theo người được phân công (vô hiệu/khác công ty cũng rơi ở đây).
       recipients: async (tx, companyId) =>
-        (await usersWhoCan(tx, "inquiry.manage", { companyId })).filter((id) => id === p.assigneeUserId),
+        usersWhoCan(tx, "inquiry.manage", { companyId }, new Date(), [p.assigneeUserId]),
     };
   }
   if (topic === "application.received") {

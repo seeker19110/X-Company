@@ -223,7 +223,7 @@ describe("POST /api/public/rum", () => {
   });
 
   test("giá trị ngoại lai (> RUM_OUTLIER_MAX_TIME_MS) bị bỏ, vẫn 204; không vào p75 (AUD-SEC-008)", async () => {
-    // 59 999 ms (biên dưới ngưỡng) được giữ; 60 001 ms và 120 000 ms (hợp lệ theo CHECK DB) bị bỏ.
+    // 60 000 ms (đúng ngưỡng) được giữ; 60 001 ms và 120 000 ms (hợp lệ theo CHECK DB) bị bỏ.
     assert.equal(RUM_OUTLIER_MAX_TIME_MS, 60_000);
     const mk = (name: string, value: number) => beacon({ page: "/", metrics: [{ name, value }] });
     assert.equal((await post(mk("LCP", 60_000))).status, 204);
@@ -245,9 +245,10 @@ describe("POST /api/public/rum", () => {
   });
 
   test("trần mẫu mỗi ngày: quá trần → vẫn 204 nhưng không ghi thêm; ngày hôm trước không tính (AUD-SEC-008)", async () => {
+    // received_at = now() + 1 phút: vẫn thuộc "hôm nay" của lần POST kể cả khi test chạy vắt qua 00:00 UTC (review PR #75).
     await db.admin.query(
-      `INSERT INTO rum_sample (page, metric, value_ms)
-       SELECT '/', 'LCP', 1000 FROM generate_series(1, $1::int)`,
+      `INSERT INTO rum_sample (page, metric, value_ms, received_at)
+       SELECT '/', 'LCP', 1000, now() + interval '1 minute' FROM generate_series(1, $1::int)`,
       [RUM_DAILY_SAMPLE_CAP],
     );
     const count = async () =>
@@ -257,8 +258,8 @@ describe("POST /api/public/rum", () => {
     assert.equal(r.status, 204, "không lộ việc bị bỏ");
     assert.equal(await r.text(), "");
     assert.equal(await count(), RUM_DAILY_SAMPLE_CAP, "không ghi thêm");
-    // Sang ngày mới (UTC) lại ghi được: chuyển toàn bộ mẫu sang hôm qua.
-    await db.admin.query("UPDATE rum_sample SET received_at = received_at - interval '1 day'");
+    // Sang ngày mới (UTC) lại ghi được: chuyển toàn bộ mẫu về trước hôm nay (lùi 2 ngày: chắc chắn trước mốc đầu ngày).
+    await db.admin.query("UPDATE rum_sample SET received_at = received_at - interval '2 days'");
     assert.equal((await post(beacon())).status, 204);
     assert.equal(await count(), RUM_DAILY_SAMPLE_CAP + 3);
   });

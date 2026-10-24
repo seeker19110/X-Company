@@ -298,7 +298,7 @@ describe("cột PII mã hoá trong Postgres", () => {
       const after = (await db.admin.query("SELECT secret_enc FROM mfa_challenge WHERE id = $1", [prep.id]))
         .rows[0];
       assert.equal(after.secret_enc, row.secret_enc);
-      // Khoá cũ bị bỏ trước khi thử thách hết hạn: không giải mã được → từ chối (401), không lộ/không ghi bí mật.
+      // Khoá cũ bị bỏ trước khi thử thách hết hạn: không giải mã được → từ chối (CryptoError KEY_UNKNOWN), không lộ/không ghi bí mật.
       process.env.DATA_ENCRYPTION_KEYS = `k2:${K2}`;
       await assert.rejects(
         verifyMfa(db.app, { challenge: prep.token, code: "000000", ip: "10.9.9.8" }, now),
