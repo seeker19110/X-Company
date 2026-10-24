@@ -3,6 +3,22 @@
 Mọi thay đổi đáng chú ý của dự án ghi ở đây. Định dạng theo [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 phiên bản theo [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html). Chưa có bản phát hành nào.
 
+## [0.3.0](https://github.com/seeker19110/X-Company/compare/v0.2.1...v0.3.0) (2026-10-24)
+
+
+### Features
+
+* **identity:** lát 15 — TOTP hai bước, chặn bỏ sysadmin cuối ([#74](https://github.com/seeker19110/X-Company/issues/74)) ([b35d051](https://github.com/seeker19110/X-Company/commit/b35d0511a10dc284db71de5c416efec01b1c0364))
+* lát 14 — form ứng tuyển, thông báo trong ứng dụng, sửa audit 🟢 ([#73](https://github.com/seeker19110/X-Company/issues/73)) ([33e7e1a](https://github.com/seeker19110/X-Company/commit/33e7e1a6683fabe7a05ac153a786a6150d4b6cec))
+* **ops:** lát 17 — autovacuum + cảnh báo XID, bộ tải chỉ loopback ([#76](https://github.com/seeker19110/X-Company/issues/76)) ([3486732](https://github.com/seeker19110/X-Company/commit/34867327715ecb43b9a700e75378a72ca4181ba1))
+
+
+### Bug Fixes
+
+* **docs:** sửa ghi chú Kiểm sai dạng, chặn bằng check:docs ([#77](https://github.com/seeker19110/X-Company/issues/77)) ([6fe147c](https://github.com/seeker19110/X-Company/commit/6fe147c109d8b23a4efb960bfabeaf35767911ad))
+* lát 12–13 — quyền cấp vai trò, xoá GPS, a11y, harden ([#68](https://github.com/seeker19110/X-Company/issues/68)) ([5d5f480](https://github.com/seeker19110/X-Company/commit/5d5f48057fefd31e2eb107c435e30548b0f0ab3a))
+* lát 16 — dọn MFA, DSAR thông báo, RUM, quyền thông báo ([#75](https://github.com/seeker19110/X-Company/issues/75)) ([1d2bbf4](https://github.com/seeker19110/X-Company/commit/1d2bbf4b260fc2bf7fafce062c18ccb1101ccf5b))
+
 ## [0.2.1](https://github.com/seeker19110/X-Company/compare/v0.2.0...v0.2.1) (2026-10-21)
 
 
