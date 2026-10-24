@@ -14,6 +14,7 @@ function strategyFor(url, mode, method) {
   if (url.origin !== self.location.origin) return "network";
   if (url.pathname.startsWith("/api/")) return "network";
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) return "cache-first";
+  if (url.pathname === OFFLINE_CSS) return "cache-first"; // kiểu của /offline.html phải có khi mất mạng
   if (mode === "navigate" && url.pathname.startsWith("/app/")) return "network-first";
   return "network";
 }

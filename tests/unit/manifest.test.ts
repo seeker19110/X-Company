@@ -53,6 +53,11 @@ describe("PWA: manifest + service worker (T-020, S-PWA-04)", () => {
     assert.equal(strategy(u("/api/app/attendance/events"), "cors", "POST"), "network");
     assert.equal(strategy(u("/_next/static/chunks/a.js"), "no-cors", "GET"), "cache-first");
     assert.equal(strategy(u("/icons/icon-192.png"), "no-cors", "GET"), "cache-first");
+    assert.equal(
+      strategy(u("/offline.css"), "no-cors", "GET"),
+      "cache-first",
+      "kiểu trang ngoại tuyến (AUD-A11Y-011)",
+    );
     assert.equal(strategy(u("/app/today"), "navigate", "GET"), "network-first");
     assert.equal(
       strategy(u("/dich-vu"), "navigate", "GET"),

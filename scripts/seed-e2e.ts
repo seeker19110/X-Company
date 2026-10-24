@@ -58,6 +58,10 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
   };
   await mk("nv", "Nguyễn Văn Nhân", [{ role: "employee", scopeType: "self" }]);
   await mk("nv2", "Lê Thị Hai", [{ role: "employee", scopeType: "self" }]);
+  // Riêng cho ca hộp thoại đăng xuất của e2e/pages.spec.ts, mỗi viewport một người (AUD-TEST-002): trạng thái ca không phụ
+  // thuộc lượt chạy trước.
+  await mk("nv3", "Đinh Văn Ba", [{ role: "employee", scopeType: "self" }]);
+  await mk("nv4", "Bùi Thị Tư", [{ role: "employee", scopeType: "self" }]);
   await mk("tl", "Trần Trưởng Nhóm", [{ role: "team_lead", scopeType: "department", scopeId: deptId }]);
   await mk("ed", "Phạm Biên Tập", [{ role: "editor", scopeType: "company" }]);
   await mk("ed2", "Hoàng Duyệt Bài", [{ role: "editor", scopeType: "company" }]);
@@ -112,7 +116,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     "INSERT INTO shift_template (company_id, code, name, start_time, end_time, break_minutes) VALUES ($1, 'NGAY', 'Ca ngày', '00:05', '23:55', 0) RETURNING id",
     [companyId],
   );
-  for (const k of ["nv", "nv2"])
+  for (const k of ["nv", "nv2", "nv3", "nv4"])
     await tx.query(
       "INSERT INTO shift_assignment (company_id, employee_id, business_date, shift_template_id) VALUES ($1, $2, $3, $4)",
       [companyId, users[k]!.employeeId, localDate(new Date()), tpl.rows[0]!.id],

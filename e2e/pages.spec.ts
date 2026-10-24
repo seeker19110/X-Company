@@ -71,10 +71,10 @@ test.describe("trạng thái lỗi, hộp thoại và bảng dashboard (AUD-A11Y
         test.use({ serviceWorkers: "block" });
 
         test("hộp xác nhận đăng xuất (còn bản chưa gửi): axe 0 vi phạm", async ({ page, context }) => {
-          await login(page, "hr");
+          // Mỗi viewport một nhân viên chưa vào ca (AUD-TEST-002): nút xác định, không chấp nhận cả hai trạng thái.
+          await login(page, vp.width === NARROW.width ? "nv3" : "nv4");
           await context.setOffline(true);
-          // Vào ca hoặc Ra ca tuỳ lượt chạy trước (cùng người dùng ở hai viewport).
-          await page.getByRole("button", { name: /^(Vào|Ra) ca$/ }).click();
+          await page.getByRole("button", { name: "Vào ca", exact: true }).click();
           await expect(page.getByRole("status").first()).toContainText("Đã lưu trên thiết bị");
           // Có mạng lại nhưng chặn đồng bộ → bản ghi vẫn "chờ gửi" khi sang màn Cá nhân (đồng bộ tự chạy lúc mở màn).
           await page.route("**/api/app/sync", (route) => route.abort("failed"));
