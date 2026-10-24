@@ -52,7 +52,7 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 - [ ] `T-091` AUD-SEC-009: thông báo `inquiry.assigned` chỉ tới người còn quyền `inquiry.manage` lúc worker xử lý (files: lib/worker/handlers.ts, lib/notify/, tests/db/notification.test.ts) — Gate: `npm run -s test:file -- tests/db/notification.test.ts tests/db/worker.test.ts`
 - [ ] `T-092` AUD-DATA-008: mốc xoá toạ độ tính bằng `now()` của DB, không đồng hồ ứng dụng (files: lib/worker/retention.ts, tests/db/retention.test.ts) — Gate: `npm run -s test:file -- tests/db/retention.test.ts tests/db/geo-consent.test.ts`
 - [ ] `T-093` AUD-TEST-004: test xoay khoá gồm bí mật TOTP và bí mật tạm của thử thách (files: tests/db/encryption.test.ts, lib/crypto/) — Gate: `npm run -s test:file -- tests/db/encryption.test.ts`
-- [ ] `T-094` AUD-TEST-003: e2e đổi trạng thái seed không thử lại trên cùng seed (retries 0 cho các describe đó) (files: e2e/) — Gate: `npm run -s check:tests && npm run -s e2e`
+- [x] `T-094` AUD-TEST-003: e2e đổi trạng thái seed không thử lại trên cùng seed (retries 0 cho các describe đó) (files: e2e/) — Gate: `npm run -s check:tests && npm run -s e2e`
 - [ ] `T-095` AUD-SEC-008: beacon RUM có trần mẫu/ngày và cắt giá trị ngoại lai trước khi bật (files: lib/rum/, tests/) — Gate: `npm run -s test:file -- tests/db/rum.test.ts`
 - [ ] `T-096` AUD-SEC-011 + sổ: ghi đánh đổi khoá bước mã vào THREAT-MODEL T1; AUDIT-STATUS/PROGRESS sau lát 16 (sau: T-089, T-090, T-091, T-092, T-093, T-094, T-095; files: docs/, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
 

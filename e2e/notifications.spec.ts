@@ -6,6 +6,9 @@ failOnCspViolation();
 // AUD-DOC-002 (giao diện). Dữ liệu: scripts/seed-e2e.ts giao hai việc cho nv5 rồi chạy worker outbox THẬT (máy chủ e2e không
 // chạy worker) → nv5 có đúng hai thông báo chưa đọc ở mỗi công ty (desktop/mobile), không bài nào khác dùng nv5.
 test.describe("thông báo trong ứng dụng (AUD-DOC-002)", () => {
+  // Đổi trạng thái seed (AUD-TEST-003): lần thử lại trên cùng seed sẽ đỏ vì dữ liệu đã đổi, không phải vì lỗi — không thử lại;
+  // flake phải hiện đỏ và được sửa tận gốc.
+  test.describe.configure({ retries: 0 });
   test("người được giao việc thấy số chưa đọc ở điều hướng, mở danh sách, đánh dấu đã đọc → số giảm @smoke", async ({
     page,
   }) => {
