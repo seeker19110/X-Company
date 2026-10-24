@@ -26,21 +26,71 @@ export const seed = (): Seed => {
     : { companyId: f.companyId, password: f.password, users: f.users };
 };
 
+/** Bí mật TOTP cố định (base32) của người dùng E2E vai trò bắt buộc (hr, exec) — scripts/seed-e2e.ts. */
+export const totpSecret = (): string =>
+  (JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as SeedFile).totpSecret;
+
 /**
- * Mã TOTP cho người dùng E2E vai trò bắt buộc (AUD-SEC-002). `offset` = bước lệch (+1 khi mã bước hiện tại vừa được dùng —
- * server chống phát lại theo bước). Bước UI nhập mã trong `login` là việc của T-087.
+ * Mã TOTP cho bí mật base32 (mặc định: bí mật seed) ở bước hiện tại + `offset` (AUD-SEC-002). Server nhận lệch ±1 bước và
+ * chống phát lại theo bước — luồng đăng nhập nên đi qua `login()` (tự chọn bước chưa dùng).
  */
-export function totpCode(offset = 0): string {
-  const f = JSON.parse(readFileSync("e2e/.seed.json", "utf8")) as SeedFile;
-  return hotp(base32Decode(f.totpSecret)!, totpStep(Date.now()) + offset);
+export function totpCode(offset = 0, secretB32 = totpSecret()): string {
+  return hotp(base32Decode(secretB32)!, totpStep(Date.now()) + offset);
 }
 
+/** Mã chắc chắn sai lúc này: khác mã của mọi bước trong cửa sổ server chấp nhận (±1) và bước kế. */
+export function wrongTotpCode(secretB32 = totpSecret()): string {
+  const valid = new Set([-1, 0, 1, 2].map((o) => totpCode(o, secretB32)));
+  for (let n = 0; ; n++) {
+    const c = String(n).padStart(6, "0");
+    if (!valid.has(c)) return c;
+  }
+}
+
+/** Bước TOTP đã dùng gần nhất theo email trong tiến trình test này (server từ chối bước ≤ bước đã dùng). */
+const usedTotpStep = new Map<string, number>();
+
+/**
+ * Bước mã của đăng nhập: chọn bước chưa dùng nhỏ nhất ≥ bước hiện tại. Cửa sổ server là ±1 bước nên bước được chọn
+ * phải ≤ hiện tại + 1; nếu cùng người đã đăng nhập hai lần trong 30 s thì chờ đồng hồ sang bước kế bằng `expect.poll`
+ * (điều kiện trên đồng hồ, không ngủ cứng). Tất định: bị từ chối (vd bước đã dùng ở tiến trình khác/lần chạy trước khi
+ * worker khởi động lại) → đánh dấu bước đó đã dùng và thử bước kế, tối đa 3 lần (dưới hạn 5 lần sai/thử thách).
+ */
+export async function enterTotp(page: Page, email: string, secretB32 = totpSecret()) {
+  const input = page.getByLabel("Mã xác thực (6 số)");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const want = Math.max(totpStep(Date.now()), (usedTotpStep.get(email) ?? -1) + 1);
+    await expect
+      .poll(() => totpStep(Date.now()) + 1 >= want, { timeout: 45_000, intervals: [250] })
+      .toBe(true);
+    usedTotpStep.set(email, want);
+    await input.fill(hotp(base32Decode(secretB32)!, want));
+    const [res] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/api/app/auth/mfa") && r.request().method() === "POST"),
+      page.getByRole("button", { name: "Xác nhận" }).click(),
+    ]);
+    if (res.ok()) {
+      await expect(page).toHaveURL(/\/app\/today$/);
+      return;
+    }
+    const body = (await res.json()) as { code?: string };
+    if (body.code !== "INVALID_MFA_CODE") throw new Error(`bước mã TOTP lỗi ${res.status()} ${body.code}`);
+  }
+  throw new Error(`TOTP bị từ chối 3 lần liên tiếp cho ${email}`);
+}
+
+/** Đăng nhập bằng mật khẩu seed; vai trò bắt buộc TOTP (hr, exec) đi tiếp bước mã (T-087). */
 export async function login(page: Page, key: string) {
   const s = seed();
+  const email = s.users[key]!.email;
   await page.goto("/app/login");
-  await page.getByLabel("Email").fill(s.users[key]!.email);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mật khẩu").fill(s.password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
+  const code = page.getByLabel("Mã xác thực (6 số)");
+  // Kết thúc bước mật khẩu: hoặc vào thẳng app, hoặc hiện bước mã.
+  await expect.poll(async () => /\/app\/today$/.test(page.url()) || (await code.isVisible())).toBe(true);
+  if (!/\/app\/today$/.test(page.url())) await enterTotp(page, email);
   await expect(page).toHaveURL(/\/app\/today$/);
 }
 

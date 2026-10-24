@@ -668,5 +668,22 @@
       "taskUpdated": "Câu thông báo việc liên quan có cập nhật (đổi trạng thái, sửa).",
       "other": "Câu thông báo dự phòng cho chủ đề chưa biết."
     }
+  },
+  "mfa": {
+    "heading": "Tiêu đề bước hai của đăng nhập (nhập mã TOTP).",
+    "intro": "Hướng dẫn ngắn ở bước nhập mã TOTP: lấy mã từ ứng dụng xác thực.",
+    "code": "Nhãn ô nhập mã TOTP 6 chữ số.",
+    "submit": "Nút gửi mã TOTP.",
+    "submitting": "Chữ của nút gửi mã TOTP trong lúc đang kiểm tra.",
+    "back": "Nút bỏ bước mã, quay về bước nhập email/mật khẩu.",
+    "badFormat": "Lỗi theo ô khi mã nhập không đủ 6 chữ số (kiểm ở trình duyệt, chưa gửi).",
+    "wait": "Câu nối sau thông điệp lỗi giới hạn tần suất (429, đăng nhập/mã TOTP); {minutes} = số phút chờ theo Retry-After (làm tròn lên).",
+    "enrollHeading": "Tiêu đề phần đăng ký TOTP lần đầu ở màn đăng nhập.",
+    "enrollIntro": "Giải thích vì sao phải đăng ký và cần cài ứng dụng xác thực nào.",
+    "enrollOpen": "Liên kết otpauth:// mở ứng dụng xác thực trên điện thoại để thêm tài khoản.",
+    "enrollManual": "Dẫn vào khoá thiết lập base32 để nhập tay vào ứng dụng xác thực.",
+    "copy": "Nút chép khoá thiết lập vào bộ nhớ tạm.",
+    "copied": "Thông báo trạng thái sau khi chép khoá thành công.",
+    "enrollDone": "Hướng dẫn bước cuối của đăng ký: nhập mã 6 số để hoàn tất."
   }
 }

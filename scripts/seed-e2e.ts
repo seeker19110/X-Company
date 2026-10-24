@@ -45,6 +45,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
     key: string,
     name: string,
     grants: { role: Role; scopeType: ScopeType; scopeId?: string }[],
+    opts: { totp?: boolean } = {},
   ) => {
     const employeeId = await createEmployee(tx, sys, companyId, { code: key.toUpperCase(), fullName: name });
     await assignEmployment(tx, sys, companyId, employeeId, { departmentId: deptId, validFrom: "2026-01-01" });
@@ -60,7 +61,7 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
         scopeType: g.scopeType,
         scopeId: g.scopeId ?? null,
       });
-    if (grants.some((g) => MFA_REQUIRED_ROLES.includes(g.role))) {
+    if (opts.totp !== false && grants.some((g) => MFA_REQUIRED_ROLES.includes(g.role))) {
       const sealed = await sealTextAsync(textColumn("app_user", "totp_secret"), rows[0]!.id, E2E_TOTP_SECRET);
       await tx.query("UPDATE app_user SET totp_secret_enc = $2, totp_enabled_at = now() WHERE id = $1", [
         rows[0]!.id,
@@ -83,6 +84,8 @@ async function seedCompany(tx: pg.PoolClient, companyName: string, emailSuffix: 
   await mk("sales", "Đỗ Kinh Doanh", [{ role: "sales", scopeType: "company" }]);
   await mk("hr", "Ngô Nhân Sự", [{ role: "hr", scopeType: "company" }]);
   await mk("exec", "Vũ Giám Đốc", [{ role: "executive", scopeType: "company" }]);
+  // Quản trị viên CHƯA đăng ký TOTP: e2e luồng đăng ký lần đầu (T-087) — mỗi project một người, chỉ đăng nhập một lần.
+  await mk("sys", "Lý Quản Trị", [{ role: "sysadmin", scopeType: "company" }], { totp: false });
   if (withSite) {
     const ed = { userId: users.ed!.userId, companyId };
     const ed2 = { userId: users.ed2!.userId, companyId };

@@ -10,6 +10,10 @@ export interface ApiResult<T> {
   error?: string;
   /** Lỗi theo trường từ problem+json (`fields`), khi server trả 400 VALIDATION (FE-FORM-001). */
   fields?: { path: string; message: string }[];
+  /** Mã lỗi máy đọc của problem+json (`code`), vd INVALID_MFA_CODE — để giao diện rẽ nhánh, không so chuỗi thông điệp. */
+  code?: string;
+  /** Giây phải chờ (header Retry-After của 429). */
+  retryAfter?: number;
 }
 
 /** Khoá đang dùng cho một thao tác chưa có kết quả chắc chắn: gửi lại cùng route + cùng nội dung → cùng khoá. */
@@ -55,6 +59,7 @@ export async function api<T = unknown>(
       signal: AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
     });
     const json = (await res.json().catch(() => ({}))) as {
+      code?: string;
       error?: { message?: string };
       fields?: { path: string; message: string }[];
     } & T;
@@ -62,11 +67,14 @@ export async function api<T = unknown>(
     if (auto && (res.ok || (res.status < 500 && res.status !== 409 && res.status !== 429)))
       pendingKeys.delete(sig);
     if (!res.ok) {
+      const retry = Number(res.headers.get("retry-after"));
       return {
         ok: false,
         status: res.status,
         error: json.error?.message ?? t("api.status", { status: res.status }),
         ...(Array.isArray(json.fields) ? { fields: json.fields } : {}),
+        ...(typeof json.code === "string" ? { code: json.code } : {}),
+        ...(retry > 0 ? { retryAfter: retry } : {}),
       };
     }
     return { ok: true, status: res.status, data: json };

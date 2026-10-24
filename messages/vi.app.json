@@ -169,5 +169,22 @@
       "taskUpdated": "Việc của bạn có cập nhật",
       "other": "Có thông báo mới"
     }
+  },
+  "mfa": {
+    "heading": "Xác thực hai bước",
+    "intro": "Nhập mã 6 số đang hiện trong ứng dụng xác thực trên điện thoại.",
+    "code": "Mã xác thực (6 số)",
+    "submit": "Xác nhận",
+    "submitting": "Đang kiểm tra…",
+    "back": "Quay lại đăng nhập",
+    "badFormat": "Nhập đủ 6 chữ số",
+    "wait": "Vui lòng chờ khoảng {minutes} phút rồi thử lại.",
+    "enrollHeading": "Thiết lập ứng dụng xác thực",
+    "enrollIntro": "Vai trò của bạn cần xác thực hai bước. Cài một ứng dụng xác thực (TOTP) trên điện thoại, ví dụ Google Authenticator hoặc Microsoft Authenticator.",
+    "enrollOpen": "Mở trong ứng dụng xác thực (trên điện thoại)",
+    "enrollManual": "Hoặc thêm tài khoản thủ công bằng khoá thiết lập (loại: theo thời gian):",
+    "copy": "Chép khoá",
+    "copied": "Đã chép khoá",
+    "enrollDone": "Sau đó nhập mã 6 số ứng dụng hiển thị để hoàn tất."
   }
 }
