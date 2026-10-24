@@ -156,6 +156,24 @@ test("check-tests: page.route chỉ hợp lệ trong phạm vi test.use({ servic
   assert.deepEqual(checkSource("e2e/d.spec.ts", nested), []);
   const fileLevel = `test.use({ serviceWorkers: "block" });\ntest("a", async ({ page }) => { await page.route("**/x", (r) => r.abort()); expect(1).toBe(1); });`;
   assert.deepEqual(checkSource("e2e/e.spec.ts", fileLevel), []);
+  // AUD-TEST-002: context.route / page.context().route / routeFromHAR cũng chặn qua SW → cùng luật.
+  for (const call of [
+    `context.route("**/x", (r) => r.abort())`,
+    `page.context().route("**/x", (r) => r.abort())`,
+    `page.routeFromHAR("x.har")`,
+    `context.routeFromHAR("x.har")`,
+  ]) {
+    const src = `test("a", async ({ page, context }) => { await ${call}; expect(1).toBe(1); });`;
+    assert.equal(checkSource("e2e/f.spec.ts", src).length, 1, call);
+    assert.deepEqual(
+      checkSource("e2e/g.spec.ts", `test.use({ serviceWorkers: "block" });\n${src}`),
+      [],
+      call,
+    );
+  }
+  // Không nhầm: router.route của mã khác, hay thuộc tính `route` không phải lời gọi.
+  const unrelated = `test("a", async () => { const x = router.route("/a"); expect(api.route).toBe(x); });`;
+  assert.deepEqual(checkSource("tests/unit/h.test.ts", unrelated), []);
 });
 
 test("check-adr: chỉ dòng Trạng thái/liên kết được đổi", () => {
