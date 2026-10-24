@@ -14,7 +14,9 @@ Cảm ơn bạn đã quan tâm. Dự án độc quyền (xem [LICENSE](LICENSE))
 
 - `main` được bảo vệ (ruleset ở [.github/rulesets/main.json](.github/rulesets/main.json)): không push thẳng, không force-push, chỉ squash merge qua PR.
 - Mỗi lát việc một nhánh, một PR. Đặt tên: `<loại>/<mô-tả-ngắn>` — `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, `test/`; có thể thêm mã task (`feat/t-012-su-kien-cong`).
-- Không rewrite lịch sử nhánh người khác đang dùng; chỉ rebase/amend nhánh cá nhân chưa chia sẻ.
+- **Nhánh dùng chung** = `main`, nhánh có người/agent khác đang làm, nhánh đã có PR được review: không force-push, không
+  `rebase`/`amend`/`reset` lịch sử đã đẩy (BASE-REPO-013). Đồng bộ với `main` bằng **merge commit**; sửa sau review bằng
+  commit mới. Chỉ rebase/amend nhánh cá nhân chưa chia sẻ. Guard của agent chặn force-push (`.claude/hooks/guard.py`).
 
 ## Commit — Conventional Commits 1.0.0
 

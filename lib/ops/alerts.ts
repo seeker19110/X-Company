@@ -232,6 +232,20 @@ const timeoutAfter = <T>(p: Promise<T>, ms: number): Promise<T> => {
 };
 export const DB_SIGNAL_TIMEOUT_MS = 5_000;
 
+/**
+ * Tuổi XID lớn nhất trên mọi database của cụm (DB-PERF-008). Wraparound là giới hạn của CẢ cụm, nên lấy max trên `pg_database`
+ * (kể cả template) chứ không riêng database đang nối. `pg_database` đọc được với mọi role, không cần quyền riêng.
+ */
+export const XID_AGE_MAX_SQL = "SELECT max(age(datfrozenxid))::bigint AS n FROM pg_database";
+
+/**
+ * Tỷ lệ hàng chết lớn nhất n_dead_tup / (n_live_tup + n_dead_tup) trên các bảng của database hiện tại có n_live_tup ≥ $1
+ * (bảng nhỏ phình vài trăm hàng không đáng báo). Không bảng nào đủ lớn → 0 (đúng nghĩa: không có phình đáng kể).
+ */
+export const DEAD_TUPLES_RATIO_MAX_SQL = `SELECT COALESCE(max(n_dead_tup::double precision / (n_live_tup + n_dead_tup)), 0) AS n
+  FROM pg_stat_user_tables WHERE n_live_tup >= $1`;
+export const DEAD_TUPLES_MIN_LIVE_DEFAULT = 10_000;
+
 export interface EngineDeps {
   sinks: AlertSink[];
   now?: () => Date;
@@ -378,6 +392,12 @@ export class AlertEngine {
           : offsiteAgeSeconds(this.deps.backupDir, nowMs, "offsite-drill.json");
       case "audit_chain_broken":
         return this.auditBroken(rule, nowMs);
+      case "xid_age_max":
+        return this.db(rule, XID_AGE_MAX_SQL, []);
+      case "dead_tuples_ratio_max":
+        return this.db(rule, DEAD_TUPLES_RATIO_MAX_SQL, [
+          Math.max(1, Math.trunc(p.min_live_tuples ?? DEAD_TUPLES_MIN_LIVE_DEFAULT)),
+        ]);
     }
   }
 

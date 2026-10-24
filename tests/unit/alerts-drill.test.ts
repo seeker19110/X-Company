@@ -90,8 +90,8 @@ const memSink = (fail = false): AlertSink & { got: AlertNotification[] } => {
 
 describe("luật cảnh báo (docs/ops/alerts.json)", () => {
   const rules = loadRules(RULES_FILE);
-  test("hợp lệ; page chỉ cho burn-rate/readyz/audit; runbook trỏ mục có thật; mỗi luật có dòng thử kích hoạt", () => {
-    assert.ok(rules.length >= 12);
+  test("hợp lệ; page chỉ cho burn-rate/readyz/audit/XID wraparound; runbook trỏ mục có thật; mỗi luật có dòng thử kích hoạt", () => {
+    assert.ok(rules.length >= 16);
     for (const r of rules) {
       const [file, anchor] = r.runbook.split("#");
       assert.ok(
@@ -99,12 +99,20 @@ describe("luật cảnh báo (docs/ops/alerts.json)", () => {
         `${r.id} → ${r.runbook}`,
       );
       if (r.severity === "page")
-        assert.ok(["http_5xx_ratio", "readyz_down", "audit_chain_broken"].includes(r.signal), r.id);
+        assert.ok(
+          ["http_5xx_ratio", "readyz_down", "audit_chain_broken", "xid_age_max"].includes(r.signal),
+          r.id,
+        );
     }
     assert.ok(
       rules.some((r) => (r.windows?.length ?? 0) >= 2 && r.severity === "page"),
       "burn rate đa cửa sổ",
     );
+    // DB-PERF-008: cảnh báo wraparound (page) trước 2^31 với biên rộng, phình bảng (ticket) ở tỷ lệ hàng chết > 0,2.
+    const xid = rules.find((r) => r.signal === "xid_age_max");
+    assert.ok(xid && xid.severity === "page" && xid.threshold > 0 && xid.threshold <= 1_500_000_000, "xid");
+    const dead = rules.find((r) => r.signal === "dead_tuples_ratio_max");
+    assert.ok(dead && dead.severity === "ticket" && dead.threshold === 0.2, "dead tuples");
     const errs = checkLocalRules(readFileSync(RULES_FILE, "utf8"), (p) => {
       try {
         return readFileSync(path.join(ROOT, p), "utf8");

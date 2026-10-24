@@ -20,6 +20,8 @@ export const SIGNALS = [
   "offsite_drill_age_seconds",
   "period_close_overdue",
   "audit_chain_broken",
+  "xid_age_max",
+  "dead_tuples_ratio_max",
 ] as const;
 export type SignalName = (typeof SIGNALS)[number];
 

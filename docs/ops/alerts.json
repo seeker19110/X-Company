@@ -171,6 +171,31 @@
       "params": {
         "min_interval_seconds": 3600
       }
+    },
+    {
+      "id": "XCLocalXidWraparound",
+      "summary": "Tuổi XID của một database vượt 1,5 tỷ (giới hạn 2^31): autovacuum không đóng băng kịp, còn ~647 triệu XID tới giới hạn 2^31 (PostgreSQL cảnh báo khi còn 40 triệu, từ chối ghi khi còn 3 triệu) và tới gần mức từ chối ghi (DB-PERF-008)",
+      "severity": "page",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#tuổi-xid-wraparound",
+      "signal": "xid_age_max",
+      "op": "gt",
+      "threshold": 1500000000,
+      "forSeconds": 0
+    },
+    {
+      "id": "XCLocalDeadTuplesHigh",
+      "summary": "Có bảng (≥ 10.000 hàng sống) mà hàng chết chiếm hơn 20% kéo dài 1 giờ: autovacuum không theo kịp hoặc bị chặn, bảng đang phình (DB-PERF-008)",
+      "severity": "ticket",
+      "owner": "seeker19110",
+      "runbook": "docs/ops/RUNBOOK.md#hàng-chết-dead-tuples--phình-bảng",
+      "signal": "dead_tuples_ratio_max",
+      "op": "gt",
+      "threshold": 0.2,
+      "forSeconds": 3600,
+      "params": {
+        "min_live_tuples": 10000
+      }
     }
   ]
 }

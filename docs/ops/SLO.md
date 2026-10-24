@@ -75,6 +75,7 @@ Vì chưa có Prometheus/Alertmanager, `lib/ops/alerts.ts` đánh giá các lu�
 | `XCLocalBackupStale` | RPO (xem [RPO-RTO.md](RPO-RTO.md)) | ticket | có (dùng `scripts/backup.sh` thật) |
 | `XCLocalPeriodCloseOverdue` | đồng hồ khoá kỳ công | ticket | có |
 | `XCLocalAuditChainBroken` | toàn vẹn audit | page | có |
+| `XCLocalXidWraparound` / `XCLocalDeadTuplesHigh` | sức khoẻ DB (DB-PERF-008: tuổi XID > 1,5 tỷ; hàng chết > 20% trong 1 giờ) | page / ticket | có (XID: ngưỡng hạ tạm, XID thật; hàng chết: DELETE thật rồi VACUUM) |
 
 Kết quả từng luật và cách thử: [alert-drills.md](alert-drills.md) (`npm run -s alerts:drill`).
 **Chưa chạy thử:** PromQL ở các mục SLI và 4 rule trong `ops/prometheus/alerts.yml` (không có Prometheus/Alertmanager thật; chỉ `npm run -s check:alerts` kiểm cấu trúc), kênh trực có người, webhook thật. SLI-3 SQL vẫn chưa có kiểm tự động riêng (luật `XCLocalOutboxStale` kiểm hàng quá hạn nhưng không tính tỷ lệ 99%).
