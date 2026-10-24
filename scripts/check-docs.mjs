@@ -691,6 +691,29 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
       must = null;
       fail("số liệu: không đọc được levels.MUST từ `xt.py blueprint-status BLUEPRINT.md --json`");
     }
+    // Ghi chú `— Kiểm:` sai dạng (vd thêm backtick sau lệnh) → `loop verify` trả exit 2 mà không chạy lệnh; bắt ở đây
+    // thay vì chờ verify cuối vòng.
+    const bad = spawnSync(
+      "python3",
+      [
+        "-c",
+        "import sys,json;sys.path.insert(0,sys.argv[1]);import xt;from pathlib import Path;" +
+          "print(json.dumps([c['id'] for c in xt.blueprint_checks(Path(sys.argv[2]))['checks'] if not c['cmd']]))",
+        p(dirname(xt)),
+        p("BLUEPRINT.md"),
+      ],
+      { encoding: "utf8" },
+    );
+    let badIds = null;
+    try {
+      badIds = JSON.parse(bad.stdout);
+    } catch {
+      fail("blueprint: không đọc được danh sách lệnh `— Kiểm:` từ xt.blueprint_checks");
+    }
+    if (Array.isArray(badIds) && badIds.length > 0)
+      fail(
+        `blueprint: ghi chú \`— Kiểm:\` sai dạng (cần đúng một lệnh trong một cặp backtick): ${badIds.join(", ")}`,
+      );
   } else out("CẢNH BÁO: không có xt.py/BLUEPRINT.md — bỏ qua kiểm số MUST");
   const nRules = has("docs/ops/alerts.json")
     ? (JSON.parse(read("docs/ops/alerts.json")).rules ?? []).length
