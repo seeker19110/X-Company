@@ -515,4 +515,39 @@ describe("retention", () => {
     assert.equal(x.geoErased + y.geoErased, 20);
     assert.equal((await auditN()) - a0, 20);
   });
+  test("AUD-DATA-009: mfa_challenge hết hạn + mfa_failure quá cửa sổ bị dọn; còn hạn/đang dùng dở giữ; chạy lại = 0", async () => {
+    const u = (await seedUser(companyId)).userId;
+    const chal = async (expiresAt: Date, attempts = 0) => {
+      const id = randomUUID();
+      await db.admin.query(
+        `INSERT INTO mfa_challenge (id, token_hash, user_id, purpose, attempts, created_at, expires_at)
+         VALUES ($1, $2, $3, 'verify', $4, $5, $6)`,
+        [id, randomUUID(), u, attempts, new Date(expiresAt.getTime() - 300_000), expiresAt],
+      );
+      return id;
+    };
+    const fail = (at: Date) =>
+      db.admin.query("INSERT INTO mfa_failure (user_id, failed_at) VALUES ($1, $2)", [u, at]);
+    const exists = async (id: string) =>
+      (await one("SELECT count(*)::int AS n FROM mfa_challenge WHERE id = $1", [id])).n === 1;
+    const oldC = await chal(new Date(NOW.getTime() - 2 * 3_600_000));
+    const oldC2 = await chal(new Date(NOW.getTime() - 3 * 3_600_000), 3);
+    const justExpired = await chal(new Date(NOW.getTime() - 60_000)); // trong biên an toàn: giữ
+    const live = await chal(new Date(NOW.getTime() + 240_000), 2); // đang dùng dở
+    await fail(new Date(NOW.getTime() - 3 * 3_600_000));
+    await fail(new Date(NOW.getTime() - 2 * 3_600_000));
+    await fail(new Date(NOW.getTime() - 60_000)); // trong cửa sổ 15 phút: giữ
+    await fail(new Date(NOW.getTime() - 20 * 60_000)); // quá cửa sổ nhưng trong biên: giữ
+    const rep = await runRetention({ config: CFG, now: NOW, pool: db.app, batchSize: 1 });
+    assert.equal(rep.mfaChallengeDeleted, 2);
+    assert.equal(rep.mfaFailureDeleted, 2);
+    assert.equal(await exists(oldC), false);
+    assert.equal(await exists(oldC2), false);
+    assert.equal(await exists(justExpired), true);
+    assert.equal(await exists(live), true);
+    assert.equal((await one("SELECT count(*)::int AS n FROM mfa_failure WHERE user_id = $1", [u])).n, 2);
+    const again = await runRetention({ config: CFG, now: NOW, pool: db.app });
+    assert.equal(again.mfaChallengeDeleted, 0);
+    assert.equal(again.mfaFailureDeleted, 0);
+  });
 });
