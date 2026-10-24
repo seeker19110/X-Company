@@ -136,6 +136,9 @@ test.describe("thử thách hết hạn và giới hạn tần suất (mock ph�
 });
 
 test.describe("đăng ký TOTP lần đầu", () => {
+  // Đổi trạng thái seed (AUD-TEST-003): lần thử lại trên cùng seed sẽ đỏ vì dữ liệu đã đổi, không phải vì lỗi — không thử lại;
+  // flake phải hiện đỏ và được sửa tận gốc.
+  test.describe.configure({ retries: 0 });
   test.use({ viewport: NARROW });
 
   // Mỗi project một người dùng `sys` (sysadmin chưa đăng ký) và chỉ đăng ký được một lần: test này không lặp lại được

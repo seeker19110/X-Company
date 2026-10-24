@@ -83,15 +83,18 @@ export async function usersWhoCan(
   action: Action,
   resource: Resource,
   now: Date = new Date(),
+  /** Chỉ xét các tài khoản này (vd người được phân công) — tránh nạp actor của mọi người cùng vai trò (review PR #75). */
+  onlyUserIds?: readonly string[],
 ): Promise<string[]> {
   const roles: readonly string[] = PERMISSIONS[action].roles;
-  if (roles.length === 0) return [];
+  if (roles.length === 0 || onlyUserIds?.length === 0) return [];
   const r = await db.query<{ id: string }>(
     `SELECT DISTINCT u.id FROM app_user u JOIN role_grant g ON g.user_id = u.id
       WHERE u.company_id = $1 AND u.disabled_at IS NULL AND g.company_id = $1 AND g.role = ANY($2::text[])
         AND g.revoked_at IS NULL AND g.valid_from <= $3 AND (g.valid_to IS NULL OR g.valid_to > $3)
+        AND ($4::uuid[] IS NULL OR u.id = ANY($4::uuid[]))
       ORDER BY u.id`,
-    [resource.companyId, roles, now],
+    [resource.companyId, roles, now, onlyUserIds ?? null],
   );
   const out: string[] = [];
   for (const { id } of r.rows) {

@@ -5,6 +5,7 @@
 // Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ, rum_sample quá hạn (T-056), public_rate_event quá 1 ngày → xoá.
 // Thông báo trong ứng dụng (T-080): đã đọc quá NOTIFICATION_READ_DAYS, chưa đọc quá NOTIFICATION_UNREAD_DAYS → xoá theo lô.
 // Toạ độ GPS chấm công quá RETENTION_GEO_DAYS → xoá toạ độ (sự kiện giữ) qua hàm có kiểm soát của migration 0029 (AUD-DATA-003).
+// mfa_challenge hết hạn + mfa_failure quá cửa sổ 15 phút → xoá theo lô (AUD-DATA-009; trước đây chỉ dọn trong luồng của chính người dùng).
 // Mỗi nhóm một giao dịch + một bản ghi audit (chỉ đếm, không PII). Tắt: RETENTION_ENABLED=false (đường lùi D-016).
 import type pg from "pg";
 import { appendAudit } from "../audit/index.ts";
@@ -13,6 +14,7 @@ import { env } from "../nen/env.ts";
 import { log } from "../nen/log.ts";
 import { localDate } from "../nen/time.ts";
 import { MS_PER_DAY } from "../nen/units.ts";
+import { MFA_WINDOW_MS } from "../identity/mfa.ts";
 import { PURPOSE_TALENT_POOL } from "../privacy/consent.ts";
 
 export interface RetentionConfig {
@@ -76,6 +78,10 @@ export interface RetentionReport {
   geoErased: number;
   /** Thông báo trong ứng dụng đã xoá (đã đọc quá hạn + chưa đọc quá hạn). */
   notificationDeleted: number;
+  /** mfa_challenge hết hạn quá biên an toàn đã xoá. */
+  mfaChallengeDeleted: number;
+  /** mfa_failure quá cửa sổ giới hạn (+ biên an toàn) đã xoá. */
+  mfaFailureDeleted: number;
 }
 
 // i18n-ignore: giá trị dữ liệu ổn định ghi vào cột tên sau ẩn danh (so khớp/kiểm bằng truy vấn), không đổi theo ngôn ngữ
@@ -130,6 +136,14 @@ type PurgeTable = Exclude<
 >;
 const selector = (table: (typeof RETENTION_SELECTORS)[number]["table"]): string =>
   RETENTION_SELECTORS.find((x) => x.table === table)!.where;
+
+/**
+ * Biên an toàn cho dọn MFA (AUD-DATA-009): luồng xác thực tự dọn đúng hạn/đúng cửa sổ; job chỉ gom phần người dùng không quay lại,
+ * nên lùi thêm 1 giờ để không bao giờ đụng thử thách đang dùng dở hay lần sai còn trong cửa sổ giới hạn (kể cả lệch đồng hồ).
+ */
+export const MFA_PURGE_MARGIN_MS = HOUR;
+const MFA_CHALLENGE_WHERE = "expires_at < $1";
+const MFA_FAILURE_WHERE = "failed_at < $1";
 
 /** public_rate_event chỉ cần cửa sổ giới hạn tần suất (≤ 10 phút); giữ 1 ngày cho điều tra rồi xoá (trước đây tăng mãi). */
 const RATE_EVENT_DAYS = 1;
@@ -298,7 +312,7 @@ async function purge(pool: pg.Pool, table: PurgeTable, before: Date, batch: numb
 /** Xoá theo lô các hàng của `table` thoả `where` ($1 = mốc) — `where` là một bộ chọn trong RETENTION_SELECTORS. */
 async function purgeWhere(
   pool: pg.Pool,
-  table: PurgeTable | "notification",
+  table: PurgeTable | "notification" | "mfa_challenge" | "mfa_failure",
   where: string,
   before: Date,
   batch: number,
@@ -351,14 +365,22 @@ async function eraseGeo(pool: pg.Pool, before: Date, batch: number): Promise<num
   let total = 0;
   for (;;) {
     const n = await inTx(pool, async (tx) => {
+      // AUD-DATA-008: hàm SQL từ chối mốc > now() của DB − 1 ngày (0031); đồng hồ ứng dụng nhanh hơn DB (hoặc geoDays = 1)
+      // sẽ làm lượt xoá lỗi → kẹp mốc về sàn của DB ngay trong giao dịch (cùng now() với hàm). Mốc cũ hơn sàn giữ nguyên.
+      // Audit ghi mốc ĐÃ KẸP (mốc thật được áp), không phải mốc phía ứng dụng (review PR #75).
+      const cut = (
+        await tx.query<{ cut: Date }>("SELECT LEAST($1::timestamptz, now() - interval '1 day') AS cut", [
+          before,
+        ])
+      ).rows[0]!.cut;
       const r = await tx.query<{ company_id: string }>(
         "SELECT attendance_event_erase_geo($1, $2) AS company_id",
-        [before, batch],
+        [cut, batch],
       );
       const per = new Map<string, number>();
       for (const row of r.rows) per.set(row.company_id, (per.get(row.company_id) ?? 0) + 1);
       for (const [companyId, k] of per)
-        await audited(tx, companyId, "retention.geo_erase", "attendance_event", before, k);
+        await audited(tx, companyId, "retention.geo_erase", "attendance_event", cut, k);
       return r.rowCount ?? 0;
     });
     total += n;
@@ -398,6 +420,8 @@ export async function runRetention(
     rateEventDeleted: 0,
     geoErased: 0,
     notificationDeleted: 0,
+    mfaChallengeDeleted: 0,
+    mfaFailureDeleted: 0,
   };
   if (!cfg.enabled) return report;
   // AUD-DATA-005: mỗi nhóm chạy độc lập — một nhóm lỗi không chặn các nhóm sau (nhất là xoá toạ độ GPS); lỗi gom lại và
@@ -473,6 +497,12 @@ export async function runRetention(
         ago(now, NOTIFICATION_UNREAD_DAYS * DAY),
         batch,
       )),
+  );
+  await step("mfaChallengeDeleted", () =>
+    purgeWhere(pool, "mfa_challenge", MFA_CHALLENGE_WHERE, ago(now, MFA_PURGE_MARGIN_MS), batch),
+  );
+  await step("mfaFailureDeleted", () =>
+    purgeWhere(pool, "mfa_failure", MFA_FAILURE_WHERE, ago(now, MFA_WINDOW_MS + MFA_PURGE_MARGIN_MS), batch),
   );
   if (errors.length > 0)
     throw Object.assign(new AggregateError(errors, `retention: ${errors.length} nhóm lỗi`), { report });

@@ -12,6 +12,7 @@ import {
   encryptedPlainColumns,
   openText,
   revealText,
+  sealText,
   textColumn,
 } from "../../lib/crypto/columns.ts";
 import { collect, decryptFileStream, encryptFileStream } from "../../lib/crypto/file.ts";
@@ -27,8 +28,10 @@ import { backfill, rotateFiles, rotateKeys, verifyFiles } from "../../lib/crypto
 import { withTx } from "../../lib/db/index.ts";
 import { diskStorage } from "../../lib/files/storage.ts";
 import { createEmployee } from "../../lib/org/index.ts";
+import { CHALLENGE_TTL_MS, prepareChallenge, storeChallenge, verifyMfa } from "../../lib/identity/mfa.ts";
+import { base32Decode, hotp, newTotpSecret, totpStep } from "../../lib/identity/totp.pure.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { seedCompany, setTestEnv } from "../helpers/fixtures.ts";
+import { seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
 
 setTestEnv();
 
@@ -235,6 +238,72 @@ describe("cột PII mã hoá trong Postgres", () => {
       assert.equal(stale.rows[0].n, 0);
       process.env.DATA_ENCRYPTION_KEYS = `k2:${K2}`; // khoá cũ đã bỏ
       assert.equal(openText(phoneCol, ids[0]!, await rawRow(ids[0]!)), "0911 000 001");
+    } finally {
+      process.env.DATA_ENCRYPTION_KEYS = `k1:${K1}`;
+    }
+  });
+
+  test("xoay khoá: bí mật TOTP (app_user.totp_secret_enc) giải đúng + verify TOTP vẫn qua sau khi bỏ khoá cũ (AUD-TEST-004)", async () => {
+    const { userId, email } = await seedUser(companyId, { withEmployee: false });
+    const secretB32 = newTotpSecret();
+    const totpCol = textColumn("app_user", "totp_secret");
+    const sealed = sealText(totpCol, userId, secretB32);
+    assert.match(sealed.enc!, /^v1:k1:/);
+    await db.admin.query("UPDATE app_user SET totp_secret_enc = $2, totp_enabled_at = now() WHERE id = $1", [
+      userId,
+      sealed.enc,
+    ]);
+    process.env.DATA_ENCRYPTION_KEYS = `k2:${K2},k1:${K1}`;
+    try {
+      const rep = (await rotateKeys(db.app)).find((x) => x.target === "app_user.totp_secret")!;
+      assert.equal(rep.rotated, 1);
+      assert.equal(rep.stale, 0);
+      assert.equal((await rotateKeys(db.app)).find((x) => x.target === "app_user.totp_secret")!.rotated, 0);
+      const row = (await db.admin.query("SELECT totp_secret_enc FROM app_user WHERE id = $1", [userId]))
+        .rows[0];
+      assert.match(row.totp_secret_enc, /^v1:k2:/);
+      process.env.DATA_ENCRYPTION_KEYS = `k2:${K2}`; // khoá cũ đã bỏ
+      assert.equal(openText(totpCol, userId, row), secretB32);
+      // Verify TOTP đầu-cuối bằng bản mã đã xoay.
+      const now = new Date();
+      const prep = await prepareChallenge(true);
+      await withTx((tx) => storeChallenge(tx, userId, email, prep, now), db.app);
+      const code = hotp(base32Decode(secretB32)!, totpStep(now.getTime()));
+      const res = await verifyMfa(db.app, { challenge: prep.token, code, ip: "10.9.9.9" }, now);
+      assert.equal(res.userId, userId);
+    } finally {
+      process.env.DATA_ENCRYPTION_KEYS = `k1:${K1}`;
+    }
+  });
+
+  test("mfa_challenge.secret_enc KHÔNG nằm trong sổ xoay khoá: thử thách sống ≤ 5 phút nên không cần; khoá bỏ → thử thách đăng ký thất bại an toàn (AUD-TEST-004)", async () => {
+    // Lý do không đăng ký: bí mật tạm, hạn cứng 5 phút (CHALLENGE_TTL_MS), xoá khi đăng nhập lại.
+    assert.ok(!ENCRYPTED_COLUMNS.some((c) => c.table === "mfa_challenge"));
+    assert.ok(CHALLENGE_TTL_MS <= 5 * 60_000);
+    const { userId, email } = await seedUser(companyId, { withEmployee: false });
+    const now = new Date();
+    const prep = await prepareChallenge(false);
+    await withTx((tx) => storeChallenge(tx, userId, email, prep, now), db.app);
+    const row = (
+      await db.admin.query("SELECT secret_enc, created_at, expires_at FROM mfa_challenge WHERE id = $1", [
+        prep.id,
+      ])
+    ).rows[0];
+    assert.match(row.secret_enc, /^v1:k1:/);
+    assert.ok(row.expires_at.getTime() - row.created_at.getTime() <= 5 * 60_000);
+    // rotateKeys không đụng bản mã thử thách.
+    process.env.DATA_ENCRYPTION_KEYS = `k2:${K2},k1:${K1}`;
+    try {
+      await rotateKeys(db.app);
+      const after = (await db.admin.query("SELECT secret_enc FROM mfa_challenge WHERE id = $1", [prep.id]))
+        .rows[0];
+      assert.equal(after.secret_enc, row.secret_enc);
+      // Khoá cũ bị bỏ trước khi thử thách hết hạn: không giải mã được → từ chối (CryptoError KEY_UNKNOWN), không lộ/không ghi bí mật.
+      process.env.DATA_ENCRYPTION_KEYS = `k2:${K2}`;
+      await assert.rejects(
+        verifyMfa(db.app, { challenge: prep.token, code: "000000", ip: "10.9.9.8" }, now),
+        isCode("KEY_UNKNOWN"),
+      );
     } finally {
       process.env.DATA_ENCRYPTION_KEYS = `k1:${K1}`;
     }

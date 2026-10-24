@@ -17,6 +17,17 @@ export const RUM_NAV_TYPES = ["navigate", "reload", "back_forward", "prerender"]
 /** Trần giá trị: chỉ số thời gian (mili giây, khớp CHECK của rum_sample.value_ms) và điểm CLS. */
 export const RUM_MAX_TIME_MS = 120_000;
 export const RUM_MAX_CLS = 10;
+/**
+ * Ngưỡng ngoại lai cho chỉ số THỜI GIAN (AUD-SEC-008): giá trị > 60 s (LCP/INP/FCP/TTFB thật không đạt tới) bị BỎ khi ghi — vẫn hợp lệ
+ * theo CHECK DB (≤ 120 s) nên không từ chối beacon (không lộ), chỉ không đưa vào p75. CLS đã bị chặn ở RUM_MAX_CLS (= CHECK DB).
+ */
+export const RUM_OUTLIER_MAX_TIME_MS = 60_000;
+/**
+ * Trần số mẫu ghi mỗi ngày UTC cho toàn site (AUD-SEC-008): nhiều IP đầu độc p75/làm phình `rum_sample` thì tối đa chừng này dòng/ngày
+ * (≈ 4 000 lượt xem × 5 chỉ số; retention vẫn dọn theo hạn). Quá trần: bỏ mẫu, route vẫn trả 204. Kiểm bằng đếm CHẶN (LIMIT) trên
+ * index received_at nên không quét quá trần dòng; đồng thời có thể vượt trần tối đa vài dòng (không khoá toàn bảng).
+ */
+export const RUM_DAILY_SAMPLE_CAP = 20_000;
 /** CLS lưu ×CLS_SCALE làm tròn thành số nguyên (rum_sample.cls_milli_n). */
 export const CLS_SCALE = 1_000;
 /** Giới hạn tần suất riêng của nhóm 'rum' (mỗi lượt xem gửi ≤ 1 beacon; cao hơn biểu mẫu vì nhiều người sau một NAT). */
@@ -59,24 +70,34 @@ export const RumInput = z
   });
 export type RumInputT = z.infer<typeof RumInput>;
 
-/** Ghi các số đo của MỘT lượt xem trang trong MỘT câu lệnh. `page` đã là nhãn chuẩn hoá. Trả số dòng đã ghi. */
+/**
+ * Ghi các số đo của MỘT lượt xem trang trong MỘT câu lệnh. `page` đã là nhãn chuẩn hoá. Bỏ giá trị ngoại lai thời gian
+ * (RUM_OUTLIER_MAX_TIME_MS) và không ghi khi hôm nay (UTC) đã đủ RUM_DAILY_SAMPLE_CAP mẫu. Trả số dòng đã ghi (0 = bỏ hết).
+ */
 export async function insertRumSamples(
   db: Pick<pg.Pool, "query">,
   page: string,
   nav: string | null,
   metrics: RumInputT["metrics"],
+  now: Date = new Date(),
 ): Promise<number> {
   const isCls = (n: string): boolean => n === "CLS";
+  const kept = metrics.filter((m) => isCls(m.name) || Math.round(m.value) <= RUM_OUTLIER_MAX_TIME_MS);
+  if (kept.length === 0) return 0;
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const r = await db.query(
     `INSERT INTO rum_sample (page, metric, value_ms, cls_milli_n, nav_type)
      SELECT $1, u.metric, u.value_ms, u.cls_milli_n, $5
-       FROM unnest($2::text[], $3::int[], $4::int[]) AS u(metric, value_ms, cls_milli_n)`,
+       FROM unnest($2::text[], $3::int[], $4::int[]) AS u(metric, value_ms, cls_milli_n)
+      WHERE (SELECT count(*) FROM (SELECT 1 FROM rum_sample WHERE received_at >= $6 LIMIT $7) d) < $7`,
     [
       page,
-      metrics.map((m) => m.name),
-      metrics.map((m) => (isCls(m.name) ? null : Math.round(m.value))),
-      metrics.map((m) => (isCls(m.name) ? Math.round(m.value * CLS_SCALE) : null)),
+      kept.map((m) => m.name),
+      kept.map((m) => (isCls(m.name) ? null : Math.round(m.value))),
+      kept.map((m) => (isCls(m.name) ? Math.round(m.value * CLS_SCALE) : null)),
       nav,
+      dayStart,
+      RUM_DAILY_SAMPLE_CAP,
     ],
   );
   return r.rowCount ?? 0;

@@ -3,7 +3,9 @@
 - 2026-10-24: lát 14–15 (`docs/autopilot/PLAN-lat-14.md`, D-058…D-063) — đóng 🟠 SEC-002/DOC-001/DOC-002 mà phiên trước để chờ người (quyết định chuyên môn, AGENTS.md §5).
   - Lát 14 — ĐÃ MERGE #73 (`33e7e1a`): form ứng tuyển (DOC-001); thông báo trong ứng dụng tự host (0030, `/app/thong-bao`, DOC-002); sàn tuổi xoá GPS (0031); CODE-010, A11Y-011, TEST-002; hàng rào `test:file` đỏ khi tệp test không tồn tại.
   - Lát 15 — PR ngoại lệ cứng (auth, người merge): SEC-007/010 không bỏ được sysadmin phạm vi công ty cuối (thu hồi lẫn vô hiệu); TOTP RFC 6238 hai bước cho sysadmin/hr/executive (0032, `/api/app/auth/mfa`, `mfa:reset`, hợp đồng login đổi — D-060); giao diện bước mã + đăng ký (khoá thủ công, không QR — JS 228,6/230 KB). Review reviewer-alt: 2 🟠 đã sửa có test.
-  - T-088 (GO-NO-GO): NO-GO vì việc người/hạ tầng (CFG-001 `.env.example`, 91 MUST, DPIA, "Khi chạy thật"); máy này không có Docker nên hàng `attack` (ZAP) chỉ xanh ở CI.
+  - Lát 15 ĐÃ MERGE #74 (`b35d051`). T-088 đóng sổ xong (SHA quét audit → `b35d051`); release-check GO tách sang T-097 chờ người (D-064).
+  - Lát 16 (D-065, "hoàn thiện dự án"): mọi 🟢 agent tự làm được — dọn bảng MFA (DATA-009), DSAR gồm thông báo (DATA-007), thông báo phân công kiểm lại quyền (SEC-009), mốc xoá GPS theo đồng hồ DB (DATA-008), test xoay khoá TOTP (TEST-004), e2e không thử lại ca đổi seed (TEST-003), RUM trần ngày + bỏ ngoại lai (SEC-008), THREAT-MODEL T1 (SEC-011).
+  - GO-NO-GO = NO-GO: chỉ còn việc người/hạ tầng (CFG-001, 91 MUST, DPIA, "Khi chạy thật"); `dast` cục bộ cần Docker (CI xanh).
 - Ruleset thật (`.github/rulesets/main.json`): required check chỉ `quality` (job tổng hợp mọi job ci.yml) + `gitleaks`, không strict; `pr-policy`, `codeql`, `merge-gate` là advisory theo ADR-0039 của khung (AUD-CI-004).
 - `GO-NO-GO.md` = NO-GO production (số máy sinh ở đó). Chưa có pháp nhân: chỉ dữ liệu mẫu (DPIA mục 0b, D-043).
 

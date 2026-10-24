@@ -128,6 +128,9 @@ test.describe("ứng dụng nội bộ", () => {
   });
 
   test.describe("nghiệm thu (mock 409 lúc bắt đầu)", () => {
+    // Đổi trạng thái seed (AUD-TEST-003): lần thử lại trên cùng seed sẽ đỏ vì dữ liệu đã đổi, không phải vì lỗi — không thử lại;
+    // flake phải hiện đỏ và được sửa tận gốc.
+    test.describe.configure({ retries: 0 });
     // Mock bằng page.route: SW đã giành trang thì request đi qua SW, mock bị trượt (check:tests bắt buộc).
     test.use({ serviceWorkers: "block" });
 

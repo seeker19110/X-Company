@@ -9,6 +9,8 @@ import {
   KNOWN_APP_SECTIONS,
   pageLabel,
   readRumP75,
+  RUM_DAILY_SAMPLE_CAP,
+  RUM_OUTLIER_MAX_TIME_MS,
   RUM_RATE_LIMIT,
   RumInput,
 } from "../../lib/rum/index.ts";
@@ -218,6 +220,48 @@ describe("POST /api/public/rum", () => {
     const rs = await rows();
     assert.equal(rs.length, 5);
     assert.ok(rs.every((x) => x.page === "/[...slug]" && x.nav_type === null));
+  });
+
+  test("giá trị ngoại lai (> RUM_OUTLIER_MAX_TIME_MS) bị bỏ, vẫn 204; không vào p75 (AUD-SEC-008)", async () => {
+    // 60 000 ms (đúng ngưỡng) được giữ; 60 001 ms và 120 000 ms (hợp lệ theo CHECK DB) bị bỏ.
+    assert.equal(RUM_OUTLIER_MAX_TIME_MS, 60_000);
+    const mk = (name: string, value: number) => beacon({ page: "/", metrics: [{ name, value }] });
+    assert.equal((await post(mk("LCP", 60_000))).status, 204);
+    assert.equal((await post(mk("LCP", 60_001))).status, 204);
+    assert.equal((await post(mk("INP", 120_000))).status, 204);
+    assert.deepEqual(
+      (await rows()).map((x) => [x.metric, x.value_ms]),
+      [["LCP", 60_000]],
+    );
+    // p75 không bị đầu độc: 5 mẫu 1000 ms + nhiều mẫu 120 000 ms bị bỏ → p75 vẫn 1000.
+    await db.admin.query("DELETE FROM rum_sample");
+    for (let i = 0; i < 5; i++) assert.equal((await post(mk("LCP", 1000))).status, 204);
+    for (let i = 0; i < 10; i++) assert.equal((await post(mk("LCP", 120_000))).status, 204);
+    const p75 = (await readRumP75(db.app))!.find((x) => x.page === "/" && x.metric === "LCP")!;
+    assert.equal(p75.n, 5);
+    assert.equal(p75.p75, 1000);
+    // Beacon chỉ gồm giá trị ngoại lai: không còn gì để ghi, không lỗi.
+    assert.equal(await insertRumSamples(db.app, "/", null, [{ name: "TTFB", value: 90_000 }]), 0);
+  });
+
+  test("trần mẫu mỗi ngày: quá trần → vẫn 204 nhưng không ghi thêm; ngày hôm trước không tính (AUD-SEC-008)", async () => {
+    // received_at = now() + 1 phút: vẫn thuộc "hôm nay" của lần POST kể cả khi test chạy vắt qua 00:00 UTC (review PR #75).
+    await db.admin.query(
+      `INSERT INTO rum_sample (page, metric, value_ms, received_at)
+       SELECT '/', 'LCP', 1000, now() + interval '1 minute' FROM generate_series(1, $1::int)`,
+      [RUM_DAILY_SAMPLE_CAP],
+    );
+    const count = async () =>
+      Number((await db.admin.query("SELECT count(*) AS n FROM rum_sample")).rows[0].n);
+    assert.equal(await count(), RUM_DAILY_SAMPLE_CAP);
+    const r = await post(beacon());
+    assert.equal(r.status, 204, "không lộ việc bị bỏ");
+    assert.equal(await r.text(), "");
+    assert.equal(await count(), RUM_DAILY_SAMPLE_CAP, "không ghi thêm");
+    // Sang ngày mới (UTC) lại ghi được: chuyển toàn bộ mẫu về trước hôm nay (lùi 2 ngày: chắc chắn trước mốc đầu ngày).
+    await db.admin.query("UPDATE rum_sample SET received_at = received_at - interval '2 days'");
+    assert.equal((await post(beacon())).status, 204);
+    assert.equal(await count(), RUM_DAILY_SAMPLE_CAP + 3);
   });
 
   test("Origin khác nguồn → 403 (CSRF), không ghi", async () => {
