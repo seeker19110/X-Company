@@ -223,4 +223,14 @@ test("test:file đỏ khi đối số trỏ tệp không tồn tại (node --tes
   );
   assert.equal(r.status, 2);
   assert.match(r.stderr, /không có tệp: tests\/unit\/khong-co\.test\.ts/);
+  // Giá trị của cờ viết tách rời và glob có nháy không bị coi là tên tệp (review PR #73).
+  const ok = spawnSync(
+    "scripts/test-file.sh",
+    ["--test-name-pattern", "check-adr", "tests/unit/arch-scripts.test.ts", "tests/unit/zz-*.test.ts"],
+    {
+      encoding: "utf8",
+      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL ?? "postgres://x@127.0.0.1:1/x" },
+    },
+  );
+  assert.doesNotMatch(ok.stderr, /không có tệp/);
 });

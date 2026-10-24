@@ -442,3 +442,10 @@
 - Chọn: Giữ 200 oneOf + x-breaking-approved; client duy nhất (UI login của repo) sửa ở T-087 trong cùng PR lát 15
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: client cũ coi mọi 2xx là đăng nhập thành công, nên 202 cũng làm vỡ luồng mà còn che giấu thay đổi; không có client ngoài (API nội bộ, PWA cùng repo), UI sửa cùng PR nên không có phiên bản nào chạy với hợp đồng lệch
 - Đường lùi: Revert PR lát 15 khôi phục hợp đồng cũ
+
+### D-061 · 2026-10-24T03:31:37+00:00 · PR #73 CI đỏ (drills/dast): ZAP 10202/20012 Absence of Anti-CSRF Tokens trên form ứng tuyển mới (/tuyen-dung, tin tuyển dụng)
+
+- Phương án: (1) Mở rộng allowlist theo đường dẫn ^/tuyen-dung(/slug)?$ cho 10202 và 20012, cùng lập luận D-047/D-049 · (2) Thêm ô csrf_token giả vào form · (3) Bỏ method=post khỏi form ứng tuyển
+- Chọn: Mở rộng allowlist theo đường dẫn ^/tuyen-dung(/slug)?$ cho 10202 và 20012, cùng lập luận D-047/D-049
+- Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: form gửi bằng fetch tới /api/public/applications — endpoint công khai không phiên, không có gì để CSRF lợi dụng (giới hạn tần suất theo IP); method=post chỉ để dữ liệu ứng viên không lên URL khi JS chưa chạy. Token giả là an ninh giả (D-047 đã loại); bỏ POST làm lộ email/SĐT lên URL. Allowlist giới hạn đúng đường dẫn, form ở chỗ khác vẫn đỏ
+- Đường lùi: Xoá đường dẫn khỏi security/zap/allowlist.json

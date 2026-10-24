@@ -3,17 +3,17 @@
   "allow": [
     {
       "pluginid": "10202",
-      "paths": ["^/app/login$", "^/lien-he$"],
-      "reason": "Absence of Anti-CSRF Tokens trên form đăng nhập và form liên hệ: form có method=post chỉ để không lộ dữ liệu lên URL khi JS chưa chạy; gửi gốc về chính trang, không handler nào đổi trạng thái (không server action, không route POST ngoài app/api). Gửi thật là fetch: /api/app/auth/login kiểm Origin (assertSameOrigin); /api/public/inquiries là endpoint công khai không phiên nên CSRF không có gì để lợi dụng (giới hạn tần suất theo IP). Form ở đường dẫn khác vẫn làm cổng đỏ.",
-      "approvedBy": "D-047 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
-      "date": "2026-10-19"
+      "paths": ["^/app/login$", "^/lien-he$", "^/tuyen-dung(/[a-z0-9-]{1,80})?$"],
+      "reason": "Absence of Anti-CSRF Tokens trên form đăng nhập, form liên hệ và form ứng tuyển (/tuyen-dung và trang tin tuyển dụng — D-061): form có method=post chỉ để không lộ dữ liệu lên URL khi JS chưa chạy; gửi gốc về chính trang, không handler nào đổi trạng thái (không server action, không route POST ngoài app/api). Gửi thật là fetch: /api/app/auth/login kiểm Origin (assertSameOrigin); /api/public/inquiries và /api/public/applications là endpoint công khai không phiên nên CSRF không có gì để lợi dụng (giới hạn tần suất theo IP). Form ở đường dẫn khác vẫn làm cổng đỏ.",
+      "approvedBy": "D-047, D-061 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
+      "date": "2026-10-24"
     },
     {
       "pluginid": "20012",
-      "paths": ["^/app/login$", "^/lien-he$"],
-      "reason": "Anti-CSRF Tokens Check (quét chủ động) trên đúng hai form đã nêu ở mục 10202 — cùng lý do, cùng phạm vi đường dẫn: gửi gốc của form không có handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (đăng nhập) hoặc là endpoint công khai không phiên (liên hệ). Form ở đường dẫn khác vẫn làm cổng đỏ.",
-      "approvedBy": "D-049 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
-      "date": "2026-10-19"
+      "paths": ["^/app/login$", "^/lien-he$", "^/tuyen-dung(/[a-z0-9-]{1,80})?$"],
+      "reason": "Anti-CSRF Tokens Check (quét chủ động) trên đúng các form đã nêu ở mục 10202 — cùng lý do, cùng phạm vi đường dẫn: gửi gốc của form không có handler đổi trạng thái; gửi thật là fetch tới /api có kiểm Origin (đăng nhập) hoặc là endpoint công khai không phiên (liên hệ, ứng tuyển). Form ở đường dẫn khác vẫn làm cổng đỏ.",
+      "approvedBy": "D-049, D-061 (phiên chính tự duyệt theo AGENTS.md §5 — chủ dự án xem lại)",
+      "date": "2026-10-24"
     }
   ]
 }

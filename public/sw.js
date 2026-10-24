@@ -3,6 +3,7 @@
 // - Trang /app/**: network-first, mất mạng → bản đã lưu của chính URL đó, không có → /offline.html.
 // - KHÔNG cache /api/** (dữ liệu cá nhân) — dữ liệu xem ngoại tuyến nằm ở IndexedDB theo người dùng.
 // - Nâng cấp: chỉ xoá Cache Storage phiên bản cũ; KHÔNG đụng IndexedDB (hàng chờ chưa gửi phải còn).
+// Đổi offline.html/offline.css/icon precache thì PHẢI tăng VERSION: chúng phục vụ cache-first từ bộ đệm của phiên bản này.
 const VERSION = "xc-v3"; // v3: precache thêm /offline.css (AUD-A11Y-011)
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
