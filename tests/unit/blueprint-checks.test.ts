@@ -54,3 +54,18 @@ describe("malformedCheckIds", () => {
     });
   });
 });
+
+describe("lineRefs (AUD-HAR-003)", () => {
+  test("bắt tệp:N, tệp:N-M, tệp:N,M; bỏ qua chuỗi trích, URL cổng và ID yêu cầu", () => {
+    const text = [
+      "— Bằng chứng: lib/http/index.ts:162 và PLAN.md:20-24",
+      'không có — proxy.ts "script-src"; e2e/flows.spec.ts:84,108',
+      "http://127.0.0.1:3000/app · `LOOP-CTX-002` · 10:30 UTC",
+    ].join("\n");
+    assert.deepEqual(BC.lineRefs(text), [
+      { line: 1, ref: "lib/http/index.ts:162" },
+      { line: 1, ref: "PLAN.md:20-24" },
+      { line: 2, ref: "e2e/flows.spec.ts:84,108" },
+    ]);
+  });
+});

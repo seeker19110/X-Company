@@ -1,6 +1,6 @@
 # docs/autopilot/PLAN-lat-14.md — X-Company · Lát 14–15: đóng 🟠 còn mở mà agent tự làm được
 
-> Duyệt: D-058 (phiên chính tự duyệt 2026-10-24) · Nguồn: `docs/ops/AUDIT-STATUS.md` (4 🟠 + 13 🟢 mở sau #68), `GO-NO-GO.md` (BLOCKER audit: SEC-002, DOC-001, DOC-002, CFG-001) · Kế hoạch trước: `PLAN.md` (lát 1–10), `PLAN-lat-11.md`, `PLAN-lat-12.md` · Blueprint: BLUEPRINT.md
+> Duyệt: D-058 (phiên chính tự duyệt 2026-10-24); lát 18–19: D-069 (2026-10-25) · Nguồn: `docs/ops/AUDIT-STATUS.md` (4 🟠 + 13 🟢 mở sau #68), `GO-NO-GO.md` (BLOCKER audit: SEC-002, DOC-001, DOC-002, CFG-001) · Kế hoạch trước: `PLAN.md` (lát 1–10), `PLAN-lat-11.md`, `PLAN-lat-12.md` · Blueprint: BLUEPRINT.md
 
 ## Tóm tắt duyệt (cổng duy nhất)
 - Các phiên trước để SEC-002/DOC-001/DOC-002 "chờ người quyết"; đây là quyết định chuyên môn (spec đã ghi MUST, cách làm là thiết kế) → phiên chính tự duyệt theo AGENTS.md §5, mặc định tự host.
@@ -62,6 +62,15 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 - [x] `T-100` PRF-WEB-005 (một phần): Lighthouse đo ≥ 5 URL chính (thêm /tuyen-dung, /app/login) giữ nguyên ngưỡng (files: lighthouserc.json, tests/unit/perf-budget.test.ts) — Gate: `npm run -s test:file -- tests/unit/perf-budget.test.ts`
 - [x] `T-101` BASE-REPO-013 (một phần) + LOOP-FB-003: CONTRIBUTING.md ghi quy ước nhánh dùng chung (không force-push/rewrite, merge commit khi đồng bộ); phản hồi khung đã có → kiểm gitleaks thư mục phản hồi và đánh dấu lại mục (files: CONTRIBUTING.md, BLUEPRINT.md) — Gate: `test -f CONTRIBUTING.md && grep -q 'force-push' CONTRIBUTING.md && "$(node scripts/tools/install-tool.mjs path gitleaks)" dir docs/xtemplates-feedback --no-banner --exit-code 1`
 
+### Lát 18 — 🟢 còn mở, làn chuẩn (D-067, D-069)
+- [x] `T-102` AUD-SEC-005: `check:lib-writes` (trong `check:arch`) — tệp `app/`, `lib/` ngoài miền import hàm ghi của `lib/org`, `lib/cms`, `lib/authz/grants` phải gọi authorize/can/requireOn trong cùng tệp hoặc có trong danh sách miễn kèm lý do; hàm ghi = mọi export không thuộc danh sách đọc, fail-closed; test fixture đỏ/xanh (files: scripts/check-lib-writes.ts, package.json, tests/unit/check-lib-writes.test.ts, lib/org/index.ts, lib/cms/index.ts) — Gate: `npm run -s test:file -- tests/unit/check-lib-writes.test.ts && npm run -s check:arch`
+- [x] `T-103` AUD-HAR-003: bằng chứng/miễn trừ trong BLUEPRINT bỏ số dòng dạng tệp:N → tệp + chuỗi trích; `check:docs` đỏ khi BLUEPRINT còn tệp:N; LOOP-CTX-002 ghi đúng trần thật (files: BLUEPRINT.md, scripts/check-docs.mjs, tests/unit/) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
+- [x] `T-104` Sổ lát 18: AUDIT-STATUS: SEC-005, HAR-003 đã sửa; CFG-003 đóng vì `PENDING_EXAMPLE_KEYS` rỗng; PROGRESS (sau: T-102, T-103; files: docs/ops/AUDIT-STATUS.md, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
+
+### Lát 19 — Khoá hộ tài khoản (ngoại lệ cứng auth, người merge — D-068)
+- [ ] `T-105` AUD-SEC-006: bộ đếm 50 lần sai/email bỏ qua khi IP hiện tại đã đăng nhập thành công email đó trong 30 ngày (IP quen); bộ (email, IP) và IP giữ nguyên; test: 50 lần sai từ 50 IP lạ → IP quen vẫn đăng nhập được, IP lạ mới vẫn 429 (exec: deep; files: lib/identity/auth.ts, tests/http/auth.test.ts, docs/THREAT-MODEL.md) — Gate: `npm run -s test:file -- tests/http/auth.test.ts tests/http/mfa.test.ts`
+- [ ] `T-106` Sổ lát 19: AUDIT-STATUS SEC-006, THREAT-MODEL T1, PROGRESS (sau: T-105; files: docs/, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
+
 ### Phát hành (chờ người — D-064)
 - [ ] `T-097` `release-check` GO trên cây cuối (cần chủ dự án: CFG-001, MUST hạ tầng/pháp lý, DPIA, quyết "Khi chạy thật"; máy có Docker) (sau: T-096; files: GO-NO-GO.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md --json > /dev/null`
 
@@ -72,3 +81,5 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 | 15 | 1 ngày-agent | 2 ngày-agent |
 | 16 | 0,5 ngày-agent | 1 ngày-agent |
 | 17 | 0,5 ngày-agent | 1 ngày-agent |
+| 18 | 0,5 ngày-agent | 1 ngày-agent |
+| 19 | 0,5 ngày-agent | 1 ngày-agent |

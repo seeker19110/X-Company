@@ -21,3 +21,17 @@ export function malformedCheckIds(xtDir, blueprintPath) {
     );
   return ids;
 }
+
+// AUD-HAR-003: bằng chứng/miễn trừ trỏ `tệp:số-dòng` lệch ngay khi tệp đổi (23 chỗ trỏ sai sau vài lát) → trích bằng
+// chuỗi có trong tệp (`tệp "chuỗi"`) thay vì số dòng.
+const LINE_REF_RE =
+  /[\w./()[\]-]+\.(?:ts|tsx|js|mjs|cjs|py|md|sql|ya?ml|json|sh|css|txt|toml):\d+(?:[-,]\d+)*/g;
+
+/** Mọi tham chiếu `tệp:N` trong văn bản blueprint, kèm số dòng của blueprint. */
+export function lineRefs(text) {
+  const out = [];
+  text.split("\n").forEach((l, i) => {
+    for (const m of l.matchAll(LINE_REF_RE)) out.push({ line: i + 1, ref: m[0] });
+  });
+  return out;
+}

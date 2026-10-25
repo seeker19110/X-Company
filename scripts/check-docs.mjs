@@ -5,7 +5,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { malformedCheckIds } from "./lib/blueprint-checks.mjs";
+import { lineRefs, malformedCheckIds } from "./lib/blueprint-checks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = process.env.CHECK_NOW ? new Date(process.env.CHECK_NOW) : new Date();
@@ -702,6 +702,10 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     } catch (e) {
       fail(`blueprint: ${e.message}`);
     }
+    for (const r of lineRefs(read("BLUEPRINT.md")))
+      fail(
+        `BLUEPRINT.md:${r.line}: bằng chứng trỏ số dòng \`${r.ref}\` — trích bằng chuỗi (\`tệp "chuỗi"\`, AUD-HAR-003)`,
+      );
   } else out("CẢNH BÁO: không có xt.py/BLUEPRINT.md — bỏ qua kiểm số MUST");
   const nRules = has("docs/ops/alerts.json")
     ? (JSON.parse(read("docs/ops/alerts.json")).rules ?? []).length
