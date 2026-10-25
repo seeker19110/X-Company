@@ -13,7 +13,7 @@
 1. Chủ dự án: rà và merge PR #82 lát 19 (SEC-006, ngoại lệ cứng auth); quyết D-056 (90 ngày lưu toạ độ GPS — pháp chế); xoá `DSAR_DAYS` khỏi `.env.example` (`PENDING_REMOVAL_KEYS`); áp bản vá TEST-005 (`scripts/kms-dev.sh`, cổng 20000–29999); LICENSE; các đề xuất "Khi chạy thật" trong DECISIONS.
 2. Pháp lý/HR: thành lập pháp nhân trước dữ liệu thật; DPIA trong 60 ngày từ ngày xử lý thật; luật sư đối chiếu Luật 91/2025, NĐ 356/2025, BLLĐ 2019, NĐ 145/2020; HR chốt nội quy ca/OT, lịch lễ (H02).
 3. Hạ tầng thật: KMS/HSM, đích off-site, giám sát production + kênh trực, tên miền + ACME (mẫu `ops/caddy/Caddyfile`), diễn tập rollback deploy; rồi `loop resume`.
-4. Agent (khi mở lát mới): DEP-001 TypeScript 7 khi typescript-eslint hỗ trợ; ARCH-005 trước task kênh SMTP/Web Push; PERF-004 phần RUM nhiều beacon khi bật RUM.
+4. Agent (khi mở lát mới): TEST-006 e2e AT09 chập chờn (bắt dấu vết `focusin` lúc đỏ); DEP-001 TypeScript 7 khi typescript-eslint hỗ trợ; ARCH-005 trước task kênh SMTP/Web Push; PERF-004 phần RUM nhiều beacon khi bật RUM.
 
 ## Quyết định
 - D-014…D-069 ở `docs/autopilot/DECISIONS.md`; D-056 thiết kế xoá GPS (chờ pháp chế); D-067…D-069 lát 18–19.

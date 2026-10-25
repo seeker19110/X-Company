@@ -1,6 +1,6 @@
 # GO/NO-GO — X-Company · phát hành `v0 (lát 8–15, chạy local)` · 2026-10-24
 
-> Commit: `main` `6f49a0b` (#78 — CFG-001, check:github; 2026-10-25; release-check chạy trên head `6cd599b` cùng cây) · trước đó: `927ee82` (head PR #74, lát 15) · Blueprint: MUST mở 78 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #74 trên head: gate, test, e2e, dast, drills, lighthouse, readme-smoke, gitleaks, codeql, pr-policy xanh; kết quả CodeQL báo 1 cảnh báo — báo nhầm, xử lý ở commit kế (mục 15).
+> Commit: `main` `b2c117a` (#81 lát 18 — check:lib-writes, bằng chứng blueprint; 2026-10-25; release-check chạy trên head `7410ee8` của PR #82 lát 19, NO-GO như cũ: chỉ việc người/hạ tầng) · trước đó: `6f49a0b` (#78) · `927ee82` (head PR #74, lát 15) · Blueprint: MUST mở 78 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #74 trên head: gate, test, e2e, dast, drills, lighthouse, readme-smoke, gitleaks, codeql, pr-policy xanh; kết quả CodeQL báo 1 cảnh báo — báo nhầm, xử lý ở commit kế (mục 15).
 > Người kiểm: agent autopilot (report-only, pha harden — ADR-0031) · Phạm vi: website + webapp nội bộ + PWA; hạ tầng dựng **cục bộ** (nhãn `faithful-fixture`, máy dev), chưa có production.
 
 ## 0. Máy: `xt.py release-check` @ `927ee82` — **NO-GO**
@@ -14,7 +14,7 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 | tree | BLOCKER | PASS | cây sạch |
 | prod_switch | BLOCKER | N/A (người) | 20 đề xuất "Khi chạy thật" trong `docs/autopilot/DECISIONS.md` (thêm D-058: kênh email/Web Push cho thông báo) |
 | phase | BLOCKER | PASS | `delivery_phase: harden` |
-| review_debt | BLOCKER | FAIL → giải | 2026-10-25: 7 file của #78 đổi sau SHA quét `6fe147c` — reviewer-alt rà từng commit, SHA quét dời sang `6f49a0b`. Trước đó: 55 file của PR #74 đổi sau SHA quét `33e7e1a` — đã được `reviewer-alt` đọc (0 🔴, 2 🟠 đã sửa có test); SHA quét đã dời sang commit merge `b35d051` (T-088) |
+| review_debt | BLOCKER | FAIL → giải | 2026-10-25 (lát 18): file của #81 đổi sau SHA quét `6f49a0b` — reviewer-alt rà cả PR 3 lượt, SHA quét dời sang `b2c117a`; #82 (auth) rà trước khi mở PR, dời SHA khi merge. Trước đó: 7 file của #78 đổi sau SHA quét `6fe147c` — reviewer-alt rà từng commit, SHA quét dời sang `6f49a0b`. Trước đó: 55 file của PR #74 đổi sau SHA quét `33e7e1a` — đã được `reviewer-alt` đọc (0 🔴, 2 🟠 đã sửa có test); SHA quét đã dời sang commit merge `b35d051` (T-088) |
 | attack | BLOCKER | FAIL (môi trường) | `npm run -s dast` cần Docker (ZAP 2.17) — máy dev phiên này không có Docker daemon; CI `dast` (ZAP baseline + quét chủ động) và `drills` (ZAP qua https staging) **xanh** trên head PR #74; `dast:probes` cục bộ 9/9 nhóm PASS |
 | perf | BLOCKER | PASS | `npm run -s perf:load` exit 0 |
 
