@@ -102,11 +102,12 @@ test("parseExports: mọi dạng export có tên đều là tên; dạng không 
     'export * from "./w.ts";',
     "// export function commented() {}",
     "export const m = 1, n = 2;",
-    'const s = "/*"; export async function afterStr() {} // */',
+    'const s = "/*";',
+    "export async function afterStr() {} // */",
     "export const sep = fn(1, 2);",
   ].join("\n");
   const r = parseExports(src);
-  assert.deepEqual(r.names.sort(), ["E", "F", "Q", "a", "c", "d", "default", "r", "sep"].sort());
+  assert.deepEqual(r.names.sort(), ["E", "F", "Q", "a", "afterStr", "c", "d", "default", "r", "sep"].sort());
   assert.deepEqual(r.unknown, [
     "export const { y, z } = o;",
     'export * from "./w.ts";',
