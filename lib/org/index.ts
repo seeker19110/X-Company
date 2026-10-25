@@ -1,5 +1,6 @@
 // Tổ chức (F-001): công ty, chi nhánh, phòng ban (cây), địa điểm, nhân viên, lịch sử công tác theo khoảng hiệu lực.
-// Hàm nhận `tx` của giao dịch và actor (để ghi audit); kiểm quyền nằm ở lớp gọi (`can()`), không ở đây.
+// Hàm nhận `tx` của giao dịch và actor (để ghi audit); kiểm quyền nằm ở lớp gọi (`can()`), không ở đây —
+// `check:lib-writes` (AUD-SEC-005) chặn tệp gọi hàm ghi mà không kiểm quyền.
 import { randomUUID } from "node:crypto";
 import { appendAudit } from "../audit/index.ts";
 import { sealTextAsync, textColumn } from "../crypto/columns.ts";

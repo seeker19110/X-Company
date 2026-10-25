@@ -1,6 +1,7 @@
 // CMS (F-003): trang + phiên bản. Luồng draft → in_review → approved → published; người duyệt ≠ tác giả (R5).
 // Công khai chỉ thấy phiên bản `published` có publish_at ≤ now (bản mới nhất theo publish_at) của trang chưa lưu trữ.
-// Kiểm quyền vai trò (cms.edit / cms.approve) ở lớp route; ở đây giữ luật luồng và R5.
+// Kiểm quyền vai trò (cms.edit / cms.approve) ở lớp route — `check:lib-writes` (AUD-SEC-005) chặn tệp gọi hàm ghi mà
+// không kiểm quyền; ở đây giữ luật luồng và R5.
 import { appendAudit } from "../audit/index.ts";
 import type { Queryable } from "../db/index.ts";
 import { AppError } from "../nen/app-error.ts";

@@ -484,3 +484,24 @@
 - Chọn: Lát 17 đóng các mục làm trọn được trong repo (DB-PERF-008, QA-PERF-007, LOOP-FB-003 nay đã áp dụng) + phần làm được của PRF-WEB-005, BASE-REPO-013; defer các mục còn lại theo nhóm (ruleset GitHub, hạ tầng thật, pháp lý/HR, số liệu thực địa, quyết định chủ dự án) kèm lý do
 - Lý do (tiêu chí chất lượng cuối): Tiêu chí 1: không defer việc agent tự làm được (DB-PERF-008/QA-PERF-007 có Kiểm chạy được cục bộ); mục cần GitHub settings, máy chủ thật, pháp chế hoặc người dùng thật thì agent không thể đạt — defer có lý do là đúng giao thức
 - Đường lùi: Bỏ task lát 17 chưa làm
+
+### D-067 · 2026-10-25T06:28:50+00:00 · AUD-SEC-005 phần còn lại: lib/org, lib/cms chưa tự gọi can() — sửa bằng cách nào?
+
+- Phương án: (1) Hàng rào máy check:lib-writes (trong check:arch): mọi tệp app/ và lib/ ngoài miền import hàm GHI của lib/org, lib/cms, lib/authz/grants phải gọi authorize()/can()/requireOn trong cùng tệp hoặc nằm trong danh sách miễn có lý do; hàm ghi = mọi export không nằm trong danh sách ĐỌC (export mới mặc định là ghi — fail-closed); có test fixture · (2) Thêm can(actor, …) vào từng hàm ghi lib/org, lib/cms (đổi kiểu actor, sửa seed/test hàng loạt) · (3) Giữ nguyên, chờ có route gọi
+- Chọn: Hàng rào máy check:lib-writes (trong check:arch): mọi tệp app/ và lib/ ngoài miền import hàm GHI của lib/org, lib/cms, lib/authz/grants phải gọi authorize()/can()/requireOn trong cùng tệp hoặc nằm trong danh sách miễn có lý do; hàm ghi = mọi export không nằm trong danh sách ĐỌC (export mới mặc định là ghi — fail-closed); có test fixture
+- Lý do (tiêu chí chất lượng cuối): (1) đúng/an toàn: route mới gọi hàm ghi mà quên kiểm quyền bị CI chặn ngay, cộng với check:authz bắt buộc test BFLA cho mọi route app; (3) đơn giản, test được, không đổi chữ ký 20+ hàm và seed — phương án 2 rủi ro cao hơn khi chưa có route nào gọi; (2) giữ đường lùi
+- Đường lùi: Bỏ script và bước trong check:arch; chuyển sang phương án 2 khi mở route quản trị tổ chức/CMS
+
+### D-068 · 2026-10-25T06:28:51+00:00 · AUD-SEC-006: kẻ có >= 10 IP khoá đăng nhập một tài khoản 15 phút (bộ đếm 50/email) — xử lý?
+
+- Phương án: (1) Miễn bộ đếm email cho IP đã đăng nhập thành công tài khoản đó trong 30 ngày (IP quen); bộ (email, IP) 5/15 và IP 30/15 vẫn áp; lát riêng vì là ngoại lệ cứng auth (người merge) · (2) Hạ ngưỡng / thêm CAPTCHA (cần dịch vụ ngoài hoặc tự làm, tăng ma sát) · (3) Giữ rủi ro chấp nhận D-053
+- Chọn: Miễn bộ đếm email cho IP đã đăng nhập thành công tài khoản đó trong 30 ngày (IP quen); bộ (email, IP) 5/15 và IP 30/15 vẫn áp; lát riêng vì là ngoại lệ cứng auth (người merge)
+- Lý do (tiêu chí chất lượng cuối): (1) an toàn: người dùng thật từ IP quen không bị khoá hộ, kẻ tấn công vẫn bị 3 bộ đếm chặn dò; (3) đơn giản, một truy vấn, test được, tự host không cần dịch vụ; ngoại lệ cứng nên tách PR để lát 18 merge theo làn máy
+- Đường lùi: Bỏ điều kiện IP quen trong lib/identity/auth.ts (về D-053)
+
+### D-069 · 2026-10-25T06:28:51+00:00 · Duyệt PLAN lát 18–19 (T-102…T-106): 🟢 còn mở agent làm được sau #80
+
+- Phương án: (1) Lát 18 (làn chuẩn): T-102 SEC-005 check:lib-writes; T-103 HAR-003 bằng chứng blueprint bỏ số dòng + check:docs cấm path:N; T-104 sổ (đóng CFG-003 đã hết hiệu lực, PROGRESS). Lát 19 (ngoại lệ cứng): T-105 SEC-006 IP quen; T-106 sổ. Không làm: DEP-001 (typescript-eslint peer <6.1.0, npm 2026-10-25), TEST-005 (guard chặn — FB-094), ARCH-005 (chỉ khi có kênh thật), CI-004 (quyết định khung), CFG-002 (hook chặn đọc .env.example) · (2) Dừng, chờ người cho mọi 🟢
+- Chọn: Lát 18 (làn chuẩn): T-102 SEC-005 check:lib-writes; T-103 HAR-003 bằng chứng blueprint bỏ số dòng + check:docs cấm path:N; T-104 sổ (đóng CFG-003 đã hết hiệu lực, PROGRESS). Lát 19 (ngoại lệ cứng): T-105 SEC-006 IP quen; T-106 sổ. Không làm: DEP-001 (typescript-eslint peer <6.1.0, npm 2026-10-25), TEST-005 (guard chặn — FB-094), ARCH-005 (chỉ khi có kênh thật), CI-004 (quyết định khung), CFG-002 (hook chặn đọc .env.example)
+- Lý do (tiêu chí chất lượng cuối): (1) đóng các rủi ro bảo mật còn đo được bằng máy; (3) lát nhỏ, mỗi task có Gate; ngoại lệ cứng tách PR để không chặn phần còn lại
+- Đường lùi: Revert PR từng lát; sổ AUDIT-STATUS giữ trạng thái cũ
