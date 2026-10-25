@@ -64,7 +64,7 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 
 ### Lát 18 — 🟢 còn mở, làn chuẩn (D-067, D-069)
 - [x] `T-102` AUD-SEC-005: `check:lib-writes` (trong `check:arch`) — tệp `app/`, `lib/` ngoài miền import hàm ghi của `lib/org`, `lib/cms`, `lib/authz/grants` phải gọi authorize/can/requireOn trong cùng tệp hoặc có trong danh sách miễn kèm lý do; hàm ghi = mọi export không thuộc danh sách đọc, fail-closed; test fixture đỏ/xanh (files: scripts/check-lib-writes.ts, package.json, tests/unit/check-lib-writes.test.ts, lib/org/index.ts, lib/cms/index.ts) — Gate: `npm run -s test:file -- tests/unit/check-lib-writes.test.ts && npm run -s check:arch`
-- [ ] `T-103` AUD-HAR-003: bằng chứng/miễn trừ trong BLUEPRINT bỏ số dòng dạng tệp:N → tệp + chuỗi trích; `check:docs` đỏ khi BLUEPRINT còn tệp:N; LOOP-CTX-002 ghi đúng trần thật (files: BLUEPRINT.md, scripts/check-docs.mjs, tests/unit/) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
+- [x] `T-103` AUD-HAR-003: bằng chứng/miễn trừ trong BLUEPRINT bỏ số dòng dạng tệp:N → tệp + chuỗi trích; `check:docs` đỏ khi BLUEPRINT còn tệp:N; LOOP-CTX-002 ghi đúng trần thật (files: BLUEPRINT.md, scripts/check-docs.mjs, tests/unit/) — Gate: `npm run -s check:docs && npm run -s check:repo-docs`
 - [ ] `T-104` Sổ lát 18: AUDIT-STATUS: SEC-005, HAR-003 đã sửa; CFG-003 đóng vì `PENDING_EXAMPLE_KEYS` rỗng; PROGRESS (sau: T-102, T-103; files: docs/ops/AUDIT-STATUS.md, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
 
 ### Lát 19 — Khoá hộ tài khoản (ngoại lệ cứng auth, người merge — D-068)
