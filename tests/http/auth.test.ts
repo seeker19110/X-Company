@@ -152,6 +152,44 @@ describe("xác thực (T-007)", () => {
     );
   });
 
+  test("AUD-SEC-006: 50 lần sai từ 50 IP lạ không khoá IP quen (đăng nhập đúng trong 30 ngày); IP lạ mới vẫn 429; IP quen quá 30 ngày thì hết miễn", async () => {
+    const u = await seedUser(org.companyId);
+    const known = "198.51.100.77";
+    const old = "198.51.100.78";
+    // Thành công cũ hơn 30 ngày không làm IP thành quen (kiểm ở cuối).
+    assert.equal(await tryLogin(u.email, old, new Date("2026-09-01T08:00:00Z"), PASSWORD), "ok");
+    const t0 = new Date("2026-10-01T08:00:00Z");
+    assert.equal(await tryLogin(u.email, known, t0, PASSWORD), "ok");
+    const now = new Date("2026-10-22T08:00:00Z");
+    for (let i = 0; i < 50; i++)
+      assert.equal(await tryLogin(u.email, `192.0.2.${i}`, now), "INVALID_CREDENTIALS", `lượt ${i + 1}`);
+    assert.equal(await tryLogin(u.email, "192.0.2.250", now, PASSWORD), "429", "IP lạ mới: vẫn khoá");
+    assert.equal(await tryLogin(u.email, known, now, PASSWORD), "ok", "IP quen: không bị khoá hộ");
+    // IP quen vẫn chịu bộ (email, IP): 5 lần sai từ chính IP đó → 429.
+    for (let i = 0; i < 5; i++) assert.equal(await tryLogin(u.email, known, now), "INVALID_CREDENTIALS");
+    assert.equal(await tryLogin(u.email, known, now, PASSWORD), "429");
+    assert.equal(
+      await tryLogin(u.email, old, now, PASSWORD),
+      "429",
+      "đăng nhập đúng 51 ngày trước: không còn quen",
+    );
+    // IP quen của email này không miễn cho email khác bị dò rải.
+    const v = await seedUser(org.companyId);
+    for (let i = 0; i < 50; i++)
+      assert.equal(await tryLogin(v.email, `192.0.2.${i}`, now), "INVALID_CREDENTIALS", `v lượt ${i + 1}`);
+    assert.equal(await tryLogin(v.email, known, now, PASSWORD), "429", "IP quen của u, lạ với v");
+  });
+
+  test("AUD-SEC-006: IP quen vẫn chịu bộ IP (30 lần sai qua mọi email)", async () => {
+    const u = await seedUser(org.companyId);
+    const known = "198.51.100.90";
+    const now = new Date("2026-10-23T08:00:00Z");
+    assert.equal(await tryLogin(u.email, known, new Date("2026-10-20T08:00:00Z"), PASSWORD), "ok");
+    for (let i = 0; i < 30; i++)
+      assert.equal(await tryLogin(`spray6-${i}@x.test`, known, now), "INVALID_CREDENTIALS", `lượt ${i + 1}`);
+    assert.equal(await tryLogin(u.email, known, now, PASSWORD), "429");
+  });
+
   test("S-ID-09: POST thiếu/sai CSRF hoặc khác Origin → 403; login từ origin lạ → 403", async () => {
     const u = await seedUser(org.companyId);
     const { cookie, body } = await doLogin(u.email);
