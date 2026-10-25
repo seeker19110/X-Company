@@ -68,8 +68,8 @@ Không còn 🟠 nào mở mà agent làm được; `release-check` chỉ còn N
 - [x] `T-104` Sổ lát 18: AUDIT-STATUS: SEC-005, HAR-003 đã sửa; CFG-003 đóng vì `PENDING_EXAMPLE_KEYS` rỗng; PROGRESS (sau: T-102, T-103; files: docs/ops/AUDIT-STATUS.md, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
 
 ### Lát 19 — Khoá hộ tài khoản (ngoại lệ cứng auth, người merge — D-068)
-- [ ] `T-105` AUD-SEC-006: bộ đếm 50 lần sai/email bỏ qua khi IP hiện tại đã đăng nhập thành công email đó trong 30 ngày (IP quen); bộ (email, IP) và IP giữ nguyên; test: 50 lần sai từ 50 IP lạ → IP quen vẫn đăng nhập được, IP lạ mới vẫn 429 (exec: deep; files: lib/identity/auth.ts, tests/http/auth.test.ts, docs/THREAT-MODEL.md) — Gate: `npm run -s test:file -- tests/http/auth.test.ts tests/http/mfa.test.ts`
-- [ ] `T-106` Sổ lát 19: AUDIT-STATUS SEC-006, THREAT-MODEL T1, PROGRESS (sau: T-105; files: docs/, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
+- [x] `T-105` AUD-SEC-006: bộ đếm 50 lần sai/email bỏ qua khi IP hiện tại đã đăng nhập thành công email đó trong 30 ngày (IP quen); bộ (email, IP) và IP giữ nguyên; test: 50 lần sai từ 50 IP lạ → IP quen vẫn đăng nhập được, IP lạ mới vẫn 429 (exec: deep; files: lib/identity/auth.ts, tests/http/auth.test.ts, docs/THREAT-MODEL.md) — Gate: `npm run -s test:file -- tests/http/auth.test.ts tests/http/mfa.test.ts`
+- [x] `T-106` Sổ lát 19: AUDIT-STATUS SEC-006, THREAT-MODEL T1, PROGRESS (sau: T-105; files: docs/, PROGRESS.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py audit check docs/ops/AUDIT-STATUS.md`
 
 ### Phát hành (chờ người — D-064)
 - [ ] `T-097` `release-check` GO trên cây cuối (cần chủ dự án: CFG-001, MUST hạ tầng/pháp lý, DPIA, quyết "Khi chạy thật"; máy có Docker) (sau: T-096; files: GO-NO-GO.md) — Gate: `npm run -s check:docs && python3 .xtemplates/scripts/xt.py release-check --blueprint BLUEPRINT.md --status docs/ops/AUDIT-STATUS.md --json > /dev/null`
