@@ -101,10 +101,17 @@ test("parseExports: mọi dạng export có tên đều là tên; dạng không 
     "export const { y, z } = o;",
     'export * from "./w.ts";',
     "// export function commented() {}",
+    "export const m = 1, n = 2;",
+    'const s = "/*"; export async function afterStr() {} // */',
+    "export const sep = fn(1, 2);",
   ].join("\n");
   const r = parseExports(src);
-  assert.deepEqual(r.names.sort(), ["E", "F", "Q", "a", "c", "d", "default", "r"].sort());
-  assert.deepEqual(r.unknown, ["export const { y, z } = o;", 'export * from "./w.ts";']);
+  assert.deepEqual(r.names.sort(), ["E", "F", "Q", "a", "c", "d", "default", "r", "sep"].sort());
+  assert.deepEqual(r.unknown, [
+    "export const { y, z } = o;",
+    'export * from "./w.ts";',
+    "export const m = 1, n = 2;",
+  ]);
 });
 
 test("check-lib-writes: export dạng danh sách vẫn là hàm ghi; dạng lạ trong miền → đỏ; can( trong chú thích không tính", () => {

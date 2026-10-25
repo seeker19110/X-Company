@@ -41,6 +41,15 @@ export function parseExports(src: string): { names: string[]; unknown: string[] 
       /^(?:declare\s+)?(?:default\s+)?(?:async\s+)?(?:function\*?|const\s+enum|enum|(?:abstract\s+)?class|const|let|var)\s+([A-Za-z_$][\w$]*)/.exec(
         rest,
       );
+    // `export const a = 1, b = 2` — tên thứ hai trở đi không bắt được bằng regex dòng → coi là không phân tích được.
+    if (
+      decl &&
+      /^(?:declare\s+)?(?:const|let|var)\s/.test(rest) &&
+      /=[^;]*,\s*[A-Za-z_$][\w$]*\s*=/.test(rest)
+    ) {
+      unknown.push(`export ${rest.trim()}`);
+      continue;
+    }
     if (decl && !/^default\s/.test(rest)) {
       names.add(decl[1]!);
       continue;
@@ -71,7 +80,8 @@ export function parseExports(src: string): { names: string[]; unknown: string[] 
 
 /** Bỏ chú thích `//` và `/* *\/` (đủ cho mã của repo; chuỗi chứa `//` như URL bị cắt đuôi dòng — chỉ làm chặt hơn). */
 export function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/[^\n]*/g, "$1");
+  // Chỉ chú thích bắt đầu ở đầu dòng hoặc sau khoảng trắng: `"/*"`, `"//"` trong chuỗi/regex không nuốt mã thật.
+  return src.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/(^|[ \t])\/\/[^\n]*/gm, "$1");
 }
 
 /** Tương thích cũ cho test: chỉ danh sách tên. */
