@@ -3,6 +3,15 @@
 Mọi thay đổi đáng chú ý của dự án ghi ở đây. Định dạng theo [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 phiên bản theo [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html). Chưa có bản phát hành nào.
 
+## [0.3.1](https://github.com/seeker19110/X-Company/compare/v0.3.0...v0.3.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **auth:** bộ đếm sai theo email bỏ qua IP quen (AUD-SEC-006) ([#82](https://github.com/seeker19110/X-Company/issues/82)) ([8655b06](https://github.com/seeker19110/X-Company/commit/8655b06394370c28ee18793b73210658c393485c))
+* **config:** đóng CFG-001, thêm check:github, 11 MUST đạt ([#78](https://github.com/seeker19110/X-Company/issues/78)) ([6f49a0b](https://github.com/seeker19110/X-Company/commit/6f49a0b272cd9f1cfd94ca1419dc0b72f671f020))
+* **security:** chặn gọi hàm ghi thiếu kiểm quyền, bằng chứng blueprint ([#81](https://github.com/seeker19110/X-Company/issues/81)) ([b2c117a](https://github.com/seeker19110/X-Company/commit/b2c117a8fafa907bbe4c48e278b49dc9ebc3630d))
+
 ## [0.3.0](https://github.com/seeker19110/X-Company/compare/v0.2.1...v0.3.0) (2026-10-24)
 
 
