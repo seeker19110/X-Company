@@ -2,3 +2,7 @@
 # dòng `".github/workflows/secret-scan.yml": "<64 hex>"`. Khung 3.11.1 ghi `sha256:<hex>` nên commit sau không còn khớp.
 8376bea40a3f666c57b7f2b4b0cc441a356bf9e2:.xtemplates/harness.sha256.json:generic-api-key:33
 8376bea40a3f666c57b7f2b4b0cc441a356bf9e2:.xtemplates/manifest.json:generic-api-key:34
+# .env.example ở commit CFG-001 của chủ dự án: dòng mẫu `# KMS_TRANSIT_TOKEN=` để TRỐNG; `generic-api-key` vượt dòng mới
+# và bắt nhầm dòng kế `KMS_TRANSIT_MOUNT=transit` (entropy 4.05) làm giá trị. Không có bí mật; dòng mẫu đã đổi thành
+# `<đặt từ kho bí mật…>` ở commit sau nên chỉ commit này cần bỏ qua.
+6feb39dd60922dcd26a8e6f861ae8b57ef4e4cb4:.env.example:generic-api-key:79

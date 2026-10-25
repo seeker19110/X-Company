@@ -1,6 +1,6 @@
 # GO/NO-GO — X-Company · phát hành `v0 (lát 8–15, chạy local)` · 2026-10-24
 
-> Commit: `927ee82` (head PR #74, lát 15 — TOTP + SEC-007/010; đã merge `b35d051`) trên `main` `33e7e1a` (#73, lát 14 đã merge) · Blueprint: MUST mở 89 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #74 trên head: gate, test, e2e, dast, drills, lighthouse, readme-smoke, gitleaks, codeql, pr-policy xanh; kết quả CodeQL báo 1 cảnh báo — báo nhầm, xử lý ở commit kế (mục 15).
+> Commit: `927ee82` (head PR #74, lát 15 — TOTP + SEC-007/010; đã merge `b35d051`) trên `main` `33e7e1a` (#73, lát 14 đã merge) · Blueprint: MUST mở 78 (đều chờ người/hạ tầng thật, `loop defer`) · CI PR #74 trên head: gate, test, e2e, dast, drills, lighthouse, readme-smoke, gitleaks, codeql, pr-policy xanh; kết quả CodeQL báo 1 cảnh báo — báo nhầm, xử lý ở commit kế (mục 15).
 > Người kiểm: agent autopilot (report-only, pha harden — ADR-0031) · Phạm vi: website + webapp nội bộ + PWA; hạ tầng dựng **cục bộ** (nhãn `faithful-fixture`, máy dev), chưa có production.
 
 ## 0. Máy: `xt.py release-check` @ `927ee82` — **NO-GO**
@@ -8,8 +8,8 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 
 | Hàng | Mức | Kết quả | Bằng chứng máy |
 |---|---|---|---|
-| blueprint | BLOCKER | FAIL | MUST mở 89 (sau lát 17: DB-PERF-008, QA-PERF-007 đạt; LOOP-FB-003 nay áp dụng và đạt) · lệnh Kiểm đỏ 3: LOOP-ORCH-003, LOOP-STOP-001, LOOP-STOP-002 (guard chặn chạy lệnh `loop` lồng trong phiên — FB-088; xanh khi chạy ngoài phiên) · 2 MUST tick không có lệnh kiểm |
-| audit | BLOCKER | FAIL | `audit check --strict`: 1 🟠 mở — CFG-001 (`.env.example` lệch mã; hook chặn agent ghi tệp này, D-050 — chờ người). SEC-002 (TOTP), DOC-001, DOC-002 đã đóng ở lát 14–15 |
+| blueprint | BLOCKER | FAIL | MUST mở 78 (2026-10-24: BASE-CFG-003 đạt sau CFG-001; 10 mục GitHub đạt sau khi ruleset/PVR hiệu lực — check:github; sau lát 17: DB-PERF-008, QA-PERF-007 đạt; LOOP-FB-003 nay áp dụng và đạt) · lệnh Kiểm đỏ 3: LOOP-ORCH-003, LOOP-STOP-001, LOOP-STOP-002 (guard chặn chạy lệnh `loop` lồng trong phiên — FB-088; xanh khi chạy ngoài phiên) · 2 MUST tick không có lệnh kiểm |
+| audit | BLOCKER | PASS | `audit check --strict`: 0 🟠 mở — CFG-001 đã sửa 2026-10-24 (chủ dự án thêm khoá mẫu; `check:env` so hai chiều). SEC-002 (TOTP), DOC-001, DOC-002 đã đóng ở lát 14–15 |
 | verify | BLOCKER | FAIL | chỉ 3 lệnh LOOP-* ở trên đỏ; mọi Gate T-079…T-087 xanh lại trên `927ee82` |
 | tree | BLOCKER | PASS | cây sạch |
 | prod_switch | BLOCKER | N/A (người) | 20 đề xuất "Khi chạy thật" trong `docs/autopilot/DECISIONS.md` (thêm D-058: kênh email/Web Push cho thông báo) |
@@ -28,7 +28,7 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 |---|---|---|---|---|
 | 1 | Build tái lập, type/lint sạch | PASS | real-path | `dev-task.sh gate` exit 0; CI `quality` xanh |
 | 2 | Test xanh (unit/DB/HTTP/E2E) | PASS | real-path | `dev-task.sh gate` 964/964 unit/DB/HTTP; E2E 89/89 desktop + mobile (axe 320 + 1280 px, gồm form ứng tuyển, thông báo, bước mã TOTP); FE-TEST-003 `--repeat-each=3` xanh; coverage giữ ngưỡng |
-| 3 | Blueprint 0 MUST mở | FAIL | real-path | 89 MUST chưa đạt, đều đã hoãn có lý do (hạ tầng/KMS/RUM/ruleset/HR); 313/316 lệnh Kiểm xanh (mục 0) |
+| 3 | Blueprint 0 MUST mở | FAIL | real-path | 78 MUST chưa đạt, đều đã hoãn có lý do (hạ tầng/KMS/RUM/ruleset/HR); 313/316 lệnh Kiểm xanh (mục 0) |
 | 4 | Không secret trong repo/lịch sử | PASS | real-path | `gitleaks git --log-opts="HEAD --remotes"` 0 phát hiện; CI `gitleaks` xanh |
 | 5 | Phụ thuộc: 0 lỗ hổng cao chưa xử lý; license allowlist | PASS | real-path | CI `osv-scanner`, `dep-audit`, `supply-chain` xanh; ngoại lệ có hạn (D-018) |
 | 6 | Kiểm quyền server; test vượt quyền | PASS | real-path | ma trận 401/403/BOLA/BFLA mọi route (gồm `/api/app/notifications*`, `/api/app/auth/mfa`); DAST nhóm I PASS; TOTP bắt buộc sysadmin/hr/executive (AUD-SEC-002); không bỏ được sysadmin công ty cuối (SEC-007/010) |
@@ -69,11 +69,11 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 ## 3. Bảng FAIL
 | # | Mức | Mục | Cách sửa đề xuất |
 |---|---|---|---|
-| 3 | BLOCKER | 89 MUST chưa đạt (đều `loop defer` theo nhóm: GitHub settings, hạ tầng thật, pháp chế/chủ dự án, số liệu thực địa — D-066) | người xử lý nhóm đã `loop defer`, rồi `loop resume` |
+| 3 | BLOCKER | 78 MUST chưa đạt (đều `loop defer` theo nhóm: GitHub settings, hạ tầng thật, pháp chế/chủ dự án, số liệu thực địa — D-066) | người xử lý nhóm đã `loop defer`, rồi `loop resume` |
 | 8 | BLOCKER | rollback deploy chưa diễn tập | diễn tập theo `docs/ops/RUNBOOK.md`, ghi `last_drilled` |
 | 11 | BLOCKER | DPIA chưa nộp, chưa xác nhận pháp chế | chủ dự án nộp trong 60 ngày từ ngày xử lý thật; luật sư rà |
 | 18 | BLOCKER | quyết định "Khi chạy thật" (20 mục) | chủ dự án quyết từng mục |
-| 0/audit | BLOCKER | 1 🟠 mở: CFG-001 | chủ dự án thêm các khoá ở `PENDING_EXAMPLE_KEYS` (`scripts/check-env.ts`) vào `.env.example` rồi xoá khỏi danh sách (D-050) |
+| 0/audit | ĐÃ ĐÓNG | CFG-001 đã sửa 2026-10-24 | còn: chủ dự án xoá dòng `DSAR_DAYS` cũ khỏi `.env.example` rồi bỏ khỏi `PENDING_REMOVAL_KEYS` (không chặn phát hành) |
 | 0/review_debt | BLOCKER | sổ audit ghi SHA trước PR #74 | sau merge #74: dời SHA nhóm sang commit merge, chạy lại `release-check` |
 | 0/attack | BLOCKER | `dast` cục bộ cần Docker | chạy `release-check` trên máy có Docker, hoặc dựa CI `dast`/`drills` (xanh) |
 
