@@ -69,7 +69,10 @@ export function TaskActions({
   const [refreshing, startRefresh] = useTransition();
 
   const pressed = useRef<HTMLButtonElement | null>(null);
-  useRestoreFocus(busy, pressed, refocus); // thất bại → focus về nút vừa bấm (thành công thì effect dưới lo)
+  // Gửi xong (thành công hay thất bại) → focus về nút vừa bấm nếu đang rơi về <body>, KHÔNG chờ làm mới: `isPending` của
+  // transition `router.refresh()` có lúc không về false (AUD-TEST-006) — chờ nó thì focus kẹt ở <body>. Dữ liệu mới về và
+  // bộ nút đổi → effect dưới chuyển focus vào khối của việc.
+  useRestoreFocus(busy, pressed);
 
   // Nút bị vô hiệu/thay bằng bộ nút của trạng thái mới → focus rơi về <body>. Khi dữ liệu mới về (status/version đổi),
   // đưa focus vào KHỐI của việc này (không phải nút: Enter lần nữa không vô tình "Gửi nghiệm thu"); việc không còn thao

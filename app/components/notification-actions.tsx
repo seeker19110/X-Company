@@ -31,7 +31,7 @@ function MarkRead({
   const holder = useRef<HTMLElement | null>(null);
   const refocus = useRef(false);
   const [refreshing, startRefresh] = useTransition();
-  useRestoreFocus(busy, btn, refocus);
+  useRestoreFocus(busy, btn); // không chờ làm mới mới trả focus (như TaskActions, AUD-TEST-006)
 
   // Như TaskActions (AUD-CODE-010): làm mới xong mà nút vẫn còn (lỗi tải, ngoại tuyến) → hạ cờ, để lần gỡ nút về sau (điều
   // hướng đi) không giật focus; focus về nút nếu đang rơi về <body>.

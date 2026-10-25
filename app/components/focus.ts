@@ -29,18 +29,14 @@ export function focusAfterRemoval(from: HTMLElement | null): void {
  * Nút bị vô hiệu khi đang gửi làm focus rơi về <body>. Gọi khi `busy` vừa chuyển true → false: focus vẫn ở <body> (thất bại,
  * hoặc gửi xong mà không có đích khác) thì trả về `target`. Không chạy lúc tải trang (chỉ sau một lần gửi).
  */
-export function useRestoreFocus(
-  busy: boolean,
-  target: RefObject<HTMLElement | null>,
-  skip?: RefObject<boolean>,
-): void {
+export function useRestoreFocus(busy: boolean, target: RefObject<HTMLElement | null>): void {
   const was = useRef(busy);
   useEffect(() => {
     const ended = was.current && !busy;
     was.current = busy;
-    if (!ended || skip?.current) return;
+    if (!ended) return;
     const el = target.current;
     const active = document.activeElement;
     if (el?.isConnected && (active === null || active === document.body)) el.focus();
-  }, [busy, target, skip]);
+  }, [busy, target]);
 }
