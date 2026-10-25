@@ -34,7 +34,7 @@ Trạng thái: Approved for implementation (D-006)
 - Mật khẩu Argon2id (D-003), tối thiểu 12 ký tự, chặn mật khẩu phổ biến (danh sách cục bộ 100k NCSC qua SecLists, phần dài ≥ 12 ký tự — D-010).
 - Phiên: id ngẫu nhiên 256 bit lưu băm SHA-256 trong bảng `session`; cookie `__Host-xc_session` HttpOnly, Secure, SameSite=Lax, hết hạn trượt 12 giờ, tuyệt đối 7 ngày. Đăng xuất xoá bản ghi phiên.
 - CSRF: request thay đổi trạng thái phải có header `x-csrf-token` khớp token gắn phiên (double-submit có ký) và `Origin` cùng site.
-- Giới hạn đăng nhập: 5 lần sai / 15 phút / (email, IP) → 429 kèm `Retry-After`. Chống dò rải (D-053): 30 lần sai / 15 phút / IP qua mọi email; 50 lần sai / 15 phút / email qua mọi IP.
+- Giới hạn đăng nhập: 5 lần sai / 15 phút / (email, IP) → 429 kèm `Retry-After`. Chống dò rải (D-053): 30 lần sai / 15 phút / IP qua mọi email; 50 lần sai / 15 phút / email qua mọi IP — trừ IP đã đăng nhập đúng email đó trong 30 ngày (IP quen, AUD-SEC-006, D-068); IP quen vẫn chịu hai bộ đếm trên.
 - Xác thực bổ sung (TOTP) bắt buộc với `sysadmin`, `hr`, `executive` — chi tiết ở mục con dưới (T-086).
 
 ### Xác thực hai bước (TOTP) — AUD-SEC-002, D-058

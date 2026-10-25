@@ -1,5 +1,7 @@
 // Đăng nhập / đăng xuất (SPEC-identity-org). Giới hạn lần sai trong 15 phút → 429: 5 / (email, IP); chống dò rải
 // (AUD-SEC-004, D-053): 30 / IP qua mọi email, 50 / email qua mọi IP (ngưỡng email cao để kẻ lạ khó khoá hộ tài khoản).
+// AUD-SEC-006 (D-068): bộ email bỏ qua IP quen (đã đăng nhập đúng email đó trong KNOWN_IP_MS) — kẻ có nhiều IP không
+// khoá hộ được người dùng ở chỗ quen; IP quen vẫn chịu bộ (email, IP) và bộ IP.
 import { appendAudit } from "../audit/index.ts";
 import { assertSysadminRemains } from "../authz/grants.ts";
 import type pg from "pg";
@@ -17,6 +19,7 @@ export const MAX_FAILURES = 5;
 export const MAX_IP_FAILURES = 30;
 export const MAX_EMAIL_FAILURES = 50;
 export const WINDOW_MS = minutesToMs(15);
+export const KNOWN_IP_MS = minutesToMs(30 * 24 * 60);
 
 export function normalizeEmail(email: string): string {
   return comparisonKey(email); // NFC + trim + lower: một địa chỉ = một khoá, dù gõ tổ hợp hay dựng sẵn
@@ -45,6 +48,7 @@ export async function login(
   const email = normalizeEmail(input.email);
   const meta = { sourceIp: input.ip, userAgent: input.userAgent, requestId: input.requestId };
   const since = new Date(now.getTime() - WINDOW_MS);
+  const knownSince = new Date(now.getTime() - KNOWN_IP_MS);
   // Bước 1 (ngắn, dưới khoá theo email+IP): đếm lần sai và GHI TRƯỚC lượt thử này là "sai" rồi commit — request song
   // song luôn thấy nhau nên không vượt giới hạn (review PR #8 #3) mà không giữ kết nối DB trong lúc băm Argon2.
   const pre = await withTx(async (tx) => {
@@ -71,10 +75,20 @@ export async function login(
       [email, input.ip, since],
     );
     const f = fails.rows[0]!;
+    // IP quen chỉ tra khi bộ email đã vượt ngưỡng — đường thường không quét lịch sử 30 ngày của cặp.
+    const knownIp =
+      f.email_n >= MAX_EMAIL_FAILURES &&
+      (
+        await tx.query(
+          `SELECT 1 FROM login_attempt WHERE email = $1 AND ip = $2 AND success
+             AND attempted_at > $3 AND attempted_at <= $4 LIMIT 1`,
+          [email, input.ip, knownSince, now],
+        )
+      ).rowCount! > 0;
     const over = [
       { n: f.pair_n, oldest: f.pair_oldest, max: MAX_FAILURES },
       { n: f.ip_n, oldest: f.ip_oldest, max: MAX_IP_FAILURES },
-      { n: f.email_n, oldest: f.email_oldest, max: MAX_EMAIL_FAILURES },
+      ...(knownIp ? [] : [{ n: f.email_n, oldest: f.email_oldest, max: MAX_EMAIL_FAILURES }]),
     ].filter((b) => b.n >= b.max);
     if (over.length > 0) {
       // Gợi ý thử lại: lúc lần sai cũ nhất của bộ chặn muộn nhất rời cửa sổ (giống cách tính cũ của cặp email+IP).
