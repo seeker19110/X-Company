@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { check, importedNames, valueExports } from "../../scripts/check-lib-writes.ts";
+import { check, importedNames, parseExports, valueExports } from "../../scripts/check-lib-writes.ts";
 
 function fixture(files: Record<string, string>): string {
   const dir = mkdtempSync(path.join(tmpdir(), "xc-libw-"));
@@ -85,4 +85,35 @@ test("check-lib-writes: export mới mặc định là ghi; READ khai sai và EX
   assert.match(errs, /READ_EXPORTS của org khai "employmentAt" không còn export/);
   assert.match(errs, /EXEMPT lib\/y\/b\.ts: không còn import hàm ghi/);
   assert.match(errs, /EXEMPT lib\/x\/a\.ts: thiếu lý do/);
+});
+
+test("parseExports: mọi dạng export có tên đều là tên; dạng không phân tích được → unknown (fail-closed)", () => {
+  const src = [
+    "const a = 1; function b() {}",
+    "export { a, b as c, type T };",
+    'export { d } from "./d.ts";',
+    "export default function x() {}",
+    "export enum E { A }",
+    "export const enum F { A }",
+    "export abstract class Q {}",
+    "export declare const r: number;",
+    "export type { U } from './u.ts';",
+    "export const { y, z } = o;",
+    'export * from "./w.ts";',
+    "// export function commented() {}",
+  ].join("\n");
+  const r = parseExports(src);
+  assert.deepEqual(r.names.sort(), ["E", "F", "Q", "a", "c", "d", "default", "r"].sort());
+  assert.deepEqual(r.unknown, ["export const { y, z } = o;", 'export * from "./w.ts";']);
+});
+
+test("check-lib-writes: export dạng danh sách vẫn là hàm ghi; dạng lạ trong miền → đỏ; can( trong chú thích không tính", () => {
+  const dir = fixture({
+    "lib/org/index.ts": ORG + "\nasync function moveX() {}\nexport { moveX };",
+    "lib/cms/index.ts": CMS + '\nexport * from "./more.ts";',
+    "lib/x/a.ts": `import { moveX } from "../org/index.js";\n// có thể gọi can() sau\nexport const a = moveX;`,
+  });
+  const errs = check(dir, {}).join("\n");
+  assert.match(errs, /lib\/x\/a\.ts: gọi hàm ghi org\.moveX/);
+  assert.match(errs, /lib\/cms\/index\.ts: không phân tích được `export \* from "\.\/more\.ts";`/);
 });
