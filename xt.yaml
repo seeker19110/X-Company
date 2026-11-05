@@ -59,10 +59,24 @@ test_fast: scripts/with-test-db.sh node --import tsx --test --test-concurrency=1
 # Pha giao hàng (ADR-0031/0041 của khung): harden — chủ dự án 2026-10-22 chuẩn bị lên production: reviewer khác họ model,
 # sàn Gate M/L, release-check chạy attack/perf (ADR-0042).
 delivery_phase: harden
-# pr_title_check: ""    # off = không đòi tiêu đề PR `<type>(scope): mô tả` ≤ 72 ký tự
+# pr_title_check: ""    # off = không đòi tiêu đề PR `<type>(scope): mô tả` ≤ 100 ký tự
 
 # Khoá mới của khung (bản 3.12.0 (5b8b8a6)) — bật bằng cách bỏ "# "; vắng khoá = hành vi cũ
 # e2e_setup: ""         # trước e2e: cài trình duyệt (vd npx playwright install --with-deps chromium)
+
+# Khoá mới của khung (bản 3.30.0 (454d146)) — bật bằng cách bỏ "# "; vắng khoá = hành vi cũ.
+# migration_check/rollback/acceptance: cổng production của release-check (M/L chưa khai = BLOCKER người ký).
+# migration_check: ""   # cổng production (ADR-0062): migration tiến + lùi trên bản sao dữ liệu/staging
+# rollback: ""          # cổng production: diễn tập quay về bản trước (tag/artifact cũ + migration lùi)
+# acceptance: ""        # cổng production: kiểm thử nghiệm thu theo tiêu chí chấp nhận (UAT tự động)
+# preview: ""           # cách chạy thử bản trình người duyệt (`xt.py stage submit` ghi lại — ADR-0058); vd npm run preview
+# preview_smoke: ""     # Gate bản trình: `stage submit` chạy (qua guard), exit ≠ 0 → không trình (D-247); vd npm run build && npx playwright test smoke
+# harness_permissions: ""   # own = install.py giữ quyền + dạng lệnh hook của dự án (không thêm allow/deny khung)
+# max_rethink: 1              # trần `pr rethink` mỗi PR (ADR-0061): hết → `pr next` trả `split-or-close`; 0 = không trần; vắng = 1
+# author_model_family: ""     # reviewer năng lực cao hơn tác giả: bậc model cao hơn, cùng họ thì effort cao hơn (ci-check kiểm)
+# reviewer_model_family: ""
+# author_effort: ""           # low|medium|high|xhigh|max — cần cả hai khi cùng họ (D-161 của khung)
+# reviewer_effort: ""
 
 # Trước phát hành (release-check, ADR-0042 của khung): đỏ = NO-GO. Cần Docker + PostgreSQL (with-test-db.sh), như job CI.
 attack: DAST_OUT="$(mktemp -d)" npm run -s dast # ZAP baseline + quét chủ động; scripts/zap-gate.mjs đỏ từ Medium ngoài allowlist

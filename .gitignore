@@ -41,3 +41,6 @@ sbom.cdx.json
 # Công cụ vận hành tải về (scripts/tools/install-tool.mjs) — nhị phân ghim sha256, không commit
 .tools/
 zap-out/
+
+# X-Templates: trạng thái autopilot cục bộ, settings cá nhân
+.claude/settings.local.json
