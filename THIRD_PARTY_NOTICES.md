@@ -38,15 +38,15 @@ Tổng: 94 thành phần.
 | @img/sharp-win32-arm64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
 | @img/sharp-win32-ia32 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
 | @img/sharp-win32-x64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
-| @next/env | 16.4.2 | MIT |
-| @next/swc-darwin-arm64 | 16.4.2 | MIT |
-| @next/swc-darwin-x64 | 16.4.2 | MIT |
-| @next/swc-linux-arm64-gnu | 16.4.2 | MIT |
-| @next/swc-linux-arm64-musl | 16.4.2 | MIT |
-| @next/swc-linux-x64-gnu | 16.4.2 | MIT |
-| @next/swc-linux-x64-musl | 16.4.2 | MIT |
-| @next/swc-win32-arm64-msvc | 16.4.2 | MIT |
-| @next/swc-win32-x64-msvc | 16.4.2 | MIT |
+| @next/env | 16.4.3 | MIT |
+| @next/swc-darwin-arm64 | 16.4.3 | MIT |
+| @next/swc-darwin-x64 | 16.4.3 | MIT |
+| @next/swc-linux-arm64-gnu | 16.4.3 | MIT |
+| @next/swc-linux-arm64-musl | 16.4.3 | MIT |
+| @next/swc-linux-x64-gnu | 16.4.3 | MIT |
+| @next/swc-linux-x64-musl | 16.4.3 | MIT |
+| @next/swc-win32-arm64-msvc | 16.4.3 | MIT |
+| @next/swc-win32-x64-msvc | 16.4.3 | MIT |
 | @node-rs/argon2 | 2.2.2 | MIT |
 | @node-rs/argon2-android-arm-eabi | 2.2.2 | MIT |
 | @node-rs/argon2-android-arm64 | 2.2.2 | MIT |
@@ -73,7 +73,7 @@ Tổng: 94 thành phần.
 | markdown-it | 15.0.3 | MIT |
 | mdurl | 2.1.0 | MIT |
 | nanoid | 3.3.20 | MIT |
-| next | 16.4.2 | MIT |
+| next | 16.4.3 | MIT |
 | pg | 8.23.1 | MIT |
 | pg-cloudflare | 1.4.1 | MIT |
 | pg-connection-string | 2.14.1 | MIT |
