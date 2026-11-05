@@ -45,7 +45,7 @@ Mọi MUST mở có phần làm được trong repo đã làm xong phần đó (
 - [x] `T-108` OPS-DEPLOY-003: `scripts/test-prev-release.sh` — checkout tag bản phát hành gần nhất (`.release-please-manifest.json`), thay `migrations/` bằng của HEAD, chạy test DB + HTTP của bản đó; migration đã phát hành phải còn nguyên byte; bước trong job CI `test` (files: scripts/test-prev-release.sh, .github/workflows/ci.yml, BLUEPRINT.md) — Gate: `scripts/test-prev-release.sh`
 
 ### Lát 22 — Glyph tiếng Việt (UX-DS-006)
-- [ ] `T-109` UX-DS-006: e2e vẽ từng chữ có dấu (chuỗi cố định + chữ trên trang chủ) bằng đúng `font` đã tính của trang, so với glyph `.notdef` của ký tự chưa gán — trùng = tofu (files: e2e/pages.spec.ts, BLUEPRINT.md) — Gate: `npm run -s e2e -- e2e/pages.spec.ts -g UX-DS-006`
+- [x] `T-109` UX-DS-006: e2e vẽ từng chữ có dấu (chuỗi cố định + chữ trên trang chủ) bằng đúng `font` đã tính của trang, so với glyph `.notdef` của ký tự chưa gán — trùng = tofu (files: e2e/pages.spec.ts, BLUEPRINT.md) — Gate: `npm run -s e2e -- e2e/pages.spec.ts -g UX-DS-006`
 
 ### Lát 23 — Phần trong repo của MUST còn chờ người (MUST vẫn `[ ]`, ghi rõ phần người ở "— Thiếu:")
 - [ ] `T-110` CMP-AUDIT-007 (phần repo): sổ bên xử lý `docs/compliance/vendors.yaml` (dịch vụ, dữ liệu chạm, vị trí, DPA: chờ người, ngày rà) + `docs/privacy/processors.md` sinh từ sổ; script CI đỏ khi `package.json` có SDK gọi dịch vụ ngoài chưa có dòng trong sổ (files: docs/compliance/, docs/privacy/, scripts/, tests/unit/, package.json) — Gate: `npm run -s check:vendors && npm run -s test:file -- tests/unit/check-vendors.test.ts`

@@ -124,6 +124,32 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
     await expect(page.locator("main")).toHaveCount(1);
   });
 
+  // UX-DS-006: font hệ thống (system-ui… — không web font) + fallback phải có glyph cho mọi chữ tiếng Việt có dấu.
+  // Không so ảnh baseline (khác theo máy): vẽ từng ký tự lên canvas bằng đúng `font` đã tính của trang và so với glyph
+  // `.notdef` (ô vuông "tofu") của ký tự chưa gán — trùng = thiếu glyph.
+  test("UX-DS-006: chữ tiếng Việt có dấu có glyph thật, không tofu", async ({ page }) => {
+    await page.goto("/");
+    const missing = await page.evaluate((fixed) => {
+      const font = getComputedStyle(document.body).font.replace(/\d+(\.\d+)?px/, "40px");
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 64;
+      const g = canvas.getContext("2d", { willReadFrequently: true });
+      if (!g) return ["(không có canvas 2d)"];
+      const draw = (ch: string) => {
+        g.clearRect(0, 0, 64, 64);
+        g.font = font;
+        g.textBaseline = "top";
+        g.fillText(ch, 4, 4);
+        return g.getImageData(0, 0, 64, 64).data.join(",");
+      };
+      const notdef = new Set(["͸", "￿", "\u{10FFFD}"].map(draw)); // ký tự chưa gán → .notdef
+      const text = `${fixed} ${document.body.innerText}`.normalize("NFC");
+      const letters = [...new Set([...text].filter((ch) => /\p{L}/u.test(ch) && ch.codePointAt(0)! > 0x7f))];
+      return letters.filter((ch) => notdef.has(draw(ch)));
+    }, "Tiếng Việt có dấu: ắ ầ ẩ ẫ ậ ờ ỡ ợ ừ ữ ự Ă ă Â â Đ đ Ê ê Ô ô Ơ ơ Ư ư Ỹ ỹ");
+    expect(missing, "ký tự hiển thị thành ô vuông (thiếu glyph)").toEqual([]);
+  });
+
   test.describe("ở 320 px", () => {
     test.use({ viewport: NARROW });
 
