@@ -42,5 +42,5 @@ sbom.cdx.json
 .tools/
 zap-out/
 
-# X-Templates: trạng thái autopilot cục bộ, settings cá nhân
+# X-Templates: settings Claude Code cá nhân (trạng thái autopilot `.autopilot/` đã bỏ qua ở dòng 2)
 .claude/settings.local.json

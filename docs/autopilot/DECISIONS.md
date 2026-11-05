@@ -505,3 +505,24 @@
 - Chọn: Lát 18 (làn chuẩn): T-102 SEC-005 check:lib-writes; T-103 HAR-003 bằng chứng blueprint bỏ số dòng + check:docs cấm path:N; T-104 sổ (đóng CFG-003 đã hết hiệu lực, PROGRESS). Lát 19 (ngoại lệ cứng): T-105 SEC-006 IP quen; T-106 sổ. Không làm: DEP-001 (typescript-eslint peer <6.1.0, npm 2026-10-25), TEST-005 (guard chặn — FB-094), ARCH-005 (chỉ khi có kênh thật), CI-004 (quyết định khung), CFG-002 (hook chặn đọc .env.example)
 - Lý do (tiêu chí chất lượng cuối): (1) đóng các rủi ro bảo mật còn đo được bằng máy; (3) lát nhỏ, mỗi task có Gate; ngoại lệ cứng tách PR để không chặn phần còn lại
 - Đường lùi: Revert PR từng lát; sổ AUDIT-STATUS giữ trạng thái cũ
+
+### D-070 · 2026-11-05T14:53:27+00:00 · Duyệt PLAN-harden 2026-11-05 (T-107…T-109): sau khung 3.30.0 còn 78 MUST mở — agent làm gì?
+
+- Phương án: (1) Chỉ làm MUST đóng được trong repo (OPS-DEPLOY-003 N−1, UX-DS-006 glyph) + sổ audit delta; 76 MUST cần hạ tầng/người giữ ở PROGRESS · (2) Dựng hạ tầng giả lập (IaC/Dockerfile/compose) để tick thêm MUST hạ tầng · (3) Không làm gì thêm, chờ chủ dự án cấp hạ tầng
+- Chọn: Chỉ làm MUST đóng được trong repo (OPS-DEPLOY-003 N−1, UX-DS-006 glyph) + sổ audit delta; 76 MUST cần hạ tầng/người giữ ở PROGRESS
+- Lý do (tiêu chí chất lượng cuối): (1) đúng và an toàn: chỉ tick MUST có lệnh Kiểm chạy thật trong repo; hạ tầng giả lập không chứng minh được production (bằng chứng faithful-fixture đã có) — tránh tick sai. (3) bền/test được: N−1 chạy mỗi PR bắt migration contract sớm; kiểm glyph không phụ thuộc ảnh baseline theo máy. Phương án 2 thêm mã khó kiểm, chọn hạ tầng thay chủ dự án; phương án 3 bỏ phí việc làm được.
+- Đường lùi: Revert PR lát 21/22; bỏ bước CI test-prev-release; MUST trở lại [ ]
+
+### D-071 · 2026-11-05T15:03:58+00:00 · Sửa phân loại 78 MUST mở sau review #90 (🟠 reviewer-alt: xếp nhầm mục agent làm được sang người)
+
+- Phương án: (1) Tách 4 nhóm: 2 đóng hết (T-108/T-109), 4 làm phần repo còn chờ người (T-110…T-113), 2 cấu trúc PLAN lịch sử cần người chấp nhận/miễn, 70 hạ tầng/người · (2) Giữ phân loại cũ 2/76 · (3) Sửa ngược PLAN lát 1 để tick PM-PRIO-003/PM-RISK-003
+- Chọn: Tách 4 nhóm: 2 đóng hết (T-108/T-109), 4 làm phần repo còn chờ người (T-110…T-113), 2 cấu trúc PLAN lịch sử cần người chấp nhận/miễn, 70 hạ tầng/người
+- Lý do (tiêu chí chất lượng cuối): (1) đúng: review chỉ ra phần 'Thiếu:' của CMP-AUDIT-007, CMP-VN-004, WF-TEAM-003, SEC-TM-006 có việc trong repo; làm phần đó giảm việc người nhưng không tự tick MUST còn phần người. Không sửa ngược lịch sử lát 1 (sai sự thật về thứ tự làm); readme-smoke đã có; miễn MUST cần người (LOOP-STOP-024).
+- Đường lùi: Bỏ lát 23 khỏi PLAN-harden; phân loại về 2/76
+
+### D-072 · 2026-11-05T15:25:14+00:00 · Sửa phân loại MUST mở lần 2 sau review opus-max #90 (🟠: WF-REL-003, CMP-INTL-002, ARC-RES-005 làm được trong repo; 8 mục có thể có phần repo)
+
+- Phương án: (1) Thêm T-114…T-116 cho 3 mục, T-117 phân loại lại 8 mục chưa xác minh và sửa 'Thiếu:' đã cũ; nhóm hạ tầng/người còn 59 · (2) Ghi nợ 🟠 (ADR-0062), giữ phân loại D-071
+- Chọn: Thêm T-114…T-116 cho 3 mục, T-117 phân loại lại 8 mục chưa xác minh và sửa 'Thiếu:' đã cũ; nhóm hạ tầng/người còn 59
+- Lý do (tiêu chí chất lượng cuối): (1) đúng: cả 3 mục có đường tái hiện cụ thể (không có tags.json/asset release; lint nhay_cam chỉ kiểm tên lớp; adapter kho tệp vốn thiết kế để thay, D-005); báo chủ dự án 70 mục cần người là sai. Không khẳng định 8 mục chưa đọc sâu — tách thành task phân loại thay vì đoán.
+- Đường lùi: Bỏ lát 24 khỏi PLAN-harden; phân loại về D-071
