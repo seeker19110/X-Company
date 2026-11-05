@@ -519,3 +519,10 @@
 - Chọn: Tách 4 nhóm: 2 đóng hết (T-108/T-109), 4 làm phần repo còn chờ người (T-110…T-113), 2 cấu trúc PLAN lịch sử cần người chấp nhận/miễn, 70 hạ tầng/người
 - Lý do (tiêu chí chất lượng cuối): (1) đúng: review chỉ ra phần 'Thiếu:' của CMP-AUDIT-007, CMP-VN-004, WF-TEAM-003, SEC-TM-006 có việc trong repo; làm phần đó giảm việc người nhưng không tự tick MUST còn phần người. Không sửa ngược lịch sử lát 1 (sai sự thật về thứ tự làm); readme-smoke đã có; miễn MUST cần người (LOOP-STOP-024).
 - Đường lùi: Bỏ lát 23 khỏi PLAN-harden; phân loại về 2/76
+
+### D-072 · 2026-11-05T15:25:14+00:00 · Sửa phân loại MUST mở lần 2 sau review opus-max #90 (🟠: WF-REL-003, CMP-INTL-002, ARC-RES-005 làm được trong repo; 8 mục có thể có phần repo)
+
+- Phương án: (1) Thêm T-114…T-116 cho 3 mục, T-117 phân loại lại 8 mục chưa xác minh và sửa 'Thiếu:' đã cũ; nhóm hạ tầng/người còn 59 · (2) Ghi nợ 🟠 (ADR-0062), giữ phân loại D-071
+- Chọn: Thêm T-114…T-116 cho 3 mục, T-117 phân loại lại 8 mục chưa xác minh và sửa 'Thiếu:' đã cũ; nhóm hạ tầng/người còn 59
+- Lý do (tiêu chí chất lượng cuối): (1) đúng: cả 3 mục có đường tái hiện cụ thể (không có tags.json/asset release; lint nhay_cam chỉ kiểm tên lớp; adapter kho tệp vốn thiết kế để thay, D-005); báo chủ dự án 70 mục cần người là sai. Không khẳng định 8 mục chưa đọc sâu — tách thành task phân loại thay vì đoán.
+- Đường lùi: Bỏ lát 24 khỏi PLAN-harden; phân loại về D-071
