@@ -512,3 +512,10 @@
 - Chọn: Chỉ làm MUST đóng được trong repo (OPS-DEPLOY-003 N−1, UX-DS-006 glyph) + sổ audit delta; 76 MUST cần hạ tầng/người giữ ở PROGRESS
 - Lý do (tiêu chí chất lượng cuối): (1) đúng và an toàn: chỉ tick MUST có lệnh Kiểm chạy thật trong repo; hạ tầng giả lập không chứng minh được production (bằng chứng faithful-fixture đã có) — tránh tick sai. (3) bền/test được: N−1 chạy mỗi PR bắt migration contract sớm; kiểm glyph không phụ thuộc ảnh baseline theo máy. Phương án 2 thêm mã khó kiểm, chọn hạ tầng thay chủ dự án; phương án 3 bỏ phí việc làm được.
 - Đường lùi: Revert PR lát 21/22; bỏ bước CI test-prev-release; MUST trở lại [ ]
+
+### D-071 · 2026-11-05T15:03:58+00:00 · Sửa phân loại 78 MUST mở sau review #90 (🟠 reviewer-alt: xếp nhầm mục agent làm được sang người)
+
+- Phương án: (1) Tách 4 nhóm: 2 đóng hết (T-108/T-109), 4 làm phần repo còn chờ người (T-110…T-113), 2 cấu trúc PLAN lịch sử cần người chấp nhận/miễn, 70 hạ tầng/người · (2) Giữ phân loại cũ 2/76 · (3) Sửa ngược PLAN lát 1 để tick PM-PRIO-003/PM-RISK-003
+- Chọn: Tách 4 nhóm: 2 đóng hết (T-108/T-109), 4 làm phần repo còn chờ người (T-110…T-113), 2 cấu trúc PLAN lịch sử cần người chấp nhận/miễn, 70 hạ tầng/người
+- Lý do (tiêu chí chất lượng cuối): (1) đúng: review chỉ ra phần 'Thiếu:' của CMP-AUDIT-007, CMP-VN-004, WF-TEAM-003, SEC-TM-006 có việc trong repo; làm phần đó giảm việc người nhưng không tự tick MUST còn phần người. Không sửa ngược lịch sử lát 1 (sai sự thật về thứ tự làm); readme-smoke đã có; miễn MUST cần người (LOOP-STOP-024).
+- Đường lùi: Bỏ lát 23 khỏi PLAN-harden; phân loại về 2/76
