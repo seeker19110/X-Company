@@ -2,11 +2,11 @@
 ## Đang làm
 - 2026-11-05: pha harden sau khung 3.30.0 (`docs/autopilot/PLAN-harden-2026-11-05.md`, D-070).
   - ĐÃ MERGE #89 (vá OSV glob/minimatch bằng `overrides` theo gói cha + gộp bump dependabot #84/#86/#87, đã đóng) và #88 (nâng khung 3.15.1 → 3.30.0: guard/hook chặt hơn, skill `/complete`…); cả hai review sạch ở head (reviewer Opus + reviewer-alt Sonnet).
-  - Lát 20 (T-107): audit delta 8655b06..a734990 — không nợ review, 0 🔴/🟠; HAR-004/HAR-005 🟢 đã sửa (lệnh Kiểm UX-VISUAL-001 đỏ oan vì chữ trong chú thích), CI-005 🟢 mở.
-  - Lát 21 (T-108) OPS-DEPLOY-003: `scripts/test-prev-release.sh` chạy test DB+HTTP của tag phát hành trước trên schema HEAD, bước trong job CI `test`.
+  - Lát 20 (T-107): audit delta 8655b06..a734990 — không nợ review, 0 🔴/🟠; HAR-004/HAR-005 🟢 đã sửa (lệnh Kiểm UX-VISUAL-001 đỏ oan vì chữ trong chú thích), CI-005/CI-006 🟢 mở. ĐÃ MERGE #90.
+  - Lát 21 (T-108) OPS-DEPLOY-003: `scripts/test-prev-release.sh` chạy test DB+HTTP của tag phát hành trước trên schema HEAD, bước trong job CI `test`; OPS-DEPLOY-003 tick (kiểm chứng đỏ bằng migration đổi tên cột).
   - Lát 22 (T-109) UX-DS-006: e2e so glyph chữ có dấu với `.notdef` (không cần ảnh baseline).
   - Lát 23 (T-110…T-113): phần trong repo của CMP-AUDIT-007, CMP-VN-004, WF-TEAM-003, SEC-TM-006 (MUST vẫn chờ người).
-  - Lát 24 (T-114…T-117): WF-REL-003 (ruleset tag + asset/checksum release), CMP-INTL-002 (lint cơ sở dữ liệu nhạy cảm), ARC-RES-005 (kho tệp S3 tự host + e2e 2 bản sao), phân loại lại 8 MUST (D-072).
+  - Lát 24 (T-114…T-117): WF-REL-003 (ruleset tag + asset/checksum release), CMP-INTL-002 (lint cơ sở dữ liệu nhạy cảm), phân loại lại 8 MUST (D-072); lát 25 (T-116) ARC-RES-005 kho tệp S3 tự host + e2e 2 bản sao.
   - #79 (Release PR 0.3.1): người — PR do `GITHUB_TOKEN` tạo nên CI không chạy (`gitleaks` không có `workflow_dispatch`); merge = gắn tag phát hành.
 - Trước đó: lát 14–19 ĐÃ MERGE (#73–#78, #80–#82): TOTP, form ứng tuyển, thông báo tự host, sàn tuổi xoá GPS, autovacuum, `check:github`, `check:lib-writes`, bộ đếm sai bỏ qua IP quen.
 - Ruleset thật (`.github/rulesets/main.json`): required check chỉ `quality` (job tổng hợp mọi job ci.yml) + `gitleaks`, không strict; `pr-policy`, `codeql`, `merge-gate` là advisory theo ADR-0039 của khung (AUD-CI-004).
