@@ -124,18 +124,30 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
     await expect(page.locator("main")).toHaveCount(1);
   });
 
-  // UX-DS-006, hai vế (review #92, #95):
-  // (1) "font chính có tiếng Việt": với mỗi họ web font (`document.fonts`), nạp font rồi vẽ từng chữ có dấu bằng
-  //     `"Họ", serif` và `"Họ", monospace` — khác nhau = họ đó KHÔNG có glyph (trình duyệt đã rơi về fallback). Không
-  //     đọc `unicode-range`: đúng cả khi subset tách nhiều @font-face (Google Fonts, next/font/google, fontsource) lẫn
-  //     khi file thiếu glyph mà không khai dải (next/font/local). Hiện dự án không có web font (font hệ thống).
-  // (2) "fallback hiển thị đủ dấu": vẽ từng chữ có dấu bằng `font-family` đã tính của trang, so với glyph `.notdef`
-  //     ("tofu") của noncharacter — trùng = không font nào có glyph. Không so ảnh baseline (khác theo máy).
+  // UX-DS-006, hai vế (review #92, #95, #96):
+  // (1) "font chính có tiếng Việt": họ font ĐẦU TIÊN của `font-family` đã tính trên các phần tử có chữ, nếu là web font
+  //     (có trong `document.fonts`): nạp từng face (weight/style) rồi vẽ đủ 134 chữ Việt dựng sẵn bằng `"Họ", serif` và
+  //     `"Họ", monospace` — khác = face đó thiếu glyph. Không đọc `unicode-range` (đúng cả subset tách nhiều @font-face
+  //     lẫn file thiếu glyph không khai dải); face phụ (`'X Fallback'` của next/font, font icon) không xét; face nạp lỗi
+  //     được báo tên thay vì ném. Hiện dự án không có web font (font hệ thống system-ui…) nên vế này rỗng.
+  // (2) "fallback hiển thị đủ dấu": vẽ từng chữ bằng `font-family` đã tính của body, so với glyph `.notdef` ("tofu") của
+  //     noncharacter — trùng = không font nào có glyph. Không so ảnh baseline (khác theo máy).
   test("UX-DS-006: chữ tiếng Việt có dấu có glyph thật, không tofu", async ({ page }) => {
     await page.goto("/");
-    const result = await page.evaluate(async (fixed) => {
-      const text = `${fixed} ${document.body.innerText}`.normalize("NFC");
-      const letters = [...new Set([...text].filter((ch) => /\p{L}/u.test(ch) && ch.codePointAt(0)! > 0x7f))];
+    const result = await page.evaluate(async () => {
+      // 134 chữ Việt dựng sẵn: 32 ở Latin-1, Ă ă Đ đ Ĩ ĩ Ũ ũ Ơ ơ Ư ư, và U+1EA0–1EF9.
+      const cps = [
+        0xc0, 0xc1, 0xc2, 0xc3, 0xc8, 0xc9, 0xca, 0xcc, 0xcd, 0xd2, 0xd3, 0xd4, 0xd5, 0xd9, 0xda, 0xdd,
+      ];
+      cps.push(...cps.map((cp) => cp + 0x20));
+      cps.push(0x102, 0x103, 0x110, 0x111, 0x128, 0x129, 0x168, 0x169, 0x1a0, 0x1a1, 0x1af, 0x1b0);
+      for (let cp = 0x1ea0; cp <= 0x1ef9; cp++) cps.push(cp);
+      const fixed = cps.map((cp) => String.fromCodePoint(cp));
+      const onPage = [...document.body.innerText.normalize("NFC")].filter(
+        (ch) => /\p{L}/u.test(ch) && ch.codePointAt(0)! > 0x7f,
+      );
+      const letters = [...new Set([...fixed, ...onPage])];
+
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 64;
       const g = canvas.getContext("2d", { willReadFrequently: true });
@@ -147,25 +159,52 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
         };
       const draw = (ch: string, font: string) => {
         g.clearRect(0, 0, 64, 64);
-        g.font = `40px ${font}`;
+        g.font = font;
         g.textBaseline = "top";
         g.fillText(ch, 4, 4);
         return g.getImageData(0, 0, 64, 64).data.join(",");
       };
 
+      const unquote = (s: string) => s.trim().replace(/^["']|["']$/g, "");
+      const textEls = document.querySelectorAll(
+        "body, h1, h2, h3, h4, h5, h6, p, a, li, button, input, label, td, th",
+      );
+      const primary = new Set(
+        [...textEls].map((el) => unquote(getComputedStyle(el).fontFamily.split(",")[0] ?? "")),
+      );
       const webFontsLackingVi: string[] = [];
-      for (const fam of new Set([...document.fonts].map((f) => f.family.replace(/^"|"$/g, "")))) {
-        await document.fonts.load(`40px "${fam}"`, letters.join(""));
-        const lacking = letters.filter(
-          (ch) => draw(ch, `"${fam}", serif`) !== draw(ch, `"${fam}", monospace`),
-        );
-        if (lacking.length > 0) webFontsLackingVi.push(`${fam}: ${lacking.join(" ")}`);
+      const seen = new Set<string>();
+      for (const face of [...document.fonts].filter((f) => primary.has(unquote(f.family)))) {
+        const fam = unquote(face.family);
+        const variant = `${face.style} ${face.weight.split(" ")[0]}`;
+        if (seen.has(`${fam}|${variant}`)) continue; // subset tách nhiều @font-face cùng họ + biến thể: kiểm một lần
+        seen.add(`${fam}|${variant}`);
+        const loaded = await Promise.allSettled([
+          document.fonts.load(`${variant} 40px "${fam}"`, letters.join("")),
+        ]);
+        if (loaded[0].status === "rejected" || face.status === "error") {
+          webFontsLackingVi.push(`${fam} ${variant}: không nạp được`);
+          continue;
+        }
+        const lacking: string[] = [];
+        for (const ch of letters) {
+          if (draw(ch, `${variant} 40px serif`) === draw(ch, `${variant} 40px monospace`)) {
+            webFontsLackingVi.push(`(serif và monospace hệ thống vẽ "${ch}" giống nhau — không kiểm được)`);
+            break;
+          }
+          if (
+            draw(ch, `${variant} 40px "${fam}", serif`) !== draw(ch, `${variant} 40px "${fam}", monospace`)
+          ) {
+            lacking.push(ch);
+          }
+        }
+        if (lacking.length > 0) webFontsLackingVi.push(`${fam} ${variant}: ${lacking.join(" ")}`);
       }
 
       // Noncharacter (U+FFFF, U+FFFE, U+FDD0, U+1FFFF, U+10FFFF) không bao giờ có glyph → đều là `.notdef`; vẽ ra
       // nhiều ảnh khác nhau = tham chiếu hỏng → đỏ thay vì im lặng xanh.
       const nonchars = [0xffff, 0xfffe, 0xfdd0, 0x1ffff, 0x10ffff].map((cp) => String.fromCodePoint(cp));
-      const notdef = new Set(nonchars.map((ch) => draw(ch, family)));
+      const notdef = new Set(nonchars.map((ch) => draw(ch, `40px ${family}`)));
       if (notdef.size !== 1)
         return {
           webFontsLackingVi,
@@ -173,10 +212,10 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
         };
       return {
         webFontsLackingVi,
-        missing: letters.filter((ch) => notdef.has(draw(ch, family))),
+        missing: letters.filter((ch) => notdef.has(draw(ch, `40px ${family}`))),
       };
-    }, "Tiếng Việt có dấu: ắ ầ ẩ ẫ ậ ờ ỡ ợ ừ ữ ự Ă ă Â â Đ đ Ê ê Ô ô Ơ ơ Ư ư Ỹ ỹ");
-    expect(result.webFontsLackingVi, "web font thiếu glyph tiếng Việt").toEqual([]);
+    });
+    expect(result.webFontsLackingVi, "web font chính thiếu glyph tiếng Việt").toEqual([]);
     expect(result.missing, "ký tự hiển thị thành ô vuông (thiếu glyph)").toEqual([]);
   });
 
