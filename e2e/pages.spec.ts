@@ -124,57 +124,59 @@ test.describe("khung trang (AUD-A11Y-001, AUD-A11Y-006)", () => {
     await expect(page.locator("main")).toHaveCount(1);
   });
 
-  // UX-DS-006, hai vế (review #92):
-  // (1) "font chính có subset tiếng Việt": mọi web font (`document.fonts`) phải có `unicode-range` phủ dải tiếng Việt —
-  //     bắt ca `@font-face`/`next/font` chỉ `latin`, mà vẽ glyph KHÔNG bắt được (trình duyệt thay chữ bằng font hệ thống).
-  //     Hiện dự án không có web font (font hệ thống system-ui…) nên danh sách rỗng.
+  // UX-DS-006, hai vế (review #92, #95):
+  // (1) "font chính có tiếng Việt": với mỗi họ web font (`document.fonts`), nạp font rồi vẽ từng chữ có dấu bằng
+  //     `"Họ", serif` và `"Họ", monospace` — khác nhau = họ đó KHÔNG có glyph (trình duyệt đã rơi về fallback). Không
+  //     đọc `unicode-range`: đúng cả khi subset tách nhiều @font-face (Google Fonts, next/font/google, fontsource) lẫn
+  //     khi file thiếu glyph mà không khai dải (next/font/local). Hiện dự án không có web font (font hệ thống).
   // (2) "fallback hiển thị đủ dấu": vẽ từng chữ có dấu bằng `font-family` đã tính của trang, so với glyph `.notdef`
   //     ("tofu") của noncharacter — trùng = không font nào có glyph. Không so ảnh baseline (khác theo máy).
   test("UX-DS-006: chữ tiếng Việt có dấu có glyph thật, không tofu", async ({ page }) => {
     await page.goto("/");
-    const result = await page.evaluate((fixed) => {
-      // Chữ tiếng Việt ngoài Latin-1: Ă ă Đ đ Ĩ ĩ Ũ ũ Ơ ơ Ư ư + khối U+1EA0–1EF9 (ạ…ỹ). Phủ = hợp các đoạn của
-      // `unicode-range` (subset `vietnamese` của Google Fonts tách U+01A0-01A1, U+01AF-01B0).
-      const vi = [0x102, 0x103, 0x110, 0x111, 0x128, 0x129, 0x168, 0x169, 0x1a0, 0x1a1, 0x1af, 0x1b0];
-      for (let cp = 0x1ea0; cp <= 0x1ef9; cp++) vi.push(cp);
-      const spans = (range: string) =>
-        range.split(",").flatMap((part) => {
-          const m = /U\+([0-9A-F?]+)(?:-([0-9A-F]+))?/i.exec(part.trim());
-          const start = m?.[1];
-          if (!start) return [];
-          const lo = parseInt(start.replace(/\?/g, "0"), 16);
-          const hi = m[2] ? parseInt(m[2], 16) : parseInt(start.replace(/\?/g, "F"), 16);
-          return [[lo, hi] as const];
-        });
-      const webFontsLackingVi = [...document.fonts]
-        .filter((f) => {
-          const s = spans(f.unicodeRange === "" ? "U+0-10FFFF" : f.unicodeRange);
-          return !vi.every((cp) => s.some(([lo, hi]) => lo <= cp && cp <= hi));
-        })
-        .map((f) => `${f.family} (${f.unicodeRange})`);
-
-      const family = getComputedStyle(document.body).fontFamily;
+    const result = await page.evaluate(async (fixed) => {
+      const text = `${fixed} ${document.body.innerText}`.normalize("NFC");
+      const letters = [...new Set([...text].filter((ch) => /\p{L}/u.test(ch) && ch.codePointAt(0)! > 0x7f))];
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 64;
       const g = canvas.getContext("2d", { willReadFrequently: true });
+      const family = getComputedStyle(document.body).fontFamily;
       if (!g || family === "")
-        return { webFontsLackingVi, missing: ["(không có canvas 2d hoặc font-family)"] };
-      const draw = (ch: string) => {
+        return {
+          webFontsLackingVi: [],
+          missing: ["(không có canvas 2d hoặc font-family)"],
+        };
+      const draw = (ch: string, font: string) => {
         g.clearRect(0, 0, 64, 64);
-        g.font = `40px ${family}`;
+        g.font = `40px ${font}`;
         g.textBaseline = "top";
         g.fillText(ch, 4, 4);
         return g.getImageData(0, 0, 64, 64).data.join(",");
       };
+
+      const webFontsLackingVi: string[] = [];
+      for (const fam of new Set([...document.fonts].map((f) => f.family.replace(/^"|"$/g, "")))) {
+        await document.fonts.load(`40px "${fam}"`, letters.join(""));
+        const lacking = letters.filter(
+          (ch) => draw(ch, `"${fam}", serif`) !== draw(ch, `"${fam}", monospace`),
+        );
+        if (lacking.length > 0) webFontsLackingVi.push(`${fam}: ${lacking.join(" ")}`);
+      }
+
       // Noncharacter (U+FFFF, U+FFFE, U+FDD0, U+1FFFF, U+10FFFF) không bao giờ có glyph → đều là `.notdef`; vẽ ra
       // nhiều ảnh khác nhau = tham chiếu hỏng → đỏ thay vì im lặng xanh.
-      const notdef = new Set(["￿", "￾", "﷐", "\u{1FFFF}", "\u{10FFFF}"].map(draw));
-      if (notdef.size !== 1) return { webFontsLackingVi, missing: ["(tham chiếu .notdef không nhất quán)"] };
-      const text = `${fixed} ${document.body.innerText}`.normalize("NFC");
-      const letters = [...new Set([...text].filter((ch) => /\p{L}/u.test(ch) && ch.codePointAt(0)! > 0x7f))];
-      return { webFontsLackingVi, missing: letters.filter((ch) => notdef.has(draw(ch))) };
+      const nonchars = [0xffff, 0xfffe, 0xfdd0, 0x1ffff, 0x10ffff].map((cp) => String.fromCodePoint(cp));
+      const notdef = new Set(nonchars.map((ch) => draw(ch, family)));
+      if (notdef.size !== 1)
+        return {
+          webFontsLackingVi,
+          missing: ["(tham chiếu .notdef không nhất quán)"],
+        };
+      return {
+        webFontsLackingVi,
+        missing: letters.filter((ch) => notdef.has(draw(ch, family))),
+      };
     }, "Tiếng Việt có dấu: ắ ầ ẩ ẫ ậ ờ ỡ ợ ừ ữ ự Ă ă Â â Đ đ Ê ê Ô ô Ơ ơ Ư ư Ỹ ỹ");
-    expect(result.webFontsLackingVi, "web font thiếu unicode-range tiếng Việt").toEqual([]);
+    expect(result.webFontsLackingVi, "web font thiếu glyph tiếng Việt").toEqual([]);
     expect(result.missing, "ký tự hiển thị thành ô vuông (thiếu glyph)").toEqual([]);
   });
 
