@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # pr-steward merge bằng GITHUB_TOKEN (thiếu XT_STEWARD_TOKEN) không kích `push` → steward gọi dispatch trên nhánh đích
+  # (khung 3.16+, T-2402). Run dispatch chạy đủ job như `push`; đừng lọc job theo `github.event_name`.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
