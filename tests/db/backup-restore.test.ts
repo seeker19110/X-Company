@@ -291,12 +291,18 @@ describe("sao lưu và diễn tập khôi phục (Postgres thật)", () => {
     for (const ext of [".dump", ".sha256", ".manifest.json"]) writeFileSync(path.join(g, future + ext), "x");
     const rg = backup(g, { ...env, BACKUP_KEEP: "1" });
     assert.equal(rg.status, 1, rg.stderr);
-    assert.equal(readdirSync(g).filter((f) => f.endsWith(".manifest.json")).length, 1);
+    assert.match(rg.stderr, /không sau bản mới nhất xc-29991231T235959999Z/);
+    assert.deepEqual(
+      readdirSync(g).filter((f) => f.endsWith(".manifest.json") || f.endsWith(".dump")),
+      [`${future}.dump`, `${future}.manifest.json`],
+      "không tạo bản mới, không xoá bản cũ",
+    );
   });
 
   test("tên bản và created_at_utc là UTC dù TZ của tiến trình khác UTC", () => {
     const d = dir("tz");
-    const b = backup(d, { TZ: "Asia/Ho_Chi_Minh" });
+    // Chuỗi POSIX (UTC+7), không cần tzdata — tên vùng thiếu tzdata thì glibc lui về UTC và test thành rỗng nghĩa.
+    const b = backup(d, { TZ: "ICT-7" });
     assert.equal(b.status, 0, b.stderr);
     const name = manifests(d)[0]!;
     const man = JSON.parse(readFileSync(path.join(d, name), "utf8")) as { created_at_utc: string };
