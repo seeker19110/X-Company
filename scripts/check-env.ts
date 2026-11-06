@@ -82,7 +82,15 @@ export const RUNTIME_KEYS = new Set(["NODE_ENV", "NEXT_PHASE", "NEXT_RUNTIME"]);
  * Khoá đã có trong mã nhưng `.env.example` chưa có, đang CHỜ NGƯỜI thêm (hook chặn agent đọc/ghi `.env.*` — AUD-CFG-001).
  * Khoá trong đây mà `.env.example` đã có → lỗi, để danh sách tự co về rỗng.
  */
-export const PENDING_EXAMPLE_KEYS = new Set<string>([]); // CFG-001: chủ dự án đã thêm đủ khoá mẫu (2026-10-24)
+export const PENDING_EXAMPLE_KEYS = new Set<string>([
+  // T-116 (D-073): kho tệp S3-compatible — chờ người thêm vào `.env.example`.
+  "FILE_STORAGE",
+  "S3_ENDPOINT",
+  "S3_BUCKET",
+  "S3_REGION",
+  "S3_ACCESS_KEY_ID",
+  "S3_SECRET_ACCESS_KEY",
+]);
 
 /** Khoá chỉ script shell vận hành đọc (`scripts/backup.sh`, `restore-*.sh`) — có trong `.env.example` nhưng không thuộc module env. */
 export const SCRIPT_KEYS = new Set(["BACKUP_KEEP", "BACKUP_PASSPHRASE"]);

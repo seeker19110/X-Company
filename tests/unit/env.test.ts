@@ -175,6 +175,11 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     KMS_TRANSIT_ADDR: "https://kms.example.test:8200",
     KMS_TRANSIT_TOKEN: "kms-token-leak-0123456789",
     FILE_STORAGE_DIR: "/srv/files",
+    FILE_STORAGE: "s3",
+    S3_ENDPOINT: "https://s3.example.test",
+    S3_BUCKET: "xc-files",
+    S3_ACCESS_KEY_ID: "s3-akid-leak-0123",
+    S3_SECRET_ACCESS_KEY: "s3-secret-leak-0123456789",
   };
 
   test("JSON.stringify(maskedEnv) cho *** ở MỌI trường bí mật và không lộ giá trị", () => {
@@ -195,6 +200,8 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
       "metrics-leak",
       "webhook-leak",
       "kms-token-leak",
+      "s3-akid-leak",
+      "s3-secret-leak",
       DATA_KEY,
     ])
       assert.equal(dump.includes(leaked), false, `lộ ${leaked}`);
