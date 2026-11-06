@@ -194,7 +194,64 @@ export const SERVER_SPEC = {
   TRUST_PROXY: field(z.enum(["0", "1"]).optional(), {
     requiredInProduction: (s) => rawOf(s, "TRUST_PROXY_HOPS") === undefined,
   }),
+  // Kho tệp (T-116, D-073; ARC-RES-005): `disk` = thư mục FILE_STORAGE_DIR (một bản sao); `s3` = kho đối tượng S3-compatible dùng chung
+  // cho nhiều bản sao (adapters/s3-http.ts, chữ ký SigV4). Tệp luôn mã hoá trước khi tới kho (lib/files/storage.ts). Nhà cung cấp
+  // production chọn ở G7 (D-005): bucket private, khoá IAM tối thiểu (Put/Get/DeleteObject trên một bucket).
+  FILE_STORAGE: field(z.enum(["disk", "s3"], { error: "phải là disk|s3" }).default("disk")),
   FILE_STORAGE_DIR: field(z.string().optional()),
+  S3_ENDPOINT: field(
+    url(/^https?$/, "http(s) của kho S3")
+      .refine(
+        (v) => {
+          const u = new URL(v);
+          return (
+            (u.pathname === "/" || u.pathname === "") &&
+            u.search === "" &&
+            u.username === "" &&
+            u.password === ""
+          );
+        },
+        { error: "chỉ gốc URL (không đường dẫn/query/thông tin đăng nhập)" },
+      )
+      .optional(),
+    {
+      requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3",
+      // http ở production = khoá truy cập + bản mã đi trên đường không mã hoá; chỉ loopback được miễn (như APP_ORIGIN).
+      productionRule: (raw) => {
+        const u = new URL(raw);
+        return u.protocol === "https:" || LOOPBACK_HOSTS.has(u.hostname)
+          ? undefined
+          : "phải là https ở production (http chỉ cho localhost/127.0.0.1/[::1])";
+      },
+    },
+  ),
+  S3_BUCKET: field(
+    z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, { error: "tên bucket S3 dạng [a-z0-9.-]{3,63}" })
+      .optional(),
+    { requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
+  S3_REGION: field(
+    z
+      .string()
+      .regex(/^[a-z0-9-]{1,32}$/, { error: "vùng dạng [a-z0-9-]{1,32}" })
+      .default("us-east-1"),
+  ),
+  S3_ACCESS_KEY_ID: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]{3,128}$/, { error: "dạng [A-Za-z0-9_.-]{3,128}" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
+  S3_SECRET_ACCESS_KEY: field(
+    z
+      .string()
+      .refine((v) => bytes(v) >= 16, { error: "phải dài ≥ 16 byte" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
   SITE_COMPANY_ID: field(z.uuid().optional()),
   LOG_LEVEL: field(z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info")),
   APP_VERSION: field(z.string().max(64).optional()),

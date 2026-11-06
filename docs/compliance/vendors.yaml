@@ -66,6 +66,19 @@ vendors:
     reviewed: 2026-11-06
     packages: []
     adapters: [adapters/kms-transit-http.ts, adapters/register-kms.ts]
+  - id: object-storage
+    name: "Kho tệp S3-compatible (FILE_STORAGE=s3, nhiều bản sao) — nhà cung cấp chưa chọn"
+    service: "lưu tệp tải lên dùng chung cho mọi bản sao ứng dụng (adapters/s3-http.ts, chữ ký SigV4; T-116, D-073)"
+    data: "tệp tải lên (biên bản, ảnh, tệp đính kèm) ĐÃ mã hoá AES-256-GCM ở ứng dụng trước khi gửi — nhà cung cấp không giữ khoá; lộ ra: kích thước, thời điểm ghi/đọc, khoá lưu ngẫu nhiên"
+    location: "chờ chủ dự án chọn ở G7 (D-005; cùng vùng với hosting; ngoài Việt Nam → hồ sơ chuyển dữ liệu, CMP-VN-004)"
+    country: chua_chon
+    dpa: "chờ chủ dự án (không cần khi tự host)"
+    certs: "chờ chủ dự án"
+    risk: trung_binh
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: [adapters/s3-http.ts, adapters/register-storage.ts]
   - id: offsite-backup
     name: "Đích sao lưu off-site restic (S3/SFTP) — nhà cung cấp chưa chọn"
     service: "lưu bản sao lưu CSDL đã mã hoá (scripts/backup-offsite.sh)"

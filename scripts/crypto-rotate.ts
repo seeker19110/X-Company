@@ -38,12 +38,21 @@ try {
           : "") +
         `, còn khoá cũ ${c.stale}`,
     );
-  const root = env("FILE_STORAGE_DIR") ?? path.join(process.cwd(), ".data", "files");
-  const f = await rotateFiles(root);
-  const readable = await verifyFiles(root).catch(() => 0);
-  console.log(
-    `[crypto:rotate] tệp: bọc lại ${f.rewrapped}, mã hoá tệp cũ ${f.encryptedLegacy}, đã hiện hành ${f.alreadyCurrent}, đọc kiểm được ${readable}`,
-  );
+  if (env("FILE_STORAGE") === "s3") {
+    // T-116: rotateFiles chỉ duyệt thư mục đĩa. Báo "xong" ở đây sẽ khiến người vận hành bỏ khoá cũ → tệp trên S3 (bọc bằng khoá
+    // cũ) không đọc được nữa. Fail-closed tới khi có bước bọc lại khoá cho kho đối tượng.
+    console.error(
+      "[crypto:rotate] FILE_STORAGE=s3: chưa hỗ trợ bọc lại khoá tệp trên kho S3 — KHÔNG bỏ khoá cũ khỏi cấu hình/KMS",
+    );
+    process.exitCode = 1;
+  } else {
+    const root = env("FILE_STORAGE_DIR") ?? path.join(process.cwd(), ".data", "files");
+    const f = await rotateFiles(root);
+    const readable = await verifyFiles(root).catch(() => 0);
+    console.log(
+      `[crypto:rotate] tệp: bọc lại ${f.rewrapped}, mã hoá tệp cũ ${f.encryptedLegacy}, đã hiện hành ${f.alreadyCurrent}, đọc kiểm được ${readable}`,
+    );
+  }
   if (cols.some((c) => c.stale > 0)) process.exitCode = 1;
 } catch (err) {
   console.error(`[crypto:rotate] lỗi: ${err instanceof Error ? err.message : "không rõ"}`);

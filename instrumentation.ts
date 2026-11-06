@@ -11,6 +11,8 @@ export async function register(): Promise<void> {
     if (env("NEXT_PHASE") !== "phase-production-build") {
       const { registerKms } = await import("./adapters/register-kms.ts");
       registerKms(); // KMS_PROVIDER=transit: kiểm cấu hình (sai → thoát 78) + đăng ký transport KMS (T-052)
+      const { registerStorage } = await import("./adapters/register-storage.ts");
+      registerStorage(); // FILE_STORAGE=s3: kho tệp S3-compatible dùng chung cho nhiều bản sao (T-116)
     }
     const { registerShutdown } = await import("./lib/nen/shutdown.ts");
     registerShutdown(); // SIGTERM → readiness 503, chờ request đang chạy, đóng pool, thoát 0 (ARC-RES-009)
