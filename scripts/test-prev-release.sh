@@ -86,7 +86,20 @@ echo "[n-1] code $TAG ($(git rev-parse --short "$TAG")) trên schema HEAD ($(git
 
 cd "$WT/prev"
 npm ci --no-audit --no-fund --ignore-scripts >/dev/null
+# KNOWN_FIXED (D-074): lỗi của CHÍNH bản N−1, đã sửa ở N, không liên quan schema — bản đã phát hành không sửa được.
+# Chỉ bỏ qua khi mã của bản N−1 CHƯA có bản sửa (dò theo nội dung) → tự hết hiệu lực khi bản phát hành kế chứa bản sửa.
+# Mỗi mục: tên test (khớp --test-skip-pattern) | tệp | chuỗi chỉ có sau bản sửa | lý do. Không thêm mục mà không có D-NNN.
+skip_args=()
+while IFS='|' read -r name file marker why; do
+  [ -n "$name" ] || continue
+  if [ -f "$file" ] && ! grep -qF -- "$marker" "$file"; then
+    echo "[n-1] ⚠ bỏ qua \"$name\" của $TAG — $why" >&2
+    skip_args+=(--test-skip-pattern "$name")
+  fi
+done <<'EOF'
+giữ N bản gần nhất|scripts/backup.sh|EPOCHREALTIME|backup.sh cũ đặt tên bằng `date %3N`, không đơn điệu với uutils (Ubuntu 26.04); sửa ở N (D-074)
+EOF
 # Chạy bằng with-test-db.sh của HEAD (có DATABASE_URL thì dùng thẳng, không thì dựng cụm tạm).
-"$ROOT/scripts/with-test-db.sh" node --import tsx --test --test-concurrency=1 \
+"$ROOT/scripts/with-test-db.sh" node --import tsx --test --test-concurrency=1 "${skip_args[@]}" \
   "tests/db/**/*.test.ts" "tests/http/**/*.test.ts"
 echo "[n-1] ✓ test DB + HTTP của $TAG xanh trên schema HEAD"

@@ -286,6 +286,27 @@ describe("sao lưu và diễn tập khôi phục (Postgres thật)", () => {
     assert.equal(r.status, 1);
     assert.match(r.stderr, /không sau bản mới nhất xc-29991231T235959999Z/);
     assert.deepEqual(readdirSync(d).sort(), before, "thư mục giữ nguyên");
+    // BACKUP_DIR có ký tự glob (`[1]`) không được hiểu thành mẫu: bản "tương lai" vẫn bị thấy → vẫn từ chối (review #99).
+    const g = dir("glob[1]");
+    for (const ext of [".dump", ".sha256", ".manifest.json"]) writeFileSync(path.join(g, future + ext), "x");
+    const rg = backup(g, { ...env, BACKUP_KEEP: "1" });
+    assert.equal(rg.status, 1, rg.stderr);
+    assert.equal(readdirSync(g).filter((f) => f.endsWith(".manifest.json")).length, 1);
+  });
+
+  test("tên bản và created_at_utc là UTC dù TZ của tiến trình khác UTC", () => {
+    const d = dir("tz");
+    const b = backup(d, { TZ: "Asia/Ho_Chi_Minh" });
+    assert.equal(b.status, 0, b.stderr);
+    const name = manifests(d)[0]!;
+    const man = JSON.parse(readFileSync(path.join(d, name), "utf8")) as { created_at_utc: string };
+    assert.ok(Math.abs(Date.parse(man.created_at_utc) - Date.now()) < 120_000, man.created_at_utc);
+    // 2026-11-06T11:42:43.231Z → xc-20261106T114243231Z
+    assert.equal(
+      name,
+      `xc-${man.created_at_utc.replace(/[-:.]/g, "")}.manifest.json`,
+      "tên khớp created_at_utc",
+    );
   });
 
   test("mã hoá: bản mã không chứa dữ liệu thô; thiếu/sai/ngắn khoá → exit 2; đúng khoá → khôi phục khớp", () => {

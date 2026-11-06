@@ -69,7 +69,10 @@ BASE="xc-$STAMP"
 DUMP="$BASE.dump"
 # Bản mới phải đứng SAU mọi bản đã có theo thứ tự tên: đồng hồ lùi (hoặc trùng mili giây) thì dừng, không ghi đè và
 # không để bước giữ N bản xoá nhầm chính bản vừa tạo.
-mapfile -t existing < <(compgen -G "$BACKUP_DIR/xc-*.manifest.json" | LC_ALL=C sort || true)
+# Glob có quote phần thư mục (BACKUP_DIR chứa `[`, `*`… không bị hiểu thành mẫu); LC_ALL=C → mở rộng đã xếp theo byte.
+shopt -s nullglob
+existing=("$BACKUP_DIR"/xc-*.manifest.json)
+shopt -u nullglob
 if [ "${#existing[@]}" -gt 0 ]; then
   newest="$(basename "${existing[-1]}" .manifest.json)"
   [[ "$newest" < "$BASE" ]] || die 1 "tên bản mới $BASE không sau bản mới nhất $newest (đồng hồ lùi?) — không sao lưu"
