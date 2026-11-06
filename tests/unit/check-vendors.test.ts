@@ -128,6 +128,9 @@ describe("check-vendors", () => {
     const md = renderProcessors(v);
     assert.equal(md, renderProcessors(v));
     assert.match(md, /bọc \\\| mở DEK/);
+    // CodeQL js/incomplete-sanitization: `\` thoát trước `|` — `a\|b` không được mở lại cột; xuống dòng không vỡ hàng.
+    const tricky = renderProcessors(parseVendors(YAML.replace('"bọc DEK"', '"a\\\\|b\\nc"')));
+    assert.match(tricky, /\| a\\\\\\\|b c \|/);
     const real = readRegistry(readFileSync("docs/compliance/vendors.yaml", "utf8"));
     assert.deepEqual(real.errors, []);
     assert.equal(readFileSync("docs/privacy/processors.md", "utf8"), renderProcessors(real.vendors));
