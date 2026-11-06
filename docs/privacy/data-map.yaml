@@ -3,7 +3,10 @@
 # Cơ sở pháp lý và thời hạn lưu là ĐỀ XUẤT (D-016 cho phần mặc định) — pháp chế/HR xác nhận. status: planned = cột chưa có migration.
 # class: thuong | nhay_cam | bi_mat. Đồng bộ với docs/compliance/data-inventory.csv (script kiểm hai chiều).
 version: 1
-updated: 2026-10-18
+updated: 2026-11-06
+# CMP-VN-004: nơi lưu dữ liệu cá nhân = id bên xử lý trong docs/compliance/vendors.yaml (quốc gia lấy từ `country` của
+# bên đó; ngoài VN phải có `transfer_assessment`). Dòng `pii` ghi đè bằng `storage: a, b` khi khác mặc định.
+storage_default: hosting, offsite-backup
 pii:
   - table: employee
     column: full_name

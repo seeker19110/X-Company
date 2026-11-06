@@ -76,6 +76,8 @@ jobs:
             # Tài liệu — spec/AC, threat model, data map, link nội bộ, tệp dự án (BASE-DOC-006, WF-DOC-002)
             npm run -s check:docs
             npm run -s check:repo-docs
+            # Mối đe doạ mức Cao có bằng chứng tồn tại, không "accept" (SEC-TM-006)
+            npm run -s check:threat-model
             # PROGRESS.md hợp lệ, SHA bàn giao có trên nhánh chính (BASE-DOC-008)
             python3 .xtemplates/scripts/xt.py progress-check
             # Khung — PLAN/blueprint/CI hợp lệ

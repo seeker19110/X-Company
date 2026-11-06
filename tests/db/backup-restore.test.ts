@@ -264,6 +264,51 @@ describe("sao lưu và diễn tập khôi phục (Postgres thật)", () => {
     assert.equal(manifests(d).length, 2, "lần lỗi cấu hình không xoá thêm bản nào");
   });
 
+  test("tên bản không phụ thuộc `date %3N` và luôn sau bản mới nhất; đồng hồ lùi → exit 1, không ghi/xoá gì", () => {
+    // `date` giả trả mọi lần cùng một thời điểm (như %3N sai/không đơn điệu) — tên bản vẫn phải tăng.
+    const shim = dir("date-shim");
+    writeFileSync(path.join(shim, "date"), '#!/bin/sh\necho "20200101T000000000Z"\n', { mode: 0o755 });
+    const d = dir("monotonic");
+    const env = { BACKUP_KEEP: "2", PATH: `${shim}:${process.env.PATH ?? ""}` };
+    const names: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const b = backup(d, env);
+      assert.equal(b.status, 0, b.stderr);
+      names.push(manifests(d).at(-1)!);
+    }
+    assert.equal(new Set(names).size, 3, `mỗi lần một tên mới: ${names.join(", ")}`);
+    assert.deepEqual(manifests(d), names.slice(1), "giữ đúng 2 bản mới nhất");
+    // Ca biên: đã có bản mang tên "tương lai" (đồng hồ lùi) → từ chối, không ghi đè, không xoá bản nào.
+    const future = "xc-29991231T235959999Z";
+    for (const ext of [".dump", ".sha256", ".manifest.json"]) writeFileSync(path.join(d, future + ext), "x");
+    const before = readdirSync(d).sort();
+    const r = backup(d, env);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /không sau bản mới nhất xc-29991231T235959999Z/);
+    assert.deepEqual(readdirSync(d).sort(), before, "thư mục giữ nguyên");
+    // BACKUP_DIR có ký tự glob (`[1]`) không được hiểu thành mẫu: bản "tương lai" vẫn bị thấy → vẫn từ chối (review #99).
+    const g = dir("glob[1]");
+    for (const ext of [".dump", ".sha256", ".manifest.json"]) writeFileSync(path.join(g, future + ext), "x");
+    const rg = backup(g, { ...env, BACKUP_KEEP: "1" });
+    assert.equal(rg.status, 1, rg.stderr);
+    assert.equal(readdirSync(g).filter((f) => f.endsWith(".manifest.json")).length, 1);
+  });
+
+  test("tên bản và created_at_utc là UTC dù TZ của tiến trình khác UTC", () => {
+    const d = dir("tz");
+    const b = backup(d, { TZ: "Asia/Ho_Chi_Minh" });
+    assert.equal(b.status, 0, b.stderr);
+    const name = manifests(d)[0]!;
+    const man = JSON.parse(readFileSync(path.join(d, name), "utf8")) as { created_at_utc: string };
+    assert.ok(Math.abs(Date.parse(man.created_at_utc) - Date.now()) < 120_000, man.created_at_utc);
+    // 2026-11-06T11:42:43.231Z → xc-20261106T114243231Z
+    assert.equal(
+      name,
+      `xc-${man.created_at_utc.replace(/[-:.]/g, "")}.manifest.json`,
+      "tên khớp created_at_utc",
+    );
+  });
+
   test("mã hoá: bản mã không chứa dữ liệu thô; thiếu/sai/ngắn khoá → exit 2; đúng khoá → khôi phục khớp", () => {
     const d = dir("enc");
     const b = backup(d, { BACKUP_PASSPHRASE: PASSPHRASE });
