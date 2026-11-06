@@ -6,6 +6,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { lineRefs, malformedCheckIds } from "./lib/blueprint-checks.mjs";
+import { checkTransfers } from "./lib/transfer-check.mjs";
+import { parseVendors } from "./check-vendors.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = process.env.CHECK_NOW ? new Date(process.env.CHECK_NOW) : new Date();
@@ -510,6 +512,14 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     out(
       `Data map: ${pii.length} cột PII khai báo · ${cand} cột ứng viên trong schema · ${cols.size} cột tổng`,
     );
+    // CMP-VN-004: nơi lưu (bên xử lý + quốc gia) của dữ liệu cá nhân; ngoài VN phải có hồ sơ chuyển dữ liệu.
+    const vendors = has("docs/compliance/vendors.yaml")
+      ? parseVendors(read("docs/compliance/vendors.yaml"))
+      : [];
+    const tr = checkTransfers(map, vendors, has);
+    tr.errors.forEach(fail);
+    tr.warnings.forEach((w) => out(`CẢNH BÁO: ${w}`));
+    out(`Chuyển dữ liệu ra ngoài VN: ${tr.abroad.length ? tr.abroad.join("; ") : "không có"}`);
     // kiểm kê CSV
     if (has("docs/compliance/data-inventory.csv")) {
       const lines = read("docs/compliance/data-inventory.csv").trim().split("\n");

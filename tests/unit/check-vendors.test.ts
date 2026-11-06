@@ -23,6 +23,7 @@ vendors:
     service: "bọc DEK"
     data: "DEK đã bọc"
     location: "chờ chủ dự án"
+    country: chua_chon
     dpa: "không cần"
     certs: "—"
     risk: trung_binh

@@ -14,6 +14,7 @@ export const REQUIRED = [
   "service",
   "data",
   "location",
+  "country",
   "dpa",
   "certs",
   "risk",
