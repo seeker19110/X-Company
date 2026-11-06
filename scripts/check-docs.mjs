@@ -10,6 +10,7 @@ import { checkTransfers } from "./lib/transfer-check.mjs";
 import { checkDor } from "./lib/dor-check.mjs";
 import { checkSpecialBasis } from "./lib/special-basis-check.mjs";
 import { checkSeedPolicy } from "./lib/seed-policy.mjs";
+import { phoneMatches } from "./lib/fixture-phone.mjs";
 import { parseVendors } from "./check-vendors.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -614,8 +615,8 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
       if (exceptions.has(key)) usedExceptions.add(key);
       else fail(`fixture có email ngoài domain cho phép: ${m[0]} (${f})`);
     }
-    for (const m of txt.matchAll(/(?<![\d])(?:\+84|84|0)[35789]\d{8}(?!\d)/g)) {
-      if (!allowedPhones.has(m[0])) fail(`fixture có số điện thoại dạng thật: ${m[0]} (${f})`);
+    for (const ph of phoneMatches(txt)) {
+      if (!allowedPhones.has(ph)) fail(`fixture có số điện thoại dạng thật: ${ph} (${f})`);
     }
   }
   for (const k of exceptions)
