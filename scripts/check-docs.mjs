@@ -9,6 +9,7 @@ import { lineRefs, malformedCheckIds } from "./lib/blueprint-checks.mjs";
 import { checkTransfers } from "./lib/transfer-check.mjs";
 import { checkDor } from "./lib/dor-check.mjs";
 import { checkSpecialBasis } from "./lib/special-basis-check.mjs";
+import { checkSeedPolicy } from "./lib/seed-policy.mjs";
 import { parseVendors } from "./check-vendors.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -321,8 +322,20 @@ if (has("docs/ops/RUNBOOK.md")) {
   else if (/^\d{4}-\d{2}-\d{2}$/.test(ld)) {
     if (NOW - new Date(ld) > 183 * 864e5) fail(`RUNBOOK: last_drilled ${ld} quá 6 tháng`);
   } else out(`CẢNH BÁO: RUNBOOK last_drilled = "${ld}"`);
-  for (const h of ["Lộ bí mật", "SESSION_SECRET", "QR_SIGNING_KEYS", "Mật khẩu DB"])
+  for (const h of [
+    "Lộ bí mật",
+    "SESSION_SECRET",
+    "QR_SIGNING_KEYS",
+    "Mật khẩu DB",
+    "Dữ liệu staging/preview",
+  ])
     if (!rb.includes(h)) fail(`RUNBOOK: thiếu "${h}"`);
+}
+// WF-ENV-010: script seed chỉ sinh dữ liệu tổng hợp, không đọc nguồn ngoài (mạng, tệp ngoài, CSDL khác).
+{
+  const sp = checkSeedPolicy(join(ROOT, "scripts"));
+  sp.errors.forEach((e) => fail(e.replaceAll(`${ROOT}/`, "")));
+  out(`Seed tổng hợp (WF-ENV-010): ${sp.files.length} script đạt chính sách`);
 }
 if (has("docs/ops/INCIDENT-RESPONSE.md")) {
   const ir = read("docs/ops/INCIDENT-RESPONSE.md");

@@ -85,6 +85,12 @@ Liên hệ/ứng viên quá hạn được **ẩn danh** (tên, email, SĐT, n�
 Chạy theo lịch hằng ngày (đề xuất 03:00 UTC): `0 3 * * * cd /srv/x-company && npm run -s retention:run` (cron/systemd timer; chủ dự án điền). Tắt khẩn cấp: `RETENTION_ENABLED=false` (đường lùi D-016) — lệnh thoát 0 và không đụng dữ liệu; ẩn danh không hoàn tác được (khôi phục từ sao lưu).
 Chưa phủ: dữ liệu định vị/ảnh chấm công, tệp đính kèm hồ sơ ứng viên, log/sao lưu (chờ DPIA và pháp chế — kế hoạch §12).
 
+### Dữ liệu staging/preview (WF-ENV-010)
+- Staging, preview, e2e, DAST, đo tải **chỉ dùng dữ liệu tổng hợp** sinh bởi `scripts/seed-*.ts` (công ty, người dùng, ca, việc giả; email/URL ở tên miền dành riêng `.test`/`example.com`). **Không** khôi phục bản sao lưu production, không `pg_dump` production sang môi trường khác, không sao chép tệp tải lên của người dùng thật.
+- Cần dữ liệu giống thật để tái hiện lỗi: dùng seed mới (thêm vào script seed qua PR), không dùng bản ghi thật. Nếu một ngày buộc phải dùng bản sao production, phải có quy trình ẩn danh hoá có kiểm (quét PII = 0) **được duyệt trước** (DPIA) — chưa có, nên hiện là cấm.
+- Diễn tập khôi phục sao lưu thật chạy vào CSDL tạm trên **chính máy production** rồi xoá (`restore-drill.sh`), không chuyển sang staging.
+- Kiểm máy: `npm run -s check:docs` đỏ khi một script seed import gói ngoài `node:fs`/`pg`, gọi mạng, đọc tệp khác `e2e/.seed.json`, đọc biến môi trường khác `DATABASE_URL`, hay chứa URL ngoài tên miền dành riêng (`scripts/lib/seed-policy.mjs`). Quét PII trên staging thật = 0: việc người khi có staging.
+
 ### Sao lưu và khôi phục thử cục bộ
 Nhãn bằng chứng: **faithful-fixture** — chạy thật trên máy phát triển với PostgreSQL thật, KHÔNG phải production; chưa có sao lưu ngoài máy, khoá KMS, diễn tập trên production (xem [RPO-RTO.md](RPO-RTO.md) mục "Chưa chứng minh").
 ```bash
