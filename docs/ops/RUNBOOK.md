@@ -59,6 +59,12 @@ Rollback **mã** không lùi **dữ liệu**: migration đã áp là append-only
 trước/thu hẹp sau (thêm cột nullable, chưa xoá cột cũ) để bản mã cũ vẫn chạy được; muốn lùi dữ liệu thật sự thì viết migration mới hoặc khôi phục từ sao lưu
 ([restore-db.md](runbooks/restore-db.md)) — thao tác này theo mục "Trước khi chạy lệnh lên dữ liệu" của [INCIDENT-RESPONSE.md](INCIDENT-RESPONSE.md).
 
+**Lùi về bản có `scripts/backup.sh` cũ (≤ v0.3.0, AUD-DATA-011):** bản đó đặt tên bản sao lưu bằng `date …%3NZ`; trên máy dùng
+coreutils viết lại bằng Rust (uutils — mặc định từ Ubuntu 26.04) tên không tăng đơn điệu và bước giữ `BACKUP_KEEP` bản có thể xoá
+nhầm bản mới nhất. Kiểm trước khi lùi: `date --version | head -1` — nếu không phải GNU coreutils thì giữ `scripts/backup.sh` của bản
+hiện hành (chỉ là script vận hành, không phụ thuộc schema; có `EPOCHREALTIME`) cho cron sao lưu, hoặc đặt `BACKUP_KEEP` đủ lớn tới khi
+lên lại bản mới.
+
 ### Chẩn đoán
 ```bash
 pm2 logs x-company --lines 200 --nostream     # log gần nhất (PM2 mặc định không che PII — chưa có logger che trường, T-026)
