@@ -6,10 +6,11 @@ import { z } from "zod";
 import { appendAudit } from "../audit/index.ts";
 import { revealTextAsync } from "../crypto/columns.ts";
 import type { Queryable } from "../db/index.ts";
-import { getStorage } from "../files/storage.ts";
 import { AppError } from "../nen/app-error.ts";
 import { fetchLimit, MAX_PAGE, toPage, type Page, type PageRequest } from "../nen/pagination.ts";
 import { BUSINESS_TZ } from "../nen/time.ts";
+import { enqueue } from "../outbox/index.ts";
+import { BLOB_DELETE_TOPIC } from "../worker/index.ts";
 import { anonymizeById } from "../worker/retention.ts";
 import { activePurposes, listConsents, withdrawConsent, type SubjectType } from "./consent.ts";
 import { CATEGORY_AUDIT_LOG, CATEGORY_CONSENT_EVIDENCE, RETAINED_BY_SUBJECT } from "./retained.ts";
@@ -469,21 +470,26 @@ async function executeDelete(
       [actor.companyId, r.subject_id],
     ); // ghi chú tự do của người xử lý có thể chứa PII; ghi chú hệ thống (actor rỗng) giữ nguyên
   await stopSubject(tx, actor, r, t("msg.privacy.stopErase"));
-  // 2) Kho tệp: xoá blob trong giao dịch (xoá idempotent; giao dịch lỗi → chạy lại vẫn xoá được, hàng dữ liệu còn nguyên).
-  const files = await tx.query<{ id: string; storage_key: string }>(
-    "SELECT id, storage_key FROM subject_file WHERE company_id = $1 AND subject_type = $2 AND subject_id = $3 FOR UPDATE",
+  // 2) Kho tệp: KHÔNG gọi kho trong giao dịch (DB-TX-003 — kho S3 là lời gọi mạng, trần 30 s/tệp, khi đang giữ khoá hàng).
+  // Xoá hàng subject_file và ghi MỖI blob một sự kiện outbox `files.blob_delete` (payload chỉ có khoá lưu trữ ngẫu nhiên) cùng
+  // giao dịch; worker xoá blob sau commit (lũy đẳng, thử lại có trần, hết lượt → DLQ). Rollback → không có sự kiện, blob còn nguyên
+  // cùng hàng subject_file; blob chưa xoá luôn còn dấu vết là hàng outbox pending/dead.
+  const files = await tx.query<{ storage_key: string }>(
+    "DELETE FROM subject_file WHERE company_id = $1 AND subject_type = $2 AND subject_id = $3 RETURNING storage_key",
     [actor.companyId, subjectType, r.subject_id],
   );
-  const storage = getStorage();
-  for (const f of files.rows) await storage.remove(f.storage_key);
-  await tx.query("DELETE FROM subject_file WHERE company_id = $1 AND subject_type = $2 AND subject_id = $3", [
-    actor.companyId,
-    subjectType,
-    r.subject_id,
-  ]);
+  for (const f of files.rows)
+    await enqueue(
+      tx,
+      actor.companyId,
+      BLOB_DELETE_TOPIC,
+      { storageKey: f.storage_key },
+      `${BLOB_DELETE_TOPIC}:${f.storage_key}`,
+    );
   // 3) DB: ẩn danh bằng đúng hàm của retention.
   const anonymized = await anonymizeById(tx, TABLE_OF[subjectType], actor.companyId, r.subject_id, now);
-  // 4) Outbox: payload chứa id/mã hồ sơ → che; việc chưa gửi bị đóng (không gửi tin cho chủ thể đã yêu cầu xoá).
+  // 4) Outbox: payload chứa id/mã hồ sơ → che; việc chưa gửi bị đóng (không gửi tin cho chủ thể đã yêu cầu xoá). Sự kiện
+  // `files.blob_delete` ở bước 2 không mang id chủ thể nên không bị che/đóng ở đây.
   const key = OUTBOX_KEY[subjectType];
   const ob = await tx.query(
     `UPDATE outbox_event
@@ -499,6 +505,7 @@ async function executeDelete(
     erased: true,
     outcome: "anonymized",
     anonymized_rows: anonymized ? 1 : 0,
+    // Số tệp của chủ thể đã gỡ khỏi hồ sơ; blob xoá bất đồng bộ qua outbox `files.blob_delete` (một sự kiện mỗi tệp).
     files_removed: files.rows.length,
     outbox_redacted: ob.rowCount ?? 0,
     consent_withdrawn: withdrawn,
