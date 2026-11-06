@@ -82,6 +82,7 @@ delivery_phase: harden
 attack: DAST_OUT="$(mktemp -d)" npm run -s dast # ZAP baseline + quét chủ động; scripts/zap-gate.mjs đỏ từ Medium ngoài allowlist
 perf: npm run -s perf:load # kiểm tải theo ngân sách p95 (scripts/perf-load.mjs, SLO-2); báo cáo ra thư mục tạm
 
+
 # Khoá mới của khung (bản 3.31.0 (01ab9b5)) — bật bằng cách bỏ "# "; vắng khoá = hành vi cũ
 # acceptance_report: "" # vd reports/junit.xml — trong dự án VÀ trong .gitignore (file chưa commit làm hàng `tree` FAIL)
 # release_artifacts: "" # artifact ứng viên, cách nhau bởi khoảng trắng (sidecar <file>.sha256 nếu có) → `subject.digest`; GO-NO-GO §5 nhắc 12 ký tự đầu
