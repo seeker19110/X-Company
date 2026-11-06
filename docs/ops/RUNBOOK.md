@@ -77,6 +77,7 @@ psql "$DATABASE_URL" -c "select count(*) from session where absolute_expires_at 
 ### DLQ / redrive
 Worker (`npm run worker`, một tiến trình dưới pm2/systemd; nhiều bản cùng chạy được — `SKIP LOCKED`) thử tối đa `WORKER_MAX_ATTEMPTS` (mặc định 5) lần với backoff mũ có jitter (10 s → trần 15 phút).
 Việc vào DLQ = `outbox_event.status = 'dead'` (giữ nguyên `payload`, `last_error`, `attempts`, `dead_at`) khi: hết lần thử · payload sai schema · không có handler cho topic · lỗi vĩnh viễn. Kênh tắt **không** vào DLQ (giữ `pending`).
+Topic `files.blob_delete` (T-125): blob của chủ thể đã yêu cầu xoá, xoá ở kho tệp SAU commit (payload chỉ `{"storageKey": "xx/<40 hex>"}`). Hàng `dead` của topic này = **blob còn nằm trong kho** (đĩa/S3) dù hồ sơ đã ẩn danh — sửa kết nối/quyền kho rồi redrive (xoá lũy đẳng: blob đã mất vẫn `done`). Worker phải chạy cùng `FILE_STORAGE`/`S3_*` với web (`scripts/worker.ts` gọi `registerStorage()`), nếu không sẽ xoá nhầm kho.
 Cảnh báo: số hàng `dead` > 0 quá 15 phút (gauge `outbox_dead_total` ở `/api/metrics`; rule mẫu `XCOutboxDeadLetter` ở `ops/prometheus/alerts.yml`, chưa nối Prometheus thật — tạm nhìn tay bằng truy vấn dưới).
 ```bash
 psql "$DATABASE_URL" -c "select id, topic, attempts, dead_at, left(last_error, 120) from outbox_event where status = 'dead' order by dead_at"

@@ -20,11 +20,11 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
 | `rum` | `index.ts`, `routes.ts`, `page.pure.ts`, `vitals.pure.ts` | RUM web-vitals tự làm (T-056, D-042): beacon `/api/public/rum`, mẫu theo nhãn trang chuẩn hoá (`page.pure.ts` = lõi thuần, tập nhãn bị chặn; `vitals.pure.ts` = CLS cửa sổ phiên, INP xấp xỉ cho client), gộp p75 cho `/api/metrics` — không dữ liệu cá nhân |
 | `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029) |
-| `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — privacy xoá blob) |
+| `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — worker xoá blob của chủ thể qua outbox `files.blob_delete`, T-125) |
 | `crypto` | `index.ts`, `columns.ts`, `file.ts`, `rotate.ts`, `kms.ts` | mã hoá dữ liệu lúc lưu (T-048): AES-256-GCM có AAD + phong bì `v1:<keyId>:…`, chỉ mục mù HMAC, mã hoá tệp theo luồng (khoá tệp bọc bằng khoá chủ), sổ cột PII đã mã hoá (`columns.ts`), backfill/xoay khoá (`rotate.ts`, chạy bằng script). Chỉ dùng `node:crypto`; không import `next/*` |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |
 | `notify` | `index.ts`, `routes.ts` | thông báo trong ứng dụng (T-080, D-058): worker ghi một hàng/người nhận trong giao dịch xử lý outbox (lũy đẳng), API đọc/đánh dấu đã đọc của chính mình — không PII |
-| `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần |
+| `worker` | `index.ts`, `retention.ts` | relay outbox (SKIP LOCKED, retry, DLQ), retention; `backoff.pure.ts` là lõi thuần; handler có `effect` gọi mạng NGOÀI giao dịch (DB-TX-003) |
 | `dashboard`  | `index.ts`            | tổng hợp cho trang điều hành                                     |
 | `today`      | `index.ts`            | màn hình "hôm nay" của nhân viên                                 |
 | `site`       | `index.ts`            | cấu hình/ngữ cảnh website công khai                              |

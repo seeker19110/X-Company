@@ -57,7 +57,7 @@ Sơ đồ DFD và ranh giới tin cậy: [THREAT-MODEL.md](THREAT-MODEL.md) mụ
 | phản hồi "đã nhận" (mọi loại) | 2 ngày làm việc (bỏ T7, CN; chưa loại ngày lễ) | `DSAR_RESPOND_WORKDAYS` |
 | gia hạn | tối đa MỘT lần, kèm lý do, khi chưa quá hạn; GIẢ ĐỊNH +15 ngày | `DSAR_EXTEND_DAYS` |
 
-  Danh sách quá hạn (thực hiện hoặc phản hồi): `GET /api/app/privacy/requests?overdue=1`; cảnh báo vận hành `XCLocalDsarOverdue`. Xoá: ẩn danh cùng hàm với job lưu giữ, xoá blob, che outbox, dừng xử lý; giữ bằng chứng đồng ý và nhật ký (không định danh). Nhân viên: hồ sơ lao động/bảng công không xoá — đánh dấu `retained_by_law`.
+  Danh sách quá hạn (thực hiện hoặc phản hồi): `GET /api/app/privacy/requests?overdue=1`; cảnh báo vận hành `XCLocalDsarOverdue`. Xoá: ẩn danh cùng hàm với job lưu giữ, xoá blob (sau commit qua outbox `files.blob_delete`, thử lại có trần; chưa xoá được → DLQ có cảnh báo), che outbox, dừng xử lý; giữ bằng chứng đồng ý và nhật ký (không định danh). Nhân viên: hồ sơ lao động/bảng công không xoá — đánh dấu `retained_by_law`.
 - Chưa làm được: xoá khỏi **bản sao lưu**; báo xoá cho bên thứ ba; chủ thể tự phục vụ; xác thực lại danh tính (HR xác minh ngoài hệ thống); thao tác gỡ cờ hạn chế; rút riêng "kho nhân tài" qua giao diện (hiện rút đồng ý = rút mọi đồng ý đang hiệu lực).
 
 ## 4. Chính sách lưu trữ, xoá, huỷ (D-030)

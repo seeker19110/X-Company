@@ -360,6 +360,14 @@ describe("kho S3: riêng phần mạng/cấu hình", () => {
     }
   });
 
+  test("tiến trình worker đăng ký kho trước vòng lặp (T-125: xoá blob S3 qua outbox phải đi đúng kho, không rơi về đĩa)", () => {
+    const src = readFileSync(path.join(import.meta.dirname, "..", "..", "scripts", "worker.ts"), "utf8");
+    assert.match(src, /import \{ registerStorage \} from "\.\.\/adapters\/register-storage\.ts";/);
+    const call = src.indexOf("registerStorage();");
+    assert.ok(call > 0, "scripts/worker.ts phải gọi registerStorage()");
+    assert.ok(call < src.indexOf("runLoop(ctl.signal"), "đăng ký kho TRƯỚC khi chạy vòng lặp outbox");
+  });
+
   test("đăng ký ở một bản sao module (như instrumentation) → bản sao module khác (như route) dùng đúng kho đó", async () => {
     // Next đóng gói instrumentation và route thành bản module riêng; mô phỏng bằng URL import khác nhau (mỗi URL = một thể hiện).
     const copy = (await import(`../../lib/files/storage.ts?ban-sao=${randomBytes(4).toString("hex")}`)) as {

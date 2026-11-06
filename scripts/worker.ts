@@ -1,5 +1,6 @@
 // npm run worker — relay outbox: lấy việc, giao qua kênh, thử lại có backoff, DLQ. Tắt êm khi nhận SIGTERM/SIGINT:
 // xong lượt đang chạy rồi đóng pool, thoát 0 (lib/nen/shutdown dành cho http.Server nên không dùng ở đây).
+import { registerStorage } from "../adapters/register-storage.ts";
 import { closePool } from "../lib/db/index.ts";
 import { env } from "../lib/nen/env.ts";
 import { log } from "../lib/nen/log.ts";
@@ -16,6 +17,9 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
 }
 
 log.info("[worker] bắt đầu");
+// FILE_STORAGE=s3: handler `files.blob_delete` (T-125) phải xoá ở CÙNG kho với web; thiếu bước này worker rơi về đĩa cục bộ,
+// "xoá" thành công giả và blob S3 thành mồ côi không dấu vết. Thiếu cấu hình S3 → ném ngay lúc khởi động.
+registerStorage();
 try {
   // Cảnh báo vận hành cục bộ (T-046): cùng tiến trình, mặc định tắt (ALERTS_ENABLED=true để bật).
   const alerts = alertConfig();

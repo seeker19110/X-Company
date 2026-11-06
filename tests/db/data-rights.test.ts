@@ -8,7 +8,15 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { verifyAuditChain } from "../../lib/audit/index.ts";
 import { withTx } from "../../lib/db/index.ts";
-import { diskStorage, setStorage } from "../../lib/files/storage.ts";
+import { s3Transport } from "../../adapters/s3-http.ts";
+import {
+  diskStorage,
+  objectStorage,
+  setStorage,
+  STORAGE_KEY_RE,
+  type Storage,
+} from "../../lib/files/storage.ts";
+import { readOutboxDead } from "../../lib/http/metrics.ts";
 import {
   ApplicationInput,
   InquiryInput,
@@ -35,10 +43,17 @@ import {
   type SubjectType,
 } from "../../lib/privacy/index.ts";
 import { listConsents } from "../../lib/privacy/consent.ts";
-import { defaultRegistry, runOnce, type Channel, type DeliveryMessage } from "../../lib/worker/index.ts";
+import {
+  defaultRegistry,
+  redriveDead,
+  runOnce,
+  type Channel,
+  type DeliveryMessage,
+} from "../../lib/worker/index.ts";
 import { ANON_EMAIL, ANON_NAME } from "../../lib/worker/retention.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { startS3, type S3Fixture } from "../helpers/s3-fixture.ts";
 
 setTestEnv();
 
@@ -484,9 +499,14 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
         [a.id],
       );
       assert.equal(notes.length, 0, "ghi chú tự do của người xử lý đã xoá");
-      // kho 2 — tệp
-      await assert.rejects(storage.get(key), { code: "ENOENT" });
+      // kho 2 — tệp: hàng subject_file mất ngay; blob xoá SAU commit qua outbox (T-125), còn tới khi worker chạy
       assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 0);
+      assert.equal((await storage.get(key)).toString(), "CV nội dung", "giao dịch xoá không gọi kho tệp");
+      const blobEv = await q(
+        "SELECT payload, status FROM outbox_event WHERE topic = 'files.blob_delete' AND job_key = $1",
+        [`files.blob_delete:${key}`],
+      );
+      assert.deepEqual(blobEv, [{ payload: { storageKey: key }, status: "pending" }]);
       // kho 3 — outbox (mọi trạng thái) không còn id/mã/PII
       const ob = await q(
         "SELECT payload, status FROM outbox_event WHERE payload::text LIKE $1 OR payload::text LIKE $2",
@@ -517,10 +537,16 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       assert.equal(keep.name, "Khách Giữ Lại");
       assert.equal(keep.email, other.email);
       assert.equal(keep.anonymized_at, null);
-      // worker không gửi gì cho chủ thể đã xoá
+      // worker không gửi gì cho chủ thể đã xoá; worker xoá blob
       const ch = new FakeChannel();
       await runOnce({ registry: defaultRegistry(ch), now: () => T0, pool: db.app, batchSize: 100 });
       assert.equal(ch.forInquiry(a.id).length, 0);
+      await assert.rejects(storage.get(key), { code: "ENOENT" });
+      assert.equal(
+        (await q("SELECT status FROM outbox_event WHERE job_key = $1", [`files.blob_delete:${key}`]))[0]
+          .status,
+        "done",
+      );
     });
 
     test("xoá lặp lại là idempotent (yêu cầu đã đóng → 409, dữ liệu không đổi)", async () => {
@@ -950,6 +976,267 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
         hist.every((h) => h.note === null),
         "ghi chú trong lịch sử bị xoá",
       );
+    });
+  });
+
+  describe("xoá blob SAU commit qua outbox — kho S3 thật (T-125, DB-TX-003)", () => {
+    let s3: S3Fixture;
+    let real: Storage;
+    const raw = () => s3Transport(() => s3);
+    before(async () => {
+      s3 = await startS3();
+      real = objectStorage(s3Transport(() => s3));
+    });
+    after(async () => {
+      await s3?.stop();
+    });
+
+    /** Số giao dịch đang mở của các phiên KHÁC trên DB test (pg_stat_activity, nhìn từ admin). */
+    const openTx = async () =>
+      Number(
+        (
+          await q(
+            `SELECT count(*) AS n FROM pg_stat_activity
+              WHERE datname = current_database() AND pid <> pg_backend_pid() AND backend_type = 'client backend'
+                AND xact_start IS NOT NULL`,
+          )
+        )[0].n,
+      );
+    /**
+     * Kho bọc kho S3 thật: ghi mọi lời gọi; `remove` NÉM nếu lúc gọi đang có giao dịch DB mở (DB-TX-003) hoặc khi `fail(khoá, lần)`.
+     * `checkTx: false` cho ca nhiều worker song song (giao dịch của worker kia là hợp lệ).
+     */
+    const spy = (fail: (key: string, nth: number) => boolean = () => false, checkTx = true) => {
+      const calls: string[] = [];
+      const inTx: string[] = [];
+      const s: Storage = {
+        put: (d) => {
+          calls.push("put");
+          return real.put(d);
+        },
+        get: (k) => {
+          calls.push(`get:${k}`);
+          return real.get(k);
+        },
+        remove: async (k) => {
+          calls.push(k);
+          if (checkTx && (await openTx()) > 0) {
+            inTx.push(k);
+            throw new Error("gọi kho khi đang có giao dịch DB mở");
+          }
+          if (fail(k, calls.filter((c) => c === k).length)) throw new Error("kho S3 lỗi tạm (giả lập 503)");
+          await real.remove(k);
+        },
+      };
+      return { s, calls, inTx, of: (keys: string[]) => calls.filter((c) => keys.includes(c)) };
+    };
+    const subjectWith3Files = async () => {
+      const a = await newInquiry();
+      const keys: string[] = [];
+      for (let i = 0; i < 3; i++) keys.push(await real.put(Buffer.from(`CV ${i} của ${a.code}`)));
+      await withTx(async (tx) => {
+        for (const k of keys) await registerSubjectFile(tx, companyId, "inquiry", a.id, k);
+      });
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      return { a, keys };
+    };
+    const exists = (keys: string[]) =>
+      Promise.all(keys.map(async (k) => (await raw().getObject(k)) !== null));
+    const blobEvents = async (keys: string[]) =>
+      (await q(
+        "SELECT id, status, attempts, payload, last_error FROM outbox_event WHERE job_key = ANY($1) ORDER BY id",
+        [keys.map((k) => `files.blob_delete:${k}`)],
+      )) as {
+        id: string;
+        status: string;
+        attempts: number;
+        payload: { storageKey: string };
+        last_error: string | null;
+      }[];
+    const work = (storage: Storage, now: Date, maxAttempts?: number) =>
+      runOnce({
+        registry: defaultRegistry(new FakeChannel(), () => storage),
+        now: () => now,
+        pool: db.app,
+        batchSize: 100,
+        ...(maxAttempts === undefined ? {} : { maxAttempts }),
+      });
+    /** Chạy `fn` với kho toàn cục là `s` (mọi lời gọi getStorage() trong lib/ đi qua kho đếm), rồi trả kho đĩa của bộ test. */
+    const withGlobalStorage = async <T>(s: Storage, fn: () => Promise<T>): Promise<T> => {
+      setStorage(s);
+      try {
+        return await fn();
+      } finally {
+        setStorage(diskStorage(blobDir));
+      }
+    };
+    const LATER = new Date(T0.getTime() + 3_600_000);
+
+    test("Given chủ thể có 3 tệp trên S3 When xoá Then giao dịch không gọi kho; sau worker cả 3 blob mất", async () => {
+      const { a, keys } = await subjectWith3Files();
+      const sp = spy();
+      const done = await withGlobalStorage(sp.s, async () =>
+        complete((await handle(a.code, "inquiry", "delete")).id),
+      );
+      assert.equal((done.result as { files_removed: number }).files_removed, 3);
+      assert.deepEqual(sp.calls, [], "luồng xoá (trong giao dịch) không gọi kho tệp lần nào");
+      assert.deepEqual(await exists(keys), [true, true, true], "blob còn tới khi worker chạy");
+      assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 0);
+      const evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => e.status),
+        ["pending", "pending", "pending"],
+      );
+      for (const e of evs) {
+        assert.deepEqual(Object.keys(e.payload), ["storageKey"], "payload chỉ có khoá lưu trữ");
+        assert.match(e.payload.storageKey, STORAGE_KEY_RE);
+      }
+      const payloads = JSON.stringify(evs.map((e) => e.payload));
+      for (const needle of [a.id, a.code, a.email]) assert.ok(!payloads.includes(needle), needle);
+      // lũy đẳng: một blob đã mất trước khi worker chạy → vẫn xong, không lỗi
+      await raw().deleteObject(keys[0]!);
+      const w = spy();
+      await work(w.s, T0);
+      assert.deepEqual(w.inTx, [], "worker gọi kho khi KHÔNG có giao dịch DB mở");
+      assert.deepEqual(w.of(keys).sort(), [...keys].sort(), "mỗi blob đúng một lời gọi xoá");
+      assert.deepEqual(await exists(keys), [false, false, false]);
+      assert.deepEqual(
+        (await blobEvents(keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      // xoá lặp (redrive/việc lặp) ở kho thật: không có đối tượng → không lỗi
+      await real.remove(keys[1]!);
+    });
+
+    test("ca biên: kho lỗi tạm → thử lại, lượt sau xoá được; hết lượt → dead, vẫn thấy được (outbox_dead_total)", async () => {
+      const { a, keys } = await subjectWith3Files();
+      await complete((await handle(a.code, "inquiry", "delete")).id);
+      const flaky = spy((k, nth) => keys.includes(k) && nth === 1); // lần gọi đầu mỗi khoá lỗi
+      await work(flaky.s, T0);
+      let evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts]),
+        [
+          ["pending", 1],
+          ["pending", 1],
+          ["pending", 1],
+        ],
+      );
+      for (const e of evs) assert.match(e.last_error ?? "", /lỗi tạm/);
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      await work(flaky.s, T0); // chưa tới hạn backoff → không lấy lại
+      assert.equal(flaky.of(keys).length, 3);
+      await work(flaky.s, LATER);
+      evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts, e.last_error]),
+        [
+          ["done", 2, null],
+          ["done", 2, null],
+          ["done", 2, null],
+        ],
+      );
+      assert.deepEqual(await exists(keys), [false, false, false]);
+
+      // hết lượt (trần 2) → DLQ; hàng dead giữ khoá = dấu vết blob mồ côi, blob còn nguyên
+      const b = await subjectWith3Files();
+      await complete((await handle(b.a.code, "inquiry", "delete")).id);
+      const down = spy((k) => b.keys.includes(k));
+      const deadBefore = await readOutboxDead(db.app);
+      assert.notEqual(deadBefore, null);
+      await work(down.s, T0, 2);
+      await work(down.s, LATER, 2);
+      evs = await blobEvents(b.keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts, e.payload.storageKey]),
+        b.keys.map((k) => ["dead", 2, k]),
+      );
+      for (const e of evs) assert.match(e.last_error ?? "", /lỗi tạm/);
+      assert.equal(
+        await readOutboxDead(db.app),
+        deadBefore! + 3,
+        "gauge outbox_dead_total tăng → cảnh báo DLQ",
+      );
+      assert.deepEqual(await exists(b.keys), [true, true, true]);
+      // vận hành sửa nguyên nhân rồi redrive (RUNBOOK) → xoá xong
+      assert.equal(
+        await redriveDead(
+          db.admin,
+          evs.map((e) => Number(e.id)),
+        ),
+        3,
+      );
+      await work(real, new Date(LATER.getTime() + 3_600_000));
+      assert.deepEqual(
+        (await blobEvents(b.keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      assert.deepEqual(await exists(b.keys), [false, false, false]);
+    });
+
+    test("ca biên: giao dịch xoá rollback → không có sự kiện, hàng subject_file và blob còn nguyên", async () => {
+      const { a, keys } = await subjectWith3Files();
+      const req = await handle(a.code, "inquiry", "delete");
+      const sp = spy();
+      await withGlobalStorage(sp.s, () =>
+        assert.rejects(
+          withTx(async (tx) => {
+            await completeRequest(tx, hr, req.id);
+            throw new Error("lỗi sau bước xoá — rollback");
+          }),
+          /rollback/,
+        ),
+      );
+      assert.deepEqual(sp.calls, []);
+      assert.deepEqual(await blobEvents(keys), [], "rollback → không sự kiện nào");
+      assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 3);
+      const w = spy();
+      await work(w.s, T0);
+      assert.deepEqual(w.of(keys), [], "worker không đụng blob của giao dịch đã rollback");
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      // yêu cầu vẫn in_progress → chạy lại thì xoá đủ
+      await complete(req.id);
+      await work(real, T0);
+      assert.deepEqual(await exists(keys), [false, false, false]);
+    });
+
+    test("đồng thời: hai worker cùng lúc → mỗi blob xoá đúng một lần, mọi sự kiện done", async () => {
+      const { a, keys } = await subjectWith3Files();
+      await complete((await handle(a.code, "inquiry", "delete")).id);
+      const sp = spy(() => false, false);
+      await Promise.all([work(sp.s, T0), work(sp.s, T0)]);
+      assert.deepEqual(sp.of(keys).sort(), [...keys].sort());
+      assert.deepEqual(
+        (await blobEvents(keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      assert.deepEqual(await exists(keys), [false, false, false]);
+    });
+
+    test("ca biên: payload khoá sai dạng (đường dẫn lạ/rỗng/thiếu) → DLQ ngay, không gọi kho", async () => {
+      const bad = [{ storageKey: "../../etc/passwd" }, { storageKey: "" }, {}];
+      const ids: string[] = [];
+      for (const p of bad)
+        ids.push(
+          (
+            await q(
+              "INSERT INTO outbox_event (company_id, topic, payload) VALUES ($1, 'files.blob_delete', $2) RETURNING id",
+              [companyId, JSON.stringify(p)],
+            )
+          )[0].id,
+        );
+      const sp = spy();
+      await work(sp.s, T0);
+      assert.deepEqual(sp.calls, []);
+      const rows = await q("SELECT status, last_error FROM outbox_event WHERE id = ANY($1) ORDER BY id", [
+        ids,
+      ]);
+      for (const r of rows) {
+        assert.equal(r.status, "dead");
+        assert.match(r.last_error, /^payload sai schema — storageKey: /);
+      }
+      // dọn để không cộng dồn DLQ cho ca sau
+      await q("DELETE FROM outbox_event WHERE id = ANY($1)", [ids]);
     });
   });
 });
