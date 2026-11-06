@@ -1,0 +1,67 @@
+# Sổ nhà cung cấp / bên xử lý (CMP-AUDIT-007; ISO/IEC 27001:2022 A.5.19–5.22; Luật 91/2025/QH15 Đ.17).
+# Nguồn sự thật cho `npm run -s check:vendors` (CI): mỗi SDK dịch vụ ngoài trong `dependencies` và mỗi tệp `adapters/*.ts`
+# phải thuộc đúng một dòng; `reviewed` ≤ 12 tháng; `docs/privacy/processors.md` sinh từ sổ này
+# (`node scripts/check-vendors.mjs --write`). Thêm/đổi bên xử lý = PR sửa sổ (thông báo sub-processor nằm trong PR).
+# status: dang_dung (đang chạy) | du_kien (thiết kế sẵn, chưa bật trên dữ liệu thật). DPA/vị trí "chờ chủ dự án" = việc người.
+version: 1
+vendors:
+  - id: github
+    name: "GitHub (GitHub, Inc.)"
+    service: "lưu mã nguồn, CI (Actions), Dependabot, phát hành"
+    data: "mã nguồn, tên/email người đóng góp; không có dữ liệu nhân viên/khách của ứng dụng"
+    location: "Hoa Kỳ (GitHub, Inc.)"
+    dpa: "GitHub Data Protection Agreement — chờ chủ dự án xác nhận áp dụng cho tài khoản"
+    certs: "SOC 2 Type II, ISO/IEC 27001 (theo công bố của GitHub — chưa xác minh)"
+    risk: thap
+    status: dang_dung
+    reviewed: 2026-11-06
+    packages: []
+    adapters: []
+  - id: npm-registry
+    name: "npm registry (GitHub, Inc.)"
+    service: "tải phụ thuộc lúc build theo package-lock.json (integrity sha512)"
+    data: "không có dữ liệu cá nhân"
+    location: "Hoa Kỳ"
+    dpa: "không cần (không xử lý dữ liệu cá nhân)"
+    certs: "—"
+    risk: thap
+    status: dang_dung
+    reviewed: 2026-11-06
+    packages: []
+    adapters: []
+  - id: hosting
+    name: "Máy chủ ứng dụng + PostgreSQL (tự host, PM2) — nhà cung cấp chưa chọn"
+    service: "chạy ứng dụng web/PWA, worker, CSDL"
+    data: "toàn bộ dữ liệu trong docs/privacy/data-map.yaml"
+    location: "chờ chủ dự án chọn (ngoài Việt Nam → hồ sơ chuyển dữ liệu, CMP-VN-004)"
+    dpa: "chờ chủ dự án"
+    certs: "chờ chủ dự án"
+    risk: cao
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: [pg]
+    adapters: []
+  - id: kms
+    name: "Kho khoá KMS (OpenBao/Vault transit, tự host)"
+    service: "bọc/mở DEK cho mã hoá cột (lib/crypto/columns)"
+    data: "chỉ DEK đã bọc và ngữ cảnh; không có dữ liệu cá nhân rõ"
+    location: "chờ chủ dự án (cùng hạ tầng ứng dụng hoặc KMS/HSM riêng)"
+    dpa: "không cần khi tự host; chờ chủ dự án nếu dùng KMS dịch vụ"
+    certs: "—"
+    risk: trung_binh
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: [adapters/kms-transit-http.ts, adapters/register-kms.ts]
+  - id: offsite-backup
+    name: "Đích sao lưu off-site restic (S3/SFTP) — nhà cung cấp chưa chọn"
+    service: "lưu bản sao lưu CSDL đã mã hoá (scripts/backup-offsite.sh)"
+    data: "bản sao lưu đã mã hoá restic của toàn bộ CSDL"
+    location: "chờ chủ dự án (khác tài khoản/vùng với production, OPS-DR-003)"
+    dpa: "chờ chủ dự án"
+    certs: "chờ chủ dự án"
+    risk: cao
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: []
