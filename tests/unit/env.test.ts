@@ -27,7 +27,7 @@ import {
 const SECRET = "s3cr3t-value-0123456789abcdef-0123456789";
 const GOOD = {
   APP_ORIGIN: "https://x-company.example/",
-  DATABASE_URL: "postgres://app:p4ssw0rd-hunter2" + "@db.internal:5432/xc", // ghép: không giống email trong fixture
+  DATABASE_URL: "postgres://app:p4ssw0rd-hunter2" + "@db.internal:5432/xc?sslmode=verify-full", // ghép: không giống email trong fixture
   SESSION_SECRET: SECRET,
   QR_SIGNING_KEYS: "k1:qr-key-0123456789abcdef0123456789abcdef",
 } as const;
@@ -164,7 +164,7 @@ describe("schema env (BASE-CFG-002)", () => {
 describe("che bí mật khi dump (BASE-CFG-005)", () => {
   const everything = {
     ...GOOD,
-    MIGRATE_DATABASE_URL: "postgres://owner:owner-pw-leak@db:5432/xc",
+    MIGRATE_DATABASE_URL: "postgres://owner:owner-pw-leak@db:5432/xc?sslmode=verify-full",
     NODE_ENV: "production",
     TRUST_PROXY: "1",
     DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
@@ -481,6 +481,59 @@ describe("APP_ORIGIN ở production phải https (AUD-SEC-003)", () => {
       issueNames(() => loadEnv({ ...prod, APP_ORIGIN: "http://localhost.evil.example" })),
       ["APP_ORIGIN"],
     );
+  });
+});
+
+describe("TLS tới CSDL ở production: sslmode=verify-full (BASE-SEC-004)", () => {
+  const prod = {
+    ...GOOD,
+    NODE_ENV: "production",
+    TRUST_PROXY: "1",
+    DATA_ENCRYPTION_KEYS: `k1:${DATA_KEY}`,
+    DATA_INDEX_KEY: DATA_KEY,
+  };
+  // Ghép "@" để quét email fixture của check:docs không nhận nhầm userinfo là email.
+  const db = (hostAndQuery: string) => `postgres://app:pw-bi-mat${"@"}${hostAndQuery}`;
+  test("host mạng thiếu sslmode / require / prefer / disable / sslmode lặp có giá trị khác → lỗi nêu TÊN biến, không lộ giá trị", () => {
+    for (const q of [
+      "db.internal/xc",
+      "db.internal/xc?sslmode=require",
+      "db.internal/xc?sslmode=prefer",
+      "10.0.0.5/xc?sslmode=disable",
+      "db.internal/xc?sslmode=VERIFY-FULL",
+      "db.internal/xc?sslmode=verify-full&sslmode=disable",
+      "localhost.evil.example/xc",
+      "localhost/xc?host=db.internal",
+    ]) {
+      let msg = "";
+      try {
+        loadEnv({ ...prod, DATABASE_URL: db(q) });
+      } catch (e) {
+        msg = String(e);
+      }
+      assert.match(msg, /DATABASE_URL: phải có sslmode=verify-full/, q);
+      assert.doesNotMatch(msg, /pw-bi-mat|db\.internal/, q);
+    }
+    assert.deepEqual(
+      issueNames(() => loadEnv({ ...prod, MIGRATE_DATABASE_URL: db("db.internal/xc?sslmode=require") })),
+      ["MIGRATE_DATABASE_URL"],
+    );
+  });
+  test("verify-full đạt; loopback và socket Unix được miễn; dev/test không ràng buộc", () => {
+    for (const q of [
+      "db.internal/xc?sslmode=verify-full",
+      "db.internal/xc?sslmode=verify-full&sslrootcert=/etc/ssl/ca.pem",
+      "127.0.0.1:5432/xc",
+      "localhost/xc",
+      "[::1]/xc",
+      "localhost/xc?host=/var/run/postgresql",
+    ])
+      assert.equal(
+        loadEnv({ ...prod, DATABASE_URL: db(q), MIGRATE_DATABASE_URL: db(q) }).NODE_ENV,
+        "production",
+        q,
+      );
+    assert.equal(loadEnv({ ...GOOD, DATABASE_URL: db("db.internal/xc") }).NODE_ENV, "development");
   });
 });
 

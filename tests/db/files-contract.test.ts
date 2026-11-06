@@ -380,7 +380,7 @@ describe("kho S3: riêng phần mạng/cấu hình", () => {
     const baseEnv = {
       NODE_ENV: "production",
       APP_ORIGIN: "https://xc.example",
-      DATABASE_URL: "postgres://u:p@db/x",
+      DATABASE_URL: "postgres://u:p@db/x?sslmode=verify-full",
       SESSION_SECRET: "s".repeat(40),
       QR_SIGNING_KEYS: `k1:${"q".repeat(40)}`,
       DATA_ENCRYPTION_KEYS: `k1:${randomBytes(32).toString("base64")}`,

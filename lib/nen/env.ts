@@ -76,6 +76,26 @@ function validDataKeys(raw: string): boolean {
 /** Loopback: harness e2e/DAST/Lighthouse chạy bản build production cục bộ qua http. */
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/**
+ * BASE-SEC-004: kết nối CSDL ở production phải mã hoá VÀ xác thực máy chủ (`sslmode=verify-full` — kiểm CA + tên máy);
+ * `require`/`prefer`/thiếu sslmode cho phép kẻ đứng giữa giả máy chủ. Miễn: loopback và socket Unix (`?host=/…`), vốn
+ * không đi qua mạng. Thông điệp không chứa giá trị URL (có mật khẩu).
+ */
+function dbTlsRule(raw: string): string | undefined {
+  const u = new URL(raw);
+  const socketHost = u.searchParams.get("host");
+  const local =
+    socketHost !== null && socketHost.startsWith("/")
+      ? true
+      : LOOPBACK_HOSTS.has(u.hostname) && (socketHost === null || LOOPBACK_HOSTS.has(socketHost));
+  if (local) return undefined;
+  // Mọi giá trị sslmode (khoá lặp: bộ đọc của pg có thể lấy cái cuối) đều phải là verify-full.
+  const modes = u.searchParams.getAll("sslmode");
+  return modes.length > 0 && modes.every((m) => m === "verify-full")
+    ? undefined
+    : "phải có sslmode=verify-full ở production (trừ localhost/127.0.0.1/[::1] hoặc socket Unix)";
+}
+
 const url = (protocols: RegExp, what: string) =>
   z
     .string()
@@ -105,8 +125,15 @@ export const SERVER_SPEC = {
       },
     },
   ),
-  DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), { required: true, secret: true }),
-  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), { secret: true }),
+  DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), {
+    required: true,
+    secret: true,
+    productionRule: (raw) => dbTlsRule(raw),
+  }),
+  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), {
+    secret: true,
+    productionRule: (raw) => dbTlsRule(raw),
+  }),
   DB_POOL_MAX: field(z.coerce.number().int().min(1).max(100).default(10)),
   // Tắt êm (ARC-RES-009): thời gian chờ request đang chạy và thời gian giữ readiness 503 trước khi ngừng nhận.
   SHUTDOWN_GRACE_MS: field(z.coerce.number().int().min(0).max(120_000).default(20_000)),
