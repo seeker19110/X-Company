@@ -526,3 +526,11 @@
 - Chọn: Thêm T-114…T-116 cho 3 mục, T-117 phân loại lại 8 mục chưa xác minh và sửa 'Thiếu:' đã cũ; nhóm hạ tầng/người còn 59
 - Lý do (tiêu chí chất lượng cuối): (1) đúng: cả 3 mục có đường tái hiện cụ thể (không có tags.json/asset release; lint nhay_cam chỉ kiểm tên lớp; adapter kho tệp vốn thiết kế để thay, D-005); báo chủ dự án 70 mục cần người là sai. Không khẳng định 8 mục chưa đọc sâu — tách thành task phân loại thay vì đoán.
 - Đường lùi: Bỏ lát 24 khỏi PLAN-harden; phân loại về D-071
+
+### D-073 · 2026-11-06T10:50:16+00:00 · T-116 ARC-RES-005: client S3 và máy chủ S3 tự host cho test 2 bản sao
+
+- Phương án: (1) Client SigV4 tối thiểu tự viết (node:crypto + fetch, không phụ thuộc runtime mới) + máy chủ fixture license cho phép (rclone serve s3 MIT / SeaweedFS Apache-2.0) ghim sha256 qua install-tool.mjs · (2) @aws-sdk/client-s3 (Apache-2.0, cây phụ thuộc lớn) + MinIO · (3) Không làm, chờ chủ dự án chọn nhà cung cấp
+- Chọn: Client SigV4 tối thiểu tự viết (node:crypto + fetch, không phụ thuộc runtime mới) + máy chủ fixture license cho phép (rclone serve s3 MIT / SeaweedFS Apache-2.0) ghim sha256 qua install-tool.mjs
+- Lý do (tiêu chí chất lượng cuối): (1) đúng/an toàn: MinIO và Garage là AGPL — license-policy deny; không thêm cây phụ thuộc runtime lớn vào bundle server (bề mặt chuỗi cung ứng); SigV4 là chuẩn công khai, test được bằng vector của AWS. (2) đường lùi: adapter sau giao ước Storage, đổi sang SDK sau không đổi người gọi. (3) test được trong CI như OpenBao/restic. Chọn nhà cung cấp production vẫn là việc G7 (D-005).
+- Đường lùi: Bỏ adapter S3, giữ diskStorage; MUST ARC-RES-005 về Thiếu cũ
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi chạy thật: S3-compatible của nhà cung cấp chủ dự án chọn (cùng vùng với hosting), bucket private, khoá IAM tối thiểu, SSE
