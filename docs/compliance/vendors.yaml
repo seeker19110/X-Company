@@ -6,6 +6,9 @@
 # `transfer_assessment: <đường dẫn hồ sơ>` (CMP-VN-004, check:docs đối chiếu với storage của data map).
 # status: dang_dung (đang chạy) | du_kien (thiết kế sẵn, chưa bật trên dữ liệu thật). DPA/vị trí "chờ chủ dự án" = việc người.
 version: 1
+# Gói `dependencies` đã phân loại là KHÔNG gọi dịch vụ ngoài lúc chạy (thư viện thuần/khung). Mọi gói `dependencies` phải
+# nằm ở đây hoặc trong `packages` của một bên xử lý — gói mới chưa phân loại làm check:vendors đỏ (review #99).
+khong_goi_ngoai: [next, react, react-dom, zod, markdown-it, server-only, "@node-rs/argon2"]
 vendors:
   - id: github
     name: "GitHub (GitHub, Inc.)"
@@ -49,12 +52,12 @@ vendors:
   - id: kms
     name: "Kho khoá KMS (OpenBao/Vault transit, tự host)"
     service: "bọc/mở DEK cho mã hoá cột (lib/crypto/columns)"
-    data: "chỉ DEK đã bọc và ngữ cảnh; không có dữ liệu cá nhân rõ"
+    data: "DEK RÕ khi bọc/mở (lib/crypto/kms.ts gửi plaintext tới encrypt/, nhận plaintext từ decrypt/) và DEK đã bọc; giữ KEK nên cùng bản dump CSDL là mở được mọi cột PII đã mã hoá"
     location: "chờ chủ dự án (cùng hạ tầng ứng dụng hoặc KMS/HSM riêng)"
     country: chua_chon
     dpa: "không cần khi tự host; chờ chủ dự án nếu dùng KMS dịch vụ"
     certs: "—"
-    risk: trung_binh
+    risk: cao
     status: du_kien
     reviewed: 2026-11-06
     packages: []
@@ -72,3 +75,29 @@ vendors:
     reviewed: 2026-11-06
     packages: []
     adapters: []
+  - id: acme-ca
+    name: "CA ACME (Let's Encrypt / ZeroSSL) qua Caddy"
+    service: "cấp và gia hạn chứng chỉ TLS tự động (ops/caddy/Caddyfile)"
+    data: "tên miền (công khai trong CT log) và ACME_EMAIL của người nhận cảnh báo hết hạn"
+    location: "Hoa Kỳ (ISRG / ZeroSSL)"
+    country: US
+    dpa: "chờ chủ dự án (điều khoản subscriber của CA; ACME_EMAIL nên là hộp thư chức năng, không phải cá nhân)"
+    certs: "WebTrust for CAs (theo công bố của CA — chưa xác minh)"
+    risk: trung_binh
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: [ops/caddy/Caddyfile]
+  - id: alert-webhook
+    name: "Kênh trực / ticket qua webhook (ALERT_WEBHOOK_URL, Alertmanager) — nhà cung cấp chưa chọn"
+    service: "gửi cảnh báo vận hành tới kênh có người trực (scripts/alert-channels.ts, ops/alertmanager/alertmanager.yml)"
+    data: "tên luật cảnh báo, mức, số đo vận hành; không có dữ liệu cá nhân (lib/ops/sinks.ts); URL webhook chứa khoá"
+    location: "chờ chủ dự án"
+    country: chua_chon
+    dpa: "chờ chủ dự án"
+    certs: "chờ chủ dự án"
+    risk: thap
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: [scripts/alert-channels.ts, ops/alertmanager/alertmanager.yml]
