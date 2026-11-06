@@ -231,8 +231,18 @@ test.describe("2 bản sao sau proxy không sticky, chung Postgres + S3 @desktop
   });
 
   test("không ghi tệp ngoài thư mục tạm: cây dự án (kể cả .next/, .data/) không có tệp mới từ lúc bản sao khởi động", () => {
-    // Bỏ: lịch sử git, phụ thuộc, công cụ tải về, và đầu ra của chính Playwright (test-results/, playwright-report/).
-    const skip = new Set([".git", "node_modules", ".tools", "test-results", "playwright-report"]);
+    // Bỏ: lịch sử git, phụ thuộc, công cụ tải về, đầu ra của chính Playwright (test-results/, playwright-report/), và trạng
+    // thái của harness agent (.autopilot/ — hook guard ghi nhật ký mỗi lệnh; .claude/ — worktree của agent) vốn ghi song
+    // song với test khi chạy trong phiên agent, không phải tệp của ứng dụng.
+    const skip = new Set([
+      ".git",
+      "node_modules",
+      ".tools",
+      "test-results",
+      "playwright-report",
+      ".autopilot",
+      ".claude",
+    ]);
     expect(writtenSince(ROOT, startedAt, skip)).toEqual([]);
   });
 });
