@@ -51,6 +51,24 @@ export function diffRuleset(live, file) {
   return out;
 }
 
+/**
+ * WF-REL-003: ruleset tag phát hành (`.github/rulesets/tags.json`) — tag `v*` bất biến: cấm xoá, cập nhật (dời), force;
+ * không ai được bỏ qua; KHÔNG chặn tạo (release-please tạo tag bằng GITHUB_TOKEN). Hàm thuần: trả danh sách lỗi.
+ */
+export function validateTagRuleset(file) {
+  const out = [];
+  if (file?.target !== "tag") out.push('target phải là "tag"');
+  if (file?.enforcement !== "active") out.push('enforcement phải là "active"');
+  if ((file?.bypass_actors ?? []).length > 0)
+    out.push("bypass_actors phải rỗng (không ai được dời/xoá tag phát hành)");
+  if (!(file?.conditions?.ref_name?.include ?? []).includes("refs/tags/v*"))
+    out.push('include phải có "refs/tags/v*"');
+  const types = new Set((file?.rules ?? []).map((r) => r.type));
+  for (const t of ["deletion", "update", "non_fast_forward"]) if (!types.has(t)) out.push(`thiếu rule ${t}`);
+  if (types.has("creation")) out.push("không được chặn creation — release-please cần tạo tag");
+  return out;
+}
+
 /** BASE-GATE-007 cách (b): không đòi "up to date" thì CI phải chạy cả trên push vào nhánh chính. */
 export function strictOrPushMain(file, ciYaml) {
   const rsc = byType(file.rules).required_status_checks;
@@ -100,9 +118,16 @@ function main() {
   if (!m) throw new Error(`không nhận ra repo GitHub từ remote origin`);
   const repo = m[1];
   const file = JSON.parse(readFileSync(join(ROOT, ".github/rulesets/main.json"), "utf8"));
-  const found = api(repo, "/rulesets").find((r) => r.name === file.name);
+  const tags = JSON.parse(readFileSync(join(ROOT, ".github/rulesets/tags.json"), "utf8"));
+  const all = api(repo, "/rulesets");
+  const found = all.find((r) => r.name === file.name);
+  const foundTags = all.find((r) => r.name === tags.name);
   const errors = [
     ...diffRuleset(found ? api(repo, `/rulesets/${found.id}`) : null, file),
+    ...validateTagRuleset(tags).map((e) => `.github/rulesets/tags.json: ${e}`),
+    ...diffRuleset(foundTags ? api(repo, `/rulesets/${foundTags.id}`) : null, tags).map((e) =>
+      e.replace(".github/rulesets/main.json", ".github/rulesets/tags.json"),
+    ),
     ...strictOrPushMain(file, readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8")),
   ];
   if (api(repo, "/private-vulnerability-reporting").enabled !== true)
@@ -111,7 +136,7 @@ function main() {
     console.error(`check:github — ${errors.length} lệch:\n${errors.map((e) => `  ${e}`).join("\n")}`);
     process.exit(1);
   }
-  console.log(`check:github: OK (ruleset "${file.name}" khớp file, PVR bật)`);
+  console.log(`check:github: OK (ruleset "${file.name}" và "${tags.name}" khớp file, PVR bật)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
