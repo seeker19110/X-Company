@@ -34,28 +34,45 @@ export function checkTransfers(map, vendors, exists) {
       else used.set(id, (used.get(id) ?? 0) + 1);
     }
   }
+  // Xét MỌI bên xử lý (review #99): bên ngoài VN giữ dữ liệu cá nhân dù không nằm trong storage của data map (vd mã nguồn
+  // có email người đóng góp, ACME_EMAIL) vẫn là chuyển ra ngoài — cần transfer_assessment, hoặc `mien_tru: "<căn cứ>"`,
+  // hoặc khai `du_lieu_ca_nhan: khong`. Bên lưu cột PII của data map thì KHÔNG được khai `du_lieu_ca_nhan: khong`.
   const abroad = [];
-  for (const [id, n] of used) {
-    const v = byId.get(id);
+  for (const v of vendors) {
+    const id = v.id;
+    const n = used.get(id) ?? 0;
     const c = String(v.country ?? "");
     if (!COUNTRY_RE.test(c)) {
       errors.push(`vendors ${id}: country phải là mã ISO 3166-1 alpha-2 (VN, US…) hoặc chua_chon`);
       continue;
     }
+    const noPii = v.du_lieu_ca_nhan === "khong";
+    if (noPii && n > 0)
+      errors.push(`vendors ${id}: khai du_lieu_ca_nhan: khong mà data map lưu ${n} cột PII ở đây`);
     if (c === "chua_chon") {
-      warnings.push(
-        `${id} lưu ${n} cột PII nhưng chưa chọn quốc gia/nhà cung cấp — chọn trước khi xử lý dữ liệu thật`,
-      );
+      if (n > 0)
+        warnings.push(
+          `${id} lưu ${n} cột PII nhưng chưa chọn quốc gia/nhà cung cấp — chọn trước khi xử lý dữ liệu thật`,
+        );
       continue;
     }
-    if (c === "VN") continue;
-    abroad.push(`${id} (${c}, ${n} cột PII)`);
+    if (c === "VN" || noPii) continue;
+    abroad.push(`${id} (${c}${n > 0 ? `, ${n} cột PII` : ""})`);
     const ta = String(v.transfer_assessment ?? "");
-    if (!ta)
+    const mt = String(v.mien_tru ?? "").trim();
+    if (ta) {
+      if (!exists(ta)) errors.push(`vendors ${id}: transfer_assessment \`${ta}\` không tồn tại`);
+    } else if (mt) {
+      if (n > 0)
+        errors.push(
+          `vendors ${id}: lưu ${n} cột PII của data map ở ${c} — cần transfer_assessment, không miễn trừ`,
+        );
+      else if (/chờ pháp chế/i.test(mt))
+        warnings.push(`vendors ${id}: miễn trừ chuyển dữ liệu (${c}) chờ pháp chế xác nhận`);
+    } else
       errors.push(
-        `vendors ${id}: lưu dữ liệu cá nhân ở ${c} (ngoài VN) mà thiếu transfer_assessment — CMP-VN-004`,
+        `vendors ${id}: xử lý dữ liệu cá nhân ở ${c} (ngoài VN) mà thiếu transfer_assessment/mien_tru (hoặc du_lieu_ca_nhan: khong) — CMP-VN-004`,
       );
-    else if (!exists(ta)) errors.push(`vendors ${id}: transfer_assessment \`${ta}\` không tồn tại`);
   }
   return { errors, warnings, abroad };
 }

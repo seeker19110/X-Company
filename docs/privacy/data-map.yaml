@@ -294,6 +294,7 @@ pii:
     subject: nhan_vien
     purpose: "đối chiếu vị trí chấm công (GPS tắt mặc định tới khi có DPIA)"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    special_basis: "đồng ý riêng, rút được của nhân viên, mục đích geo_attendance (consent_record — migration 0022, lib/privacy/consent.ts; mã dẫn Luật 91/2025 Điều 25.3, 31.3a), chấm công không phụ thuộc đồng ý này; thu chỉ khi GEO_CAPTURE_ENABLED — chờ pháp chế xác nhận"
     retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB; period_export.content nếu xuất"
     recipients: "HR theo quyền"
@@ -304,6 +305,7 @@ pii:
     subject: nhan_vien
     purpose: "đối chiếu vị trí chấm công"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    special_basis: "đồng ý riêng, rút được của nhân viên, mục đích geo_attendance (consent_record — migration 0022, lib/privacy/consent.ts; mã dẫn Luật 91/2025 Điều 25.3, 31.3a), chấm công không phụ thuộc đồng ý này; thu chỉ khi GEO_CAPTURE_ENABLED — chờ pháp chế xác nhận"
     retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
@@ -314,6 +316,7 @@ pii:
     subject: nhan_vien
     purpose: "độ chính xác vị trí"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    special_basis: "đồng ý riêng, rút được của nhân viên, mục đích geo_attendance (consent_record — migration 0022, lib/privacy/consent.ts; mã dẫn Luật 91/2025 Điều 25.3, 31.3a), chấm công không phụ thuộc đồng ý này; thu chỉ khi GEO_CAPTURE_ENABLED — chờ pháp chế xác nhận"
     retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
@@ -324,6 +327,7 @@ pii:
     subject: nhan_vien
     purpose: "thời điểm lấy vị trí"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    special_basis: "đồng ý riêng, rút được của nhân viên, mục đích geo_attendance (consent_record — migration 0022, lib/privacy/consent.ts; mã dẫn Luật 91/2025 Điều 25.3, 31.3a), chấm công không phụ thuộc đồng ý này; thu chỉ khi GEO_CAPTURE_ENABLED — chờ pháp chế xác nhận"
     retention: "xoá toạ độ sau RETENTION_GEO_DAYS ngày kể từ lúc server nhận (mặc định 90 — giả định, chờ pháp chế chốt; job retention + hàm attendance_event_erase_geo, migration 0029); chưa thu thật"
     copies: "sao lưu DB"
     recipients: "HR theo quyền"
@@ -344,6 +348,7 @@ pii:
     subject: nhan_vien
     purpose: "lý do nghỉ (văn bản tự do, có thể lộ thông tin sức khoẻ)"
     legal_basis: "thực hiện hợp đồng lao động / nghĩa vụ pháp lý (pháp chế xác nhận)"
+    special_basis: "thực hiện nghĩa vụ của người sử dụng lao động về nghỉ ốm/thai sản (BLLĐ 2019) — tương tự GDPR Art. 9(2)(b); lý do có thể chứa thông tin sức khoẻ — chờ pháp chế xác nhận"
     retention: "hồ sơ lao động/chấm công: 10 năm kể từ chấm dứt hợp đồng, liên hệ xoá ngay sau ngày chấm dứt (D-030; nguồn luật mức B, chờ xác nhận pháp chế)"
     copies: "sao lưu DB"
     recipients: "người duyệt theo phạm vi"

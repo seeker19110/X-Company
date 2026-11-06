@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { lineRefs, malformedCheckIds } from "./lib/blueprint-checks.mjs";
 import { checkTransfers } from "./lib/transfer-check.mjs";
 import { checkDor } from "./lib/dor-check.mjs";
+import { checkSpecialBasis } from "./lib/special-basis-check.mjs";
 import { parseVendors } from "./check-vendors.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -520,6 +521,10 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     const tr = checkTransfers(map, vendors, has);
     tr.errors.forEach(fail);
     tr.warnings.forEach((w) => out(`CẢNH BÁO: ${w}`));
+    // CMP-INTL-002: dữ liệu nhạy cảm có cơ sở xử lý loại đặc biệt riêng.
+    const sb = checkSpecialBasis(map);
+    sb.errors.forEach(fail);
+    sb.warnings.forEach((w) => out(`CẢNH BÁO: ${w}`));
     out(`Chuyển dữ liệu ra ngoài VN: ${tr.abroad.length ? tr.abroad.join("; ") : "không có"}`);
     // kiểm kê CSV
     if (has("docs/compliance/data-inventory.csv")) {
