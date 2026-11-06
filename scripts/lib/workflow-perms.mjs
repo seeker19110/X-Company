@@ -59,6 +59,37 @@ export function renderTable(dir) {
   return [START, ...rows, END].join("\n");
 }
 
+/**
+ * XC-GREEN-007: bước `uses: actions/upload-artifact@…` nào không có `retention-days` trong cùng bước → lỗi `tệp:dòng`.
+ * Bước kết thúc ở dòng `- ` kế tiếp cùng mức thụt lề hoặc khi thụt lề nhỏ hơn.
+ */
+export function uploadsWithoutRetentionText(text, file) {
+  const lines = text.split("\n");
+  const out = [];
+  for (const [i, l] of lines.entries()) {
+    if (!/uses:\s*actions\/upload-artifact@/.test(l)) continue;
+    const dash = /^(\s*)- /.exec(l);
+    const stepIndent = dash ? dash[1].length : l.length - l.trimStart().length - 2;
+    let ok = false;
+    for (let j = i + 1; j < lines.length; j++) {
+      const m = lines[j];
+      if (!m.trim()) continue;
+      const ind = m.length - m.trimStart().length;
+      if (ind <= stepIndent) break;
+      if (/^\s*retention-days:\s*\d+/.test(m)) ok = true;
+    }
+    if (!ok) out.push(`XC-GREEN-007: ${file}:${i + 1} upload-artifact thiếu retention-days`);
+  }
+  return out;
+}
+
+export function uploadsWithoutRetention(dir) {
+  return readdirSync(dir)
+    .filter((x) => /\.ya?ml$/.test(x))
+    .sort()
+    .flatMap((f) => uploadsWithoutRetentionText(readFileSync(path.join(dir, f), "utf8"), `${dir}/${f}`));
+}
+
 /** Bảng trong tài liệu khớp workflow thật không — trả lỗi (rỗng = khớp). */
 export function checkDoc(doc, dir) {
   const a = doc.indexOf(START);

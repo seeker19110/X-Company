@@ -9,11 +9,14 @@ import { after, describe, test } from "node:test";
 import * as mod from "../../scripts/lib/workflow-perms.mjs";
 
 type Job = { job: string; perms: string; own: boolean };
-const { workflowPerms, renderTable, checkDoc } = mod as {
-  workflowPerms: (t: string) => Job[];
-  renderTable: (dir: string) => string;
-  checkDoc: (doc: string, dir: string) => string[];
-};
+const { workflowPerms, renderTable, checkDoc, uploadsWithoutRetention, uploadsWithoutRetentionText } =
+  mod as {
+    uploadsWithoutRetention: (dir: string) => string[];
+    uploadsWithoutRetentionText: (text: string, file: string) => string[];
+    workflowPerms: (t: string) => Job[];
+    renderTable: (dir: string) => string;
+    checkDoc: (doc: string, dir: string) => string[];
+  };
 
 const WF = `name: X
 on: push
@@ -67,7 +70,22 @@ describe("workflow-perms (BASE-SEC-006)", () => {
     assert.match(checkDoc("# không mốc", dir).join(), /thiếu bảng/);
   });
 
-  test("tài liệu thật của repo khớp .github/workflows", () => {
+  test("XC-GREEN-007: upload-artifact thiếu retention-days → lỗi tệp:dòng; có (kể cả sau if/with) → không lỗi", () => {
+    const step = (extra: string) =>
+      `jobs:\n  a:\n    steps:\n      - uses: actions/upload-artifact@abc # v7\n        if: always()\n        with:\n          name: x\n${extra}      - run: echo\n`;
+    assert.deepEqual(uploadsWithoutRetentionText(step("          retention-days: 14\n"), "w.yml"), []);
+    assert.deepEqual(uploadsWithoutRetentionText(step(""), "w.yml"), [
+      "XC-GREEN-007: w.yml:4 upload-artifact thiếu retention-days",
+    ]);
+    // retention-days ở bước KẾ TIẾP không được tính cho bước upload.
+    assert.equal(
+      uploadsWithoutRetentionText(step("      - with:\n          retention-days: 3\n"), "w.yml").length,
+      1,
+    );
+  });
+
+  test("tài liệu thật của repo khớp .github/workflows; mọi upload-artifact của repo có retention-days", () => {
+    assert.deepEqual(uploadsWithoutRetention(".github/workflows"), []);
     assert.deepEqual(checkDoc(readFileSync("docs/ops/PERMISSIONS.md", "utf8"), ".github/workflows"), []);
   });
 });

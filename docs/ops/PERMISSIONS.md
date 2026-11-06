@@ -46,7 +46,6 @@ Mức workflow mặc định `contents: read`; job cần ghi tự khai quyền t
 | dep-audit.yml | dep-audit | contents: read | workflow |
 | maintenance.yml | eol-check | contents: read | workflow |
 | maintenance.yml | link-check | contents: read, issues: write | job |
-| maintenance.yml | gitleaks-history | contents: read | workflow |
 | merge-gate.yml | merge-gate | contents: read | workflow |
 | osv-scanner.yml | osv-scanner | contents: read | workflow |
 | pr-policy.yml | pr-policy | contents: read | workflow |

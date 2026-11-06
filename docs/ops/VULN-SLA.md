@@ -13,7 +13,7 @@ status: đề xuất — chủ dự án chốt
 | Cập nhật phụ thuộc | Dependabot (`.github/dependabot.yml`) | tuần |
 | Phụ thuộc production + dev | osv-scanner trên `package-lock.json` (PR: bước trong job `gate` của `ci.yml`, chặn qua `quality`; push `main` và lịch: `.github/workflows/osv-scanner.yml`; ngoại lệ có hạn ở `osv-scanner.toml`, hạn kiểm bởi `scripts/check-osv-exceptions.mjs`) | mỗi push/PR + lịch tuần (thứ Hai 02:37 UTC) |
 | Mã nguồn (SAST) | CodeQL javascript-typescript, `security-extended` (`.github/workflows/codeql.yml`) | mỗi PR + lịch tuần (thứ Ba) |
-| Bí mật | gitleaks trên push/PR (`secret-scan.yml`) + toàn lịch sử (job `gitleaks-history`, `maintenance.yml`) | mỗi push/PR; lịch tuần |
+| Bí mật | gitleaks toàn lịch sử (`--all`) trên push/PR và lịch tuần (`secret-scan.yml`) | mỗi push/PR; lịch tuần |
 | License | `scripts/check-licenses.mjs` + `license-policy.yaml` (job `supply-chain`, `ci.yml`) | mỗi push/PR |
 | SBOM | CycloneDX `npm sbom --omit dev` → artifact CI `sbom` (90 ngày), kiểm license ≥ 99% | mỗi push/PR |
 | EOL runtime/CSDL | `scripts/eol-check.mjs --strict` (job `eol-check`, `maintenance.yml`): đỏ khi đã EOL hoặc còn < 90 ngày | lịch tuần |

@@ -1,7 +1,7 @@
 // check:ci-policy — Gate T-036: các hàng rào CI/repo đã nối thật (không chỉ có tệp). Mỗi dòng lỗi nêu mục blueprint.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { REQUIRED_SECTIONS } from "./pr-policy.mjs";
-import { checkDoc } from "./lib/workflow-perms.mjs";
+import { checkDoc, uploadsWithoutRetention } from "./lib/workflow-perms.mjs";
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
 const errs = [];
@@ -136,6 +136,8 @@ need(
   /gitleaks git --staged/.test(read("scripts/git-hooks/pre-commit")),
   "WF-GIT-010: pre-commit quét bí mật staged bằng gitleaks",
 );
+// XC-GREEN-007: mọi bước upload-artifact khai retention-days (không giữ artefact CI theo mặc định 90 ngày "phòng khi").
+errs.push(...uploadsWithoutRetention(".github/workflows"));
 // BASE-SEC-006: bảng quyền GITHUB_TOKEN trong docs/ops/PERMISSIONS.md khớp workflow thật.
 errs.push(...checkDoc(read("docs/ops/PERMISSIONS.md"), ".github/workflows"));
 
