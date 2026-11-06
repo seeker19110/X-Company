@@ -535,6 +535,13 @@
 - Đường lùi: Bỏ adapter S3, giữ diskStorage; MUST ARC-RES-005 về Thiếu cũ
 - Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi chạy thật: S3-compatible của nhà cung cấp chủ dự án chọn (cùng vùng với hosting), bucket private, khoá IAM tối thiểu, SSE
 
+### D-074 · 2026-11-06T11:48:59+00:00 · Bước N−1 (OPS-DEPLOY-003) đỏ ở test 'giữ N bản gần nhất' của v0.3.0: backup.sh CŨ đặt tên bằng date %3N, không đơn điệu trên runner ubuntu-26.04; lỗi đã sửa ở HEAD (294927a) nhưng bản phát hành cũ không sửa được
+
+- Phương án: (1) Bỏ qua đúng một test đó ở bước N−1, chỉ khi backup.sh của bản N−1 chưa có bản sửa (dò theo nội dung: thiếu EPOCHREALTIME), in rõ lý do; tự hết hiệu lực khi bản phát hành kế có bản sửa · (2) Chép scripts/backup.sh của HEAD đè vào worktree N−1 · (3) Chạy lại test đỏ tới khi xanh (retry) · (4) Ghim runner ubuntu-24.04 cho job test
+- Chọn: Bỏ qua đúng một test đó ở bước N−1, chỉ khi backup.sh của bản N−1 chưa có bản sửa (dò theo nội dung: thiếu EPOCHREALTIME), in rõ lý do; tự hết hiệu lực khi bản phát hành kế có bản sửa
+- Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: bước N−1 kiểm code cũ chạy được trên schema mới; ca giữ N bản không phụ thuộc schema, lỗi của nó đã có test hồi quy + bản sửa ở HEAD. Phương án 2 âm thầm đổi code đang kiểm; 3 che lỗi chập chờn; 4 né môi trường thật sẽ chạy production. Phạm vi hẹp nhất, tự hết hạn theo nội dung, không theo tay
+- Đường lùi: Xoá khối KNOWN_FIXED trong scripts/test-prev-release.sh
+
 ### D-075 · 2026-11-06T12:13:21+00:00 · T-121 CMP-RIGHTS-007: xoá tài khoản tự phục vụ của người dùng nội bộ (nhân viên) — phạm vi và thời điểm thực thi
 
 - Phương án: (1) Tự phục vụ: xác thực lại (mật khẩu + TOTP nếu đã bật, chống phát lại) → tạo yêu cầu delete cho chính mình và thực thi NGAY trong một giao dịch: thu hồi mọi phiên, vô hiệu đăng nhập (xoá mật khẩu băm, TOTP, thiết bị, đăng ký thông báo), xoá PII không thuộc danh mục phải giữ (RETAINED_BY_SUBJECT/data-map), giữ phần bắt buộc kèm processing_restriction ghi căn cứ; blob qua outbox (T-125) · (2) Tự phục vụ chỉ tạo yêu cầu cho HR xử lý trong hạn (NĐ 356) — người dùng không tự xoá được · (3) Xoá toàn bộ dữ liệu kể cả phần pháp luật bắt giữ

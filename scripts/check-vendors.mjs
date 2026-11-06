@@ -184,7 +184,12 @@ export function checkVendors(
 
 const STATUS_VI = { dang_dung: "đang dùng", du_kien: "dự kiến" };
 const RISK_VI = { thap: "thấp", trung_binh: "trung bình", cao: "cao" };
-const cell = (s) => String(s).replace(/\|/g, "\\|");
+// Ô bảng Markdown: thoát `\` TRƯỚC rồi `|` (không thì `\|` sẵn có thành `\\|` mở lại cột), xuống dòng → khoảng trắng.
+const cell = (s) =>
+  String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/[\r\n]+/g, " ");
 
 /** processors.md sinh từ sổ — tất định (không ghi ngày chạy). */
 export function renderProcessors(vendors) {
@@ -211,7 +216,10 @@ function main(argv) {
   const pkg = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8"));
   const adapters = readdirSync(path.join(ROOT, "adapters"), { recursive: true })
     .map((f) => String(f).split(path.sep).join("/"))
-    .filter((f) => /\.(ts|tsx|mts|cts|mjs|cjs|js)$/.test(f) && !/\.(test|spec)\.|\.d\.ts$/.test(f))
+    .filter(
+      (f) =>
+        /\.(ts|tsx|mts|cts|mjs|cjs|js)$/.test(f) && !/\.(test|spec)\.[^/]+$/.test(f) && !f.endsWith(".d.ts"),
+    )
     .map((f) => `adapters/${f}`);
   const errors = [
     ...reg.errors,
