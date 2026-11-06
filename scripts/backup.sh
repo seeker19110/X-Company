@@ -55,10 +55,25 @@ cleanup() {
 trap cleanup EXIT
 
 START="$(date +%s.%N)"
-STAMP="$(date -u +%Y%m%dT%H%M%S%3NZ)"
-CREATED="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
+# Tên bản theo đồng hồ của chính bash ($EPOCHREALTIME luôn 6 chữ số micro giây; printf %()T là strftime của libc) —
+# không dựa vào `%3N` của `date` (GNU coreutils và uutils của Ubuntu 26.04 khác nhau; tên phải tăng đơn điệu vì việc
+# giữ BACKUP_KEEP bản xếp theo tên).
+NOW="$EPOCHREALTIME"
+NOW_S="${NOW%%[.,]*}"
+NOW_MS="${NOW#*[.,]}"
+NOW_MS="${NOW_MS:0:3}"
+[[ "$NOW_S" =~ ^[0-9]+$ && "$NOW_MS" =~ ^[0-9]{3}$ ]] || die 1 "không đọc được đồng hồ (EPOCHREALTIME=$NOW)"
+STAMP="$(TZ=UTC0 printf '%(%Y%m%dT%H%M%S)T' "$NOW_S")${NOW_MS}Z"
+CREATED="$(TZ=UTC0 printf '%(%Y-%m-%dT%H:%M:%S)T' "$NOW_S").${NOW_MS}Z"
 BASE="xc-$STAMP"
 DUMP="$BASE.dump"
+# Bản mới phải đứng SAU mọi bản đã có theo thứ tự tên: đồng hồ lùi (hoặc trùng mili giây) thì dừng, không ghi đè và
+# không để bước giữ N bản xoá nhầm chính bản vừa tạo.
+mapfile -t existing < <(compgen -G "$BACKUP_DIR/xc-*.manifest.json" | LC_ALL=C sort || true)
+if [ "${#existing[@]}" -gt 0 ]; then
+  newest="$(basename "${existing[-1]}" .manifest.json)"
+  [[ "$newest" < "$BASE" ]] || die 1 "tên bản mới $BASE không sau bản mới nhất $newest (đồng hồ lùi?) — không sao lưu"
+fi
 
 # --- Một phiên REPEATABLE READ giữ snapshot; số liệu manifest + pg_dump dùng chung snapshot đó ---------------------
 coproc PSQL { psql -X -q -A -t -v ON_ERROR_STOP=1 2>&1; }
