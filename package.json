@@ -30,6 +30,7 @@
     "audit:verify": "tsx scripts/verify-audit-chain.ts",
     "check:repo-docs": "node scripts/check-repo-docs.mjs",
     "check:docs": "node scripts/check-docs.mjs",
+    "check:threat-model": "node scripts/check-threat-model.mjs",
     "check:domains": "tsx scripts/check-domains.ts",
     "check:routes": "tsx scripts/check-routes.ts",
     "check:adr": "tsx scripts/check-adr-immutable.ts",
