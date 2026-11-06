@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { REQUIRED_SECTIONS } from "./pr-policy.mjs";
 import { checkDoc, uploadsWithoutRetention } from "./lib/workflow-perms.mjs";
+import { checkCiBudget } from "./lib/ci-budget.mjs";
 
 const read = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
 const errs = [];
@@ -138,6 +139,8 @@ need(
 );
 // XC-GREEN-007: mọi bước upload-artifact khai retention-days (không giữ artefact CI theo mặc định 90 ngày "phòng khi").
 errs.push(...uploadsWithoutRetention(".github/workflows"));
+// XC-GREEN-002: ngân sách số job + tổng trần phút CI mỗi PR (perf-budget.json `ci`).
+errs.push(...checkCiBudget(".github/workflows", JSON.parse(read("perf-budget.json") || "{}").ci).errors);
 // BASE-SEC-006: bảng quyền GITHUB_TOKEN trong docs/ops/PERMISSIONS.md khớp workflow thật.
 errs.push(...checkDoc(read("docs/ops/PERMISSIONS.md"), ".github/workflows"));
 
