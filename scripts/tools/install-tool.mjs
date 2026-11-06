@@ -217,6 +217,34 @@ export const TOOLS = {
     },
     versionProbe: { args: ["version"], expect: /^v2\.11\.7 / },
   },
+  // rclone `serve s3`: máy chủ S3-compatible TỰ HOST cho contract test kho tệp + e2e 2 bản sao (T-116, D-073). MIT — MinIO/Garage
+  // là AGPL (license-policy deny). `serve s3` được rclone gắn nhãn Experimental: chỉ là fixture test, không phải kho production
+  // (chọn nhà cung cấp production ở G7, D-005). Tải từ downloads.rclone.org (trang phát hành chính thức; GitHub bị chặn ở môi
+  // trường này), sha256 từ SHA256SUMS chính thức cùng thư mục (tra 2026-11-06; v1.75.2 phát hành 2026-10-09 theo changelog).
+  rclone: {
+    version: "1.75.2",
+    license: "MIT",
+    bin: "rclone",
+    verified: "2026-11-06",
+    release: "https://rclone.org/changelog/#v1-75-2-2026-10-09",
+    base: "https://downloads.rclone.org/v1.75.2",
+    checksums: "SHA256SUMS",
+    platforms: {
+      "linux-x64": {
+        archive: "rclone-v1.75.2-linux-amd64.zip",
+        sha256: "349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702",
+        kind: "zip",
+        member: "rclone-v1.75.2-linux-amd64/rclone",
+      },
+      "linux-arm64": {
+        archive: "rclone-v1.75.2-linux-arm64.zip",
+        sha256: "7e1e8d69654941b7b7df84ee74c5f7fb09cce7d5496947fb7bf16b55ff427d10",
+        kind: "zip",
+        member: "rclone-v1.75.2-linux-arm64/rclone",
+      },
+    },
+    versionProbe: { args: ["version"], expect: /^rclone v1\.75\.2\b/ },
+  },
   // OWASP ZAP (Java, chạy không cần docker): quét baseline qua https của staging — T-055. Cả thư mục (jar + plugin);
   // hash chính thức nằm trong ZapVersions.xml của zap-admin (tệp này chỉ liệt kê bản hiện hành → check-pins lệch khi ZAP lên bản mới).
   zap: {
@@ -333,6 +361,14 @@ function install(name) {
       const r = spawnSync("tar", ["-xzf", archive, "-C", x, plat.member], { encoding: "utf8" });
       if (r.status !== 0) fail(`${name}: giải nén thất bại: ${(r.stderr || "").slice(0, 200)}`);
       renameSync(path.join(x, plat.member), staged);
+    } else if (plat.kind === "zip") {
+      // rclone chỉ phát hành .zip: giải đúng MỘT thành viên bằng `unzip` của hệ điều hành (-j: bỏ thư mục, -o: không hỏi).
+      const x = path.join(tmp, "x");
+      mkdirSync(x);
+      const r = spawnSync("unzip", ["-q", "-j", "-o", archive, plat.member, "-d", x], { encoding: "utf8" });
+      if (r.status !== 0)
+        fail(`${name}: giải nén zip thất bại (cần unzip): ${(r.stderr || "").slice(0, 200)}`);
+      renameSync(path.join(x, path.basename(plat.member)), staged);
     } else if (plat.kind === "bz2") {
       const r = spawnSync("bzip2", ["-dc", archive], { maxBuffer: 1 << 30 });
       if (r.status !== 0) fail(`${name}: giải nén bz2 thất bại`);
