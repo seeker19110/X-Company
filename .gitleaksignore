@@ -6,3 +6,20 @@
 # và bắt nhầm dòng kế `KMS_TRANSIT_MOUNT=transit` (entropy 4.05) làm giá trị. Không có bí mật; dòng mẫu đã đổi thành
 # `<đặt từ kho bí mật…>` ở commit sau nên chỉ commit này cần bỏ qua.
 6feb39dd60922dcd26a8e6f861ae8b57ef4e4cb4:.env.example:generic-api-key:79
+# Fixture test của T-116 (kho S3, PR #100): giá trị giả `s3-secret-leak-…` / `bi-mat-khong-duoc-in-ra-…` đặt cố ý để test
+# kiểm "không lộ giá trị"; generic-api-key bắt vì entropy cao. Commit sau đổi sang giá trị entropy thấp nên chỉ hai commit
+# lịch sử này (commit gốc + merge vào nhánh lát 24, quét --diff-merges=first-parent) cần bỏ qua.
+22a30c22e0719a45a99f18ed9390a384937c8d7d:tests/unit/env.test.ts:generic-api-key:182
+22a30c22e0719a45a99f18ed9390a384937c8d7d:tests/db/files-contract.test.ts:generic-api-key:405
+bcf48f7b723409e3d9e23c4f3201a73c946a001c:tests/unit/env.test.ts:generic-api-key:182
+bcf48f7b723409e3d9e23c4f3201a73c946a001c:tests/db/files-contract.test.ts:generic-api-key:405
+# Fixture test của T-122 (kho lỗi, PR #100): JWT và khoá AWS GIẢ (AKIA + chữ cái tuần tự) để kiểm che bí mật trước khi lưu.
+# Commit sau ghép chuỗi lúc chạy nên chỉ commit gốc e4dfaad + merge 5498667 (quét --diff-merges=first-parent) cần bỏ qua.
+5498667e4fe2b7f811b715a701596ccc745a652d:tests/db/errors-collect.test.ts:aws-access-token:211
+5498667e4fe2b7f811b715a701596ccc745a652d:tests/db/errors-collect.test.ts:aws-access-token:220
+5498667e4fe2b7f811b715a701596ccc745a652d:tests/db/errors-collect.test.ts:jwt:209
+5498667e4fe2b7f811b715a701596ccc745a652d:tests/db/errors-collect.test.ts:jwt:219
+e4dfaad067097799530acca27ec97744f0e67b7e:tests/db/errors-collect.test.ts:aws-access-token:207
+e4dfaad067097799530acca27ec97744f0e67b7e:tests/db/errors-collect.test.ts:aws-access-token:216
+e4dfaad067097799530acca27ec97744f0e67b7e:tests/db/errors-collect.test.ts:jwt:205
+e4dfaad067097799530acca27ec97744f0e67b7e:tests/db/errors-collect.test.ts:jwt:215

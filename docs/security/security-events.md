@@ -9,11 +9,11 @@ Không ghi email, mật khẩu, token. Thành công = mức INFO, từ chối = 
 
 | event                     | Khi nào                                          | outcome        | Nơi phát                      |
 | ------------------------- | ------------------------------------------------ | -------------- | ----------------------------- |
-| `auth.login`              | đăng nhập thành công / sai thông tin             | success/denied | `lib/identity/auth.ts`        |
+| `auth.login`              | đăng nhập thành công / sai thông tin; xác thực lại trước thao tác không đảo ngược (`detail.step = reauth`) | success/denied | `lib/identity/auth.ts`, `lib/identity/account.ts` |
 | `auth.logout`             | đăng xuất                                        | success        | `lib/identity/routes.ts`      |
-| `auth.mfa`                | thử thách TOTP cấp / mã đúng / mã sai, thử thách không hợp lệ, phiên thiếu bước hai (`MFA_REQUIRED`) | success/denied | `lib/identity/auth.ts`, `lib/identity/mfa.ts`, `lib/http/index.ts` |
+| `auth.mfa`                | thử thách TOTP cấp / mã đúng / mã sai, thử thách không hợp lệ, phiên thiếu bước hai (`MFA_REQUIRED`); mã TOTP thiếu/sai/phát lại khi xác thực lại | success/denied | `lib/identity/auth.ts`, `lib/identity/mfa.ts`, `lib/http/index.ts`, `lib/identity/account.ts` |
 | `auth.mfa_reset`          | vận hành đặt lại TOTP (`npm run -s mfa:reset`)   | success        | `scripts/mfa-reset.ts`        |
-| `auth.rate_limited`       | vượt 5 lần sai mật khẩu / 15 phút; vượt 10 lần sai mã TOTP / 15 phút / người dùng | denied | `lib/identity/auth.ts`, `lib/identity/mfa.ts` |
+| `auth.rate_limited`       | vượt 5 lần sai mật khẩu / 15 phút; vượt 10 lần sai mã TOTP / 15 phút / người dùng (cả khi xác thực lại) | denied | `lib/identity/auth.ts`, `lib/identity/mfa.ts`, `lib/identity/account.ts` |
 | `authz.denied`            | từ chối quyền (403) ở `authorize`/`withActor`    | denied         | `lib/http/index.ts`           |
 | `input.validation_failed` | dữ liệu gửi lên sai schema (400)                 | denied         | `lib/http/index.ts`           |
 | `ops.alert`               | cảnh báo vận hành bắn (error) / hết (success)    | error/success  | `lib/ops/sinks.ts`            |

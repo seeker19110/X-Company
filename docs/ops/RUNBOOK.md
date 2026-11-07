@@ -59,6 +59,12 @@ Rollback **mã** không lùi **dữ liệu**: migration đã áp là append-only
 trước/thu hẹp sau (thêm cột nullable, chưa xoá cột cũ) để bản mã cũ vẫn chạy được; muốn lùi dữ liệu thật sự thì viết migration mới hoặc khôi phục từ sao lưu
 ([restore-db.md](runbooks/restore-db.md)) — thao tác này theo mục "Trước khi chạy lệnh lên dữ liệu" của [INCIDENT-RESPONSE.md](INCIDENT-RESPONSE.md).
 
+**Lùi về bản có `scripts/backup.sh` cũ (≤ v0.3.0, AUD-DATA-011):** bản đó đặt tên bản sao lưu bằng `date …%3NZ`; trên máy dùng
+coreutils viết lại bằng Rust (uutils — mặc định từ Ubuntu 26.04) tên không tăng đơn điệu và bước giữ `BACKUP_KEEP` bản có thể xoá
+nhầm bản mới nhất. Kiểm trước khi lùi: `date --version | head -1` — nếu không phải GNU coreutils thì giữ `scripts/backup.sh` của bản
+hiện hành (chỉ là script vận hành, không phụ thuộc schema; có `EPOCHREALTIME`) cho cron sao lưu, hoặc đặt `BACKUP_KEEP` đủ lớn tới khi
+lên lại bản mới.
+
 ### Chẩn đoán
 ```bash
 pm2 logs x-company --lines 200 --nostream     # log gần nhất (PM2 mặc định không che PII — chưa có logger che trường, T-026)
@@ -71,6 +77,7 @@ psql "$DATABASE_URL" -c "select count(*) from session where absolute_expires_at 
 ### DLQ / redrive
 Worker (`npm run worker`, một tiến trình dưới pm2/systemd; nhiều bản cùng chạy được — `SKIP LOCKED`) thử tối đa `WORKER_MAX_ATTEMPTS` (mặc định 5) lần với backoff mũ có jitter (10 s → trần 15 phút).
 Việc vào DLQ = `outbox_event.status = 'dead'` (giữ nguyên `payload`, `last_error`, `attempts`, `dead_at`) khi: hết lần thử · payload sai schema · không có handler cho topic · lỗi vĩnh viễn. Kênh tắt **không** vào DLQ (giữ `pending`).
+Topic `files.blob_delete` (T-125): blob của chủ thể đã yêu cầu xoá, xoá ở kho tệp SAU commit (payload chỉ `{"storageKey": "xx/<40 hex>"}`). Hàng `dead` của topic này = **blob còn nằm trong kho** (đĩa/S3) dù hồ sơ đã ẩn danh — sửa kết nối/quyền kho rồi redrive (xoá lũy đẳng: blob đã mất vẫn `done`). Worker phải chạy cùng `FILE_STORAGE`/`S3_*` với web (`scripts/worker.ts` gọi `registerStorage()`), nếu không sẽ xoá nhầm kho.
 Cảnh báo: số hàng `dead` > 0 quá 15 phút (gauge `outbox_dead_total` ở `/api/metrics`; rule mẫu `XCOutboxDeadLetter` ở `ops/prometheus/alerts.yml`, chưa nối Prometheus thật — tạm nhìn tay bằng truy vấn dưới).
 ```bash
 psql "$DATABASE_URL" -c "select id, topic, attempts, dead_at, left(last_error, 120) from outbox_event where status = 'dead' order by dead_at"
@@ -80,10 +87,16 @@ psql "$DATABASE_URL" -c "update outbox_event set status='pending', attempts=0, d
 Dead lâu hơn `RETENTION_OUTBOX_DONE_DAYS` vẫn **không** bị retention xoá (chỉ `done` bị xoá) — dọn tay sau khi điều tra: `delete from outbox_event where status='dead' and id = <id>`.
 
 ### Lưu giữ dữ liệu
-Thời hạn là cấu hình (`.env`; mặc định thận trọng theo D-016 — số chính thức do HR/pháp chế chốt ở F02): `RETENTION_INQUIRY_DAYS` 730 · `RETENTION_APPLICATION_DAYS` 365 · `RETENTION_SESSION_DAYS` 30 (tính từ hết hạn tuyệt đối) · `RETENTION_LOGIN_ATTEMPT_DAYS` 90 · `RETENTION_OUTBOX_DONE_DAYS` 30 · `RETENTION_IDEMPOTENCY_HOURS` 24 · `RETENTION_GEO_DAYS` 90 (toạ độ GPS chấm công, xoá qua hàm `attendance_event_erase_geo` — migration 0029, D-056; audit `retention.geo_erase`) · `RETENTION_RUM_DAYS` 30 (mẫu `rum_sample`; job cũng xoá `public_rate_event` quá 1 ngày — bảng đếm tần suất biểu mẫu/RUM, không còn tăng mãi).
+Thời hạn là cấu hình (`.env`; mặc định thận trọng theo D-016 — số chính thức do HR/pháp chế chốt ở F02): `RETENTION_INQUIRY_DAYS` 730 · `RETENTION_APPLICATION_DAYS` 365 · `RETENTION_SESSION_DAYS` 30 (tính từ hết hạn tuyệt đối) · `RETENTION_LOGIN_ATTEMPT_DAYS` 90 · `RETENTION_OUTBOX_DONE_DAYS` 30 · `RETENTION_IDEMPOTENCY_HOURS` 24 · `RETENTION_GEO_DAYS` 90 (toạ độ GPS chấm công, xoá qua hàm `attendance_event_erase_geo` — migration 0029, D-056; audit `retention.geo_erase`) · `RETENTION_RUM_DAYS` 30 (mẫu `rum_sample`; job cũng xoá `public_rate_event` quá 1 ngày — bảng đếm tần suất biểu mẫu/RUM, không còn tăng mãi) · `RETENTION_ERROR_DAYS` 30 (nhóm lỗi `error_group` không gặp lại, tính từ `last_seen_at`; T-122).
 Liên hệ/ứng viên quá hạn được **ẩn danh** (tên, email, SĐT, nội dung, thư xin việc, `ip_hash`; giữ mã, trạng thái, thời điểm để thống kê; đặt `anonymized_at`) và ghi audit `retention.anonymize` (chỉ số đếm). Session hết hạn, `login_attempt`, outbox `done` cũ, `idempotency_record` cũ, `rum_sample` quá hạn và `public_rate_event` quá 1 ngày bị **xoá** (audit `retention.purge`, chỉ số đếm).
 Chạy theo lịch hằng ngày (đề xuất 03:00 UTC): `0 3 * * * cd /srv/x-company && npm run -s retention:run` (cron/systemd timer; chủ dự án điền). Tắt khẩn cấp: `RETENTION_ENABLED=false` (đường lùi D-016) — lệnh thoát 0 và không đụng dữ liệu; ẩn danh không hoàn tác được (khôi phục từ sao lưu).
 Chưa phủ: dữ liệu định vị/ảnh chấm công, tệp đính kèm hồ sơ ứng viên, log/sao lưu (chờ DPIA và pháp chế — kế hoạch §12).
+
+### Dữ liệu staging/preview (WF-ENV-010)
+- Staging, preview, e2e, DAST, đo tải **chỉ dùng dữ liệu tổng hợp** sinh bởi `scripts/seed-*.ts` (công ty, người dùng, ca, việc giả; email/URL ở tên miền dành riêng `.test`/`example.com`). **Không** khôi phục bản sao lưu production, không `pg_dump` production sang môi trường khác, không sao chép tệp tải lên của người dùng thật.
+- Cần dữ liệu giống thật để tái hiện lỗi: dùng seed mới (thêm vào script seed qua PR), không dùng bản ghi thật. Nếu một ngày buộc phải dùng bản sao production, phải có quy trình ẩn danh hoá có kiểm (quét PII = 0) **được duyệt trước** (DPIA) — chưa có, nên hiện là cấm.
+- Diễn tập khôi phục sao lưu thật chạy vào CSDL tạm trên **chính máy production** rồi xoá (`restore-drill.sh`), không chuyển sang staging.
+- Kiểm máy: `npm run -s check:docs` đỏ khi một script seed import gói ngoài `node:fs`/`pg`, gọi mạng, đọc tệp khác `e2e/.seed.json`, đọc biến môi trường khác `DATABASE_URL`, hay chứa URL ngoài tên miền dành riêng (`scripts/lib/seed-policy.mjs`). Quét PII trên staging thật = 0: việc người khi có staging.
 
 ### Sao lưu và khôi phục thử cục bộ
 Nhãn bằng chứng: **faithful-fixture** — chạy thật trên máy phát triển với PostgreSQL thật, KHÔNG phải production; chưa có sao lưu ngoài máy, khoá KMS, diễn tập trên production (xem [RPO-RTO.md](RPO-RTO.md) mục "Chưa chứng minh").
@@ -117,6 +130,19 @@ npm run -s backup:offsite:drill                    # restic check --read-data �
 - Khôi phục thật: `restic restore latest --tag xc-db --target <thư mục>` rồi làm theo [runbooks/restore-db.md](runbooks/restore-db.md) với tệp khôi phục.
 - Chưa chứng minh: đích thật khác nhà cung cấp/khu vực (3-2-1 thật), lịch tự động trên máy chủ thật (cron/timer `15 3 * * *`), quyền ghi-chỉ-thêm/immutable ở đích (OPS-DR-007: restic `--append-only` qua rest-server hoặc object lock S3), khoá kho do người giữ riêng.
 
+### Sao lưu kho tệp S3 (`FILE_STORAGE=s3`, T-126)
+Nhãn: **faithful-fixture** — S3 tự host `rclone serve s3` + restic THẬT, cùng máy dev (không phải nhà cung cấp production — D-005, D-073). Kho đĩa (`FILE_STORAGE=disk`) không đi đường này: [runbooks/restore-files.md](runbooks/restore-files.md) §A.
+```bash
+# chạy với CÙNG env của ứng dụng (FILE_STORAGE=s3, S3_*, DATA_ENCRYPTION_KEYS hoặc KMS_*) + RESTIC_REPOSITORY/RESTIC_PASSWORD_FILE như mục trên
+npm run -s backup:files          # ListObjectsV2 → chụp bản MÃ mọi đối tượng + files-manifest.json (giải mã thử từng tệp) → restic backup --tag xc-files → check → forget
+npm run -s backup:files:drill    # restic check --read-data → restore bản chụp mới nhất vào thư mục tạm → đọc lại qua objectStorage.get, sha256 bản rõ khớp manifest
+```
+- Exit `backup-files.sh`: 0 xong · 1 lỗi (đối tượng lạ/không giải mã được, S3 lỗi, restic lỗi/check đỏ) · 2 cấu hình (FILE_STORAGE khác s3, thiếu mật khẩu kho/công cụ). `restore-files-drill.sh`: 0 khớp · 1 lệch/không đọc được · 2 cấu hình · 3 kho hỏng/không mở/không có bản `xc-files`.
+- **Đối tượng lạ** (khoá không dạng `xx/<40 hex>` hoặc thiếu đầu mã hoá `XCFILE`) → sao lưu DỪNG, nêu khoá; không âm thầm bỏ qua. Chuyển đối tượng đó ra bucket khác rồi chạy lại.
+- Trạng thái: `BACKUP_DIR/files-offsite-status.json` (khi đẩy xong), `files-offsite-drill.json` (khi diễn tập đạt). Giữ: `BACKUP_FILES_KEEP_LAST|DAILY|WEEKLY|MONTHLY` (mặc định 7/7/4/6), nhóm riêng với `xc-db`.
+- Bản chụp chỉ chứa bản mã — đọc lại cần khoá chủ (env/KMS) **của thời điểm chụp**: sau xoay khoá, GIỮ khoá cũ (tách khỏi cấu hình đang chạy, trong kho bí mật) cho tới khi mọi bản chụp/bản CSDL cũ hơn lần xoay hết hạn giữ; gỡ khoá cũ khỏi kho bí mật trước đó = bản sao lưu cũ không đọc được.
+- Khôi phục thật: [runbooks/restore-files.md](runbooks/restore-files.md) §B (S3). Chưa chứng minh: nhà cung cấp S3 thật, lịch tự động, cảnh báo riêng cho tuổi `files-offsite-status.json` (chưa có luật trong `alerts.json`).
+
 ### Vận hành KMS (OpenBao Transit) — khi `KMS_PROVIDER=transit`
 Nhãn: **faithful-fixture** (OpenBao 2.7.1 thật cục bộ qua `scripts/kms-dev.sh`; KHÔNG HSM, KHÔNG hạ tầng thật). Cấu hình mẫu production: [kms-deploy.md](kms-deploy.md); thiết kế: [../security/encryption-at-rest.md](../security/encryption-at-rest.md).
 - **Mở niêm phong (unseal)**: sau mỗi lần khởi động/khởi động lại, OpenBao ở trạng thái niêm phong → ứng dụng ghi/đọc dữ liệu mã hoá đều lỗi `KMS_UNAVAILABLE` (fail-closed, KHÔNG rơi về khoá env). Mở bằng ngưỡng khoá chia (`bao operator unseal` — nhập từng phần, mỗi người một phần; khoá KHÔNG dán lên dòng lệnh dùng chung). Dev: `scripts/kms-dev.sh unseal`.
@@ -144,7 +170,7 @@ Thao tác tay không đi qua `audit.append`: ghi lại ai/lúc nào/lý do ở t
 ## 2. Xoay bí mật
 
 ### `SESSION_SECRET` (khoá ký CSRF; phiên lưu băm trong bảng `session`)
-`SESSION_SECRET` ký token CSRF (`HMAC(SESSION_SECRET, "csrf:"+token phiên)`); đổi giá trị làm **mọi token CSRF cũ mất hiệu lực** — người dùng đang mở trang sẽ bị từ chối ghi cho tới khi tải lại.
+`SESSION_SECRET` ký token CSRF (`HMAC(SESSION_SECRET, "csrf:"+token phiên)`); đổi giá trị làm **mọi token CSRF cũ mất hiệu lực** — người dùng đang mở trang sẽ bị từ chối ghi cho tới khi tải lại. Hash request của lớp idempotency cũng có khoá dẫn từ `SESSION_SECRET`: request **gửi lại** với `Idempotency-Key` đã dùng trước khi xoay (≤ 24 h) nhận 422 `IDEMPOTENCY_KEY_REUSED` thay vì bản phát lại — client bỏ khoá; người dùng thao tác lại sinh khoá mới. Xoay ngoài giờ cao điểm. Cùng hiệu ứng một lần khi nâng lên bản dùng hash HMAC (PR #100).
 ```bash
 openssl rand -base64 48            # sinh giá trị mới (≥ 32 byte); lưu vào kho bí mật, KHÔNG dán vào chat/commit
 # đặt SESSION_SECRET mới trong môi trường của PM2, rồi:
@@ -163,7 +189,7 @@ psql "$MIGRATE_DATABASE_URL" -c 'delete from session'
 ### `DATA_ENCRYPTION_KEYS` / `DATA_INDEX_KEY` — mã hoá dữ liệu lúc lưu (T-048)
 Chi tiết, phạm vi và cảnh báo mất khoá: [../security/encryption-at-rest.md](../security/encryption-at-rest.md). **Mất mọi khoá = mất dữ liệu đã mã hoá** — sao lưu khoá riêng, tách khỏi sao lưu CSDL.
 1. Sinh khoá: `openssl rand -base64 32`. Thêm khoá MỚI lên ĐẦU: `DATA_ENCRYPTION_KEYS="d2:<khoá-mới>,d1:<khoá-cũ>"` → restart.
-2. Chạy `npm run -s crypto:rotate` (cột PII + bọc lại khoá tệp; idempotent, theo lô, chạy lại được). Xong khi mọi dòng `còn khoá cũ 0`, exit 0.
+2. Chạy `npm run -s crypto:rotate` (cột PII + bọc lại khoá tệp; idempotent, theo lô, chạy lại được). Xong khi mọi dòng `còn khoá cũ 0`, exit 0. Với `FILE_STORAGE=s3` (T-126): script liệt kê cả bucket, bọc lại đầu từng đối tượng (một PUT ghi đè — S3 lỗi giữa chừng thì chạy lại, đối tượng đã xoay rơi vào `đã hiện hành`), rồi đọc thử MỌI đối tượng (`đọc kiểm được N`); đối tượng lạ hoặc không đọc được → exit 1, KHÔNG sang bước 3. Chạy khi không có tác vụ xoá blob đang chờ (`files.blob_delete`): xoá trùng lúc xoay có thể làm đối tượng vừa xoá được ghi lại.
 3. Chỉ sau đó mới bỏ khoá cũ khỏi cấu hình → restart. Kiểm: `npm run -s crypto:rotate` vẫn xanh (không `KEY_UNKNOWN`).
 4. Nghi lộ khoá: làm bước 1–3 NGAY (không chờ), rồi coi dữ liệu mã hoá bằng khoá lộ trong các bản sao lưu cũ là đã lộ → [data-breach.md](runbooks/data-breach.md). `DATA_INDEX_KEY` đổi → `npm run -s crypto:backfill -- --reindex`.
 5. Dữ liệu cũ chưa mã hoá: `npm run -s crypto:backfill` (kiểm số dòng), sau khi đọc kiểm xong mới `-- --scrub` (xoá bản rõ — mất đường lùi "bản trước đọc cột rõ").
@@ -214,6 +240,15 @@ Nhãn `page` là trang **tải vào** tài liệu (lần tải đầy đủ): đ
 Biến môi trường (khai ở `lib/nen/env.ts`; `.env.example` chưa có — việc của người, danh sách đủ ở `PENDING_EXAMPLE_KEYS` trong `scripts/check-env.ts`): `RUM_ENABLED=false` (mặc định; `true` mới nhận beacon và nạp `RumBeacon` ở layout khu công khai, layout khu nội bộ và trang đăng nhập) · `RETENTION_RUM_DAYS=30`.
 Giới hạn cần biết: số đo RUM là **tham khảo**, không dùng để tự động hành động — một IP bơm 60 beacon/10 phút đủ làm lệch p75 của trang ít lưu lượng (giá trị thời gian > 60 s bị bỏ khi ghi — `RUM_OUTLIER_MAX_TIME_MS`; tổng mẫu toàn site có trần `RUM_DAILY_SAMPLE_CAP` = 20.000/ngày UTC, quá trần thì bỏ im lặng — kẻ đầu độc có thể lấp đầy trần từ đầu ngày, AUD-SEC-008), và `assertSameOrigin` không cản curl. Khi chạy thật BẮT BUỘC đặt `TRUST_PROXY`/`TRUST_PROXY_HOPS`: không đặt thì cả site dùng chung MỘT bucket giới hạn tần suất, một client làm cạn bucket sẽ chặn (429) toàn bộ beacon thật (`curl -i` thấy 429 hàng loạt, `public_rate_event` bucket 'rum' đầy).
 Tắt khẩn cấp (đường lùi D-042): `RUM_ENABLED=false` rồi khởi động lại web — beacon không còn được nạp, endpoint 404, metric biến mất, rule hết bắn. Dữ liệu `rum_sample` tự xoá sau `RETENTION_RUM_DAYS` (30) ngày.
+
+### Kho lỗi tự host + source map riêng tư
+Kho lỗi (T-122, PRF-WEB-008), không bên thứ ba: trình duyệt gửi lỗi (`reportClientError`, `window.onerror`, `unhandledrejection`; tối đa 10 lỗi khác nhau mỗi lần tải trang) về `POST /api/public/errors` (cùng nguồn, ≤ 16 KiB, 30 lần/10 phút/IP băm); lỗi 500 chưa bắt của server (`publicRoute`/`withActor`, `onRequestError` của Next) ghi nền vào cùng bảng `error_group`. Mỗi dòng = một nhóm (fingerprint = loại lỗi + khung stack đầu đã chuẩn hoá, theo **release**): lặp lại chỉ tăng `occurrence_count`/`last_seen_at`. Thông điệp/stack được che (token, JWT, khoá, email, URL có mật khẩu, dãy ≥ 7 chữ số); trang là nhãn chuẩn hoá như RUM; không IP/UA/mã người dùng. Trần 1.000 nhóm **mới**/ngày UTC **cho mỗi nguồn** (client, server — beacon không lấp được trần của lỗi server; quá trần bỏ nhóm mới, nhóm cũ vẫn đếm).
+- **Release:** đặt `APP_VERSION` (vd SHA commit hoặc tag) **giống nhau lúc build và lúc chạy**; không đặt → `dev`. Trang gửi release của bản build đã render nó, server gắn `APP_VERSION` của tiến trình.
+- **Source map:** `npm run -s build` = `next build` + `node scripts/sourcemaps-stash.mjs` — chuyển mọi `*.map` khỏi `.next/static` sang `.data/sourcemaps/<release>/static/`, sao map server sang `…/server/`, bỏ chú thích `sourceMappingURL`, quyền 0700/0600; còn sót map công khai → build exit 1. Lớp hai: `next.config.ts` rewrite `*.map` dưới `/_next/static` về trang không tồn tại. DAST (`npm run -s dast:probes`) kiểm 404 + không tham chiếu. `.data/` đã gitignore — **sao lưu thư mục này cùng bản phát hành** (mất map = không giải được stack của release đó; không ảnh hưởng chạy).
+- **Xem lỗi:** `GET /api/app/errors?source=client|server&release=<mã>&limit=&offset=` (quyền `errors.read` = sysadmin; người khác 403 + audit denied), hoặc `psql "$DATABASE_URL" -c "select id, source, release, error_type, occurrence_count, last_seen_at, message from error_group order by last_seen_at desc limit 20"`.
+- **Giải stack:** `psql "$DATABASE_URL" -Atc "select stack from error_group where id = <id>" | node scripts/sourcemap-resolve.mjs --release <release>` (hoặc `--stack "…"`) — chạy trên máy giữ `.data/sourcemaps`; in `hàm (đường/dẫn/nguồn.ts:dòng:cột)` từng khung.
+- **Thời hạn:** `RETENTION_ERROR_DAYS` (mặc định 30, trần 180) tính từ `last_seen_at`; job retention xoá theo lô, audit chỉ đếm.
+- **Giới hạn:** `assertSameOrigin` không cản curl — kẻ xấu bơm được lỗi giả (bị chặn bởi tần suất + trần nhóm mới/ngày); endpoint luôn bật (không cờ) — muốn ngừng nhận khẩn cấp: chặn `POST /api/public/errors` ở reverse proxy. Bão lỗi 500 (vd DB chết): tối đa 16 lần ghi nền cùng lúc, quá thì bỏ + log `kho lỗi: bỏ ghi lỗi server`.
 
 ### Luật cảnh báo cục bộ (`docs/ops/alerts.json`)
 Bộ đánh giá `lib/ops/alerts.ts` chạy trong tiến trình worker khi `ALERTS_ENABLED=true` (chu kỳ `ALERT_INTERVAL_MS`), gửi tới tệp `ALERT_SINK_FILE` (JSON-lines), log sự kiện `ops.alert` và webhook `ALERT_WEBHOOK_URL` (tuỳ chọn); cùng một luật không gửi lặp (nhắc lại sau `ALERT_REPEAT_MS`), có `firing` rồi `resolved`. Thử kích hoạt: `npm run -s alerts:drill` ([alert-drills.md](alert-drills.md)). Đây là **faithful-fixture**: chưa có Prometheus/Alertmanager/kênh trực thật.

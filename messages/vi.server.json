@@ -210,6 +210,12 @@
       "duongDanKhongHopLe": "Đường dẫn không hợp lệ",
       "revisionStatusMismatch": "Phiên bản đang ở trạng thái {status}, cần {expected}"
     },
+    "errors": {
+      "guiQuaNhieu": "Gửi quá nhiều lần, vui lòng thử lại sau",
+      "trangKhongHopLe": "Đường dẫn trang không hợp lệ",
+      "nguonKhongHopLe": "Nguồn lỗi không hợp lệ (client hoặc server)",
+      "releaseKhongHopLe": "Mã phiên bản không hợp lệ"
+    },
     "files": {
       "khongTimThayDoiTuong": "Không tìm thấy đối tượng",
       "loaiDoiTuongKhongHopLe": "Loại đối tượng không hợp lệ",
@@ -267,6 +273,8 @@
       "matKhauQuaDai": "Mật khẩu quá dài",
       "matKhauQuaPhoBien": "Mật khẩu quá phổ biến",
       "matKhauKhongDuocChuaTen": "Mật khẩu không được chứa tên đăng nhập",
+      "matKhauHienTaiKhongDung": "Mật khẩu hiện tại không đúng",
+      "canMaXacThucDeXacNhan": "Nhập mã xác thực 6 số từ ứng dụng xác thực để xác nhận",
       "passwordTooShort": "Mật khẩu cần ít nhất {min} ký tự",
       "maXacThucKhongDung": "Mã xác thực không đúng",
       "thuThachXacThucKhongHopLe": "Phiên xác thực hai bước không hợp lệ hoặc đã hết hạn — vui lòng đăng nhập lại",
@@ -298,8 +306,12 @@
       "statusKhongHopLe": "status không hợp lệ",
       "canNeuCanCuTuChoi2": "Cần nêu căn cứ từ chối (reason)",
       "subjectRefHint": "Dùng mã hồ sơ (vd YC-20261018-0001), không dùng email/SĐT",
+      "confirmPhrase": "Gõ đúng {phrase} để xác nhận xoá tài khoản",
       "cannotStartInState": "Không bắt đầu được yêu cầu ở trạng thái {status}",
       "requestClosed": "Yêu cầu đã đóng ({status})",
+      "selfEraseViaProfile": "Không tự xoá tài khoản của chính mình qua yêu cầu quyền dữ liệu — dùng mục Xoá tài khoản ở trang Cá nhân (có xác thực lại)",
+      "accountHasPrivileges": "Tài khoản còn quyền ngoài nhân viên — quản trị hệ thống thu hồi quyền trước khi hoàn tất yêu cầu xoá",
+      "requestBusy": "Yêu cầu xoá đang được xử lý — thử lại sau ít phút",
       "canLyDoGiaHan": "Cần nêu lý do gia hạn (1–1000 ký tự)",
       "daGiaHanMotLan": "Yêu cầu này đã gia hạn một lần; luật chỉ cho gia hạn tối đa một lần",
       "quaHanKhongGiaHan": "Yêu cầu đã quá hạn xử lý nên không gia hạn được; hãy hoàn tất hoặc từ chối và nêu căn cứ"
@@ -399,7 +411,8 @@
     },
     "identity": {
       "bootstrapReason": "Tạo quản trị viên đầu tiên bằng lệnh vận hành",
-      "mfaResetReason": "Đặt lại xác thực hai bước bằng lệnh vận hành (mất thiết bị)"
+      "mfaResetReason": "Đặt lại xác thực hai bước bằng lệnh vận hành (mất thiết bị)",
+      "erasedAccountName": "[tài khoản đã xoá]"
     },
     "inquiry": {
       "autoRouted": "định tuyến tự động",
@@ -410,6 +423,7 @@
       "stopRestrictRequest": "yêu cầu hạn chế xử lý của chủ thể",
       "stopErase": "xoá theo yêu cầu chủ thể",
       "retainedByLaw": "giữ theo luật: {categories}",
+      "selfServiceNote": "chủ thể tự yêu cầu xoá trong ứng dụng (đã xác thực lại)",
       "consent": {
         "inquiryContact": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
         "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng",

@@ -14,6 +14,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/[...slug]` | `app/(public)/[...slug]/page.tsx` | động   | Trang CMS theo đường dẫn, đọc DB mỗi request, không phiên       |
 | `/api/public/applications` | `app/api/public/applications/route.ts` | động | Ghi hồ sơ ứng tuyển; không cache |
 | `/api/public/inquiries` | `app/api/public/inquiries/route.ts` | động | Ghi yêu cầu liên hệ; không cache |
+| `/api/public/errors` | `app/api/public/errors/route.ts` | động | Beacon lỗi client (kho lỗi tự host, T-122); cùng nguồn, ≤ 16 KiB, giới hạn tần suất theo IP băm, gắn release, che bí mật/PII; `no-store` |
 | `/api/public/rum` | `app/api/public/rum/route.ts` | động | Beacon web-vitals (RUM tự làm, cờ `RUM_ENABLED`, tắt thì 404); cùng nguồn, ≤ 2 KiB, giới hạn tần suất; `no-store` |
 | `/api/healthz` | `app/api/healthz/route.ts` | động | Liveness, không chạm DB; `no-store` |
 | `/api/metrics` | `app/api/metrics/route.ts` | động | Metric Prometheus (RED + DLQ); bearer `METRICS_TOKEN`, không đặt thì 404; `no-store` |
@@ -41,11 +42,13 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/app/auth/mfa`                    | `app/api/app/auth/mfa/route.ts`                      | động   | Bước TOTP → đặt phiên đã xác thực hai bước, `no-store`     |
 | `/api/app/auth/logout`                 | `app/api/app/auth/logout/route.ts`                   | động   | Huỷ phiên, `no-store`                                      |
 | `/api/app/comments`                    | `app/api/app/comments/route.ts`                      | động   | API có xác thực, `no-store`                                |
+| `/api/app/errors`                      | `app/api/app/errors/route.ts`                        | động   | Nhóm lỗi của kho lỗi tự host, quyền `errors.read` (sysadmin), `no-store` |
 | `/api/app/files/[id]`                  | `app/api/app/files/[id]/route.ts`                    | động   | Tải tệp private, `private, no-store`                       |
 | `/api/app/files`                       | `app/api/app/files/route.ts`                         | động   | Tải lên tệp private, `no-store`                            |
 | `/api/app/inquiries`                   | `app/api/app/inquiries/route.ts`                     | động   | API có xác thực, `no-store`                                |
 | `/api/app/leave-requests`              | `app/api/app/leave-requests/route.ts`                | động   | API có xác thực, `no-store`                                |
 | `/api/app/me`                          | `app/api/app/me/route.ts`                            | động   | Thông tin phiên hiện tại, `no-store`                       |
+| `/api/app/me/delete` | `app/api/app/me/delete/route.ts` | động | Tự xoá tài khoản của chính mình, xác thực lại (quyền `account.delete_own`), `no-store` |
 | `/api/app/notifications/read` | `app/api/app/notifications/read/route.ts` | động | Đánh dấu đã đọc thông báo của chính mình, `no-store` |
 | `/api/app/notifications` | `app/api/app/notifications/route.ts` | động | Thông báo trong ứng dụng của chính mình, `no-store` |
 | `/api/app/ot-requests`                 | `app/api/app/ot-requests/route.ts`                   | động   | API có xác thực, `no-store`                                |

@@ -34,8 +34,15 @@ export const STATIC_SOURCES = [
   "/manifest.webmanifest",
 ];
 
+/** Mẫu đường dẫn source map của tệp tĩnh (khớp `/_next/static/<…>.map`). */
+export const SOURCE_MAP_SOURCE = "/_next/static/:path(.*\\.map)";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Source map trình duyệt (T-122, PRF-WEB-008): SINH lúc build để giải stack của kho lỗi tự host, nhưng KHÔNG phục vụ —
+  // `npm run build` chạy scripts/sourcemaps-stash.mjs chuyển *.map ra .data/sourcemaps/<release>/ và bỏ `sourceMappingURL`
+  // (còn sót → build đỏ); rewrite dưới đây chặn *.map lần nữa. DAST (`npm run -s dast:probes`) kiểm 404 + không tham chiếu.
+  productionBrowserSourceMaps: true,
   reactStrictMode: true,
   typedRoutes: false,
   // proxy.ts bỏ qua /api (JSON, header riêng ở lib/http; tránh đệm thân request tải tệp 20 MB) nên header cho API đặt ở đây:
@@ -66,7 +73,12 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return {
-      beforeFiles: [{ source: `/:malformed(${MALFORMED_PATH_RE})`, destination: "/khong-hop-le" }],
+      beforeFiles: [
+        { source: `/:malformed(${MALFORMED_PATH_RE})`, destination: "/khong-hop-le" },
+        // Lớp thứ hai cho source map (T-122): kể cả khi bước `sourcemaps-stash` bị bỏ qua (chạy `next build` trần), *.map dưới
+        // /_next/static không bao giờ được phục vụ — rewrite beforeFiles chạy TRƯỚC tệp tĩnh, trỏ tới trang không tồn tại → 404.
+        { source: SOURCE_MAP_SOURCE, destination: "/khong-hop-le" },
+      ],
       afterFiles: [],
       fallback: [],
     };

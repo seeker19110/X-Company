@@ -48,7 +48,7 @@ quan trọng gồm `company_id` (ràng buộc phạm vi công ty); thời điể
 app/(public)/…        website            app/app/…   nội bộ + PWA        app/api/{public,app}/…  route
 lib/<miền>/           nghiệp vụ          migrations/ SQL                 tests/{unit,db,http}/   node:test
 e2e/                  Playwright         scripts/    migrate, worker, test-db, verify-audit-chain, kms-dev, backup-offsite
-adapters/             client mạng KMS (lib/ không có client mạng — DB-TX-003); công cụ tải về ở .tools/ (docs/ops/tools.md)
+adapters/             client mạng KMS, kho tệp S3 (lib/ không có client mạng — DB-TX-003); công cụ tải về ở .tools/ (docs/ops/tools.md)
 docs/{specs,adr,design,g0,autopilot}/
 ```
 

@@ -28,7 +28,7 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 |---|---|---|---|---|
 | 1 | Build tái lập, type/lint sạch | PASS | real-path | `dev-task.sh gate` exit 0; CI `quality` xanh |
 | 2 | Test xanh (unit/DB/HTTP/E2E) | PASS | real-path | `dev-task.sh gate` 964/964 unit/DB/HTTP; E2E 89/89 desktop + mobile (axe 320 + 1280 px, gồm form ứng tuyển, thông báo, bước mã TOTP); FE-TEST-003 `--repeat-each=3` xanh; coverage giữ ngưỡng |
-| 3 | Blueprint 0 MUST mở | FAIL | real-path | 76 MUST chưa đạt (OPS-DEPLOY-003 #91, UX-DS-006 #92 đóng 2026-11-05), đều đã hoãn có lý do (hạ tầng/KMS/RUM/ruleset/HR); 313/316 lệnh Kiểm xanh (mục 0) |
+| 3 | Blueprint 0 MUST mở | FAIL | real-path | 75 MUST chưa đạt (OPS-DEPLOY-003 #91, UX-DS-006 #92 đóng 2026-11-05; ARC-RES-005 T-116 đóng 2026-11-06), đều đã hoãn có lý do (hạ tầng/KMS/RUM/ruleset/HR); 313/316 lệnh Kiểm xanh (mục 0) |
 | 4 | Không secret trong repo/lịch sử | PASS | real-path | `gitleaks git --log-opts="HEAD --remotes"` 0 phát hiện; CI `gitleaks` xanh |
 | 5 | Phụ thuộc: 0 lỗ hổng cao chưa xử lý; license allowlist | PASS | real-path | CI `osv-scanner`, `dep-audit`, `supply-chain` xanh; ngoại lệ có hạn (D-018) |
 | 6 | Kiểm quyền server; test vượt quyền | PASS | real-path | ma trận 401/403/BOLA/BFLA mọi route (gồm `/api/app/notifications*`, `/api/app/auth/mfa`); DAST nhóm I PASS; TOTP bắt buộc sysadmin/hr/executive (AUD-SEC-002); không bỏ được sysadmin công ty cuối (SEC-007/010) |
@@ -69,7 +69,7 @@ Lệnh: `PATH=$PWD/.tools/bin:$PATH PW_CHROMIUM_PATH=… python3 .xtemplates/scr
 ## 3. Bảng FAIL
 | # | Mức | Mục | Cách sửa đề xuất |
 |---|---|---|---|
-| 3 | BLOCKER | 76 MUST chưa đạt (đều `loop defer` theo nhóm: GitHub settings, hạ tầng thật, pháp chế/chủ dự án, số liệu thực địa — D-066) | người xử lý nhóm đã `loop defer`, rồi `loop resume` |
+| 3 | BLOCKER | 75 MUST chưa đạt (đều `loop defer` theo nhóm: GitHub settings, hạ tầng thật, pháp chế/chủ dự án, số liệu thực địa — D-066) | người xử lý nhóm đã `loop defer`, rồi `loop resume` |
 | 8 | BLOCKER | rollback deploy chưa diễn tập | diễn tập theo `docs/ops/RUNBOOK.md`, ghi `last_drilled` |
 | 11 | BLOCKER | DPIA chưa nộp, chưa xác nhận pháp chế | chủ dự án nộp trong 60 ngày từ ngày xử lý thật; luật sư rà |
 | 18 | BLOCKER | quyết định "Khi chạy thật" (20 mục) | chủ dự án quyết từng mục |

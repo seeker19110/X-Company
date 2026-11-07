@@ -27,6 +27,14 @@ URL đo Lighthouse: `/`, `/dich-vu`, `/lien-he` (công khai), chạy trên `next
 ## Đổi ngân sách
 Nâng ngưỡng = sửa `perf-budget.json`/`lighthouserc.json` trong PR kèm lý do (đo trước/sau); không nâng chỉ để cổng xanh. Test cổng (`tests/unit/perf-budget.test.ts`) chứng minh: thêm 200 KB JS → đỏ.
 
+### Lịch sử trần tổng JS tĩnh
+| Ngày | Trần (KB gzip) | Đo | Lý do |
+| --- | --- | --- | --- |
+| 2026-11-07 | 230 → 234 | 230,0 → 233,3 | D-076/D-078: bộ bắt lỗi client tự host (T-122, PRF-WEB-008: +1,9 KB, đặt ở 3 layout thay vì root để giảm từ 3,8 KB) + form xoá tài khoản có hộp thoại xác nhận (T-121, CMP-RIGHTS-007: +1,4 KB) |
+
+## Ngân sách CI mỗi PR (XC-GREEN-002)
+`perf-budget.json` → `ci`: số job tối đa và tổng `timeout-minutes` tối đa của mọi job thuộc workflow chạy trên `pull_request` (đặt 2026-11-06 = hiện trạng 12 job / 268 phút). `npm run -s check:ci-policy` đỏ khi vượt hoặc khi job chạy trên PR thiếu `timeout-minutes`; xem số hiện tại: `node scripts/lib/ci-budget.mjs`. Thêm job = nâng ngân sách trong cùng PR kèm lý do. Đây là trần xấu nhất (timeout), không phải thời gian chạy thật đo được.
+
 ## Chưa làm / giới hạn
 - RUM tự làm đã có (T-056, D-042: beacon `app/components/rum-beacon.tsx` → `/api/public/rum` → `rum_web_vitals_p75` + 3 luật `XCRum*`), nhưng chưa có số p75 thực địa: cần bật `RUM_ENABLED` và có người dùng production (PRF-WEB-005 cần ≥ 5 URL ở p75; nhãn trang hiện gộp theo `/`, `/app/<phân hệ>`, `/[...slug]`). CrUX chưa dùng. Beacon gắn ở layout `(public)`, layout `(secure)` và trang đăng nhập (không ở root layout: client component ở root làm tổng JS static +3,4 KB, vượt trần 230 KB). Không tách mobile/desktop (FE-PERF-001) — chưa có chiều đó trong mẫu.
 - Lighthouse CI là job `lighthouse`, job con của `quality` (required check của ruleset `.github/rulesets/main.json`) — đỏ thì chặn merge; ruleset có hiệu lực khi chủ dự án import.

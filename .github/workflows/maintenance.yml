@@ -57,25 +57,3 @@ jobs:
           n=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ -n "$n" ]; then gh issue comment "$n" --body-file lychee/out.md
           else gh issue create --title "$title" --body-file lychee/out.md; fi
-
-  gitleaks-history:
-    name: gitleaks-history
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GITLEAKS_VERSION: "8.30.1"
-      # sha256 của gitleaks_8.30.1_linux_x64.tar.gz theo gitleaks_8.30.1_checksums.txt của bản phát hành.
-      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Tải gitleaks, kiểm checksum
-        run: |
-          set -eu
-          curl -sSfL -o "$RUNNER_TEMP/gl.tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gl.tgz" | sha256sum -c -
-          mkdir "$RUNNER_TEMP/gl" && tar -xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP/gl"
-      - name: Quét toàn bộ lịch sử (đỏ khi có phát hiện)
-        run: '"$RUNNER_TEMP/gl/gitleaks" git --log-opts=--all --redact --exit-code 1 --config .gitleaks.toml .'

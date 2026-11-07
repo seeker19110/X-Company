@@ -8,7 +8,15 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { verifyAuditChain } from "../../lib/audit/index.ts";
 import { withTx } from "../../lib/db/index.ts";
-import { diskStorage, setStorage } from "../../lib/files/storage.ts";
+import { s3Transport } from "../../adapters/s3-http.ts";
+import {
+  diskStorage,
+  objectStorage,
+  setStorage,
+  STORAGE_KEY_RE,
+  type Storage,
+} from "../../lib/files/storage.ts";
+import { readOutboxDead } from "../../lib/http/metrics.ts";
 import {
   ApplicationInput,
   InquiryInput,
@@ -34,11 +42,20 @@ import {
   type RequestKind,
   type SubjectType,
 } from "../../lib/privacy/index.ts";
-import { listConsents } from "../../lib/privacy/consent.ts";
-import { defaultRegistry, runOnce, type Channel, type DeliveryMessage } from "../../lib/worker/index.ts";
+import { listConsents, PURPOSE_GEO_ATTENDANCE, recordConsent } from "../../lib/privacy/consent.ts";
+import { deleteOwnAccount } from "../../lib/privacy/self-service.ts";
+import { createSession } from "../../lib/identity/session.ts";
+import {
+  defaultRegistry,
+  redriveDead,
+  runOnce,
+  type Channel,
+  type DeliveryMessage,
+} from "../../lib/worker/index.ts";
 import { ANON_EMAIL, ANON_NAME } from "../../lib/worker/retention.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
 import { seedCompany, seedUser, setTestEnv } from "../helpers/fixtures.ts";
+import { startS3, type S3Fixture } from "../helpers/s3-fixture.ts";
 
 setTestEnv();
 
@@ -484,9 +501,14 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
         [a.id],
       );
       assert.equal(notes.length, 0, "ghi chú tự do của người xử lý đã xoá");
-      // kho 2 — tệp
-      await assert.rejects(storage.get(key), { code: "ENOENT" });
+      // kho 2 — tệp: hàng subject_file mất ngay; blob xoá SAU commit qua outbox (T-125), còn tới khi worker chạy
       assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 0);
+      assert.equal((await storage.get(key)).toString(), "CV nội dung", "giao dịch xoá không gọi kho tệp");
+      const blobEv = await q(
+        "SELECT payload, status FROM outbox_event WHERE topic = 'files.blob_delete' AND job_key = $1",
+        [`files.blob_delete:${key}`],
+      );
+      assert.deepEqual(blobEv, [{ payload: { storageKey: key }, status: "pending" }]);
       // kho 3 — outbox (mọi trạng thái) không còn id/mã/PII
       const ob = await q(
         "SELECT payload, status FROM outbox_event WHERE payload::text LIKE $1 OR payload::text LIKE $2",
@@ -517,10 +539,16 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       assert.equal(keep.name, "Khách Giữ Lại");
       assert.equal(keep.email, other.email);
       assert.equal(keep.anonymized_at, null);
-      // worker không gửi gì cho chủ thể đã xoá
+      // worker không gửi gì cho chủ thể đã xoá; worker xoá blob
       const ch = new FakeChannel();
       await runOnce({ registry: defaultRegistry(ch), now: () => T0, pool: db.app, batchSize: 100 });
       assert.equal(ch.forInquiry(a.id).length, 0);
+      await assert.rejects(storage.get(key), { code: "ENOENT" });
+      assert.equal(
+        (await q("SELECT status FROM outbox_event WHERE job_key = $1", [`files.blob_delete:${key}`]))[0]
+          .status,
+        "done",
+      );
     });
 
     test("xoá lặp lại là idempotent (yêu cầu đã đóng → 409, dữ liệu không đổi)", async () => {
@@ -548,36 +576,276 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       );
     });
 
-    test("nhân viên: dữ liệu bắt buộc giữ (hồ sơ lao động, công) — đánh dấu hạn chế + lý do, không xoá", async () => {
+    // T-121 (D-075): nhân viên — xoá tài khoản đăng nhập + PII không bắt buộc qua mọi kho; chỉ giữ phần bắt buộc, kèm căn cứ.
+    test("nhân viên có dữ liệu phải giữ: tài khoản + PII không bắt buộc bị xoá ở mọi kho; hồ sơ lao động/bảng công giữ kèm căn cứ; audit không PII", async () => {
       const emp = await seedUser(companyId);
-      const e = (await q("SELECT code, full_name FROM employee WHERE id = $1", [emp.employeeId]))[0];
+      const empId = emp.employeeId!;
+      const workEmail = `nv.rieng.${randomUUID().slice(0, 8)}@example.test`;
+      const phone = "0900000000";
       await db.admin.query(
-        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time, source, status)
-         VALUES ($1, $2, $3, 'h', 'in', now(), 'kiosk', 'accepted')`,
-        [companyId, emp.employeeId, `key-${randomUUID()}`],
+        "UPDATE employee SET work_email = $2, phone = $3, hired_on = '2024-01-02' WHERE id = $1",
+        [empId, workEmail, phone],
       );
-      const done = await complete((await handle(e.code, "employee", "delete")).id);
+      const e = (await q("SELECT code, full_name FROM employee WHERE id = $1", [empId]))[0];
+      const [acc0] = await q("SELECT email, display_name FROM app_user WHERE id = $1", [emp.userId]);
+      // Dữ liệu phải giữ: lịch sử công tác + sự kiện chấm công (có toạ độ GPS — đồng ý riêng, KHÔNG phải giữ).
+      const [dept] = await q("SELECT id FROM department WHERE company_id = $1 LIMIT 1", [companyId]);
+      await db.admin.query(
+        `INSERT INTO employment_history (company_id, employee_id, department_id, title, valid_from)
+         VALUES ($1, $2, $3, 'Kỹ sư', '2024-01-02')`,
+        [companyId, empId, dept.id],
+      );
+      await db.admin.query(
+        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time, source, status,
+           geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at)
+         VALUES ($1, $2, $3, 'h', 'in', now(), 'gps', 'accepted', 'v1:g1:ban-ma-gia', 21.02, 105.8, 12, now())`,
+        [companyId, empId, `key-${randomUUID()}`],
+      );
+      await withTx((tx) =>
+        recordConsent(tx, {
+          companyId,
+          subjectType: "employee",
+          subjectId: empId,
+          purposeId: PURPOSE_GEO_ATTENDANCE,
+          policyVersion: "v1",
+          channel: "app",
+          at: new Date(),
+        }),
+      );
+      // Dữ liệu theo tài khoản (không bắt buộc giữ): phiên, lần đăng nhập, lần sai TOTP, thông báo, phản hồi idempotency.
+      await withTx((tx) => createSession(tx, emp.userId, { ip: "10.9.9.9", userAgent: "UA-nv" }));
+      await db.admin.query(
+        `INSERT INTO login_attempt (email, ip, attempted_at, success)
+         VALUES ($1, '10.9.9.9', now(), false), ($1, '10.9.9.9', now(), true)`,
+        [acc0.email],
+      );
+      await db.admin.query("INSERT INTO mfa_failure (user_id, failed_at) VALUES ($1, now())", [emp.userId]);
+      await db.admin.query(
+        `INSERT INTO notification (company_id, user_id, topic, ref_type, ref_id, code, source_event_id)
+         VALUES ($1, $2, 'task.assigned', 'task', $3, NULL, 777001)`,
+        [companyId, emp.userId, randomUUID()],
+      );
+      await db.admin.query(
+        `INSERT INTO idempotency_record (company_id, user_id, key, request_hash, state)
+         VALUES ($1, $2, 'khoa-cu-123', repeat('a', 64), 'processing')`,
+        [companyId, emp.userId],
+      );
+
+      const req = await handle(e.code, "employee", "delete");
+      const done = await complete(req.id);
+      assert.equal(done.status, "done");
       const result = done.result as {
         erased: boolean;
         outcome: string;
+        deleted: {
+          account: Record<string, number>;
+          employee_contact: number;
+          geo_points: number;
+          consent_withdrawn: string[];
+        };
         retained: { category: string; reason: string }[];
       };
-      assert.equal(result.erased, false);
-      assert.equal(result.outcome, "retained_by_law");
+      assert.equal(result.erased, true);
+      assert.equal(result.outcome, "erased_except_retained");
+      assert.deepEqual(result.deleted.account, {
+        account: 1,
+        grants: 0,
+        sessions: 1,
+        notifications: 1,
+        login_attempts: 2,
+        mfa_records: 1,
+        idempotency_records: 1,
+      });
+      assert.equal(result.deleted.employee_contact, 1);
+      assert.equal(result.deleted.geo_points, 1);
+      assert.deepEqual(result.deleted.consent_withdrawn, [PURPOSE_GEO_ATTENDANCE]);
       assert.ok(result.retained.some((r) => r.category === "hồ sơ lao động" && r.reason.length > 20));
-      assert.ok(result.retained.some((r) => r.category === "bảng công và nghỉ phép"));
-      const [row] = await q("SELECT full_name FROM employee WHERE id = $1", [emp.employeeId]);
-      assert.equal(row.full_name, e.full_name, "hồ sơ lao động còn nguyên");
-      assert.equal(
-        (await q("SELECT 1 FROM attendance_event WHERE employee_id = $1", [emp.employeeId])).length,
-        1,
+      assert.ok(result.retained.some((r) => r.category === "bảng công và nghỉ phép" && r.reason.length > 20));
+
+      // PII không bắt buộc đã mất — từng kho.
+      const [empRow] = await q(
+        "SELECT code, full_name, work_email, phone, phone_enc, phone_bidx, hired_on FROM employee WHERE id = $1",
+        [empId],
       );
+      assert.deepEqual(
+        [empRow.work_email, empRow.phone, empRow.phone_enc, empRow.phone_bidx],
+        [null, null, null, null],
+      );
+      const [acc] = await q(
+        "SELECT email, display_name, password_hash, totp_secret_enc, disabled_at FROM app_user WHERE id = $1",
+        [emp.userId],
+      );
+      assert.equal(acc.email, `erased-${emp.userId}@erased.invalid`);
+      assert.equal(acc.display_name, "[tài khoản đã xoá]");
+      assert.equal(acc.password_hash, null);
+      assert.ok(acc.disabled_at instanceof Date);
+      for (const [sql, params] of [
+        ["SELECT 1 FROM session WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM notification WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM mfa_failure WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM idempotency_record WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM login_attempt WHERE email = $1", [acc0.email]],
+      ] as const)
+        assert.equal((await q(sql, [...params])).length, 0, sql);
+      const [ev] = await q(
+        "SELECT status, geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at FROM attendance_event WHERE employee_id = $1",
+        [empId],
+      );
+      assert.deepEqual(ev, {
+        status: "accepted",
+        geo_enc: null,
+        geo_lat: null,
+        geo_lng: null,
+        geo_accuracy_m: null,
+        geo_captured_at: null,
+      });
+
+      // Phần phải giữ còn nguyên, có cờ hạn chế kèm căn cứ.
+      assert.equal(empRow.code, e.code);
+      assert.equal(empRow.full_name, e.full_name, "hồ sơ lao động còn");
+      assert.ok(empRow.hired_on !== null);
+      assert.equal((await q("SELECT 1 FROM employment_history WHERE employee_id = $1", [empId])).length, 1);
       const [flag] = await q(
-        "SELECT kind, reason FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL",
-        [emp.employeeId],
+        "SELECT kind, reason, request_id FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL",
+        [empId],
       );
       assert.equal(flag.kind, "retained_by_law");
-      assert.match(flag.reason, /giữ theo luật: .*hồ sơ lao động/);
+      assert.equal(flag.request_id, req.id);
+      assert.match(flag.reason, /giữ theo luật: hồ sơ lao động \(Nghĩa vụ lưu hồ sơ lao động/);
+      assert.match(flag.reason, /bảng công và nghỉ phép \(Chứng từ chấm công/);
+
+      // Audit chỉ số đếm/loại — không email, SĐT, tên.
+      const audits = JSON.stringify(
+        await q("SELECT action, before, after, reason FROM audit_event WHERE object_id IN ($1, $2, $3)", [
+          req.id,
+          emp.userId,
+          empId,
+        ]),
+      );
+      assert.match(audits, /account\.erase/);
+      assert.match(audits, /privacy\.erase/);
+      for (const needle of [workEmail, phone, acc0.email, acc0.display_name, e.full_name])
+        assert.ok(!audits.includes(needle), needle);
+      assert.equal((await verifyAuditChain(db.admin)).ok, true);
+    });
+
+    test("tự phục vụ: deleteOwnAccount tạo + hoàn tất yêu cầu cho chính mình; nhân viên không có dữ liệu bảng công vẫn xoá được; gọi lại không hỏng", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const self = { userId: emp.userId, companyId };
+      const first = await withTx((tx) => deleteOwnAccount(tx, self, empId));
+      assert.equal(first.status, "done");
+      assert.equal(first.subject_id, empId);
+      assert.equal(first.handler, emp.userId);
+      const r1 = first.result as { deleted: { account: { account: number }; employee_contact: number } };
+      assert.equal(r1.deleted.account.account, 1);
+      // Gọi lại: yêu cầu mới, mọi số đếm 0, không lỗi; cờ hạn chế không nhân bản.
+      const again = await withTx((tx) => deleteOwnAccount(tx, self, empId));
+      assert.equal(again.status, "done");
+      assert.notEqual(again.id, first.id);
+      const r2 = again.result as { deleted: { account: Record<string, number>; employee_contact: number } };
+      assert.ok(
+        Object.values(r2.deleted.account).every((n) => n === 0),
+        JSON.stringify(r2.deleted.account),
+      );
+      assert.equal(r2.deleted.employee_contact, 0);
+      assert.equal(
+        (
+          await q("SELECT 1 FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL", [
+            empId,
+          ])
+        ).length,
+        1,
+      );
+      const [acc] = await q("SELECT email, disabled_at FROM app_user WHERE id = $1", [emp.userId]);
+      assert.equal(acc.email, `erased-${emp.userId}@erased.invalid`);
+    });
+
+    test("tự phục vụ khi HR đã tiếp nhận yêu cầu xoá đang mở: hoàn tất đúng yêu cầu đó (không tạo trùng, không 409)", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const code = (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code;
+      const open = await handle(code, "employee", "delete");
+      const done = await withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId));
+      assert.equal(done.id, open.id);
+      assert.equal(done.status, "done");
+      assert.equal(
+        (await q("SELECT 1 FROM data_subject_request WHERE subject_id = $1 AND kind = 'delete'", [empId]))
+          .length,
+        1,
+      );
+    });
+
+    test("đường HR (không xác thực lại của chủ): tài khoản còn quyền ngoài employee → 409; tài khoản của chính người xử lý → 409; không xoá gì (review #100)", async () => {
+      const codeOf = async (empId: string) =>
+        (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code as string;
+      const untouched = async (userId: string) => {
+        const [acc] = await q("SELECT password_hash, disabled_at FROM app_user WHERE id = $1", [userId]);
+        assert.ok(acc.password_hash !== null);
+        assert.equal(acc.disabled_at, null);
+        assert.ok(
+          (await q("SELECT 1 FROM role_grant WHERE user_id = $1 AND revoked_at IS NULL", [userId])).length >
+            0,
+        );
+      };
+      // sysadmin (công ty còn sysadmin khác — không phải ca LAST_SYSADMIN) — HR không có access.manage.
+      await seedUser(companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      const admin = await seedUser(companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      const r1 = await handle(await codeOf(admin.employeeId!), "employee", "delete");
+      await assert.rejects(complete(r1.id), isCode("ACCOUNT_HAS_PRIVILEGES"));
+      await untouched(admin.userId);
+      assert.equal(
+        (await q("SELECT status FROM data_subject_request WHERE id = $1", [r1.id]))[0].status,
+        "in_progress",
+      );
+      // Kẻ chiếm phiên HR xoá tài khoản của chính HR đó qua DSAR (né xác thực lại D-075) → 409.
+      const hrEmp = (await q("SELECT employee_id FROM app_user WHERE id = $1", [hr.userId]))[0]
+        .employee_id as string;
+      const r2 = await handle(await codeOf(hrEmp), "employee", "delete");
+      await assert.rejects(complete(r2.id), isCode("SELF_ERASE_VIA_PROFILE"));
+      await untouched(hr.userId);
+      // Quyền đặc quyền đã hết hạn/thu hồi không chặn: sau khi sysadmin thu hồi, HR hoàn tất được.
+      await db.admin.query("UPDATE role_grant SET revoked_at = now() WHERE user_id = $1", [admin.userId]);
+      assert.equal((await complete(r1.id)).status, "done");
+    });
+
+    test("nhân viên tự xoá đúng lúc HR đang giữ yêu cầu xoá của họ → 409 PRIVACY_REQUEST_BUSY, không deadlock (review #100)", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const r = await handle(
+        (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code,
+        "employee",
+        "delete",
+      );
+      const holder = await db.admin.connect();
+      try {
+        await holder.query("BEGIN");
+        await holder.query("SELECT 1 FROM data_subject_request WHERE id = $1 FOR UPDATE", [r.id]);
+        await assert.rejects(
+          withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId)),
+          isCode("PRIVACY_REQUEST_BUSY"),
+        );
+      } finally {
+        await holder.query("ROLLBACK");
+        holder.release();
+      }
+      assert.equal(
+        (await withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId))).id,
+        r.id,
+      );
+    });
+
+    test("sysadmin hiệu lực cuối không tự xoá được (409 LAST_SYSADMIN) — giao dịch lùi, không xoá gì", async () => {
+      const { companyId: c2 } = await seedCompany("Công ty Một Quản Trị");
+      const admin = await seedUser(c2, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      await assert.rejects(
+        withTx((tx) => deleteOwnAccount(tx, { userId: admin.userId, companyId: c2 }, admin.employeeId!)),
+        isCode("LAST_SYSADMIN"),
+      );
+      const [acc] = await q("SELECT password_hash, disabled_at FROM app_user WHERE id = $1", [admin.userId]);
+      assert.ok(acc.password_hash !== null);
+      assert.equal(acc.disabled_at, null);
+      assert.equal((await q("SELECT 1 FROM data_subject_request WHERE company_id = $1", [c2])).length, 0);
     });
   });
 
@@ -950,6 +1218,267 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
         hist.every((h) => h.note === null),
         "ghi chú trong lịch sử bị xoá",
       );
+    });
+  });
+
+  describe("xoá blob SAU commit qua outbox — kho S3 thật (T-125, DB-TX-003)", () => {
+    let s3: S3Fixture;
+    let real: Storage;
+    const raw = () => s3Transport(() => s3);
+    before(async () => {
+      s3 = await startS3();
+      real = objectStorage(s3Transport(() => s3));
+    });
+    after(async () => {
+      await s3?.stop();
+    });
+
+    /** Số giao dịch đang mở của các phiên KHÁC trên DB test (pg_stat_activity, nhìn từ admin). */
+    const openTx = async () =>
+      Number(
+        (
+          await q(
+            `SELECT count(*) AS n FROM pg_stat_activity
+              WHERE datname = current_database() AND pid <> pg_backend_pid() AND backend_type = 'client backend'
+                AND xact_start IS NOT NULL`,
+          )
+        )[0].n,
+      );
+    /**
+     * Kho bọc kho S3 thật: ghi mọi lời gọi; `remove` NÉM nếu lúc gọi đang có giao dịch DB mở (DB-TX-003) hoặc khi `fail(khoá, lần)`.
+     * `checkTx: false` cho ca nhiều worker song song (giao dịch của worker kia là hợp lệ).
+     */
+    const spy = (fail: (key: string, nth: number) => boolean = () => false, checkTx = true) => {
+      const calls: string[] = [];
+      const inTx: string[] = [];
+      const s: Storage = {
+        put: (d) => {
+          calls.push("put");
+          return real.put(d);
+        },
+        get: (k) => {
+          calls.push(`get:${k}`);
+          return real.get(k);
+        },
+        remove: async (k) => {
+          calls.push(k);
+          if (checkTx && (await openTx()) > 0) {
+            inTx.push(k);
+            throw new Error("gọi kho khi đang có giao dịch DB mở");
+          }
+          if (fail(k, calls.filter((c) => c === k).length)) throw new Error("kho S3 lỗi tạm (giả lập 503)");
+          await real.remove(k);
+        },
+      };
+      return { s, calls, inTx, of: (keys: string[]) => calls.filter((c) => keys.includes(c)) };
+    };
+    const subjectWith3Files = async () => {
+      const a = await newInquiry();
+      const keys: string[] = [];
+      for (let i = 0; i < 3; i++) keys.push(await real.put(Buffer.from(`CV ${i} của ${a.code}`)));
+      await withTx(async (tx) => {
+        for (const k of keys) await registerSubjectFile(tx, companyId, "inquiry", a.id, k);
+      });
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      return { a, keys };
+    };
+    const exists = (keys: string[]) =>
+      Promise.all(keys.map(async (k) => (await raw().getObject(k)) !== null));
+    const blobEvents = async (keys: string[]) =>
+      (await q(
+        "SELECT id, status, attempts, payload, last_error FROM outbox_event WHERE job_key = ANY($1) ORDER BY id",
+        [keys.map((k) => `files.blob_delete:${k}`)],
+      )) as {
+        id: string;
+        status: string;
+        attempts: number;
+        payload: { storageKey: string };
+        last_error: string | null;
+      }[];
+    const work = (storage: Storage, now: Date, maxAttempts?: number) =>
+      runOnce({
+        registry: defaultRegistry(new FakeChannel(), () => storage),
+        now: () => now,
+        pool: db.app,
+        batchSize: 100,
+        ...(maxAttempts === undefined ? {} : { maxAttempts }),
+      });
+    /** Chạy `fn` với kho toàn cục là `s` (mọi lời gọi getStorage() trong lib/ đi qua kho đếm), rồi trả kho đĩa của bộ test. */
+    const withGlobalStorage = async <T>(s: Storage, fn: () => Promise<T>): Promise<T> => {
+      setStorage(s);
+      try {
+        return await fn();
+      } finally {
+        setStorage(diskStorage(blobDir));
+      }
+    };
+    const LATER = new Date(T0.getTime() + 3_600_000);
+
+    test("Given chủ thể có 3 tệp trên S3 When xoá Then giao dịch không gọi kho; sau worker cả 3 blob mất", async () => {
+      const { a, keys } = await subjectWith3Files();
+      const sp = spy();
+      const done = await withGlobalStorage(sp.s, async () =>
+        complete((await handle(a.code, "inquiry", "delete")).id),
+      );
+      assert.equal((done.result as { files_removed: number }).files_removed, 3);
+      assert.deepEqual(sp.calls, [], "luồng xoá (trong giao dịch) không gọi kho tệp lần nào");
+      assert.deepEqual(await exists(keys), [true, true, true], "blob còn tới khi worker chạy");
+      assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 0);
+      const evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => e.status),
+        ["pending", "pending", "pending"],
+      );
+      for (const e of evs) {
+        assert.deepEqual(Object.keys(e.payload), ["storageKey"], "payload chỉ có khoá lưu trữ");
+        assert.match(e.payload.storageKey, STORAGE_KEY_RE);
+      }
+      const payloads = JSON.stringify(evs.map((e) => e.payload));
+      for (const needle of [a.id, a.code, a.email]) assert.ok(!payloads.includes(needle), needle);
+      // lũy đẳng: một blob đã mất trước khi worker chạy → vẫn xong, không lỗi
+      await raw().deleteObject(keys[0]!);
+      const w = spy();
+      await work(w.s, T0);
+      assert.deepEqual(w.inTx, [], "worker gọi kho khi KHÔNG có giao dịch DB mở");
+      assert.deepEqual(w.of(keys).sort(), [...keys].sort(), "mỗi blob đúng một lời gọi xoá");
+      assert.deepEqual(await exists(keys), [false, false, false]);
+      assert.deepEqual(
+        (await blobEvents(keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      // xoá lặp (redrive/việc lặp) ở kho thật: không có đối tượng → không lỗi
+      await real.remove(keys[1]!);
+    });
+
+    test("ca biên: kho lỗi tạm → thử lại, lượt sau xoá được; hết lượt → dead, vẫn thấy được (outbox_dead_total)", async () => {
+      const { a, keys } = await subjectWith3Files();
+      await complete((await handle(a.code, "inquiry", "delete")).id);
+      const flaky = spy((k, nth) => keys.includes(k) && nth === 1); // lần gọi đầu mỗi khoá lỗi
+      await work(flaky.s, T0);
+      let evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts]),
+        [
+          ["pending", 1],
+          ["pending", 1],
+          ["pending", 1],
+        ],
+      );
+      for (const e of evs) assert.match(e.last_error ?? "", /lỗi tạm/);
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      await work(flaky.s, T0); // chưa tới hạn backoff → không lấy lại
+      assert.equal(flaky.of(keys).length, 3);
+      await work(flaky.s, LATER);
+      evs = await blobEvents(keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts, e.last_error]),
+        [
+          ["done", 2, null],
+          ["done", 2, null],
+          ["done", 2, null],
+        ],
+      );
+      assert.deepEqual(await exists(keys), [false, false, false]);
+
+      // hết lượt (trần 2) → DLQ; hàng dead giữ khoá = dấu vết blob mồ côi, blob còn nguyên
+      const b = await subjectWith3Files();
+      await complete((await handle(b.a.code, "inquiry", "delete")).id);
+      const down = spy((k) => b.keys.includes(k));
+      const deadBefore = await readOutboxDead(db.app);
+      assert.notEqual(deadBefore, null);
+      await work(down.s, T0, 2);
+      await work(down.s, LATER, 2);
+      evs = await blobEvents(b.keys);
+      assert.deepEqual(
+        evs.map((e) => [e.status, e.attempts, e.payload.storageKey]),
+        b.keys.map((k) => ["dead", 2, k]),
+      );
+      for (const e of evs) assert.match(e.last_error ?? "", /lỗi tạm/);
+      assert.equal(
+        await readOutboxDead(db.app),
+        deadBefore! + 3,
+        "gauge outbox_dead_total tăng → cảnh báo DLQ",
+      );
+      assert.deepEqual(await exists(b.keys), [true, true, true]);
+      // vận hành sửa nguyên nhân rồi redrive (RUNBOOK) → xoá xong
+      assert.equal(
+        await redriveDead(
+          db.admin,
+          evs.map((e) => Number(e.id)),
+        ),
+        3,
+      );
+      await work(real, new Date(LATER.getTime() + 3_600_000));
+      assert.deepEqual(
+        (await blobEvents(b.keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      assert.deepEqual(await exists(b.keys), [false, false, false]);
+    });
+
+    test("ca biên: giao dịch xoá rollback → không có sự kiện, hàng subject_file và blob còn nguyên", async () => {
+      const { a, keys } = await subjectWith3Files();
+      const req = await handle(a.code, "inquiry", "delete");
+      const sp = spy();
+      await withGlobalStorage(sp.s, () =>
+        assert.rejects(
+          withTx(async (tx) => {
+            await completeRequest(tx, hr, req.id);
+            throw new Error("lỗi sau bước xoá — rollback");
+          }),
+          /rollback/,
+        ),
+      );
+      assert.deepEqual(sp.calls, []);
+      assert.deepEqual(await blobEvents(keys), [], "rollback → không sự kiện nào");
+      assert.equal((await q("SELECT 1 FROM subject_file WHERE subject_id = $1", [a.id])).length, 3);
+      const w = spy();
+      await work(w.s, T0);
+      assert.deepEqual(w.of(keys), [], "worker không đụng blob của giao dịch đã rollback");
+      assert.deepEqual(await exists(keys), [true, true, true]);
+      // yêu cầu vẫn in_progress → chạy lại thì xoá đủ
+      await complete(req.id);
+      await work(real, T0);
+      assert.deepEqual(await exists(keys), [false, false, false]);
+    });
+
+    test("đồng thời: hai worker cùng lúc → mỗi blob xoá đúng một lần, mọi sự kiện done", async () => {
+      const { a, keys } = await subjectWith3Files();
+      await complete((await handle(a.code, "inquiry", "delete")).id);
+      const sp = spy(() => false, false);
+      await Promise.all([work(sp.s, T0), work(sp.s, T0)]);
+      assert.deepEqual(sp.of(keys).sort(), [...keys].sort());
+      assert.deepEqual(
+        (await blobEvents(keys)).map((e) => e.status),
+        ["done", "done", "done"],
+      );
+      assert.deepEqual(await exists(keys), [false, false, false]);
+    });
+
+    test("ca biên: payload khoá sai dạng (đường dẫn lạ/rỗng/thiếu) → DLQ ngay, không gọi kho", async () => {
+      const bad = [{ storageKey: "../../etc/passwd" }, { storageKey: "" }, {}];
+      const ids: string[] = [];
+      for (const p of bad)
+        ids.push(
+          (
+            await q(
+              "INSERT INTO outbox_event (company_id, topic, payload) VALUES ($1, 'files.blob_delete', $2) RETURNING id",
+              [companyId, JSON.stringify(p)],
+            )
+          )[0].id,
+        );
+      const sp = spy();
+      await work(sp.s, T0);
+      assert.deepEqual(sp.calls, []);
+      const rows = await q("SELECT status, last_error FROM outbox_event WHERE id = ANY($1) ORDER BY id", [
+        ids,
+      ]);
+      for (const r of rows) {
+        assert.equal(r.status, "dead");
+        assert.match(r.last_error, /^payload sai schema — storageKey: /);
+      }
+      // dọn để không cộng dồn DLQ cho ca sau
+      await q("DELETE FROM outbox_event WHERE id = ANY($1)", [ids]);
     });
   });
 });

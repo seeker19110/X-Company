@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ErrorReporting } from "@/app/server/errors";
 import { RumIfEnabled } from "@/app/server/rum";
 import { t } from "@/lib/i18n";
 import "./site.css";
@@ -49,6 +50,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         </div>
       </footer>
       <RumIfEnabled />
+      <ErrorReporting />
     </>
   );
 }

@@ -3,6 +3,7 @@
 // khi chốt kết quả, trừ khi có đồng ý riêng "kho nhân tài" còn hiệu lực (khi đó 12 tháng); ứng viên chưa chốt quá lâu → lưới an
 // toàn. Nhân viên đã chấm dứt hợp đồng → xoá liên hệ không phải giữ; hết 10 năm → ẩn danh họ tên (chấm công/lương giữ 10 năm).
 // Session hết hạn, login_attempt, outbox done cũ, idempotency_record cũ, rum_sample quá hạn (T-056), public_rate_event quá 1 ngày → xoá.
+// Nhóm lỗi của kho lỗi tự host (error_group, T-122) không gặp lại quá RETENTION_ERROR_DAYS → xoá theo lô.
 // Thông báo trong ứng dụng (T-080): đã đọc quá NOTIFICATION_READ_DAYS, chưa đọc quá NOTIFICATION_UNREAD_DAYS → xoá theo lô.
 // Toạ độ GPS chấm công quá RETENTION_GEO_DAYS → xoá toạ độ (sự kiện giữ) qua hàm có kiểm soát của migration 0029 (AUD-DATA-003).
 // mfa_challenge hết hạn + mfa_failure quá cửa sổ 15 phút → xoá theo lô (AUD-DATA-009; trước đây chỉ dọn trong luồng của chính người dùng).
@@ -40,6 +41,8 @@ export interface RetentionConfig {
   rumDays: number;
   /** Toạ độ GPS chấm công: ngày kể từ lúc server nhận sự kiện. */
   geoDays: number;
+  /** Nhóm lỗi của kho lỗi tự host (error_group): ngày kể từ lần gặp cuối. */
+  errorDays: number;
 }
 
 export function retentionConfig(source?: Record<string, string | undefined>): RetentionConfig {
@@ -58,6 +61,7 @@ export function retentionConfig(source?: Record<string, string | undefined>): Re
     idempotencyHours: env("RETENTION_IDEMPOTENCY_HOURS", source),
     rumDays: env("RETENTION_RUM_DAYS", source),
     geoDays: env("RETENTION_GEO_DAYS", source),
+    errorDays: env("RETENTION_ERROR_DAYS", source),
   };
 }
 
@@ -74,6 +78,8 @@ export interface RetentionReport {
   idempotencyDeleted: number;
   rumSampleDeleted: number;
   rateEventDeleted: number;
+  /** Nhóm lỗi (error_group) không gặp lại quá RETENTION_ERROR_DAYS đã xoá. */
+  errorGroupDeleted: number;
   /** Số sự kiện chấm công được xoá toạ độ (bản mã + bản rõ) lần chạy này. */
   geoErased: number;
   /** Thông báo trong ứng dụng đã xoá (đã đọc quá hạn + chưa đọc quá hạn). */
@@ -117,6 +123,8 @@ export const RETENTION_SELECTORS = [
   { table: "login_attempt", where: "attempted_at < $1" },
   { table: "idempotency_record", where: "created_at < $1" },
   { table: "rum_sample", where: "received_at < $1" },
+  // Kho lỗi (T-122): đúng mốc chưa xoá, cũ hơn mốc (dù 1 ms) thì xoá.
+  { table: "error_group", where: "last_seen_at < $1" },
   { table: "public_rate_event", where: "at < $1" },
   // Hai bộ chọn cho cùng bảng (hai mốc khác nhau) — mỗi cái một index một phần (0030).
   { table: "notification", where: NOTIFICATION_READ_WHERE },
@@ -418,6 +426,7 @@ export async function runRetention(
     idempotencyDeleted: 0,
     rumSampleDeleted: 0,
     rateEventDeleted: 0,
+    errorGroupDeleted: 0,
     geoErased: 0,
     notificationDeleted: 0,
     mfaChallengeDeleted: 0,
@@ -479,6 +488,7 @@ export async function runRetention(
   await step("rateEventDeleted", () =>
     purge(pool, "public_rate_event", ago(now, RATE_EVENT_DAYS * DAY), batch),
   );
+  await step("errorGroupDeleted", () => purge(pool, "error_group", ago(now, cfg.errorDays * DAY), batch));
   await step("geoErased", () => eraseGeo(pool, ago(now, cfg.geoDays * DAY), batch));
   await step(
     "notificationDeleted",

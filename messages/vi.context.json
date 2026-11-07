@@ -400,6 +400,12 @@
       "duongDanKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "revisionStatusMismatch": "Lỗi 409 INVALID_STATE khi chuyển trạng thái bản nội dung; {status} = trạng thái hiện tại (mã), {expected} = trạng thái cần có (mã)."
     },
+    "errors": {
+      "guiQuaNhieu": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền errors (kho lỗi tự host), beacon lỗi gửi quá nhiều. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "trangKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, đường dẫn trang trong beacon lỗi không chuẩn hoá được. Giữ nguyên ý, ngắn.",
+      "nguonKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, tham số lọc `source` của danh sách lỗi nội bộ sai. Giữ nguyên ý, ngắn.",
+      "releaseKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, tham số lọc `release` (mã phiên bản build) sai định dạng. Giữ nguyên ý, ngắn."
+    },
     "files": {
       "khongTimThayDoiTuong": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "loaiDoiTuongKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
@@ -457,6 +463,8 @@
       "matKhauQuaDai": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "matKhauQuaPhoBien": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "matKhauKhongDuocChuaTen": "Thông báo lỗi nghiệp vụ trả client (AppError WEAK_PASSWORD 422); miền identity. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "matKhauHienTaiKhongDung": "Lỗi khi xác thực lại trước thao tác nhạy cảm (AppError REAUTH_FAILED 403): mật khẩu hiện tại nhập sai.",
+      "canMaXacThucDeXacNhan": "Lỗi khi xác thực lại (AppError MFA_CODE_REQUIRED 403): tài khoản đã bật xác thực hai bước nhưng chưa nhập mã.",
       "passwordTooShort": "Lỗi 422 WEAK_PASSWORD; {min} = độ dài tối thiểu.",
       "maXacThucKhongDung": "Thông báo lỗi nghiệp vụ trả client (AppError INVALID_MFA_CODE 401) khi mã TOTP sai hoặc đã dùng; miền identity. Giữ nguyên ý, ngắn.",
       "thuThachXacThucKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError MFA_CHALLENGE_INVALID 401) khi thử thách TOTP hết hạn/không tồn tại/đã dùng; một thông điệp chung, nói rõ cần đăng nhập lại.",
@@ -488,8 +496,12 @@
       "statusKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "canNeuCanCuTuChoi2": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "subjectRefHint": "Thông báo kiểm tra đầu vào: ô nhập tham chiếu chủ thể phải là mã hồ sơ, không nhập thông tin liên hệ.",
+      "confirmPhrase": "Lỗi kiểm tra đầu vào khi xoá tài khoản tự phục vụ: chuỗi xác nhận thiếu hoặc sai; {phrase} = chuỗi phải gõ (giữ nguyên, không dịch).",
       "cannotStartInState": "Lỗi 409 INVALID_STATE khi bắt đầu xử lý yêu cầu quyền dữ liệu không ở trạng thái 'received'; {status} = mã trạng thái.",
       "requestClosed": "Lỗi 409 INVALID_STATE khi thao tác trên yêu cầu quyền dữ liệu đã hoàn tất/từ chối; {status} = mã trạng thái.",
+      "selfEraseViaProfile": "Lỗi 409 khi HR hoàn tất yêu cầu xoá có tài khoản của CHÍNH người xử lý — phải tự xoá ở trang Cá nhân (xác thực lại).",
+      "accountHasPrivileges": "Lỗi 409 khi HR hoàn tất yêu cầu xoá mà tài khoản đích còn quyền ngoài 'employee' (vd sysadmin, hr) — cần thu hồi quyền trước.",
+      "requestBusy": "Lỗi 409 khi nhân viên tự xoá tài khoản đúng lúc HR đang giữ yêu cầu xoá của họ (khoá NOWAIT) — thử lại.",
       "canLyDoGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy: gia hạn yêu cầu quyền dữ liệu thiếu lý do.",
       "daGiaHanMotLan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_ALREADY_USED 409); miền privacy: gia hạn lần hai bị từ chối.",
       "quaHanKhongGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_TOO_LATE 409); miền privacy: gia hạn sau khi đã quá hạn."
@@ -589,7 +601,8 @@
     },
     "identity": {
       "bootstrapReason": "Lý do ghi vào nhật ký kiểm toán khi tạo quản trị viên đầu tiên bằng lệnh vận hành.",
-      "mfaResetReason": "Lý do ghi vào nhật ký kiểm toán khi vận hành đặt lại TOTP bằng lệnh mfa:reset."
+      "mfaResetReason": "Lý do ghi vào nhật ký kiểm toán khi vận hành đặt lại TOTP bằng lệnh mfa:reset.",
+      "erasedAccountName": "Tên hiển thị thay thế của tài khoản đã bị xoá theo yêu cầu chủ thể (hiện ở nơi còn nhắc tới tài khoản, vd lịch sử việc)."
     },
     "inquiry": {
       "autoRouted": "Ghi chú lịch sử yêu cầu khi hệ thống tự giao người phụ trách theo quy tắc.",
@@ -599,7 +612,8 @@
       "stopWithdrawConsent": "Lý do ghi vào nhật ký/hạn chế khi dừng xử lý dữ liệu vì chủ thể rút đồng ý.",
       "stopRestrictRequest": "Lý do mặc định của lệnh hạn chế xử lý khi yêu cầu không có ghi chú.",
       "stopErase": "Lý do ghi vào nhật ký khi dừng xử lý để xoá dữ liệu theo yêu cầu của chủ thể.",
-      "retainedByLaw": "Lý do hạn chế xử lý khi hồ sơ nhân viên phải giữ theo luật; {categories} = danh mục giữ, ngăn cách bằng dấu chấm phẩy.",
+      "retainedByLaw": "Lý do hạn chế xử lý khi hồ sơ nhân viên phải giữ theo luật; {categories} = danh mục giữ kèm căn cứ trong ngoặc, ngăn cách bằng dấu chấm phẩy.",
+      "selfServiceNote": "Ghi chú của yêu cầu xoá do nhân viên tự gửi trong ứng dụng (không phải HR tiếp nhận).",
       "consent": {
         "inquiryContact": "Văn bản đồng ý hiển thị cho người gửi biểu mẫu liên hệ; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
         "jobApplication": "Văn bản đồng ý hiển thị cho ứng viên; chữ này được băm làm bằng chứng đồng ý — đổi chữ phải đổi phiên bản chính sách.",
@@ -668,6 +682,23 @@
       "taskUpdated": "Câu thông báo việc liên quan có cập nhật (đổi trạng thái, sửa).",
       "other": "Câu thông báo dự phòng cho chủ đề chưa biết."
     }
+  },
+  "accountDelete": {
+    "heading": "Tiêu đề khối xoá tài khoản trong trang Cá nhân.",
+    "intro": "Giải thích hậu quả xoá tài khoản: phần bị xoá ngay và phần phải giữ theo luật.",
+    "password": "Nhãn ô mật khẩu hiện tại (bắt buộc) để xác thực lại.",
+    "totp": "Nhãn ô mã xác thực hai bước; chỉ bắt buộc khi người dùng đã bật.",
+    "confirmLabel": "Nhãn ô gõ chuỗi xác nhận; {phrase} = chuỗi phải gõ đúng (giữ nguyên).",
+    "submit": "Nút gửi yêu cầu xoá tài khoản.",
+    "busy": "Chữ trên nút khi đang gửi yêu cầu xoá.",
+    "passwordRequired": "Lỗi ô mật khẩu khi để trống.",
+    "confirmMismatch": "Lỗi ô xác nhận khi chuỗi gõ không khớp.",
+    "dialogTitle": "Tiêu đề hộp thoại hỏi lần cuối trước khi xoá tài khoản.",
+    "dialogObject": "Đối tượng bị tác động trong hộp thoại (in đậm).",
+    "dialogConsequence": "Hậu quả nói rõ trong hộp thoại: không hoàn tác, bị đăng xuất.",
+    "dialogConfirm": "Nút xác nhận xoá trong hộp thoại (động từ).",
+    "dialogCancel": "Nút huỷ trong hộp thoại (giữ tài khoản).",
+    "cancelled": "Thông báo khi người dùng huỷ ở hộp thoại."
   },
   "mfa": {
     "heading": "Tiêu đề bước hai của đăng nhập (nhập mã TOTP).",

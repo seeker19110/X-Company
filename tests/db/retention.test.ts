@@ -35,6 +35,7 @@ const CFG: RetentionConfig = {
   idempotencyHours: 24,
   rumDays: 30,
   geoDays: 90,
+  errorDays: 30,
 };
 
 describe("cấu hình retention (env)", () => {

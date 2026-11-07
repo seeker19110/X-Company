@@ -527,9 +527,66 @@
 - Lý do (tiêu chí chất lượng cuối): (1) đúng: cả 3 mục có đường tái hiện cụ thể (không có tags.json/asset release; lint nhay_cam chỉ kiểm tên lớp; adapter kho tệp vốn thiết kế để thay, D-005); báo chủ dự án 70 mục cần người là sai. Không khẳng định 8 mục chưa đọc sâu — tách thành task phân loại thay vì đoán.
 - Đường lùi: Bỏ lát 24 khỏi PLAN-harden; phân loại về D-071
 
+### D-073 · 2026-11-06T10:50:16+00:00 · T-116 ARC-RES-005: client S3 và máy chủ S3 tự host cho test 2 bản sao
+
+- Phương án: (1) Client SigV4 tối thiểu tự viết (node:crypto + fetch, không phụ thuộc runtime mới) + máy chủ fixture license cho phép (rclone serve s3 MIT / SeaweedFS Apache-2.0) ghim sha256 qua install-tool.mjs · (2) @aws-sdk/client-s3 (Apache-2.0, cây phụ thuộc lớn) + MinIO · (3) Không làm, chờ chủ dự án chọn nhà cung cấp
+- Chọn: Client SigV4 tối thiểu tự viết (node:crypto + fetch, không phụ thuộc runtime mới) + máy chủ fixture license cho phép (rclone serve s3 MIT / SeaweedFS Apache-2.0) ghim sha256 qua install-tool.mjs
+- Lý do (tiêu chí chất lượng cuối): (1) đúng/an toàn: MinIO và Garage là AGPL — license-policy deny; không thêm cây phụ thuộc runtime lớn vào bundle server (bề mặt chuỗi cung ứng); SigV4 là chuẩn công khai, test được bằng vector của AWS. (2) đường lùi: adapter sau giao ước Storage, đổi sang SDK sau không đổi người gọi. (3) test được trong CI như OpenBao/restic. Chọn nhà cung cấp production vẫn là việc G7 (D-005).
+- Đường lùi: Bỏ adapter S3, giữ diskStorage; MUST ARC-RES-005 về Thiếu cũ
+- Khi chạy thật (đề xuất, chủ dự án quyết ở G7): Khi chạy thật: S3-compatible của nhà cung cấp chủ dự án chọn (cùng vùng với hosting), bucket private, khoá IAM tối thiểu, SSE
+
 ### D-074 · 2026-11-06T11:48:59+00:00 · Bước N−1 (OPS-DEPLOY-003) đỏ ở test 'giữ N bản gần nhất' của v0.3.0: backup.sh CŨ đặt tên bằng date %3N, không đơn điệu trên runner ubuntu-26.04; lỗi đã sửa ở HEAD (294927a) nhưng bản phát hành cũ không sửa được
 
 - Phương án: (1) Bỏ qua đúng một test đó ở bước N−1, chỉ khi backup.sh của bản N−1 chưa có bản sửa (dò theo nội dung: thiếu EPOCHREALTIME), in rõ lý do; tự hết hiệu lực khi bản phát hành kế có bản sửa · (2) Chép scripts/backup.sh của HEAD đè vào worktree N−1 · (3) Chạy lại test đỏ tới khi xanh (retry) · (4) Ghim runner ubuntu-24.04 cho job test
 - Chọn: Bỏ qua đúng một test đó ở bước N−1, chỉ khi backup.sh của bản N−1 chưa có bản sửa (dò theo nội dung: thiếu EPOCHREALTIME), in rõ lý do; tự hết hiệu lực khi bản phát hành kế có bản sửa
 - Lý do (tiêu chí chất lượng cuối): Đúng và an toàn: bước N−1 kiểm code cũ chạy được trên schema mới; ca giữ N bản không phụ thuộc schema, lỗi của nó đã có test hồi quy + bản sửa ở HEAD. Phương án 2 âm thầm đổi code đang kiểm; 3 che lỗi chập chờn; 4 né môi trường thật sẽ chạy production. Phạm vi hẹp nhất, tự hết hạn theo nội dung, không theo tay
 - Đường lùi: Xoá khối KNOWN_FIXED trong scripts/test-prev-release.sh
+
+### D-075 · 2026-11-06T12:13:21+00:00 · T-121 CMP-RIGHTS-007: xoá tài khoản tự phục vụ của người dùng nội bộ (nhân viên) — phạm vi và thời điểm thực thi
+
+- Phương án: (1) Tự phục vụ: xác thực lại (mật khẩu + TOTP nếu đã bật, chống phát lại) → tạo yêu cầu delete cho chính mình và thực thi NGAY trong một giao dịch: thu hồi mọi phiên, vô hiệu đăng nhập (xoá mật khẩu băm, TOTP, thiết bị, đăng ký thông báo), xoá PII không thuộc danh mục phải giữ (RETAINED_BY_SUBJECT/data-map), giữ phần bắt buộc kèm processing_restriction ghi căn cứ; blob qua outbox (T-125) · (2) Tự phục vụ chỉ tạo yêu cầu cho HR xử lý trong hạn (NĐ 356) — người dùng không tự xoá được · (3) Xoá toàn bộ dữ liệu kể cả phần pháp luật bắt giữ
+- Chọn: Tự phục vụ: xác thực lại (mật khẩu + TOTP nếu đã bật, chống phát lại) → tạo yêu cầu delete cho chính mình và thực thi NGAY trong một giao dịch: thu hồi mọi phiên, vô hiệu đăng nhập (xoá mật khẩu băm, TOTP, thiết bị, đăng ký thông báo), xoá PII không thuộc danh mục phải giữ (RETAINED_BY_SUBJECT/data-map), giữ phần bắt buộc kèm processing_restriction ghi căn cứ; blob qua outbox (T-125)
+- Lý do (tiêu chí chất lượng cuối): Đúng yêu cầu (tự phục vụ + xác thực lại + lan mọi kho + chỉ giữ phần bắt buộc kèm căn cứ); phương án 3 trái BLLĐ/NĐ 145 về lưu hồ sơ lao động; phương án 2 không phải tự phục vụ. Xác thực lại chặn kẻ chiếm phiên xoá tài khoản; audit ghi chỉ số đếm/loại, không PII. Ngoại lệ cứng: người merge
+- Đường lùi: Tắt route tự phục vụ (yêu cầu đi lại qua HR); dữ liệu đã xoá chỉ khôi phục từ sao lưu theo quy trình DSAR
+
+### D-076 · 2026-11-07T01:55:21+00:00 · T-122: bộ bắt lỗi client (ErrorReporter ở 3 layout) làm tổng JS tĩnh 231,9 KB gzip > trần 230 KB (bản gốc đã chạm trần 230,0)
+
+- Phương án: (1) Nâng max_static_js_gzip_kb_total 230 → 232 trong cùng PR, ghi đo trước/sau (230,0 → 231,9 KB) và lý do: tính năng PRF-WEB-008 bắt buộc, không có cách bắt lỗi window/promise mà không thêm mã client · (2) Bỏ bắt lỗi chưa xử lý ở client, chỉ giữ reportClientError gọi tay — mất lỗi window/unhandledrejection · (3) Giữ trần 230, tối ưu chỗ khác trong task riêng — CI check:perf-budget đỏ tới khi xong
+- Chọn: Nâng max_static_js_gzip_kb_total 230 → 232 trong cùng PR, ghi đo trước/sau (230,0 → 231,9 KB) và lý do: tính năng PRF-WEB-008 bắt buộc, không có cách bắt lỗi window/promise mà không thêm mã client
+- Lý do (tiêu chí chất lượng cuối): Ngân sách là công cụ ra quyết định có ý thức chứ không phải để chặn tính năng bắt buộc; nâng 2 KB (0,9 %) kèm số đo trước/sau đúng quy trình docs/PERF-BUDGET.md 'Đổi ngân sách'. Phương án 2 bỏ mất phần chính của PRF-WEB-008; phương án 3 để cổng đỏ. Reporter đã đặt ở 3 layout thay vì root (3,8 → 1,9 KB)
+- Đường lùi: Hạ trần về 230 và bỏ ErrorReporter khỏi layout
+
+### D-077 · 2026-11-07T01:55:21+00:00 · T-122: kho lỗi error_group là dữ liệu toàn hệ thống; quyền errors.read (sysadmin) có thấy lỗi phát sinh từ công ty khác không
+
+- Phương án: (1) Chấp nhận: một đơn vị vận hành (sysadmin là quản trị hệ thống, không phải vai trò nghiệp vụ của công ty); thông điệp/stack đã che bí mật + PII; ghi nợ thêm company_id khi có triển khai nhiều tổ chức vận hành độc lập · (2) Thêm company_id nullable cho lỗi server có actor, lọc theo công ty của người xem; lỗi client/không actor chỉ quản trị hệ thống cấp cao thấy
+- Chọn: Chấp nhận: một đơn vị vận hành (sysadmin là quản trị hệ thống, không phải vai trò nghiệp vụ của công ty); thông điệp/stack đã che bí mật + PII; ghi nợ thêm company_id khi có triển khai nhiều tổ chức vận hành độc lập
+- Lý do (tiêu chí chất lượng cuối): Triển khai hiện là một tổ chức vận hành một cụm (ADR-0001 tự host); lỗi là dữ liệu vận hành, đã che; phương án 2 cần phân cấp sysadmin chưa tồn tại và lỗi client công khai không có công ty. Giữ đường lùi: thêm cột nullable sau không phá dữ liệu
+- Đường lùi: Thêm cột company_id (migration expand) + lọc trong getErrorGroups
+
+### D-078 · 2026-11-07T01:56:06+00:00 · Đo chung T-121 + T-122 (build thật 2026-11-07): tổng JS tĩnh 233,3 KB > trần 232 của D-076 — form xoá tài khoản (T-121, CMP-RIGHTS-007) thêm ~1,4 KB
+
+- Phương án: (1) Nâng trần 232 → 234 (đo: gốc 230,0 → T-122 231,9 → T-121+T-122 233,3 KB), ghi vào docs/PERF-BUDGET.md; cả hai là MUST bắt buộc có UI client · (2) Chuyển form xoá tài khoản thành form HTML thuần không JS (mất hộp thoại xác nhận phía client, server vẫn đòi confirm + xác thực lại)
+- Chọn: Nâng trần 232 → 234 (đo: gốc 230,0 → T-122 231,9 → T-121+T-122 233,3 KB), ghi vào docs/PERF-BUDGET.md; cả hai là MUST bắt buộc có UI client
+- Lý do (tiêu chí chất lượng cuối): Hộp thoại hỏi lần cuối là chống bấm nhầm cho thao tác không đảo ngược (tiêu chí 1 an toàn > 5 chi phí); +1,4 KB (0,6 %) có số đo; trang /app/me vẫn trong ngân sách theo route
+- Đường lùi: Hạ trần về 232 và đổi form sang HTML thuần
+
+### D-079 · 2026-11-07T03:19:22+00:00 · Bước N−1 (test-prev-release) đỏ vì test 'COMMENT PII khớp data-map' của v0.3.0 đếm cố định 45 cột PII, schema HEAD thêm error_group.message (T-122)
+
+- Phương án: (1) Bỏ qua có chữ ký (danh mục SAME_VERSION): test tài liệu↔schema cùng phiên bản không chạy ở bước N−1; HEAD vẫn chạy bản của nó · (2) Sao data-map HEAD vào cây N−1: không đủ, test cũ đếm cố định 45 · (3) Sửa tag v0.3.0: không được (bản đã phát hành, không rewrite)
+- Chọn: Bỏ qua có chữ ký (danh mục SAME_VERSION): test tài liệu↔schema cùng phiên bản không chạy ở bước N−1; HEAD vẫn chạy bản của nó
+- Lý do (tiêu chí chất lượng cuối): Đúng: kiểm này nói về tài liệu của chính một phiên bản, không về tương thích rollback mã N−1 trên schema N; HEAD đã chạy nó trên cây HEAD (test vẫn đỏ khi thêm cột PII mà quên data-map). Bỏ qua theo chữ ký, hiện ::warning trên CI, tự hết khi test đổi tên. Không nới test nào chạy ở HEAD.
+- Đường lùi: Xoá dòng SAME_VERSION trong heredoc của scripts/test-prev-release.sh
+
+### D-080 · 2026-11-07T04:45:25+00:00 · UX-CONTENT-001 đỏ: chuỗi xác nhận gõ tay của tự xoá tài khoản 'XOA TAI KHOAN' (T-121) không dấu
+
+- Phương án: (1) Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do · (2) Đổi sang 'XÓA TÀI KHOẢN' có dấu: người dùng phải gõ dấu (phụ thuộc bộ gõ, NFC/NFD lệch) — chặn người dùng thật · (3) Đổi thành dạng gạch nối để lách regex: vẫn là chữ không dấu, chỉ né kiểm
+- Chọn: Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do
+- Lý do (tiêu chí chất lượng cuối): mã T-121 (lib/privacy/self-delete.pure.ts) chọn ASCII để gõ được trên mọi bàn phím; đây là mã xác nhận, không phải văn bản giao diện (nhãn quanh nó qua t() có dấu). Ngoại lệ đặt tên tệp cụ thể, mọi tệp khác vẫn bị quét; chọn 3 là làm xanh bằng cách lừa kiểm.
+- Đường lùi: Bỏ --exclude ở lệnh Kiểm UX-CONTENT-001 và đổi SELF_DELETE_CONFIRM
+
+### D-081 · 2026-11-07T04:49:07+00:00 · 11 lệnh Kiểm blueprint về bảo vệ nhánh main đỏ vì check:github còn so ruleset tag (WF-REL-003, chờ người import)
+
+- Phương án: (1) Thêm --no-tags cho check:github; 10 mục về nhánh main dùng --no-tags, WF-REL-003 và release-check giữ kiểm đầy đủ · (2) Bỏ tick 10 mục main tới khi người import ruleset tag: sai sự thật — bảo vệ nhánh main đã khớp · (3) Gỡ kiểm ruleset tag khỏi check:github: nới cổng
+- Chọn: Thêm --no-tags cho check:github; 10 mục về nhánh main dùng --no-tags, WF-REL-003 và release-check giữ kiểm đầy đủ
+- Lý do (tiêu chí chất lượng cuối): Mỗi lệnh kiểm chỉ chứng minh đúng mục của nó; ruleset main vẫn so với GitHub, tags.json vẫn kiểm hợp lệ tại chỗ; mặc định không đổi nên cổng phát hành (release-check, WF-REL-003) vẫn đỏ tới khi người import.
+- Đường lùi: Bỏ ' -- --no-tags' ở 10 lệnh Kiểm trong BLUEPRINT.md

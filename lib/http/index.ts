@@ -21,6 +21,7 @@ import {
   runWithLogContext,
 } from "../nen/log.ts";
 import { logSecurityEvent } from "../nen/security-event.ts";
+import { recordServerError } from "../errors/index.ts";
 import { readCapped } from "./body.ts";
 import { guarded, type GuardOptions } from "./idempotency.ts";
 import { kb, msToSeconds } from "../nen/units.ts";
@@ -211,6 +212,14 @@ function recordRequest(req: Request, status: number, startedMs: number): void {
   }
 }
 
+function safePathname(req: Request): string | null {
+  try {
+    return new URL(req.url).pathname;
+  } catch {
+    return null;
+  }
+}
+
 /** Route công khai: request_id/trace_id + ngữ cảnh log + ánh xạ lỗi. */
 export function publicRoute(handler: Handler<RequestContext>): (req: Request) => Promise<Response> {
   return async (req) => {
@@ -227,6 +236,9 @@ export function publicRoute(handler: Handler<RequestContext>): (req: Request) =>
       try {
         return await handler({ req, requestId });
       } catch (err) {
+        // Lỗi chưa lường (→ 500 INTERNAL) vào kho lỗi tự host, gắn release (T-122); chạy nền, không chặn/không đổi phản hồi.
+        if (!(err instanceof AppError) && !(err instanceof $ZodError))
+          recordServerError(err, { path: safePathname(req) });
         return errorResponse(err, requestId);
       }
     });

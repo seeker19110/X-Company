@@ -2,7 +2,8 @@
 // Không `curl | sh`, không phụ thuộc npm: tải bằng `curl --proto =https`, giải nén bằng `tar`/`bzip2` của hệ điều hành.
 // Dùng:  node scripts/tools/install-tool.mjs install <tên…>      cài (idempotent; sai sha256 → xoá bản tải, exit 1)
 //        node scripts/tools/install-tool.mjs path <tên>          in đường dẫn nhị phân đã cài (exit 1 nếu chưa cài)
-//        node scripts/tools/install-tool.mjs check-pins [tên…]   tải tệp checksum CHÍNH THỨC của bản phát hành, so với bảng ghim
+//        node scripts/tools/install-tool.mjs run <tên> [đối số…]  cài nếu thiếu rồi chạy, giữ exit code (npm run -s gitleaks -- …)
+//        node scripts/tools/install-tool.mjs check-pins [tên…]  tải tệp checksum CHÍNH THỨC của bản phát hành, so với bảng ghim
 //        node scripts/tools/install-tool.mjs list                bảng phiên bản/giấy phép
 // Bố cục: `.tools/<tên>/<phiên bản>/<bin>` + liên kết `.tools/bin/<bin>`. Nguồn + ngày xác minh: docs/ops/tools.md.
 // Thêm công cụ = thêm một mục vào TOOLS (đủ url + sha256 của tệp tải + cách giải nén); sha256 lấy từ tệp checksum chính thức.
@@ -19,6 +20,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { constants } from "node:os";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -217,6 +219,34 @@ export const TOOLS = {
     },
     versionProbe: { args: ["version"], expect: /^v2\.11\.7 / },
   },
+  // rclone `serve s3`: máy chủ S3-compatible TỰ HOST cho contract test kho tệp + e2e 2 bản sao (T-116, D-073). MIT — MinIO/Garage
+  // là AGPL (license-policy deny). `serve s3` được rclone gắn nhãn Experimental: chỉ là fixture test, không phải kho production
+  // (chọn nhà cung cấp production ở G7, D-005). Tải từ downloads.rclone.org (trang phát hành chính thức; GitHub bị chặn ở môi
+  // trường này), sha256 từ SHA256SUMS chính thức cùng thư mục (tra 2026-11-06; v1.75.2 phát hành 2026-10-09 theo changelog).
+  rclone: {
+    version: "1.75.2",
+    license: "MIT",
+    bin: "rclone",
+    verified: "2026-11-06",
+    release: "https://rclone.org/changelog/#v1-75-2-2026-10-09",
+    base: "https://downloads.rclone.org/v1.75.2",
+    checksums: "SHA256SUMS",
+    platforms: {
+      "linux-x64": {
+        archive: "rclone-v1.75.2-linux-amd64.zip",
+        sha256: "349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702",
+        kind: "zip",
+        member: "rclone-v1.75.2-linux-amd64/rclone",
+      },
+      "linux-arm64": {
+        archive: "rclone-v1.75.2-linux-arm64.zip",
+        sha256: "7e1e8d69654941b7b7df84ee74c5f7fb09cce7d5496947fb7bf16b55ff427d10",
+        kind: "zip",
+        member: "rclone-v1.75.2-linux-arm64/rclone",
+      },
+    },
+    versionProbe: { args: ["version"], expect: /^rclone v1\.75\.2\b/ },
+  },
   // OWASP ZAP (Java, chạy không cần docker): quét baseline qua https của staging — T-055. Cả thư mục (jar + plugin);
   // hash chính thức nằm trong ZapVersions.xml của zap-admin (tệp này chỉ liệt kê bản hiện hành → check-pins lệch khi ZAP lên bản mới).
   zap: {
@@ -333,6 +363,14 @@ function install(name) {
       const r = spawnSync("tar", ["-xzf", archive, "-C", x, plat.member], { encoding: "utf8" });
       if (r.status !== 0) fail(`${name}: giải nén thất bại: ${(r.stderr || "").slice(0, 200)}`);
       renameSync(path.join(x, plat.member), staged);
+    } else if (plat.kind === "zip") {
+      // rclone chỉ phát hành .zip: giải đúng MỘT thành viên bằng `unzip` của hệ điều hành (-j: bỏ thư mục, -o: không hỏi).
+      const x = path.join(tmp, "x");
+      mkdirSync(x);
+      const r = spawnSync("unzip", ["-q", "-j", "-o", archive, plat.member, "-d", x], { encoding: "utf8" });
+      if (r.status !== 0)
+        fail(`${name}: giải nén zip thất bại (cần unzip): ${(r.stderr || "").slice(0, 200)}`);
+      renameSync(path.join(x, path.basename(plat.member)), staged);
     } else if (plat.kind === "bz2") {
       const r = spawnSync("bzip2", ["-dc", archive], { maxBuffer: 1 << 30 });
       if (r.status !== 0) fail(`${name}: giải nén bz2 thất bại`);
@@ -408,11 +446,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const p = installedPath(args[0] ?? "");
     if (!p) fail(`${args[0]} chưa cài (chạy: node scripts/tools/install-tool.mjs install ${args[0]})`);
     process.stdout.write(`${p}\n`);
+  } else if (cmd === "run") {
+    // Cài nếu thiếu (idempotent, kiểm sha256) rồi chạy với đối số còn lại; exit code của công cụ được giữ nguyên.
+    const [name, ...rest] = args;
+    if (!name) fail("thiếu tên công cụ", 2);
+    if (!installedPath(name)) install(name);
+    const r = spawnSync(installedPath(name), rest, { stdio: "inherit" });
+    if (r.error) fail(`${name}: ${r.error.message}`);
+    // Bị tín hiệu dừng: báo rõ, exit 128+số tín hiệu (không lẫn với exit 1 = "có phát hiện" của công cụ).
+    if (r.signal) fail(`${name}: bị dừng bởi ${r.signal}`, 128 + (constants.signals[r.signal] ?? 0));
+    process.exit(r.status ?? 1);
   } else if (cmd === "check-pins") {
     mkdirSync(TOOLS_DIR, { recursive: true });
     process.exit(checkPins(args.length > 0 ? args : Object.keys(TOOLS)) === 0 ? 0 : 1);
   } else if (cmd === "list") {
     for (const [n, t] of Object.entries(TOOLS))
       process.stdout.write(`${n} ${t.version} ${t.license} ${t.release}\n`);
-  } else fail("dùng: install <tên…> | path <tên> | check-pins [tên…] | list", 2);
+  } else fail("dùng: install <tên…> | path <tên> | run <tên> [đối số…] | check-pins [tên…] | list", 2);
 }

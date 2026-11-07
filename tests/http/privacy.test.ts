@@ -3,10 +3,29 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
+import { meHandler } from "../../lib/identity/routes.ts";
+import { base32Decode, hotp } from "../../lib/identity/totp.pure.ts";
 import { InquiryInput, submitInquiry } from "../../lib/inquiry/index.ts";
-import { getRequestExport, getRequests, postRequest, postRequestAction } from "../../lib/privacy/routes.ts";
+import { SELF_DELETE_CONFIRM } from "../../lib/privacy/self-delete.pure.ts";
+import {
+  getRequestExport,
+  getRequests,
+  postDeleteOwnAccount,
+  postRequest,
+  postRequestAction,
+} from "../../lib/privacy/routes.ts";
 import { freshDb, type TestDb } from "../helpers/db.ts";
-import { cookieFrom, req, seedCompany, seedUser, setTestEnv, loginThrough } from "../helpers/fixtures.ts";
+import {
+  cookieFrom,
+  req,
+  seedCompany,
+  seedUser,
+  setTestEnv,
+  loginThrough,
+  nextTotpCode,
+  PASSWORD,
+  totpStateOf,
+} from "../helpers/fixtures.ts";
 
 setTestEnv();
 interface S {
@@ -269,5 +288,198 @@ describe("API quyền chủ thể dữ liệu (T-040)", () => {
     );
     assert.equal(listed.respond_overdue, false);
     assert.equal(listed.overdue, false);
+  });
+});
+
+// Xoá tài khoản TỰ PHỤC VỤ (T-121, CMP-RIGHTS-007, D-075): xác thực lại trong cùng request, chủ thể luôn là chính mình.
+describe("xoá tài khoản tự phục vụ (T-121)", () => {
+  let db: TestDb;
+  let companyId: string;
+  const DEL = "/api/app/me/delete";
+  const del = (s: S | null, body: unknown, key?: string | null) =>
+    postDeleteOwnAccount(req("POST", DEL, { cookie: s?.cookie, csrf: s?.csrf, body, idempotencyKey: key }));
+  const valid = (over: Record<string, unknown> = {}) => ({
+    password: PASSWORD,
+    confirm: SELF_DELETE_CONFIRM,
+    ...over,
+  });
+  const me = (s: S) => meHandler(req("GET", "/api/app/me", { cookie: s.cookie }));
+  const codeOf = async (r: Response) => ((await r.json()) as { error: { code: string } }).error.code;
+  const pwFailures = async (email: string) =>
+    (
+      await db.admin.query<{ n: number }>(
+        "SELECT count(*)::int AS n FROM login_attempt WHERE email = $1 AND NOT success",
+        [email],
+      )
+    ).rows[0]!.n;
+  type Grants = NonNullable<Parameters<typeof seedUser>[1]>["grants"];
+  const newUser = async (grants: Grants = [{ role: "employee", scopeType: "self" }], withEmployee = true) => {
+    const u = await seedUser(companyId, { grants, withEmployee });
+    return { ...u, s: await login(u.email) };
+  };
+  const accountOf = async (userId: string) =>
+    (
+      await db.admin.query(
+        "SELECT email, password_hash, totp_secret_enc, disabled_at FROM app_user WHERE id = $1",
+        [userId],
+      )
+    ).rows[0];
+
+  before(async () => {
+    db = await freshDb();
+    companyId = (await seedCompany("Công ty Xoá")).companyId;
+  });
+  after(async () => {
+    await db.close();
+  });
+
+  test("api5-bfla POST /api/app/me/delete — chưa đăng nhập 401; tài khoản không gắn nhân viên 403 (audit denied); thiếu Idempotency-Key 400; thiếu CSRF 403", async () => {
+    assert.equal((await del(null, valid())).status, 401);
+    const noEmp = await newUser([], false);
+    const denied = await del(noEmp.s, valid());
+    assert.equal(denied.status, 403);
+    const audit = await db.admin.query(
+      "SELECT 1 FROM audit_event WHERE action = 'account.delete_own' AND result = 'denied' AND actor_user_id = $1",
+      [noEmp.userId],
+    );
+    assert.equal(audit.rowCount, 1);
+    const e = await newUser();
+    assert.equal((await del(e.s, valid(), null)).status, 400, "thiếu Idempotency-Key");
+    assert.equal((await del({ cookie: e.s.cookie, csrf: "" }, valid())).status, 403, "thiếu CSRF");
+    assert.equal((await me(e.s)).status, 200, "tài khoản còn nguyên");
+    assert.equal((await me(noEmp.s)).status, 200);
+  });
+
+  test("api5-bfla POST /api/app/me/delete — thiếu/sai confirm hoặc khoá lạ → 400 trước khi kiểm mật khẩu; sai mật khẩu → 403 và tăng đếm sai", async () => {
+    const e = await newUser();
+    const noConfirm = await del(e.s, { password: PASSWORD });
+    assert.equal(noConfirm.status, 400);
+    assert.equal(await codeOf(noConfirm), "VALIDATION");
+    assert.equal((await del(e.s, valid({ confirm: "xoa tai khoan" }))).status, 400);
+    assert.equal((await del(e.s, valid({ password: "" }))).status, 400);
+    assert.equal(await pwFailures(e.email), 0, "400 không chạm bộ đếm mật khẩu");
+
+    const wrong = await del(e.s, valid({ password: "Sai-mat-khau-hoan-toan-1" }));
+    assert.equal(wrong.status, 403);
+    assert.equal(await codeOf(wrong), "REAUTH_FAILED");
+    assert.equal(await pwFailures(e.email), 1, "sai mật khẩu tính vào bộ đếm đăng nhập");
+    assert.equal(
+      (
+        await db.admin.query(
+          "SELECT 1 FROM audit_event WHERE action = 'auth.reauth' AND result = 'denied' AND actor_user_id = $1",
+          [e.userId],
+        )
+      ).rowCount,
+      1,
+    );
+    assert.equal((await me(e.s)).status, 200, "phiên còn hiệu lực");
+    assert.ok((await accountOf(e.userId)).password_hash !== null);
+    assert.equal((await db.admin.query("SELECT 1 FROM data_subject_request")).rowCount, 0);
+  });
+
+  test("api1-bola POST /api/app/me/delete — người khác không xoá được tài khoản của tôi: không có tham số chủ thể (khoá lạ 400), chỉ tài khoản của phiên bị xoá", async () => {
+    const mine = await newUser();
+    const other = await newUser();
+    const mineEmail = (await accountOf(mine.userId)).email;
+    for (const extra of [
+      { user_id: mine.userId },
+      { employee_id: mine.employeeId },
+      { subject_ref: mine.employeeId },
+    ]) {
+      const r = await del(other.s, valid(extra));
+      assert.equal(r.status, 400, JSON.stringify(Object.keys(extra)));
+    }
+    const res = await del(other.s, valid());
+    assert.equal(res.status, 200);
+    assert.equal((await me(mine.s)).status, 200, "tài khoản của tôi không bị đụng");
+    assert.equal((await accountOf(mine.userId)).email, mineEmail);
+    assert.equal((await accountOf(other.userId)).disabled_at instanceof Date, true);
+    const subjects = (
+      await db.admin.query(
+        "SELECT subject_id FROM data_subject_request WHERE kind = 'delete' AND status = 'done'",
+      )
+    ).rows.map((r) => r.subject_id);
+    assert.deepEqual(subjects, [other.employeeId]);
+  });
+
+  test("api1-bola POST /api/app/me/delete — xoá xong: mọi phiên cũ 401, đăng nhập lại thất bại, cookie bị xoá; yêu cầu ghi phần xoá/giữ", async () => {
+    const e = await newUser();
+    const second = await login(e.email); // phiên thứ hai (thiết bị khác)
+    const key = randomUUID();
+    const res = await del(e.s, valid(), key);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    assert.equal(res.headers.get("clear-site-data"), '"cache", "storage"');
+    const rq = (await res.json()).request;
+    assert.equal(rq.status, "done");
+    assert.equal(rq.kind, "delete");
+    assert.equal(rq.subject_type, "employee");
+    assert.equal(rq.result.erased, true);
+    assert.equal(rq.result.deleted.account.sessions, 2);
+    assert.equal(rq.result.deleted.account.account, 1);
+    const retained = rq.result.retained as { reason: string }[];
+    assert.ok(retained.length >= 2 && retained.every((r) => r.reason.length > 0));
+    assert.equal((await me(e.s)).status, 401);
+    assert.equal((await me(second)).status, 401);
+    assert.equal((await loginThrough(e.email)).status, 401, "đăng nhập lại thất bại");
+    assert.equal((await del(e.s, valid(), key)).status, 401, "gửi lại cùng khoá: phiên đã mất");
+    const acc = await accountOf(e.userId);
+    assert.equal(acc.password_hash, null);
+    assert.notEqual(acc.email, e.email.toLowerCase());
+  });
+
+  test("api1-bola POST /api/app/me/delete — TOTP đã bật: thiếu mã 403, mã đã dùng (phát lại) 403 và tăng đếm sai TOTP; mã mới → xoá, xoá cả bí mật TOTP", async () => {
+    const h = await newUser([{ role: "hr", scopeType: "company" }]); // vai trò bắt buộc TOTP → đăng ký ở lần đăng nhập
+    const st = await totpStateOf(h.email);
+    assert.ok(st.secret !== null && st.lastStep !== null);
+    const mfaFailures = async () =>
+      (
+        await db.admin.query<{ n: number }>("SELECT count(*)::int AS n FROM mfa_failure WHERE user_id = $1", [
+          h.userId,
+        ])
+      ).rows[0]!.n;
+    const missing = await del(h.s, valid());
+    assert.equal(missing.status, 403);
+    assert.equal(await codeOf(missing), "MFA_CODE_REQUIRED");
+    const used = hotp(base32Decode(st.secret!)!, st.lastStep!);
+    const replay = await del(h.s, valid({ totp: used }));
+    assert.equal(replay.status, 403);
+    assert.equal(await codeOf(replay), "INVALID_MFA_CODE");
+    assert.equal(await mfaFailures(), 1, "phát lại tính vào bộ đếm sai TOTP");
+    assert.equal((await me(h.s)).status, 200);
+    const fresh = await nextTotpCode(st.secret!, st.lastStep);
+    const ok = await del(h.s, valid({ totp: fresh }));
+    assert.equal(ok.status, 200);
+    const acc = await accountOf(h.userId);
+    assert.equal(acc.totp_secret_enc, null);
+    assert.equal(await mfaFailures(), 0, "lần sai TOTP của tài khoản đã xoá cũng xoá");
+  });
+
+  test("api1-bola POST /api/app/me/delete — sysadmin hiệu lực cuối: 409, không xoá gì, không tính là lần sai mật khẩu", async () => {
+    const a = await newUser([{ role: "sysadmin", scopeType: "company" }]);
+    const st = await totpStateOf(a.email);
+    const before = await pwFailures(a.email);
+    const r = await del(a.s, valid({ totp: await nextTotpCode(st.secret!, st.lastStep) }));
+    assert.equal(r.status, 409);
+    assert.equal(await codeOf(r), "LAST_SYSADMIN");
+    assert.equal(await pwFailures(a.email), before);
+    assert.equal((await me(a.s)).status, 200);
+    assert.ok((await accountOf(a.userId)).password_hash !== null);
+  });
+
+  test("api1-bola POST /api/app/me/delete — hai request song song cùng phiên: đúng một lần xoá, request kia bị từ chối (không 500)", async () => {
+    const e = await newUser();
+    const rs = await Promise.all([del(e.s, valid()), del(e.s, valid())]);
+    const codes = rs.map((r) => r.status).sort();
+    assert.equal(codes.filter((c) => c === 200).length, 1, JSON.stringify(codes));
+    assert.ok(
+      codes.every((c) => [200, 401, 403, 409].includes(c)),
+      JSON.stringify(codes),
+    );
+    const n = await db.admin.query(
+      "SELECT 1 FROM data_subject_request WHERE subject_id = $1 AND kind = 'delete' AND status = 'done'",
+      [e.employeeId],
+    );
+    assert.equal(n.rowCount, 1);
   });
 });

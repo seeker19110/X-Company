@@ -16,6 +16,7 @@
 set -euo pipefail
 umask 077
 export LC_ALL=C
+unset GLOBSORT # bash ≥ 5.3: thứ tự mở rộng glob phải là theo tên (giữ N bản mới nhất dựa vào đó)
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/pg-env.sh
 source "$ROOT/scripts/lib/pg-env.sh"
@@ -70,7 +71,9 @@ DUMP="$BASE.dump"
 # Bản mới phải đứng SAU mọi bản đã có theo thứ tự tên: đồng hồ lùi (hoặc trùng mili giây) thì dừng, không ghi đè và
 # không để bước giữ N bản xoá nhầm chính bản vừa tạo.
 # Glob có quote phần thư mục (BACKUP_DIR chứa `[`, `*`… không bị hiểu thành mẫu); LC_ALL=C → mở rộng đã xếp theo byte.
+# failglob kế thừa (BASHOPTS) sẽ làm thư mục rỗng chết; GLOBSORT (bash ≥ 5.3) bị gỡ ở đầu tệp để giữ thứ tự theo tên.
 shopt -s nullglob
+shopt -u failglob
 existing=("$BACKUP_DIR"/xc-*.manifest.json)
 shopt -u nullglob
 if [ "${#existing[@]}" -gt 0 ]; then

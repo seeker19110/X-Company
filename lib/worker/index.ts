@@ -2,6 +2,7 @@
 // thử lại với backoff mũ có jitter, hết lần/sai schema/lỗi vĩnh viễn → DLQ (`status = 'dead'`), khử trùng consumer.
 // Mô hình: (1) giao dịch ngắn "claim" đánh dấu processing + thuê (locked_until) rồi commit; (2) mỗi việc chạy một giao dịch
 // riêng gồm processed_message + tác động + đánh dấu done (nguyên tử). Worker chết → thuê hết hạn → việc được lấy lại.
+// Handler có `effect` (gọi mạng, vd xoá blob S3) chạy effect TRƯỚC giao dịch (2), ngoài mọi giao dịch (DB-TX-003); effect lũy đẳng.
 import type pg from "pg";
 import { getPool } from "../db/index.ts";
 import { log, redactString } from "../nen/log.ts";
@@ -13,7 +14,7 @@ import { msToSeconds } from "../nen/units.ts";
 export { DEFAULT_MAX_ATTEMPTS, nextAttemptDelay } from "./backoff.pure.ts";
 export { ChannelDisabledError, PermanentJobError, logChannel } from "./channels.ts";
 export type { Channel, DeliveryMessage } from "./channels.ts";
-export { defaultRegistry, Registry } from "./handlers.ts";
+export { BLOB_DELETE_TOPIC, defaultRegistry, Registry } from "./handlers.ts";
 export type { Handler, JobEvent } from "./handlers.ts";
 
 export interface WorkerOptions {
@@ -128,6 +129,14 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
     await markDead(pool, ev, `payload sai schema — ${issues}`, now);
     return "dead";
   }
+  if (handler.effect) {
+    // Tác động mạng chạy NGOÀI giao dịch và không giữ kết nối pool (DB-TX-003); lũy đẳng nên lượt sau chạy lại được.
+    try {
+      await handler.effect(parsed.data, ev);
+    } catch (err) {
+      return failed(pool, ev, err, o);
+    }
+  }
   const c = await pool.connect();
   try {
     await c.query("BEGIN");
@@ -146,31 +155,46 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
     return "done";
   } catch (err) {
     await rollback(c);
-    if (err instanceof ChannelDisabledError) {
-      // Kênh tắt: không tính là lần lỗi; giữ pending, thử lại sau.
-      await pool.query(
-        `UPDATE outbox_event SET status = 'pending', attempts = GREATEST(attempts - 1, 0), locked_until = NULL,
-                last_error = $3, next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
-          WHERE id = $1 AND status = 'processing'`,
-        [ev.id, now, errorText(err), msToSeconds(o.channelOffDelayMs)],
-      );
-      return "deferred";
-    }
-    if (err instanceof PermanentJobError || ev.attempts >= o.maxAttempts) {
-      await markDead(pool, ev, errorText(err), now);
-      return "dead";
-    }
-    const delay = nextAttemptDelay(ev.attempts, o.rand());
-    await pool.query(
-      `UPDATE outbox_event SET status = 'pending', locked_until = NULL, last_error = $3,
-              next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
-        WHERE id = $1 AND status = 'processing'`,
-      [ev.id, now, errorText(err), msToSeconds(delay)],
-    );
-    return "retried";
+    return failed(pool, ev, err, o);
   } finally {
     c.release();
   }
+}
+
+/**
+ * Việc lỗi: kênh tắt → hoãn (không tính lần); lỗi vĩnh viễn/hết lần → DLQ; còn lại → pending với backoff.
+ * Mốc thời gian lấy LÚC LỖI (không phải lúc lấy việc): `effect` gọi mạng có thể mất tới hết timeout, tính backoff từ mốc cũ
+ * thì `next_attempt_at` rơi vào quá khứ và việc bị lấy lại ngay, đốt hết lượt thử (review #100).
+ */
+async function failed(
+  pool: pg.Pool,
+  ev: Claimed,
+  err: unknown,
+  o: Required<WorkerOptions>,
+): Promise<Outcome> {
+  const now = o.now();
+  if (err instanceof ChannelDisabledError) {
+    // Kênh tắt: không tính là lần lỗi; giữ pending, thử lại sau.
+    await pool.query(
+      `UPDATE outbox_event SET status = 'pending', attempts = GREATEST(attempts - 1, 0), locked_until = NULL,
+              last_error = $3, next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
+        WHERE id = $1 AND status = 'processing'`,
+      [ev.id, now, errorText(err), msToSeconds(o.channelOffDelayMs)],
+    );
+    return "deferred";
+  }
+  if (err instanceof PermanentJobError || ev.attempts >= o.maxAttempts) {
+    await markDead(pool, ev, errorText(err), now);
+    return "dead";
+  }
+  const delay = nextAttemptDelay(ev.attempts, o.rand());
+  await pool.query(
+    `UPDATE outbox_event SET status = 'pending', locked_until = NULL, last_error = $3,
+            next_attempt_at = $2::timestamptz + make_interval(secs => $4::double precision)
+      WHERE id = $1 AND status = 'processing'`,
+    [ev.id, now, errorText(err), msToSeconds(delay)],
+  );
+  return "retried";
 }
 
 /** Một lượt: lấy việc đến hạn và xử lý tuần tự. */

@@ -2,6 +2,8 @@ name: Release
 
 # WF-REL-001: SemVer sinh tự động từ Conventional Commits bằng release-please (Release PR; không sửa tay số phiên bản).
 # Cần bật Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+# WF-REL-003: khi Release PR được merge (release-please tạo tag + Release), job `release-assets` đính tarball mã nguồn
+# đúng tag + SHA256SUMS vào GitHub Release. Tag `v*` bất biến nhờ ruleset `.github/rulesets/tags.json` (người import).
 on:
   push:
     branches: [main]
@@ -18,8 +20,39 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: rp
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  release-assets:
+    name: release-assets
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # chỉ để `gh release upload` vào Release vừa tạo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tarball đúng tag + SHA256SUMS, đính vào Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in v[0-9]*) ;; *) echo "::error::tag lạ: $TAG"; exit 1 ;; esac
+          git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null
+          name="x-company-$TAG"
+          git archive --format=tar.gz --prefix="$name/" -o "$name.tar.gz" "$TAG"
+          sha256sum "$name.tar.gz" > SHA256SUMS
+          sha256sum --check --strict SHA256SUMS
+          gh release upload "$TAG" "$name.tar.gz" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
