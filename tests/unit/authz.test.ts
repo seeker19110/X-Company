@@ -55,6 +55,19 @@ describe("hành động riêng cho đơn của chính mình (AUD-XFEAT-006)", ()
     assert.doesNotMatch(readFileSync("lib/attendance/ot.ts", "utf8"), /"leave\.request"/);
     assert.doesNotMatch(readFileSync("lib/attendance/period.ts", "utf8"), /"leave\.request"/);
   });
+
+  test("account.delete_own (T-121): chỉ chính nhân viên; HR/sysadmin không xoá hộ; tài khoản không gắn nhân viên bị từ chối", () => {
+    assert.deepEqual(PERMISSIONS["account.delete_own"], { roles: [], self: true });
+    const own = { companyId: C1, ownerEmployeeId: "e-self" };
+    assert.equal(can(actor([]), "account.delete_own", own), true);
+    assert.equal(can(actor([]), "account.delete_own", { companyId: C1, ownerEmployeeId: "e-x" }), false);
+    const admin = actor([
+      { role: "sysadmin", companyId: C1, scopeType: "company", scopeId: null },
+      { role: "hr", companyId: C1, scopeType: "company", scopeId: null },
+    ]);
+    assert.equal(can(admin, "account.delete_own", { companyId: C1, ownerEmployeeId: "e-x" }), false);
+    assert.equal(can(actor([], null), "account.delete_own", { companyId: C1, ownerEmployeeId: null }), false);
+  });
 });
 
 describe("kịch bản SPEC-identity-org", () => {

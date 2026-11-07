@@ -42,7 +42,9 @@ import {
   type RequestKind,
   type SubjectType,
 } from "../../lib/privacy/index.ts";
-import { listConsents } from "../../lib/privacy/consent.ts";
+import { listConsents, PURPOSE_GEO_ATTENDANCE, recordConsent } from "../../lib/privacy/consent.ts";
+import { deleteOwnAccount } from "../../lib/privacy/self-service.ts";
+import { createSession } from "../../lib/identity/session.ts";
 import {
   defaultRegistry,
   redriveDead,
@@ -574,36 +576,217 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       );
     });
 
-    test("nhân viên: dữ liệu bắt buộc giữ (hồ sơ lao động, công) — đánh dấu hạn chế + lý do, không xoá", async () => {
+    // T-121 (D-075): nhân viên — xoá tài khoản đăng nhập + PII không bắt buộc qua mọi kho; chỉ giữ phần bắt buộc, kèm căn cứ.
+    test("nhân viên có dữ liệu phải giữ: tài khoản + PII không bắt buộc bị xoá ở mọi kho; hồ sơ lao động/bảng công giữ kèm căn cứ; audit không PII", async () => {
       const emp = await seedUser(companyId);
-      const e = (await q("SELECT code, full_name FROM employee WHERE id = $1", [emp.employeeId]))[0];
+      const empId = emp.employeeId!;
+      const workEmail = `nv.rieng.${randomUUID().slice(0, 8)}@example.test`;
+      const phone = "0900000000";
       await db.admin.query(
-        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time, source, status)
-         VALUES ($1, $2, $3, 'h', 'in', now(), 'kiosk', 'accepted')`,
-        [companyId, emp.employeeId, `key-${randomUUID()}`],
+        "UPDATE employee SET work_email = $2, phone = $3, hired_on = '2024-01-02' WHERE id = $1",
+        [empId, workEmail, phone],
       );
-      const done = await complete((await handle(e.code, "employee", "delete")).id);
+      const e = (await q("SELECT code, full_name FROM employee WHERE id = $1", [empId]))[0];
+      const [acc0] = await q("SELECT email, display_name FROM app_user WHERE id = $1", [emp.userId]);
+      // Dữ liệu phải giữ: lịch sử công tác + sự kiện chấm công (có toạ độ GPS — đồng ý riêng, KHÔNG phải giữ).
+      const [dept] = await q("SELECT id FROM department WHERE company_id = $1 LIMIT 1", [companyId]);
+      await db.admin.query(
+        `INSERT INTO employment_history (company_id, employee_id, department_id, title, valid_from)
+         VALUES ($1, $2, $3, 'Kỹ sư', '2024-01-02')`,
+        [companyId, empId, dept.id],
+      );
+      await db.admin.query(
+        `INSERT INTO attendance_event (company_id, employee_id, idempotency_key, request_hash, kind, device_time, source, status,
+           geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at)
+         VALUES ($1, $2, $3, 'h', 'in', now(), 'gps', 'accepted', 'v1:g1:ban-ma-gia', 21.02, 105.8, 12, now())`,
+        [companyId, empId, `key-${randomUUID()}`],
+      );
+      await withTx((tx) =>
+        recordConsent(tx, {
+          companyId,
+          subjectType: "employee",
+          subjectId: empId,
+          purposeId: PURPOSE_GEO_ATTENDANCE,
+          policyVersion: "v1",
+          channel: "app",
+          at: new Date(),
+        }),
+      );
+      // Dữ liệu theo tài khoản (không bắt buộc giữ): phiên, lần đăng nhập, lần sai TOTP, thông báo, phản hồi idempotency.
+      await withTx((tx) => createSession(tx, emp.userId, { ip: "10.9.9.9", userAgent: "UA-nv" }));
+      await db.admin.query(
+        `INSERT INTO login_attempt (email, ip, attempted_at, success)
+         VALUES ($1, '10.9.9.9', now(), false), ($1, '10.9.9.9', now(), true)`,
+        [acc0.email],
+      );
+      await db.admin.query("INSERT INTO mfa_failure (user_id, failed_at) VALUES ($1, now())", [emp.userId]);
+      await db.admin.query(
+        `INSERT INTO notification (company_id, user_id, topic, ref_type, ref_id, code, source_event_id)
+         VALUES ($1, $2, 'task.assigned', 'task', $3, NULL, 777001)`,
+        [companyId, emp.userId, randomUUID()],
+      );
+      await db.admin.query(
+        `INSERT INTO idempotency_record (company_id, user_id, key, request_hash, state)
+         VALUES ($1, $2, 'khoa-cu-123', repeat('a', 64), 'processing')`,
+        [companyId, emp.userId],
+      );
+
+      const req = await handle(e.code, "employee", "delete");
+      const done = await complete(req.id);
+      assert.equal(done.status, "done");
       const result = done.result as {
         erased: boolean;
         outcome: string;
+        deleted: {
+          account: Record<string, number>;
+          employee_contact: number;
+          geo_points: number;
+          consent_withdrawn: string[];
+        };
         retained: { category: string; reason: string }[];
       };
-      assert.equal(result.erased, false);
-      assert.equal(result.outcome, "retained_by_law");
+      assert.equal(result.erased, true);
+      assert.equal(result.outcome, "erased_except_retained");
+      assert.deepEqual(result.deleted.account, {
+        account: 1,
+        grants: 0,
+        sessions: 1,
+        notifications: 1,
+        login_attempts: 2,
+        mfa_records: 1,
+        idempotency_records: 1,
+      });
+      assert.equal(result.deleted.employee_contact, 1);
+      assert.equal(result.deleted.geo_points, 1);
+      assert.deepEqual(result.deleted.consent_withdrawn, [PURPOSE_GEO_ATTENDANCE]);
       assert.ok(result.retained.some((r) => r.category === "hồ sơ lao động" && r.reason.length > 20));
-      assert.ok(result.retained.some((r) => r.category === "bảng công và nghỉ phép"));
-      const [row] = await q("SELECT full_name FROM employee WHERE id = $1", [emp.employeeId]);
-      assert.equal(row.full_name, e.full_name, "hồ sơ lao động còn nguyên");
-      assert.equal(
-        (await q("SELECT 1 FROM attendance_event WHERE employee_id = $1", [emp.employeeId])).length,
-        1,
+      assert.ok(result.retained.some((r) => r.category === "bảng công và nghỉ phép" && r.reason.length > 20));
+
+      // PII không bắt buộc đã mất — từng kho.
+      const [empRow] = await q(
+        "SELECT code, full_name, work_email, phone, phone_enc, phone_bidx, hired_on FROM employee WHERE id = $1",
+        [empId],
       );
+      assert.deepEqual(
+        [empRow.work_email, empRow.phone, empRow.phone_enc, empRow.phone_bidx],
+        [null, null, null, null],
+      );
+      const [acc] = await q(
+        "SELECT email, display_name, password_hash, totp_secret_enc, disabled_at FROM app_user WHERE id = $1",
+        [emp.userId],
+      );
+      assert.equal(acc.email, `erased-${emp.userId}@erased.invalid`);
+      assert.equal(acc.display_name, "[tài khoản đã xoá]");
+      assert.equal(acc.password_hash, null);
+      assert.ok(acc.disabled_at instanceof Date);
+      for (const [sql, params] of [
+        ["SELECT 1 FROM session WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM notification WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM mfa_failure WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM idempotency_record WHERE user_id = $1", [emp.userId]],
+        ["SELECT 1 FROM login_attempt WHERE email = $1", [acc0.email]],
+      ] as const)
+        assert.equal((await q(sql, [...params])).length, 0, sql);
+      const [ev] = await q(
+        "SELECT status, geo_enc, geo_lat, geo_lng, geo_accuracy_m, geo_captured_at FROM attendance_event WHERE employee_id = $1",
+        [empId],
+      );
+      assert.deepEqual(ev, {
+        status: "accepted",
+        geo_enc: null,
+        geo_lat: null,
+        geo_lng: null,
+        geo_accuracy_m: null,
+        geo_captured_at: null,
+      });
+
+      // Phần phải giữ còn nguyên, có cờ hạn chế kèm căn cứ.
+      assert.equal(empRow.code, e.code);
+      assert.equal(empRow.full_name, e.full_name, "hồ sơ lao động còn");
+      assert.ok(empRow.hired_on !== null);
+      assert.equal((await q("SELECT 1 FROM employment_history WHERE employee_id = $1", [empId])).length, 1);
       const [flag] = await q(
-        "SELECT kind, reason FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL",
-        [emp.employeeId],
+        "SELECT kind, reason, request_id FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL",
+        [empId],
       );
       assert.equal(flag.kind, "retained_by_law");
-      assert.match(flag.reason, /giữ theo luật: .*hồ sơ lao động/);
+      assert.equal(flag.request_id, req.id);
+      assert.match(flag.reason, /giữ theo luật: hồ sơ lao động \(Nghĩa vụ lưu hồ sơ lao động/);
+      assert.match(flag.reason, /bảng công và nghỉ phép \(Chứng từ chấm công/);
+
+      // Audit chỉ số đếm/loại — không email, SĐT, tên.
+      const audits = JSON.stringify(
+        await q("SELECT action, before, after, reason FROM audit_event WHERE object_id IN ($1, $2, $3)", [
+          req.id,
+          emp.userId,
+          empId,
+        ]),
+      );
+      assert.match(audits, /account\.erase/);
+      assert.match(audits, /privacy\.erase/);
+      for (const needle of [workEmail, phone, acc0.email, acc0.display_name, e.full_name])
+        assert.ok(!audits.includes(needle), needle);
+      assert.equal((await verifyAuditChain(db.admin)).ok, true);
+    });
+
+    test("tự phục vụ: deleteOwnAccount tạo + hoàn tất yêu cầu cho chính mình; nhân viên không có dữ liệu bảng công vẫn xoá được; gọi lại không hỏng", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const self = { userId: emp.userId, companyId };
+      const first = await withTx((tx) => deleteOwnAccount(tx, self, empId));
+      assert.equal(first.status, "done");
+      assert.equal(first.subject_id, empId);
+      assert.equal(first.handler, emp.userId);
+      const r1 = first.result as { deleted: { account: { account: number }; employee_contact: number } };
+      assert.equal(r1.deleted.account.account, 1);
+      // Gọi lại: yêu cầu mới, mọi số đếm 0, không lỗi; cờ hạn chế không nhân bản.
+      const again = await withTx((tx) => deleteOwnAccount(tx, self, empId));
+      assert.equal(again.status, "done");
+      assert.notEqual(again.id, first.id);
+      const r2 = again.result as { deleted: { account: Record<string, number>; employee_contact: number } };
+      assert.ok(
+        Object.values(r2.deleted.account).every((n) => n === 0),
+        JSON.stringify(r2.deleted.account),
+      );
+      assert.equal(r2.deleted.employee_contact, 0);
+      assert.equal(
+        (
+          await q("SELECT 1 FROM processing_restriction WHERE subject_id = $1 AND released_at IS NULL", [
+            empId,
+          ])
+        ).length,
+        1,
+      );
+      const [acc] = await q("SELECT email, disabled_at FROM app_user WHERE id = $1", [emp.userId]);
+      assert.equal(acc.email, `erased-${emp.userId}@erased.invalid`);
+    });
+
+    test("tự phục vụ khi HR đã tiếp nhận yêu cầu xoá đang mở: hoàn tất đúng yêu cầu đó (không tạo trùng, không 409)", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const code = (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code;
+      const open = await handle(code, "employee", "delete");
+      const done = await withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId));
+      assert.equal(done.id, open.id);
+      assert.equal(done.status, "done");
+      assert.equal(
+        (await q("SELECT 1 FROM data_subject_request WHERE subject_id = $1 AND kind = 'delete'", [empId]))
+          .length,
+        1,
+      );
+    });
+
+    test("sysadmin hiệu lực cuối không tự xoá được (409 LAST_SYSADMIN) — giao dịch lùi, không xoá gì", async () => {
+      const { companyId: c2 } = await seedCompany("Công ty Một Quản Trị");
+      const admin = await seedUser(c2, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      await assert.rejects(
+        withTx((tx) => deleteOwnAccount(tx, { userId: admin.userId, companyId: c2 }, admin.employeeId!)),
+        isCode("LAST_SYSADMIN"),
+      );
+      const [acc] = await q("SELECT password_hash, disabled_at FROM app_user WHERE id = $1", [admin.userId]);
+      assert.ok(acc.password_hash !== null);
+      assert.equal(acc.disabled_at, null);
+      assert.equal((await q("SELECT 1 FROM data_subject_request WHERE company_id = $1", [c2])).length, 0);
     });
   });
 

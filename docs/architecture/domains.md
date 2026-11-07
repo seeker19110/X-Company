@@ -10,7 +10,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 
 | Miền         | Công khai             | Ghi chú                                                          |
 | ------------ | --------------------- | ---------------------------------------------------------------- |
-| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts`, `mfa.ts`, `totp.pure.ts` | tài khoản, phiên, đăng nhập; xác thực hai bước TOTP (`mfa.ts`; `totp.pure.ts` = lõi thuần RFC 6238 dùng chung server/seed/e2e) |
+| `identity` | `index.ts`, `password.ts`, `routes.ts`, `session.ts`, `bootstrap.ts`, `mfa.ts`, `totp.pure.ts`, `account.ts` | tài khoản, phiên, đăng nhập; xác thực hai bước TOTP (`mfa.ts`; `totp.pure.ts` = lõi thuần RFC 6238 dùng chung server/seed/e2e); `account.ts` = xác thực lại trước thao tác không đảo ngược + xoá tài khoản đăng nhập (T-121) |
 | `org`        | `index.ts`            | công ty, chi nhánh, phòng ban, nhân viên                         |
 | `authz` | `index.ts`, `grants.ts`, `load.ts` | `can()` — mô-đun thuần                                           |
 | `audit`      | `index.ts`            | chuỗi băm kiểm toán                                              |
@@ -19,7 +19,7 @@ Cột "Công khai" liệt kê tệp (tương đối `lib/<miền>/`) mà miền 
 | `cms` | `index.ts`, `markdown.ts` | nội dung website                                                 |
 | `inquiry` | `index.ts`, `routes.ts`, `schema.pure.ts` | liên hệ, tuyển dụng                                              |
 | `rum` | `index.ts`, `routes.ts`, `page.pure.ts`, `vitals.pure.ts` | RUM web-vitals tự làm (T-056, D-042): beacon `/api/public/rum`, mẫu theo nhãn trang chuẩn hoá (`page.pure.ts` = lõi thuần, tập nhãn bị chặn; `vitals.pure.ts` = CLS cửa sổ phiên, INP xấp xỉ cho client), gộp p75 cho `/api/metrics` — không dữ liệu cá nhân |
-| `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029) |
+| `privacy` | `index.ts`, `consent.ts`, `routes.ts`, `deadlines.ts`, `self-delete.pure.ts` | quyền chủ thể dữ liệu (DSAR), bản ghi đồng ý chỉ thêm, danh mục dữ liệu phải giữ (`retained.ts`); `deadlines.ts` = hạn xử lý theo loại yêu cầu (lõi thuần, D-029); xoá tài khoản tự phục vụ (`self-service.ts`, `erase-employee.ts`; `self-delete.pure.ts` = chuỗi xác nhận dùng chung form/server, T-121) |
 | `files` | `index.ts`, `routes.ts`, `storage.ts` | kho tệp private (`storage.ts`: adapter kho tệp — worker xoá blob của chủ thể qua outbox `files.blob_delete`, T-125) |
 | `crypto` | `index.ts`, `columns.ts`, `file.ts`, `rotate.ts`, `kms.ts` | mã hoá dữ liệu lúc lưu (T-048): AES-256-GCM có AAD + phong bì `v1:<keyId>:…`, chỉ mục mù HMAC, mã hoá tệp theo luồng (khoá tệp bọc bằng khoá chủ), sổ cột PII đã mã hoá (`columns.ts`), backfill/xoay khoá (`rotate.ts`, chạy bằng script). Chỉ dùng `node:crypto`; không import `next/*` |
 | `outbox`     | `index.ts`            | hàng đợi sự kiện                                                 |

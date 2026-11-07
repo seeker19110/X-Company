@@ -30,6 +30,7 @@ export const AUTHZ_COVERAGE: Readonly<Record<string, AuthzClass>> = {
   "GET /api/app/inquiries": { bola: true, bfla: true },
   "POST /api/app/leave-requests": { bola: true },
   "GET /api/app/me": { bola: true },
+  "POST /api/app/me/delete": { bola: true, bfla: true },
   "GET /api/app/notifications": { bola: true },
   "POST /api/app/notifications/read": { bola: true },
   "POST /api/app/ot-requests": { bola: true },

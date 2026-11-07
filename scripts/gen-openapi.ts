@@ -17,7 +17,12 @@ import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
 import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
 import { RumInput } from "../lib/rum/index.ts";
-import { ACTIONS as PRIVACY_ACTIONS, ActionBody, STATUSES } from "../lib/privacy/routes.ts";
+import {
+  ACTIONS as PRIVACY_ACTIONS,
+  ActionBody,
+  DeleteOwnAccountBody,
+  STATUSES,
+} from "../lib/privacy/routes.ts";
 import { ACTIONS as TASK_ACTIONS, Body as TaskActionBody } from "../lib/work/routes.ts";
 import { REF_TYPES as NOTIFICATION_REF_TYPES } from "../lib/notify/index.ts";
 import { ReadBody as NotificationReadBody } from "../lib/notify/routes.ts";
@@ -406,6 +411,7 @@ function requestSchemas(): Record<string, Json> {
     SyncBatchRequest: fromZod(Batch),
     PrivacyRequestCreate: fromZod(CreateRequestInput),
     PrivacyRequestActionRequest: fromZod(ActionBody),
+    DeleteOwnAccountRequest: fromZod(DeleteOwnAccountBody),
     InquiryRequest: fromZod(InquiryInput),
     RumRequest: fromZod(RumInput),
     ApplicationRequest: fromZod(ApplicationInput),
@@ -732,6 +738,32 @@ export const REGISTRY: Registry = {
       permission: "Phiên hợp lệ.",
       idempotency: "none",
       ok: { 200: { description: "Người dùng, vai trò, token CSRF.", schema: "MeResult" } },
+    },
+  },
+  "/api/app/me/delete": {
+    POST: {
+      source: "lib/privacy/routes.ts#postDeleteOwnAccount",
+      operationId: "deleteOwnAccount",
+      tag: "Quyền riêng tư",
+      summary: "Tự xoá tài khoản của chính mình (xác thực lại trong cùng request)",
+      description:
+        "Chủ thể luôn là nhân viên của phiên (không có tham số chủ thể). Thân: mật khẩu hiện tại, mã TOTP khi đã bật (mã đã dùng không dùng lại), `confirm` đúng chuỗi cố định — thiếu/sai → 400 trước khi kiểm mật khẩu. Sai mật khẩu → 403 `REAUTH_FAILED`, thiếu mã → 403 `MFA_CODE_REQUIRED`, sai/phát lại mã → 403 `INVALID_MFA_CODE` (tính vào bộ đếm sai của đăng nhập/TOTP; vượt → 429). Thành công: tạo + hoàn tất yêu cầu xoá trong một giao dịch — thu hồi mọi phiên, vô hiệu đăng nhập, xoá PII không bắt buộc, giữ hồ sơ lao động/bảng công kèm căn cứ (`result`); xoá cookie như đăng xuất. Sysadmin hiệu lực cuối → 409 `LAST_SYSADMIN`.",
+      permission:
+        "`account.delete_own` — chỉ chính nhân viên gắn với tài khoản (tài khoản không gắn nhân viên: 403).",
+      idempotency: "guard",
+      body: { kind: "json", schema: "DeleteOwnAccountRequest" },
+      ok: {
+        200: {
+          description: "Đã xoá; phiên đã bị thu hồi (cũng là mã của bản phát lại).",
+          schema: "PrivacyRequestResult",
+          headers: {
+            "Idempotent-Replayed": REPLAY_HEADER,
+            "Set-Cookie": { description: "Cookie phiên hết hạn.", schema: { type: "string" } },
+            "Clear-Site-Data": { description: '"cache", "storage".', schema: { type: "string" } },
+          },
+        },
+      },
+      errors: [403, 409, 429],
     },
   },
   "/api/app/notifications": {

@@ -13,7 +13,7 @@ import { enqueue } from "../outbox/index.ts";
 import { BLOB_DELETE_TOPIC } from "../worker/index.ts";
 import { anonymizeById } from "../worker/retention.ts";
 import { activePurposes, listConsents, withdrawConsent, type SubjectType } from "./consent.ts";
-import { CATEGORY_AUDIT_LOG, CATEGORY_CONSENT_EVIDENCE, RETAINED_BY_SUBJECT } from "./retained.ts";
+import { RETAINED_BY_SUBJECT } from "./retained.ts";
 import {
   computeDeadlines,
   dsarAnyOverdueSql,
@@ -27,6 +27,7 @@ import {
   type RequestKind,
 } from "./deadlines.ts";
 import { t } from "../i18n/index.ts";
+import { eraseEmployee } from "./erase-employee.ts";
 
 export { type SubjectType } from "./consent.ts";
 export { KINDS, type RequestKind } from "./deadlines.ts";
@@ -444,21 +445,18 @@ async function executeDelete(
     reason: c.reason,
   }));
   if (r.subject_type === "employee") {
-    // Hồ sơ lao động/bảng công phải giữ theo luật: không xoá, đánh dấu hạn chế xử lý + ghi lý do giữ (CMP-RIGHTS-007).
-    const reason = t("msg.privacy.retainedByLaw", {
-      categories: retained
-        .filter((c) => c.category !== CATEGORY_CONSENT_EVIDENCE && c.category !== CATEGORY_AUDIT_LOG)
-        .map((c) => c.category)
-        .join("; "),
+    // CMP-RIGHTS-007 (D-075): xoá tài khoản đăng nhập + PII không bắt buộc; hồ sơ lao động/bảng công giữ kèm căn cứ.
+    const result = await eraseEmployee(tx, actor, r, now, retained);
+    const { account, employee_contact, geo_points, consent_withdrawn } = result.deleted;
+    await audit(tx, actor, "privacy.erase", r, null, {
+      account_erased: account?.account ?? 0,
+      sessions_revoked: account?.sessions ?? 0,
+      employee_contact,
+      geo_points,
+      consent_withdrawn: consent_withdrawn.length,
+      retained: retained.map((c) => c.category),
     });
-    await tx.query(
-      `INSERT INTO processing_restriction (company_id, subject_type, subject_id, kind, reason, request_id)
-       VALUES ($1, 'employee', $2, 'retained_by_law', $3, $4)
-       ON CONFLICT (subject_type, subject_id, kind) WHERE released_at IS NULL DO NOTHING`,
-      [actor.companyId, r.subject_id, reason, r.id],
-    );
-    await audit(tx, actor, "privacy.erase", r, null, { retained: retained.map((c) => c.category) });
-    return { erased: false, outcome: "retained_by_law", retained };
+    return { ...result };
   }
 
   const subjectType = r.subject_type;

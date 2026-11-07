@@ -55,7 +55,7 @@ test("mọi route dưới app/api có mặt, không thừa (test đỏ khi thi�
     .filter((f) => f.startsWith("app/api/") && f.endsWith("route.ts"))
     .map((f) => urlOf(f).replace(/\[([^\]]+)\]/g, "{$1}"))
     .sort();
-  assert.equal(real.length, 29);
+  assert.equal(real.length, 30);
   assert.deepEqual(Object.keys(doc().paths).sort(), real);
   assert.deepEqual(registryErrors(ROOT), []);
 });
@@ -137,7 +137,7 @@ test("mọi POST ghi nghiệp vụ có Idempotency-Key bắt buộc + 400/409/42
     } else without.push(p);
   }
   assert.deepEqual(without.sort(), NO_GUARD_POST);
-  assert.equal(withKey.length, 10);
+  assert.equal(withKey.length, 11);
   // Phát lại: mã 2xx của POST guard có header Idempotent-Replayed; 422 = khoá dùng cho nội dung khác.
   const leave = d.paths["/api/app/leave-requests"].post;
   assert.notEqual(leave.responses["201"].headers["Idempotent-Replayed"], undefined);
@@ -490,5 +490,5 @@ test("PR policy chạy check-api-breaking, action ghim SHA, quyền tối thiể
   assert.match(pkg.scripts["check:arch"]!, /check:openapi/);
   assert.equal(pkg.scripts["gen:openapi"], "tsx scripts/gen-openapi.ts");
   assert.equal(pkg.scripts["check:api-breaking"], "node scripts/check-api-breaking.mjs");
-  assert.ok(Object.keys(REGISTRY).length === 29);
+  assert.ok(Object.keys(REGISTRY).length === 30);
 });

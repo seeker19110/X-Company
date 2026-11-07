@@ -170,6 +170,23 @@
       "other": "Có thông báo mới"
     }
   },
+  "accountDelete": {
+    "heading": "Xoá tài khoản",
+    "intro": "Tài khoản đăng nhập, thông tin liên hệ, thông báo và vị trí chấm công của bạn sẽ bị xoá ngay; bạn bị đăng xuất và không đăng nhập lại được. Hồ sơ lao động và bảng công được giữ theo luật, kèm căn cứ.",
+    "password": "Mật khẩu hiện tại (bắt buộc)",
+    "totp": "Mã xác thực 6 số (nếu đã bật xác thực hai bước)",
+    "confirmLabel": "Gõ {phrase} để xác nhận (bắt buộc)",
+    "submit": "Xoá tài khoản của tôi",
+    "busy": "Đang xoá…",
+    "passwordRequired": "Nhập mật khẩu hiện tại",
+    "confirmMismatch": "Chưa gõ đúng chuỗi xác nhận",
+    "dialogTitle": "Xoá vĩnh viễn tài khoản?",
+    "dialogObject": "Tài khoản của bạn",
+    "dialogConsequence": "Không thể hoàn tác. Bạn sẽ bị đăng xuất và không đăng nhập lại được.",
+    "dialogConfirm": "Xoá tài khoản",
+    "dialogCancel": "Giữ tài khoản",
+    "cancelled": "Đã huỷ — tài khoản vẫn còn."
+  },
   "mfa": {
     "heading": "Xác thực hai bước",
     "intro": "Nhập mã 6 số đang hiện trong ứng dụng xác thực trên điện thoại.",

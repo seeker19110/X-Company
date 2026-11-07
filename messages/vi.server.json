@@ -267,6 +267,8 @@
       "matKhauQuaDai": "Mật khẩu quá dài",
       "matKhauQuaPhoBien": "Mật khẩu quá phổ biến",
       "matKhauKhongDuocChuaTen": "Mật khẩu không được chứa tên đăng nhập",
+      "matKhauHienTaiKhongDung": "Mật khẩu hiện tại không đúng",
+      "canMaXacThucDeXacNhan": "Nhập mã xác thực 6 số từ ứng dụng xác thực để xác nhận",
       "passwordTooShort": "Mật khẩu cần ít nhất {min} ký tự",
       "maXacThucKhongDung": "Mã xác thực không đúng",
       "thuThachXacThucKhongHopLe": "Phiên xác thực hai bước không hợp lệ hoặc đã hết hạn — vui lòng đăng nhập lại",
@@ -298,6 +300,7 @@
       "statusKhongHopLe": "status không hợp lệ",
       "canNeuCanCuTuChoi2": "Cần nêu căn cứ từ chối (reason)",
       "subjectRefHint": "Dùng mã hồ sơ (vd YC-20261018-0001), không dùng email/SĐT",
+      "confirmPhrase": "Gõ đúng {phrase} để xác nhận xoá tài khoản",
       "cannotStartInState": "Không bắt đầu được yêu cầu ở trạng thái {status}",
       "requestClosed": "Yêu cầu đã đóng ({status})",
       "canLyDoGiaHan": "Cần nêu lý do gia hạn (1–1000 ký tự)",
@@ -399,7 +402,8 @@
     },
     "identity": {
       "bootstrapReason": "Tạo quản trị viên đầu tiên bằng lệnh vận hành",
-      "mfaResetReason": "Đặt lại xác thực hai bước bằng lệnh vận hành (mất thiết bị)"
+      "mfaResetReason": "Đặt lại xác thực hai bước bằng lệnh vận hành (mất thiết bị)",
+      "erasedAccountName": "[tài khoản đã xoá]"
     },
     "inquiry": {
       "autoRouted": "định tuyến tự động",
@@ -410,6 +414,7 @@
       "stopRestrictRequest": "yêu cầu hạn chế xử lý của chủ thể",
       "stopErase": "xoá theo yêu cầu chủ thể",
       "retainedByLaw": "giữ theo luật: {categories}",
+      "selfServiceNote": "chủ thể tự yêu cầu xoá trong ứng dụng (đã xác thực lại)",
       "consent": {
         "inquiryContact": "Tôi đồng ý để X-Company xử lý thông tin trên nhằm phản hồi yêu cầu",
         "jobApplication": "Tôi đồng ý để X-Company xử lý hồ sơ nhằm tuyển dụng",

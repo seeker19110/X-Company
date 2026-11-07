@@ -94,6 +94,8 @@ export const PERMISSIONS = {
   "application.read": { roles: ["hr"], self: false },
   // Tiếp nhận/xử lý yêu cầu quyền chủ thể dữ liệu (DSAR, T-040) — người phụ trách là HR.
   "privacy.manage": { roles: ["hr"], self: false },
+  // T-121 (D-075): nhân viên tự xoá tài khoản của CHÍNH MÌNH (kèm xác thực lại) — không vai trò nào xoá hộ qua quyền này.
+  "account.delete_own": { roles: [], self: true },
 } as const satisfies Record<string, { roles: readonly Role[]; self: boolean }>;
 
 export type Action = keyof typeof PERMISSIONS;

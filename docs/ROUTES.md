@@ -46,6 +46,7 @@ Chế độ: **tĩnh** (dựng lúc build, không đọc DB) · **cache dùng ch
 | `/api/app/inquiries`                   | `app/api/app/inquiries/route.ts`                     | động   | API có xác thực, `no-store`                                |
 | `/api/app/leave-requests`              | `app/api/app/leave-requests/route.ts`                | động   | API có xác thực, `no-store`                                |
 | `/api/app/me`                          | `app/api/app/me/route.ts`                            | động   | Thông tin phiên hiện tại, `no-store`                       |
+| `/api/app/me/delete` | `app/api/app/me/delete/route.ts` | động | Tự xoá tài khoản của chính mình, xác thực lại (quyền `account.delete_own`), `no-store` |
 | `/api/app/notifications/read` | `app/api/app/notifications/read/route.ts` | động | Đánh dấu đã đọc thông báo của chính mình, `no-store` |
 | `/api/app/notifications` | `app/api/app/notifications/route.ts` | động | Thông báo trong ứng dụng của chính mình, `no-store` |
 | `/api/app/ot-requests`                 | `app/api/app/ot-requests/route.ts`                   | động   | API có xác thực, `no-store`                                |
