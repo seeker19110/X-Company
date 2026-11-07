@@ -124,6 +124,15 @@ export interface ObjectTransport {
 }
 
 /**
+ * Kho đối tượng liệt kê được (T-126): thêm `listKeys` cho việc VẬN HÀNH duyệt cả kho — sao lưu/khôi phục thử
+ * (lib/files/object-backup.ts) và xoay khoá (lib/crypto/rotate.ts `rotateObjects`). Đường phục vụ request không cần liệt kê.
+ * Trả MỌI khoá trong kho (kể cả khoá lạ không do ứng dụng tạo — bên gọi tự phân loại), phân trang bên trong.
+ */
+export interface ObjectInventory extends ObjectTransport {
+  listKeys(): AsyncIterable<string>;
+}
+
+/**
  * Kho tệp trên kho đối tượng: cùng giao ước và cùng định dạng mã hoá như `diskStorage` — backend chỉ thấy BẢN MÃ (AES-256-GCM theo
  * khối, DEK theo tệp bọc bằng khoá chủ/KMS, AAD gắn khoá lưu → tráo đối tượng sang khoá khác bị phát hiện). Kho đối tượng không có
  * "tệp cũ bản rõ": đối tượng thiếu đầu mã hoá bị từ chối (chặt hơn đĩa). Cả tệp nằm trong bộ nhớ (giao ước Buffer; trần 20 MB ở

@@ -201,4 +201,43 @@ describe("s3Transport: yêu cầu gửi đi (fetch giả)", () => {
       return true;
     });
   });
+
+  test("ListObjectsV2 (T-126): phân trang theo continuation-token (ký trong query), giải thực thể XML; token lặp/thiếu, thân lạ → lỗi", async () => {
+    const page = (keys: string[], next?: string) =>
+      `<?xml version="1.0"?><ListBucketResult>${keys.map((k) => `<Contents><Key>${k}</Key><Size>1</Size></Contents>`).join("")}` +
+      `<IsTruncated>${next === undefined ? "false" : "true"}</IsTruncated>${next === undefined ? "" : `<NextContinuationToken>${next}</NextContinuationToken>`}</ListBucketResult>`;
+    const pages = (bodies: string[]) => {
+      calls.length = 0;
+      let i = 0;
+      return (async (url: string | URL | Request, init?: RequestInit) => {
+        calls.push({ url: String(url), init: init ?? {} });
+        return new Response(bodies[Math.min(i++, bodies.length - 1)], { status: 200 });
+      }) as typeof fetch;
+    };
+    const all = async (f: typeof fetch) => {
+      const out: string[] = [];
+      for await (const k of s3Transport(() => cfg, f, now).listKeys()) out.push(k);
+      return out;
+    };
+    assert.deepEqual(await all(pages([page(["ab/1", "a &amp; b &lt;x&gt;"], "t+1/="), page(["cd/2"])])), [
+      "ab/1",
+      "a & b <x>",
+      "cd/2",
+    ]);
+    assert.equal(calls[0]?.url, "http://127.0.0.1:9000/xc-files?list-type=2&max-keys=1000");
+    assert.equal(
+      calls[1]?.url,
+      "http://127.0.0.1:9000/xc-files?list-type=2&max-keys=1000&continuation-token=t%2B1%2F%3D",
+    );
+    assert.deepEqual(await all(pages([page([])])), []);
+    await assert.rejects(all(pages([page(["a"], "x"), page(["b"], "x")])), {
+      s3Code: "RepeatedContinuationToken",
+    });
+    await assert.rejects(all(pages([page(["a"], "")])), { s3Code: "MissingContinuationToken" });
+    await assert.rejects(all(pages(["<html>proxy</html>"])), { s3Code: "MalformedListResponse" });
+    await assert.rejects(all(reply(403, "<Error><Code>AccessDenied</Code></Error>")), {
+      status: 403,
+      s3Code: "AccessDenied",
+    });
+  });
 });
