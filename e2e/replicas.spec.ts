@@ -14,6 +14,8 @@ import { startRoundRobinProxy, TARGET_HEADER, type RoundRobinProxy } from "./rr-
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PROXY = "http://127.0.0.1:3110";
+/** Việc seed của nv5 (scripts/seed-e2e.ts) — không spec nào đổi trạng thái việc này. */
+const TASK = "Đo điện trở nối đất";
 const REPLICAS = [
   { name: "A", port: 3111 },
   { name: "B", port: 3112 },
@@ -125,9 +127,10 @@ test.describe("2 bản sao sau proxy không sticky, chung Postgres + S3 @desktop
     page,
   }) => {
     const before = proxy.served.length;
-    await login(page, "nv");
+    // nv5 + việc của nv5: "Lắp đặt tủ điện tầng 3" (nv) bị AT09 (flows.spec) nghiệm thu và biến khỏi danh sách khi chạy cả bộ.
+    await login(page, "nv5");
     await page.goto("/app/tasks");
-    await expect(page.getByText("Lắp đặt tủ điện tầng 3").first()).toBeVisible();
+    await expect(page.getByText(TASK).first()).toBeVisible();
     await page.goto("/app/today");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const used = new Set(proxy.served.slice(before));
@@ -135,7 +138,7 @@ test.describe("2 bản sao sau proxy không sticky, chung Postgres + S3 @desktop
     for (const r of ["A", "B"]) {
       const me = await on(r, (h) => page.request.get("/api/app/me", { headers: h }));
       expect(me.status()).toBe(200);
-      expect(((await me.json()) as { email: string }).email).toBe(seed().users.nv!.email);
+      expect(((await me.json()) as { email: string }).email).toBe(seed().users.nv5!.email);
     }
   });
 
@@ -146,7 +149,7 @@ test.describe("2 bản sao sau proxy không sticky, chung Postgres + S3 @desktop
     const headers = { origin: PROXY };
     const loginRes = await on("A", (h) =>
       request.post("/api/app/auth/login", {
-        data: { email: s.users.nv!.email, password: s.password },
+        data: { email: s.users.nv5!.email, password: s.password },
         headers: { ...headers, ...h },
       }),
     );
@@ -155,9 +158,9 @@ test.describe("2 bản sao sau proxy không sticky, chung Postgres + S3 @desktop
     const tasks = await on("B", (h) => request.get("/api/app/tasks", { headers: h }));
     expect(tasks.status()).toBe(200);
     const task = ((await tasks.json()) as { items: { id: string; title: string }[] }).items.find(
-      (t) => t.title === "Lắp đặt tủ điện tầng 3",
+      (t) => t.title === TASK,
     );
-    expect(task, "nv phải thấy việc của mình").toBeTruthy();
+    expect(task, "nv5 phải thấy việc của mình").toBeTruthy();
 
     const marker = `BAN-RO-${randomBytes(8).toString("hex")}`;
     const pdf = Buffer.from(`%PDF-1.7\n% ${marker}\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n`);
