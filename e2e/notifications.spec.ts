@@ -4,7 +4,8 @@ import { expectAccessible, expectNoHorizontalScroll, failOnCspViolation, login }
 failOnCspViolation();
 
 // AUD-DOC-002 (giao diện). Dữ liệu: scripts/seed-e2e.ts giao hai việc cho nv5 rồi chạy worker outbox THẬT (máy chủ e2e không
-// chạy worker) → nv5 có đúng hai thông báo chưa đọc ở mỗi công ty (desktop/mobile), không bài nào khác dùng nv5.
+// chạy worker) → nv5 có đúng hai thông báo chưa đọc ở mỗi công ty (desktop/mobile). replicas.spec cũng dùng nv5 (đăng nhập,
+// tải tệp lên việc của nv5) nhưng không tạo thông báo: máy chủ e2e không chạy worker nên outbox không thành thông báo.
 test.describe("thông báo trong ứng dụng (AUD-DOC-002)", () => {
   // Đổi trạng thái seed (AUD-TEST-003): lần thử lại trên cùng seed sẽ đỏ vì dữ liệu đã đổi, không phải vì lỗi — không thử lại;
   // flake phải hiện đỏ và được sửa tận gốc.

@@ -50,6 +50,8 @@ import {
   type MfaText,
 } from "../../app/app/login/mfa-step.tsx";
 import { THEME_COLOR } from "../../lib/web/theme.ts";
+import { deleteAccountErrors } from "../../app/components/delete-account-form.tsx";
+import { SELF_DELETE_CONFIRM } from "../../lib/privacy/self-delete.pure.ts";
 
 const { check, checkContrast, contrastRatio, hardcodedColors, parseHex } = tokenScript;
 const { parseTokens, renderTheme } = buildScript;
@@ -710,5 +712,18 @@ describe("AUD-SEC-002 (T-087): bước mã TOTP ở màn đăng nhập", () => {
     );
     assert.match(withCopy, /<button[^>]*type="button"[^>]*>Chép<\/button>/);
     assert.match(withCopy, /role="status"[^>]*>Đã chép/);
+  });
+});
+
+describe("T-121: form xoá tài khoản — kiểm phía client trước khi hỏi xác nhận", () => {
+  test("thiếu mật khẩu, chuỗi xác nhận rỗng/sai chữ hoa-thường → lỗi theo ô; đúng chuỗi (cho phép khoảng trắng thừa) → không lỗi", () => {
+    assert.deepEqual(Object.keys(deleteAccountErrors({ password: null, confirm: null })).sort(), [
+      "confirm",
+      "password",
+    ]);
+    assert.deepEqual(Object.keys(deleteAccountErrors({ password: "x", confirm: "xoa tai khoan" })), [
+      "confirm",
+    ]);
+    assert.deepEqual(deleteAccountErrors({ password: "x", confirm: ` ${SELF_DELETE_CONFIRM} ` }), {});
   });
 });

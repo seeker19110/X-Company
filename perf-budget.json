@@ -1,7 +1,12 @@
 {
   "_doc": "Ngân sách hiệu năng máy đọc — lý do và cách đổi ở docs/PERF-BUDGET.md. Đo bằng scripts/check-perf-budget.mjs (KB gzip).",
   "baseline_tolerance_pct": 10,
-  "max_static_js_gzip_kb_total": 230,
+  "ci": {
+    "_doc": "XC-GREEN-002: mỗi PR tối đa bấy nhiêu job (workflow chạy trên pull_request) và tổng timeout-minutes; kiểm ở check:ci-policy (scripts/lib/ci-budget.mjs). Đặt 2026-11-06 = hiện trạng 12 job / 268 phút.",
+    "max_jobs_per_pr": 12,
+    "max_minutes_per_pr": 270
+  },
+  "max_static_js_gzip_kb_total": 234,
   "routes": {
     "/": { "max_js_gzip_kb": 195, "max_requests": 14 },
     "/[...slug]": { "max_js_gzip_kb": 195, "max_requests": 14 },

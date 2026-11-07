@@ -87,19 +87,28 @@ echo "[n-1] code $TAG ($(git rev-parse --short "$TAG")) trên schema HEAD ($(git
 cd "$WT/prev"
 npm ci --no-audit --no-fund --ignore-scripts >/dev/null
 # KNOWN_FIXED (D-074): lỗi của CHÍNH bản N−1, đã sửa ở N, không liên quan schema — bản đã phát hành không sửa được.
-# Chỉ bỏ qua khi mã của bản N−1 CHƯA có bản sửa (dò theo nội dung) → tự hết hiệu lực khi bản phát hành kế chứa bản sửa.
-# Mỗi mục: tên test (khớp --test-skip-pattern) | tệp | chuỗi chỉ có sau bản sửa | lý do. Không thêm mục mà không có D-NNN.
+# Chỉ bỏ qua khi mã của bản N−1 còn CHỮ KÝ của lỗi (dò theo nội dung, không theo commit — main merge squash) → tự hết
+# hiệu lực khi bản phát hành kế không còn dòng lỗi, kể cả khi mã được tái cấu trúc sang tệp khác.
+# SAME_VERSION (D-079): test kiểm tài liệu của CHÍNH bản đó khớp schema của CHÍNH bản đó (đếm cố định cột PII trong
+# data-map) — HEAD đã chạy bản của nó trên cây HEAD; chạy bản N−1 trên schema HEAD chỉ đỏ mỗi khi HEAD thêm cột PII, không
+# nói gì về tương thích rollback. Chữ ký = tên test (tự hết hiệu lực khi test đổi tên/bị bỏ).
+# Mỗi mục: tên test (khớp --test-skip-pattern) | tệp | chuỗi chữ ký lỗi | lý do. Không thêm mục mà không có D-NNN.
 skip_args=()
-while IFS='|' read -r name file marker why; do
+skipped=0
+while IFS='|' read -r name file signature why; do
   [ -n "$name" ] || continue
-  if [ -f "$file" ] && ! grep -qF -- "$marker" "$file"; then
+  if [ -f "$file" ] && grep -qF -- "$signature" "$file"; then
     echo "[n-1] ⚠ bỏ qua \"$name\" của $TAG — $why" >&2
+    # Hiện trên trang checks của PR (không chỉ stderr): test bị lọc không tính vào `skipped` của node --test.
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning title=N−1 bỏ qua có lý do (D-074/D-079)::bỏ qua \"$name\" của $TAG — $why"; fi
     skip_args+=(--test-skip-pattern "$name")
+    skipped=$((skipped + 1))
   fi
 done <<'EOF'
-giữ N bản gần nhất|scripts/backup.sh|EPOCHREALTIME|backup.sh cũ đặt tên bằng `date %3N`, không đơn điệu với uutils (Ubuntu 26.04); sửa ở N (D-074)
+giữ N bản gần nhất|scripts/backup.sh|+%Y%m%dT%H%M%S%3NZ|backup.sh cũ đặt tên bằng `date %3N`, không đơn điệu với uutils (Ubuntu 26.04); sửa ở PR #99 (D-074)
+COMMENT PII khớp hai chiều với data-map.yaml|tests/db/encryption.test.ts|COMMENT PII khớp hai chiều với data-map.yaml|SAME_VERSION: data-map của bản cũ đếm cố định cột PII, schema HEAD có cột PII mới; HEAD chạy kiểm này trên cây của nó (D-079)
 EOF
 # Chạy bằng with-test-db.sh của HEAD (có DATABASE_URL thì dùng thẳng, không thì dựng cụm tạm).
 "$ROOT/scripts/with-test-db.sh" node --import tsx --test --test-concurrency=1 "${skip_args[@]}" \
   "tests/db/**/*.test.ts" "tests/http/**/*.test.ts"
-echo "[n-1] ✓ test DB + HTTP của $TAG xanh trên schema HEAD"
+echo "[n-1] ✓ test DB + HTTP của $TAG xanh trên schema HEAD (bỏ qua $skipped test có lý do: KNOWN_FIXED/SAME_VERSION)"

@@ -182,6 +182,29 @@ describe("worker outbox", () => {
     assert.equal((await runOnce({ registry: reg, now: () => new Date(now.getTime() + 9e9) })).claimed, 0);
   });
 
+  test("effect chạy lâu rồi lỗi → backoff tính từ LÚC LỖI, không từ lúc lấy việc (review #100)", async () => {
+    await reset();
+    let clock = T0;
+    const reg = new Registry().register({
+      consumer: "slow-effect",
+      match: "inquiry.assigned",
+      schema: z.object({ inquiryId: z.uuid() }).loose(),
+      effect: () => {
+        clock = new Date(clock.getTime() + 30_000); // gọi mạng hết timeout 30 s
+        return Promise.reject(new Error("S3 timeout"));
+      },
+      handle: () => Promise.resolve(),
+    });
+    const id = await add("inquiry.assigned", inquiryPayload());
+    const s = await runOnce({ registry: reg, now: () => clock, rand: () => 0, maxAttempts: 5 });
+    assert.equal(s.claimed, 1);
+    const r = await row(id);
+    assert.equal(r.status, "pending");
+    assert.equal(new Date(r.next_attempt_at).getTime(), T0.getTime() + 30_000 + nextAttemptDelay(1, 0));
+    // Ngay sau lỗi (đồng hồ = lúc lỗi) chưa tới hạn → không bị lấy lại.
+    assert.equal((await runOnce({ registry: reg, now: () => clock })).claimed, 0);
+  });
+
   test("payload sai schema → dead ngay, không gọi handler, lỗi không lộ giá trị", async () => {
     await reset();
     let calls = 0;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireSession } from "@/app/server/session";
 import { t } from "@/lib/i18n";
 import { EMPTY } from "@/lib/i18n/format";
+import { DeleteAccountForm } from "@/app/components/delete-account-form";
 import { LogoutButton } from "@/app/components/logout-button";
 import { SyncStatus } from "@/app/components/sync-status";
 
@@ -33,6 +34,8 @@ export default async function MePage() {
       </section>
       <SyncStatus />
       <LogoutButton />
+      {/* Xoá tài khoản tự phục vụ (T-121): chỉ tài khoản gắn nhân viên — server kiểm lại bằng account.delete_own. */}
+      {s.actor.employeeId !== null && <DeleteAccountForm />}
     </>
   );
 }

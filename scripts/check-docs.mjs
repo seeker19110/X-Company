@@ -8,6 +8,9 @@ import { fileURLToPath } from "node:url";
 import { lineRefs, malformedCheckIds } from "./lib/blueprint-checks.mjs";
 import { checkTransfers } from "./lib/transfer-check.mjs";
 import { checkDor } from "./lib/dor-check.mjs";
+import { checkSpecialBasis } from "./lib/special-basis-check.mjs";
+import { checkSeedPolicy } from "./lib/seed-policy.mjs";
+import { phoneMatches } from "./lib/fixture-phone.mjs";
 import { parseVendors } from "./check-vendors.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -320,8 +323,20 @@ if (has("docs/ops/RUNBOOK.md")) {
   else if (/^\d{4}-\d{2}-\d{2}$/.test(ld)) {
     if (NOW - new Date(ld) > 183 * 864e5) fail(`RUNBOOK: last_drilled ${ld} quá 6 tháng`);
   } else out(`CẢNH BÁO: RUNBOOK last_drilled = "${ld}"`);
-  for (const h of ["Lộ bí mật", "SESSION_SECRET", "QR_SIGNING_KEYS", "Mật khẩu DB"])
+  for (const h of [
+    "Lộ bí mật",
+    "SESSION_SECRET",
+    "QR_SIGNING_KEYS",
+    "Mật khẩu DB",
+    "Dữ liệu staging/preview",
+  ])
     if (!rb.includes(h)) fail(`RUNBOOK: thiếu "${h}"`);
+}
+// WF-ENV-010: script seed chỉ sinh dữ liệu tổng hợp, không đọc nguồn ngoài (mạng, tệp ngoài, CSDL khác).
+{
+  const sp = checkSeedPolicy(join(ROOT, "scripts"));
+  sp.errors.forEach((e) => fail(e.replaceAll(`${ROOT}/`, "")));
+  out(`Seed tổng hợp (WF-ENV-010): ${sp.files.length} script đạt chính sách`);
 }
 if (has("docs/ops/INCIDENT-RESPONSE.md")) {
   const ir = read("docs/ops/INCIDENT-RESPONSE.md");
@@ -520,6 +535,10 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
     const tr = checkTransfers(map, vendors, has);
     tr.errors.forEach(fail);
     tr.warnings.forEach((w) => out(`CẢNH BÁO: ${w}`));
+    // CMP-INTL-002: dữ liệu nhạy cảm có cơ sở xử lý loại đặc biệt riêng.
+    const sb = checkSpecialBasis(map);
+    sb.errors.forEach(fail);
+    sb.warnings.forEach((w) => out(`CẢNH BÁO: ${w}`));
     out(`Chuyển dữ liệu ra ngoài VN: ${tr.abroad.length ? tr.abroad.join("; ") : "không có"}`);
     // kiểm kê CSV
     if (has("docs/compliance/data-inventory.csv")) {
@@ -596,8 +615,8 @@ const isCandidate = (c) => PII_NAMES.has(c) || c.split("_").some((t) => PII_TOKE
       if (exceptions.has(key)) usedExceptions.add(key);
       else fail(`fixture có email ngoài domain cho phép: ${m[0]} (${f})`);
     }
-    for (const m of txt.matchAll(/(?<![\d])(?:\+84|84|0)[35789]\d{8}(?!\d)/g)) {
-      if (!allowedPhones.has(m[0])) fail(`fixture có số điện thoại dạng thật: ${m[0]} (${f})`);
+    for (const ph of phoneMatches(txt)) {
+      if (!allowedPhones.has(ph)) fail(`fixture có số điện thoại dạng thật: ${ph} (${f})`);
     }
   }
   for (const k of exceptions)

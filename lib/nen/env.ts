@@ -76,6 +76,26 @@ function validDataKeys(raw: string): boolean {
 /** Loopback: harness e2e/DAST/Lighthouse chạy bản build production cục bộ qua http. */
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/**
+ * BASE-SEC-004: kết nối CSDL ở production phải mã hoá VÀ xác thực máy chủ (`sslmode=verify-full` — kiểm CA + tên máy);
+ * `require`/`prefer`/thiếu sslmode cho phép kẻ đứng giữa giả máy chủ. Miễn: loopback và socket Unix (`?host=/…`), vốn
+ * không đi qua mạng. Thông điệp không chứa giá trị URL (có mật khẩu).
+ */
+function dbTlsRule(raw: string): string | undefined {
+  const u = new URL(raw);
+  // `host=` lặp: pg-connection-string lấy giá trị CUỐI (giá trị rỗng → lùi về host của authority). Miễn chỉ khi MỌI đích
+  // có thể được chọn đều cục bộ (review #100: `?host=/sock&host=db.xa` từng lọt vì chỉ xét giá trị đầu).
+  const hostParams = u.searchParams.getAll("host");
+  const isLocal = (h: string) => h.startsWith("/") || LOOPBACK_HOSTS.has(h);
+  const targets = hostParams.length === 0 ? [u.hostname] : hostParams.map((h) => (h === "" ? u.hostname : h));
+  if (targets.every(isLocal)) return undefined;
+  // Mọi giá trị sslmode (khoá lặp: bộ đọc của pg có thể lấy cái cuối) đều phải là verify-full.
+  const modes = u.searchParams.getAll("sslmode");
+  return modes.length > 0 && modes.every((m) => m === "verify-full")
+    ? undefined
+    : "phải có sslmode=verify-full ở production (trừ đúng host localhost, [::1], địa chỉ loopback IPv4 chuẩn hoặc socket Unix)";
+}
+
 const url = (protocols: RegExp, what: string) =>
   z
     .string()
@@ -105,8 +125,15 @@ export const SERVER_SPEC = {
       },
     },
   ),
-  DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), { required: true, secret: true }),
-  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), { secret: true }),
+  DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL"), {
+    required: true,
+    secret: true,
+    productionRule: (raw) => dbTlsRule(raw),
+  }),
+  MIGRATE_DATABASE_URL: field(url(/^postgres(ql)?$/, "PostgreSQL").optional(), {
+    secret: true,
+    productionRule: (raw) => dbTlsRule(raw),
+  }),
   DB_POOL_MAX: field(z.coerce.number().int().min(1).max(100).default(10)),
   // Tắt êm (ARC-RES-009): thời gian chờ request đang chạy và thời gian giữ readiness 503 trước khi ngừng nhận.
   SHUTDOWN_GRACE_MS: field(z.coerce.number().int().min(0).max(120_000).default(20_000)),
@@ -194,7 +221,64 @@ export const SERVER_SPEC = {
   TRUST_PROXY: field(z.enum(["0", "1"]).optional(), {
     requiredInProduction: (s) => rawOf(s, "TRUST_PROXY_HOPS") === undefined,
   }),
+  // Kho tệp (T-116, D-073; ARC-RES-005): `disk` = thư mục FILE_STORAGE_DIR (một bản sao); `s3` = kho đối tượng S3-compatible dùng chung
+  // cho nhiều bản sao (adapters/s3-http.ts, chữ ký SigV4). Tệp luôn mã hoá trước khi tới kho (lib/files/storage.ts). Nhà cung cấp
+  // production chọn ở G7 (D-005): bucket private, khoá IAM tối thiểu (Put/Get/DeleteObject trên một bucket).
+  FILE_STORAGE: field(z.enum(["disk", "s3"], { error: "phải là disk|s3" }).default("disk")),
   FILE_STORAGE_DIR: field(z.string().optional()),
+  S3_ENDPOINT: field(
+    url(/^https?$/, "http(s) của kho S3")
+      .refine(
+        (v) => {
+          const u = new URL(v);
+          return (
+            (u.pathname === "/" || u.pathname === "") &&
+            u.search === "" &&
+            u.username === "" &&
+            u.password === ""
+          );
+        },
+        { error: "chỉ gốc URL (không đường dẫn/query/thông tin đăng nhập)" },
+      )
+      .optional(),
+    {
+      requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3",
+      // http ở production = khoá truy cập + bản mã đi trên đường không mã hoá; chỉ loopback được miễn (như APP_ORIGIN).
+      productionRule: (raw) => {
+        const u = new URL(raw);
+        return u.protocol === "https:" || LOOPBACK_HOSTS.has(u.hostname)
+          ? undefined
+          : "phải là https ở production (http chỉ cho localhost/127.0.0.1/[::1])";
+      },
+    },
+  ),
+  S3_BUCKET: field(
+    z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, { error: "tên bucket S3 dạng [a-z0-9.-]{3,63}" })
+      .optional(),
+    { requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
+  S3_REGION: field(
+    z
+      .string()
+      .regex(/^[a-z0-9-]{1,32}$/, { error: "vùng dạng [a-z0-9-]{1,32}" })
+      .default("us-east-1"),
+  ),
+  S3_ACCESS_KEY_ID: field(
+    z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]{3,128}$/, { error: "dạng [A-Za-z0-9_.-]{3,128}" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
+  S3_SECRET_ACCESS_KEY: field(
+    z
+      .string()
+      .refine((v) => bytes(v) >= 16, { error: "phải dài ≥ 16 byte" })
+      .optional(),
+    { secret: true, requiredWhen: (s) => rawOf(s, "FILE_STORAGE") === "s3" },
+  ),
   SITE_COMPANY_ID: field(z.uuid().optional()),
   LOG_LEVEL: field(z.enum(["debug", "info", "warn", "error", "fatal", "silent"]).default("info")),
   APP_VERSION: field(z.string().max(64).optional()),
@@ -243,6 +327,9 @@ export const SERVER_SPEC = {
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
   // Mẫu RUM (rum_sample): 30 ngày — đủ so sánh tuần/tháng; số đo gộp p75 chỉ cần 24 giờ gần nhất.
   RETENTION_RUM_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Kho lỗi tự host (error_group, T-122): xoá nhóm lỗi không gặp lại sau ngần ấy ngày (tính từ last_seen_at). 30 ngày đủ so lỗi
+  // giữa các bản phát hành gần nhau; thông điệp đã che nhưng vẫn có thể sót dữ liệu cá nhân → giữ tối thiểu, trần 180 ngày.
+  RETENTION_ERROR_DAYS: field(z.coerce.number().int().min(1).max(180).default(30)),
   // Toạ độ GPS chấm công (attendance_event.geo_*; AUD-DATA-003): xoá toạ độ (bản mã + bản rõ) sau ngần ấy ngày kể từ lúc server
   // nhận; giờ công/sự kiện giữ nguyên. Mặc định 90 ngày (GIẢ ĐỊNH, chưa có xác nhận pháp chế): toạ độ chỉ dùng đối chiếu vị trí,
   // dữ liệu nhạy cảm → giữ tối thiểu (Luật 91/2025 Điều 3.3, 14.1 — mức A), đủ qua chốt kỳ tháng + thời gian khiếu nại/điều chỉnh.

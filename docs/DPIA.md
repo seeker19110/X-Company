@@ -57,8 +57,8 @@ Sơ đồ DFD và ranh giới tin cậy: [THREAT-MODEL.md](THREAT-MODEL.md) mụ
 | phản hồi "đã nhận" (mọi loại) | 2 ngày làm việc (bỏ T7, CN; chưa loại ngày lễ) | `DSAR_RESPOND_WORKDAYS` |
 | gia hạn | tối đa MỘT lần, kèm lý do, khi chưa quá hạn; GIẢ ĐỊNH +15 ngày | `DSAR_EXTEND_DAYS` |
 
-  Danh sách quá hạn (thực hiện hoặc phản hồi): `GET /api/app/privacy/requests?overdue=1`; cảnh báo vận hành `XCLocalDsarOverdue`. Xoá: ẩn danh cùng hàm với job lưu giữ, xoá blob, che outbox, dừng xử lý; giữ bằng chứng đồng ý và nhật ký (không định danh). Nhân viên: hồ sơ lao động/bảng công không xoá — đánh dấu `retained_by_law`.
-- Chưa làm được: xoá khỏi **bản sao lưu**; báo xoá cho bên thứ ba; chủ thể tự phục vụ; xác thực lại danh tính (HR xác minh ngoài hệ thống); thao tác gỡ cờ hạn chế; rút riêng "kho nhân tài" qua giao diện (hiện rút đồng ý = rút mọi đồng ý đang hiệu lực).
+  Danh sách quá hạn (thực hiện hoặc phản hồi): `GET /api/app/privacy/requests?overdue=1`; cảnh báo vận hành `XCLocalDsarOverdue`. Xoá: ẩn danh cùng hàm với job lưu giữ, xoá blob (sau commit qua outbox `files.blob_delete`, thử lại có trần; chưa xoá được → DLQ có cảnh báo), che outbox, dừng xử lý; giữ bằng chứng đồng ý và nhật ký (không định danh). Nhân viên (T-121, D-075): xoá tài khoản đăng nhập (thu hồi phiên/quyền, xoá mật khẩu băm + bí mật TOTP, email/tên hiển thị thay bằng giá trị không định danh, xoá thông báo/lần đăng nhập/lần sai TOTP/phản hồi idempotency), xoá email công việc + SĐT, xoá toạ độ GPS, rút đồng ý; hồ sơ lao động (họ tên, mã, ngày vào/nghỉ, lịch sử công tác) và bảng công/phép giữ — đánh dấu `retained_by_law` kèm căn cứ từng danh mục; kết quả yêu cầu ghi phần xoá (số đếm theo loại) và phần giữ (lý do). Nhân viên tự phục vụ ở trang Cá nhân (`POST /api/app/me/delete`): xác thực lại trong cùng request (mật khẩu + TOTP nếu đã bật, mã không dùng lại được; sai tính vào bộ đếm đăng nhập/TOTP) và gõ chuỗi xác nhận.
+- Chưa làm được: xoá khỏi **bản sao lưu**; báo xoá cho bên thứ ba; tự phục vụ cho liên hệ/ứng viên công khai và tài khoản không gắn nhân viên (đi qua HR, HR xác minh danh tính ngoài hệ thống); tệp đính kèm công việc và bình luận do nhân viên viết (tài liệu nghiệp vụ, chưa phân loại xoá/giữ); thao tác gỡ cờ hạn chế; rút riêng "kho nhân tài" qua giao diện (hiện rút đồng ý = rút mọi đồng ý đang hiệu lực).
 
 ## 4. Chính sách lưu trữ, xoá, huỷ (D-030)
 Mọi số là cấu hình ở `lib/nen/env.ts` (nguồn + mức tin cậy ở chú thích); số cụ thể là lựa chọn thận trọng của chủ dự án uỷ quyền, **chưa có xác nhận pháp chế**.
@@ -74,6 +74,7 @@ Mọi số là cấu hình ở `lib/nen/env.ts` (nguồn + mức tin cậy ở c
 | Hồ sơ vi phạm dữ liệu | 5 năm sau khắc phục (`RETENTION_BREACH_RECORD_YEARS`; chưa có bảng) | NĐ 356/2025 Đ29.1c — B |
 | Phiên 30 ngày, login_attempt 90 ngày, outbox đã gửi 30 ngày | xoá | D-016 |
 | Mẫu RUM `rum_sample` (không định danh trực tiếp) 30 ngày (`RETENTION_RUM_DAYS`); `public_rate_event` (băm IP đếm tần suất) 1 ngày | xoá | lựa chọn thiết kế (D-042; tối thiểu hoá lưu trữ) |
+| Kho lỗi tự host `error_group` (thông điệp lỗi đã che bí mật/PII, có thể sót dữ liệu cá nhân; không IP/UA/mã người dùng) | xoá nhóm không gặp lại sau 30 ngày kể từ lần gặp cuối (`RETENTION_ERROR_DAYS`, trần 180) | lựa chọn thiết kế (T-122; tối thiểu hoá lưu trữ) |
 | Toạ độ GPS chấm công (`attendance_event.geo_*`, chỉ khi bật thu GPS) | xoá toạ độ (bản mã + bản rõ) sau 90 ngày kể từ lúc server nhận (`RETENTION_GEO_DAYS`; sự kiện chấm công giữ) | GIẢ ĐỊNH tối thiểu hoá (D-056) — pháp chế chốt trước khi bật GPS |
 | Bản sao lưu | theo `BACKUP_KEEP` | — |
 

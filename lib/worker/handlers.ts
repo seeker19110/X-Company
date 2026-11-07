@@ -1,8 +1,10 @@
 // Handler theo topic outbox có trong mã (lib/inquiry, lib/work/tasks) + schema zod cho payload (BE-JOB-007):
 // payload chỉ chứa ID/tham số tối thiểu; sai schema → dead ngay. Handler mặc định: (1) thông báo TRONG ỨNG DỤNG (D-058,
 // luôn bật, ghi trong giao dịch worker — lib/notify) cho người bị ảnh hưởng, (2) kênh phụ `Channel` (mặc định ghi log).
+// Ngoài ra `files.blob_delete` (T-125): xoá blob ở kho tệp SAU khi giao dịch xoá dữ liệu chủ thể đã commit (DB-TX-003).
 import { z } from "zod";
 import type { Tx } from "../db/index.ts";
+import { getStorage, STORAGE_KEY_RE, type Storage } from "../files/storage.ts";
 import { addNotifications, usersOfEmployees, usersWhoCan, type RefType } from "../notify/index.ts";
 import { isProcessingBlocked } from "../privacy/consent.ts";
 import { ChannelDisabledError, logChannel, type Channel } from "./channels.ts";
@@ -20,6 +22,12 @@ export interface Handler<S extends z.ZodType = z.ZodType> {
   /** Topic khớp: chuỗi (đúng bằng) hoặc RegExp. */
   match: string | RegExp;
   schema: S;
+  /**
+   * Tác động NGOÀI giao dịch (gọi mạng: kho tệp S3, API…) — DB-TX-003: worker chạy nó TRƯỚC giao dịch đánh dấu xong, không mở
+   * giao dịch và không giữ kết nối pool trong lúc chờ. Ít nhất một lần (worker chết sau effect, trước commit → lượt sau chạy lại)
+   * nên PHẢI lũy đẳng. Ném lỗi → thử lại/DLQ như `handle`.
+   */
+  effect?(payload: z.output<S>, event: JobEvent): Promise<void>;
   /** Chạy trong giao dịch của worker: tác động DB cùng commit với đánh dấu đã xử lý. Ném lỗi → thử lại. */
   handle(tx: Tx, payload: z.output<S>, event: JobEvent): Promise<void>;
 }
@@ -43,6 +51,13 @@ export const InquiryAssigned = z.object({
   assigneeUserId: z.uuid(),
 });
 export const ApplicationReceived = z.object({ applicationId: z.uuid(), code: z.string().min(1).max(64) });
+/**
+ * Xoá blob của kho tệp sau commit (T-125). Payload CHỈ có khoá lưu trữ (`xx/<40 hex>` ngẫu nhiên lúc ghi — không tên tệp, không id
+ * chủ thể, không PII); sai dạng → DLQ ngay (sai schema).
+ */
+export const BLOB_DELETE_TOPIC = "files.blob_delete";
+export const BlobDelete = z.object({ storageKey: z.string().regex(STORAGE_KEY_RE) });
+
 export const TaskNotice = z.object({
   taskId: z.uuid(),
   employeeIds: z.array(z.uuid()).min(1).max(200),
@@ -108,8 +123,12 @@ function inApp(topic: string, payload: unknown): InApp | null {
 /**
  * Registry mặc định: mọi topic hiện có ghi thông báo trong ứng dụng (cùng giao dịch worker) rồi giao qua `channel`
  * (kênh phụ, mặc định ghi log). Kênh phụ tắt → cả giao dịch hoãn (giữ pending), thông báo trong ứng dụng ghi khi thử lại.
+ * `files.blob_delete` xoá blob qua `storage()` (mặc định kho của tiến trình — scripts/worker.ts đăng ký S3 khi FILE_STORAGE=s3).
  */
-export function defaultRegistry(channel: Channel = logChannel): Registry {
+export function defaultRegistry(
+  channel: Channel = logChannel,
+  storage: () => Storage = getStorage,
+): Registry {
   const deliverTo = (consumer: string, match: string | RegExp) =>
     ({
       consumer,
@@ -141,5 +160,14 @@ export function defaultRegistry(channel: Channel = logChannel): Registry {
   return new Registry()
     .register({ ...deliverTo("notify.inquiry", "inquiry.assigned"), schema: InquiryAssigned })
     .register({ ...deliverTo("notify.application", "application.received"), schema: ApplicationReceived })
-    .register({ ...deliverTo("notify.task", /^task\.[a-z_]+$/), schema: TaskNotice });
+    .register({ ...deliverTo("notify.task", /^task\.[a-z_]+$/), schema: TaskNotice })
+    .register({
+      consumer: "files.blob_delete",
+      match: BLOB_DELETE_TOPIC,
+      schema: BlobDelete,
+      // Gọi kho NGOÀI giao dịch; `remove` lũy đẳng ở mọi backend (blob đã mất = xong). Lỗi tạm → thử lại có trần → DLQ; hàng
+      // outbox (payload giữ khoá) là dấu vết blob chưa xoá cho vận hành (`outbox_dead_total`).
+      effect: (p) => storage().remove(p.storageKey),
+      handle: () => Promise.resolve(),
+    });
 }

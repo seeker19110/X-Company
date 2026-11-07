@@ -28,9 +28,11 @@ export const RULES = [
   [".github/workflows/maintenance.yml", "schedule:", "OPS-MAINT-003: lịch tuần"],
   [".github/workflows/maintenance.yml", "scripts/eol-check.mjs --strict", "OPS-MAINT-003: eol-check"],
   [".github/workflows/maintenance.yml", "lycheeverse/lychee-action@", "BASE-DOC-006: lychee"],
-  [".github/workflows/maintenance.yml", "--log-opts=--all", "SEC-SECRET-001: gitleaks toàn lịch sử"],
-  [".github/workflows/maintenance.yml", "sha256sum -c", "SEC-SECRET-001: kiểm checksum binary"],
-  [".github/workflows/maintenance.yml", "fetch-depth: 0", "SEC-SECRET-001: fetch-depth 0"],
+  // AUD-CI-005: quét toàn lịch sử nằm ở secret-scan.yml (push/PR + lịch tuần), không lặp ở maintenance.yml.
+  [".github/workflows/secret-scan.yml", "--log-opts='--all", "SEC-SECRET-001: gitleaks toàn lịch sử"],
+  [".github/workflows/secret-scan.yml", "sha256sum --check --strict", "SEC-SECRET-001: kiểm checksum binary"],
+  [".github/workflows/secret-scan.yml", "fetch-depth: 0", "SEC-SECRET-001: fetch-depth 0"],
+  [".github/workflows/secret-scan.yml", "schedule:", "SEC-SECRET-001: quét lịch định kỳ"],
   [".github/workflows/release.yml", "googleapis/release-please-action@", "WF-REL-001: release-please"],
   [".github/workflows/ci.yml", "check:supply-chain", "CMP-LIC-002: cổng chuỗi cung ứng trong CI"],
   [

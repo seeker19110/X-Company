@@ -17,7 +17,13 @@ import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
 import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
 import { RumInput } from "../lib/rum/index.ts";
-import { ACTIONS as PRIVACY_ACTIONS, ActionBody, STATUSES } from "../lib/privacy/routes.ts";
+import { ClientErrorInput, ERROR_SOURCES, RELEASE_RE } from "../lib/errors/index.ts";
+import {
+  ACTIONS as PRIVACY_ACTIONS,
+  ActionBody,
+  DeleteOwnAccountBody,
+  STATUSES,
+} from "../lib/privacy/routes.ts";
 import { ACTIONS as TASK_ACTIONS, Body as TaskActionBody } from "../lib/work/routes.ts";
 import { REF_TYPES as NOTIFICATION_REF_TYPES } from "../lib/notify/index.ts";
 import { ReadBody as NotificationReadBody } from "../lib/notify/routes.ts";
@@ -219,6 +225,28 @@ const SCHEMAS: Record<string, Json> = {
     },
     required: ["items", "limit", "offset", "next_offset", "unread"],
   },
+  ErrorGroup: obj({
+    id: { type: "string", pattern: "^[0-9]+$", description: "Id nhóm (bigint dạng chuỗi)." },
+    source: { type: "string", enum: [...ERROR_SOURCES] },
+    release: { type: "string", pattern: RELEASE_RE.source },
+    group_key: {
+      type: "string",
+      pattern: "^[0-9a-f]{64}$",
+      description: "Fingerprint của nhóm: sha256 của nguồn + loại lỗi + khung stack đầu đã chuẩn hoá.",
+    },
+    error_type: { type: "string" },
+    message: { type: "string", description: "Thông điệp đã che bí mật/PII." },
+    stack: nullable({
+      type: "string",
+      description: "Dòng khung đã chuẩn hoá (giữ dòng:cột để giải source map).",
+    }),
+    page: nullable({ type: "string", description: "Nhãn trang đã chuẩn hoá." }),
+    context: nullable({ type: "string" }),
+    occurrence_count: { type: "integer", minimum: 1 },
+    first_seen_at: dateTime,
+    last_seen_at: dateTime,
+  }),
+  ErrorGroupPage: pageOf("ErrorGroup"),
   NotificationReadResult: obj({
     updated: { type: "integer", minimum: 0, description: "Số thông báo vừa chuyển sang đã đọc." },
     unread: { type: "integer", minimum: 0 },
@@ -406,8 +434,10 @@ function requestSchemas(): Record<string, Json> {
     SyncBatchRequest: fromZod(Batch),
     PrivacyRequestCreate: fromZod(CreateRequestInput),
     PrivacyRequestActionRequest: fromZod(ActionBody),
+    DeleteOwnAccountRequest: fromZod(DeleteOwnAccountBody),
     InquiryRequest: fromZod(InquiryInput),
     RumRequest: fromZod(RumInput),
+    ClientErrorRequest: fromZod(ClientErrorInput),
     ApplicationRequest: fromZod(ApplicationInput),
   };
 }
@@ -653,6 +683,36 @@ export const REGISTRY: Registry = {
       errors: [404, 422],
     },
   },
+  "/api/app/errors": {
+    GET: {
+      source: "lib/errors/routes.ts#getErrorGroups",
+      operationId: "listErrorGroups",
+      tag: "Vận hành",
+      summary: "Nhóm lỗi của kho lỗi tự host",
+      description:
+        "Lỗi client (beacon) và lỗi 500 chưa bắt của server, gom theo (fingerprint, release); gặp gần nhất trước. Thông điệp/stack đã " +
+        "che bí mật/PII; giải stack bằng source map riêng tư: `node scripts/sourcemap-resolve.mjs --release <release>`.",
+      permission: "`errors.read` (quản trị hệ thống).",
+      idempotency: "none",
+      paged: true,
+      params: [
+        {
+          name: "source",
+          in: "query",
+          schema: { type: "string", enum: [...ERROR_SOURCES] },
+          description: "Lọc theo nguồn lỗi.",
+        },
+        {
+          name: "release",
+          in: "query",
+          schema: { type: "string", pattern: RELEASE_RE.source },
+          description: "Lọc theo mã phiên bản build.",
+        },
+      ],
+      ok: { 200: { description: "Một trang nhóm lỗi.", schema: "ErrorGroupPage" } },
+      errors: [400, 403],
+    },
+  },
   "/api/app/files": {
     POST: {
       source: "lib/files/routes.ts#postFile",
@@ -732,6 +792,32 @@ export const REGISTRY: Registry = {
       permission: "Phiên hợp lệ.",
       idempotency: "none",
       ok: { 200: { description: "Người dùng, vai trò, token CSRF.", schema: "MeResult" } },
+    },
+  },
+  "/api/app/me/delete": {
+    POST: {
+      source: "lib/privacy/routes.ts#postDeleteOwnAccount",
+      operationId: "deleteOwnAccount",
+      tag: "Quyền riêng tư",
+      summary: "Tự xoá tài khoản của chính mình (xác thực lại trong cùng request)",
+      description:
+        "Chủ thể luôn là nhân viên của phiên (không có tham số chủ thể). Thân: mật khẩu hiện tại, mã TOTP khi đã bật (mã đã dùng không dùng lại), `confirm` đúng chuỗi cố định — thiếu/sai → 400 trước khi kiểm mật khẩu. Sai mật khẩu → 403 `REAUTH_FAILED`, thiếu mã → 403 `MFA_CODE_REQUIRED`, sai/phát lại mã → 403 `INVALID_MFA_CODE` (tính vào bộ đếm sai của đăng nhập/TOTP; vượt → 429). Thành công: tạo + hoàn tất yêu cầu xoá trong một giao dịch — thu hồi mọi phiên, vô hiệu đăng nhập, xoá PII không bắt buộc, giữ hồ sơ lao động/bảng công kèm căn cứ (`result`); xoá cookie như đăng xuất. Sysadmin hiệu lực cuối → 409 `LAST_SYSADMIN`; yêu cầu xoá đang được HR xử lý cùng lúc → 409 `PRIVACY_REQUEST_BUSY` (thử lại).",
+      permission:
+        "`account.delete_own` — chỉ chính nhân viên gắn với tài khoản (tài khoản không gắn nhân viên: 403).",
+      idempotency: "guard",
+      body: { kind: "json", schema: "DeleteOwnAccountRequest" },
+      ok: {
+        200: {
+          description: "Đã xoá; phiên đã bị thu hồi (cũng là mã của bản phát lại).",
+          schema: "PrivacyRequestResult",
+          headers: {
+            "Idempotent-Replayed": REPLAY_HEADER,
+            "Set-Cookie": { description: "Cookie phiên hết hạn.", schema: { type: "string" } },
+            "Clear-Site-Data": { description: '"cache", "storage".', schema: { type: "string" } },
+          },
+        },
+      },
+      errors: [403, 409, 429],
     },
   },
   "/api/app/notifications": {
@@ -841,7 +927,7 @@ export const REGISTRY: Registry = {
       tag: "Quyền riêng tư",
       summary: "Bắt đầu, ghi nhận phản hồi, gia hạn, hoàn tất hoặc từ chối một yêu cầu",
       permission:
-        "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409).",
+        "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409). Hoàn tất yêu cầu xoá nhân viên: tài khoản có vai trò khác `employee` → 409 `ACCOUNT_HAS_PRIVILEGES` (thu hồi quyền trước), tài khoản của chính người xử lý → 409 `SELF_ERASE_VIA_PROFILE` (dùng tự xoá có xác thực lại).",
       idempotency: "guard",
       params: [
         idParam("Id yêu cầu."),
@@ -956,6 +1042,23 @@ export const REGISTRY: Registry = {
         201: { description: "Đã tạo hồ sơ.", schema: "CodeResult" },
       },
       errors: [404, 413, 429],
+    },
+  },
+  "/api/public/errors": {
+    POST: {
+      source: "lib/errors/routes.ts#postClientError",
+      operationId: "submitClientError",
+      tag: "Công khai",
+      summary: "Gửi lỗi phía trình duyệt (kho lỗi tự host)",
+      description:
+        "Beacon lỗi của trình duyệt (`navigator.sendBeacon`). Phải cùng nguồn (`Origin`). Tối đa 16 KiB; giới hạn tần suất theo IP " +
+        "(băm). `release` = mã phiên bản build của trang; `page` được chuẩn hoá thành nhãn có số giá trị bị chặn; thông điệp/stack " +
+        "được che bí mật/PII; cùng fingerprint trong cùng release chỉ tăng bộ đếm. Không lưu IP/user agent.",
+      auth: "public",
+      idempotency: "none",
+      body: { kind: "json", schema: "ClientErrorRequest" },
+      ok: { 204: { description: "Đã ghi nhận (không có thân)." } },
+      errors: [403, 429],
     },
   },
   "/api/public/inquiries": {

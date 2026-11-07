@@ -49,11 +49,24 @@ export interface TransitTransport {
   request(req: TransitRequest): Promise<TransitResponse>;
 }
 
-let transport: TransitTransport | undefined;
-let transportEpoch = 0;
+// Transport + client đã dựng nằm ở globalThis (không phải biến module), như pool DB và kho tệp (lib/files/storage.ts): Next đóng
+// gói instrumentation.ts và từng route thành bản sao module RIÊNG — `setKmsTransport` ở instrumentation đặt vào biến module thì
+// route không thấy (KMS_CONFIG ở mọi lần giải mã), và mỗi bản sao giữ bộ đệm DEK/trần lượt gọi riêng. Một tiến trình = một client.
+const KMS_KEY = Symbol.for("x-company.crypto.kms");
+interface KmsShared {
+  transport?: TransitTransport;
+  epoch: number;
+  cached?: { sig: string; provider: TransitProvider };
+}
+const kmsShared = (): KmsShared => {
+  const g = globalThis as unknown as { [KMS_KEY]?: KmsShared };
+  g[KMS_KEY] ??= { epoch: 0 };
+  return g[KMS_KEY];
+};
 export function setKmsTransport(t: TransitTransport | undefined): void {
-  transport = t;
-  transportEpoch += 1;
+  const s = kmsShared();
+  s.transport = t;
+  s.epoch += 1;
 }
 
 // ---- Cấu hình ------------------------------------------------------------------------------------------------------
@@ -373,7 +386,6 @@ export class TransitProvider implements KeyProvider {
 }
 
 let override: KeyProvider | undefined;
-let cached: { sig: string; provider: TransitProvider } | undefined;
 
 /** Ghi đè nhà cung cấp (test/tiêm phụ thuộc). `undefined` = quay về theo KMS_PROVIDER. */
 export function setKeyProvider(p: KeyProvider | undefined): void {
@@ -385,15 +397,16 @@ export function keyProvider(): KeyProvider {
   if (override !== undefined) return override;
   if (env("KMS_PROVIDER") === "env") return envProvider;
   const cfg = transitConfig();
-  const sig = `${transportEpoch}|${JSON.stringify(cfg)}`;
-  if (cached?.sig === sig) return cached.provider;
-  if (transport === undefined)
+  const s = kmsShared();
+  const sig = `${s.epoch}|${JSON.stringify(cfg)}`;
+  if (s.cached?.sig === sig) return s.cached.provider;
+  if (s.transport === undefined)
     throw new CryptoError(
       "KMS_CONFIG",
       "KMS_PROVIDER=transit nhưng chưa đăng ký transport KMS (import adapters/register-kms.ts ở điểm vào)",
     );
-  const provider = new TransitProvider(new TransitKms(cfg, transport));
-  cached = { sig, provider };
+  const provider = new TransitProvider(new TransitKms(cfg, s.transport));
+  s.cached = { sig, provider };
   return provider;
 }
 

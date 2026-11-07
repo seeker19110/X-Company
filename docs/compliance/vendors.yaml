@@ -1,9 +1,11 @@
 # Sổ nhà cung cấp / bên xử lý (CMP-AUDIT-007; ISO/IEC 27001:2022 A.5.19–5.22; Luật 91/2025/QH15 Đ.17).
-# Nguồn sự thật cho `npm run -s check:vendors` (CI): mỗi SDK dịch vụ ngoài trong `dependencies` và mỗi tệp `adapters/*.ts`
-# phải thuộc đúng một dòng; `reviewed` ≤ 12 tháng; `docs/privacy/processors.md` sinh từ sổ này
+# Nguồn sự thật cho `npm run -s check:vendors` (CI): mọi gói `dependencies` phải được phân loại (`packages` của một
+# dòng hoặc `khong_goi_ngoai`), SDK dev và tệp client mạng (`adapters/**`, khai thêm ở `adapters:`) phải thuộc một
+# dòng; `reviewed` ≤ 12 tháng; `docs/privacy/processors.md` sinh từ sổ này
 # (`node scripts/check-vendors.mjs --write`). Thêm/đổi bên xử lý = PR sửa sổ (thông báo sub-processor nằm trong PR).
 # country: mã ISO 3166-1 alpha-2 nơi xử lý/lưu (VN, US…) hoặc chua_chon; bên lưu dữ liệu cá nhân ngoài VN cần
-# `transfer_assessment: <đường dẫn hồ sơ>` (CMP-VN-004, check:docs đối chiếu với storage của data map).
+# `transfer_assessment: <đường dẫn hồ sơ>`, hoặc `mien_tru: "<căn cứ>"` (không dùng cho bên lưu cột PII của data map),
+# hoặc `du_lieu_ca_nhan: khong` (CMP-VN-004; check:docs xét MỌI bên xử lý).
 # status: dang_dung (đang chạy) | du_kien (thiết kế sẵn, chưa bật trên dữ liệu thật). DPA/vị trí "chờ chủ dự án" = việc người.
 version: 1
 # Gói `dependencies` đã phân loại là KHÔNG gọi dịch vụ ngoài lúc chạy (thư viện thuần/khung). Mọi gói `dependencies` phải
@@ -16,6 +18,7 @@ vendors:
     data: "mã nguồn, tên/email người đóng góp; không có dữ liệu nhân viên/khách của ứng dụng"
     location: "Hoa Kỳ (GitHub, Inc.)"
     country: US
+    mien_tru: "chỉ tên/email người đóng góp mã nguồn, không có dữ liệu nhân viên/khách của ứng dụng — chờ pháp chế xác nhận có cần hồ sơ chuyển dữ liệu"
     dpa: "GitHub Data Protection Agreement — chờ chủ dự án xác nhận áp dụng cho tài khoản"
     certs: "SOC 2 Type II, ISO/IEC 27001 (theo công bố của GitHub — chưa xác minh)"
     risk: thap
@@ -29,6 +32,7 @@ vendors:
     data: "không có dữ liệu cá nhân"
     location: "Hoa Kỳ"
     country: US
+    du_lieu_ca_nhan: khong
     dpa: "không cần (không xử lý dữ liệu cá nhân)"
     certs: "—"
     risk: thap
@@ -62,6 +66,19 @@ vendors:
     reviewed: 2026-11-06
     packages: []
     adapters: [adapters/kms-transit-http.ts, adapters/register-kms.ts]
+  - id: object-storage
+    name: "Kho tệp S3-compatible (FILE_STORAGE=s3, nhiều bản sao) — nhà cung cấp chưa chọn"
+    service: "lưu tệp tải lên dùng chung cho mọi bản sao ứng dụng (adapters/s3-http.ts, chữ ký SigV4; T-116, D-073)"
+    data: "tệp tải lên (biên bản, ảnh, tệp đính kèm) ĐÃ mã hoá AES-256-GCM ở ứng dụng trước khi gửi — nhà cung cấp không giữ khoá; lộ ra: kích thước, thời điểm ghi/đọc, khoá lưu ngẫu nhiên"
+    location: "chờ chủ dự án chọn ở G7 (D-005; cùng vùng với hosting; ngoài Việt Nam → hồ sơ chuyển dữ liệu, CMP-VN-004)"
+    country: chua_chon
+    dpa: "chờ chủ dự án (không cần khi tự host)"
+    certs: "chờ chủ dự án"
+    risk: trung_binh
+    status: du_kien
+    reviewed: 2026-11-06
+    packages: []
+    adapters: [adapters/s3-http.ts, adapters/register-storage.ts]
   - id: offsite-backup
     name: "Đích sao lưu off-site restic (S3/SFTP) — nhà cung cấp chưa chọn"
     service: "lưu bản sao lưu CSDL đã mã hoá (scripts/backup-offsite.sh)"
@@ -79,8 +96,9 @@ vendors:
     name: "CA ACME (Let's Encrypt / ZeroSSL) qua Caddy"
     service: "cấp và gia hạn chứng chỉ TLS tự động (ops/caddy/Caddyfile)"
     data: "tên miền (công khai trong CT log) và ACME_EMAIL của người nhận cảnh báo hết hạn"
-    location: "Hoa Kỳ (ISRG / ZeroSSL)"
+    location: "Hoa Kỳ (ISRG/Let's Encrypt); ZeroSSL — pháp nhân chưa xác minh"
     country: US
+    mien_tru: "ACME_EMAIL dùng hộp thư chức năng (không định danh cá nhân), tên miền là thông tin công khai — chờ pháp chế xác nhận"
     dpa: "chờ chủ dự án (điều khoản subscriber của CA; ACME_EMAIL nên là hộp thư chức năng, không phải cá nhân)"
     certs: "WebTrust for CAs (theo công bố của CA — chưa xác minh)"
     risk: trung_binh

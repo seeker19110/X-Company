@@ -198,8 +198,8 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y --no-install-recommends postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
-      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
-        run: node scripts/tools/install-tool.mjs install openbao restic
+      - name: Cài OpenBao + restic + rclone (ghim sha256) cho test KMS/off-site/kho tệp S3
+        run: node scripts/tools/install-tool.mjs install openbao restic rclone
       - name: Coverage theo baseline (.c8rc.json chỉ tăng — QA-COV-002)
         run: |
           npm run -s check:coverage-baseline
@@ -244,6 +244,8 @@ jobs:
         run: npm ci
       - name: Cài Chromium đúng phiên bản Playwright
         run: npx --no-install playwright install --with-deps chromium
+      - name: Cài rclone (ghim sha256) — máy chủ S3 tự host cho e2e 2 bản sao (T-116)
+        run: node scripts/tools/install-tool.mjs install rclone
       - name: E2E đầy đủ (Postgres thật + bản build production, axe WCAG 2.2 AA)
         run: npm run -s e2e
       - name: Lưu báo cáo + trace Playwright khi đỏ (QA-E2E-005)
@@ -273,8 +275,8 @@ jobs:
       - name: PostgreSQL của runner vào PATH (initdb/pg_ctl cho scripts/with-test-db.sh)
         run: echo "$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)" >> "$GITHUB_PATH"
       # `npm test` của README gồm test KMS/off-site chạy nhị phân thật (không skip): cài bản ghim sha256 như job quality.
-      - name: Cài OpenBao + restic (ghim sha256) cho test KMS/off-site
-        run: node scripts/tools/install-tool.mjs install openbao restic
+      - name: Cài OpenBao + restic + rclone (ghim sha256) cho test KMS/off-site/kho tệp S3
+        run: node scripts/tools/install-tool.mjs install openbao restic rclone
       - name: Lệnh trong README (trích tự động, chạy nguyên văn)
         run: node scripts/readme-smoke.mjs
 
