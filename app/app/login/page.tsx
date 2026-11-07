@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { t } from "@/lib/i18n";
+import { ErrorReporting } from "@/app/server/errors";
 import { RumIfEnabled } from "@/app/server/rum";
 import { getSession } from "@/app/server/session";
 import { LoginForm } from "./login-form";
@@ -38,6 +39,7 @@ export default async function LoginPage() {
       <h1>{t("login.heading")}</h1>
       <LoginForm mfaText={mfaText()} />
       <RumIfEnabled />
+      <ErrorReporting />
     </main>
   );
 }
