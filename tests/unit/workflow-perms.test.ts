@@ -48,6 +48,15 @@ describe("workflow-perms (BASE-SEC-006)", () => {
     ]);
   });
 
+  test("chú thích ở cột 0 giữa jobs và chú thích cuối dòng tên job không làm mất/gán nhầm quyền (review #100)", () => {
+    const wf =
+      "permissions:\n  contents: read\njobs:\n  a:\n    runs-on: x\n# --- nhóm ---\n  b: # ghi chú\n    permissions: write-all\n";
+    assert.deepEqual(workflowPerms(wf), [
+      { job: "a", perms: "contents: read", own: false },
+      { job: "b", perms: "write-all", own: true },
+    ]);
+  });
+
   test("workflow thiếu permissions cấp đỉnh → hiện rõ là mặc định của repo; dạng vô hướng read-all giữ nguyên", () => {
     assert.match(
       workflowPerms("on: push\njobs:\n  a:\n    runs-on: x\n")[0]?.perms ?? "",

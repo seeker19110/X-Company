@@ -40,10 +40,12 @@ export function checkSeedText(text, file) {
         `WF-ENV-010: ${at(m.index)} ${m[1]}(${arg || "…"}) — seed chỉ đọc ${[...ALLOWED_READS].join(", ")} (chuỗi cố định)`,
       );
   }
-  for (const m of text.matchAll(/process\.env(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[)/g))
+  // Mọi `process.env` không đi kèm `.TÊN_ĐƯỢC_PHÉP` đều đỏ: `[…]`, destructuring `const { X } = process.env`, truyền cả
+  // object (review #100: destructuring từng lọt).
+  for (const m of text.matchAll(/process\.env(?:\.([A-Za-z_][A-Za-z0-9_]*))?/g))
     if (!m[1] || !ALLOWED_ENV.has(m[1]))
       errs.push(
-        `WF-ENV-010: ${at(m.index)} process.env${m[1] ? `.${m[1]}` : "[…]"} — seed chỉ đọc ${[...ALLOWED_ENV].join(", ")}`,
+        `WF-ENV-010: ${at(m.index)} process.env${m[1] ? `.${m[1]}` : " (không qua .TÊN)"} — seed chỉ đọc ${[...ALLOWED_ENV].join(", ")}`,
       );
   for (const m of text.matchAll(/\b(?:https?|wss?|postgres(?:ql)?):\/\/([^/\s"'`?#\\]+)/gi)) {
     // authority = [userinfo@]host[:port] — bỏ userinfo (tới @ cuối) và cổng.

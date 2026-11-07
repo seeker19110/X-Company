@@ -37,9 +37,10 @@ export function workflowPerms(text) {
       inJobs = true;
       continue;
     }
-    if (inJobs && /^\S/.test(l)) inJobs = false;
+    // Chú thích ở cột 0 không kết thúc khối jobs; tên job có thể kèm chú thích cuối dòng (review #100).
+    if (inJobs && /^[^\s#]/.test(l)) inJobs = false;
     if (!inJobs) continue;
-    const jm = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(l);
+    const jm = /^ {2}([A-Za-z0-9_-]+):\s*(#.*)?$/.exec(l);
     if (jm) {
       cur = { job: jm[1], perms: null };
       jobs.push(cur);

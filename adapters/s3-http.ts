@@ -161,6 +161,15 @@ async function errorCode(res: Response): Promise<string | undefined> {
 }
 
 /**
+ * 404 chỉ nghĩa là "không có đối tượng" khi mã là NoSuchKey (hoặc thân không có mã). NoSuchBucket/mã khác = cấu hình sai
+ * (bucket/endpoint của worker khác web) → ném để thử lại rồi vào DLQ, không âm thầm coi blob đã xoá (review #100).
+ */
+async function missingOrThrow(op: string, res: Response): Promise<void> {
+  const code = await errorCode(res);
+  if (code !== undefined && code !== "NoSuchKey") throw new S3Error(op, res.status, code);
+}
+
+/**
  * `cfg` là hàm (đọc lại mỗi lời gọi) để test đổi cấu hình không cần tạo lại. `fetchFn`/`now` tiêm được để test.
  */
 export function s3Transport(
@@ -220,7 +229,7 @@ export function s3Transport(
     async getObject(key) {
       const res = await call("GetObject", "GET", key);
       if (res.status === 404) {
-        await res.body?.cancel();
+        await missingOrThrow("GetObject", res);
         return null;
       }
       if (res.status !== 200) throw new S3Error("GetObject", res.status, await errorCode(res));
@@ -235,8 +244,9 @@ export function s3Transport(
     },
     async deleteObject(key) {
       const res = await call("DeleteObject", "DELETE", key);
-      // S3 trả 204 cả khi không có đối tượng; một số máy chủ tương thích trả 404 → coi như đã xoá (idempotent).
-      if (res.status !== 204 && res.status !== 200 && res.status !== 404)
+      // S3 trả 204 cả khi không có đối tượng; một số máy chủ tương thích trả 404 NoSuchKey → coi như đã xoá (idempotent).
+      if (res.status === 404) return missingOrThrow("DeleteObject", res);
+      if (res.status !== 204 && res.status !== 200)
         throw new S3Error("DeleteObject", res.status, await errorCode(res));
       await res.body?.cancel();
     },

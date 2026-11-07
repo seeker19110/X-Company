@@ -134,7 +134,7 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
     try {
       await handler.effect(parsed.data, ev);
     } catch (err) {
-      return failed(pool, ev, err, o, now);
+      return failed(pool, ev, err, o);
     }
   }
   const c = await pool.connect();
@@ -155,20 +155,24 @@ async function processOne(pool: pg.Pool, ev: Claimed, o: Required<WorkerOptions>
     return "done";
   } catch (err) {
     await rollback(c);
-    return failed(pool, ev, err, o, now);
+    return failed(pool, ev, err, o);
   } finally {
     c.release();
   }
 }
 
-/** Việc lỗi: kênh tắt → hoãn (không tính lần); lỗi vĩnh viễn/hết lần → DLQ; còn lại → pending với backoff. */
+/**
+ * Việc lỗi: kênh tắt → hoãn (không tính lần); lỗi vĩnh viễn/hết lần → DLQ; còn lại → pending với backoff.
+ * Mốc thời gian lấy LÚC LỖI (không phải lúc lấy việc): `effect` gọi mạng có thể mất tới hết timeout, tính backoff từ mốc cũ
+ * thì `next_attempt_at` rơi vào quá khứ và việc bị lấy lại ngay, đốt hết lượt thử (review #100).
+ */
 async function failed(
   pool: pg.Pool,
   ev: Claimed,
   err: unknown,
   o: Required<WorkerOptions>,
-  now: Date,
 ): Promise<Outcome> {
+  const now = o.now();
   if (err instanceof ChannelDisabledError) {
     // Kênh tắt: không tính là lần lỗi; giữ pending, thử lại sau.
     await pool.query(

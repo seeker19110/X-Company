@@ -83,12 +83,12 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
  */
 function dbTlsRule(raw: string): string | undefined {
   const u = new URL(raw);
-  const socketHost = u.searchParams.get("host");
-  const local =
-    socketHost !== null && socketHost.startsWith("/")
-      ? true
-      : LOOPBACK_HOSTS.has(u.hostname) && (socketHost === null || LOOPBACK_HOSTS.has(socketHost));
-  if (local) return undefined;
+  // `host=` lặp: pg-connection-string lấy giá trị CUỐI (giá trị rỗng → lùi về host của authority). Miễn chỉ khi MỌI đích
+  // có thể được chọn đều cục bộ (review #100: `?host=/sock&host=db.xa` từng lọt vì chỉ xét giá trị đầu).
+  const hostParams = u.searchParams.getAll("host");
+  const isLocal = (h: string) => h.startsWith("/") || LOOPBACK_HOSTS.has(h);
+  const targets = hostParams.length === 0 ? [u.hostname] : hostParams.map((h) => (h === "" ? u.hostname : h));
+  if (targets.every(isLocal)) return undefined;
   // Mọi giá trị sslmode (khoá lặp: bộ đọc của pg có thể lấy cái cuối) đều phải là verify-full.
   const modes = u.searchParams.getAll("sslmode");
   return modes.length > 0 && modes.every((m) => m === "verify-full")

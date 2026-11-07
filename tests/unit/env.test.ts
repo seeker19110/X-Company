@@ -505,6 +505,10 @@ describe("TLS tới CSDL ở production: sslmode=verify-full (BASE-SEC-004)", ()
       "db.internal/xc?sslmode=verify-full&sslmode=disable",
       "localhost.evil.example/xc",
       "localhost/xc?host=db.internal",
+      // review #100: pg lấy `host=` CUỐI; giá trị rỗng lùi về host của authority.
+      "db.internal/xc?host=/var/run/postgresql&host=db.internal",
+      "localhost/xc?host=localhost&host=db.internal",
+      "db.internal/xc?host=/tmp&host=",
     ]) {
       let msg = "";
       try {

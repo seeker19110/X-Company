@@ -33,6 +33,21 @@ describe("ci-budget (XC-GREEN-002)", () => {
     assert.ok(runsOnPr("on: [push, pull_request]\n"));
     assert.ok(runsOnPr("on:\n  pull_request_target:\n"));
     assert.equal(runsOnPr("on:\n  push:\n  schedule:\n    - cron: '0 0 * * 1'\n"), false);
+    // review #100: khoá `on` có nháy vẫn được nhận.
+    assert.ok(runsOnPr('"on":\n  pull_request:\n'));
+    assert.ok(runsOnPr("'on': [pull_request]\n"));
+  });
+
+  test("job có chú thích cuối dòng / chú thích cột 0 giữa các job vẫn được đếm (review #100)", () => {
+    const t =
+      "on: pull_request\njobs:\n  lint: # nhanh\n    timeout-minutes: 5\n# --- nhóm ---\n  test:\n    timeout-minutes: 10\n";
+    assert.deepEqual(
+      workflowJobs(t).map((j) => [j.job, j.timeout]),
+      [
+        ["lint", 5],
+        ["test", 10],
+      ],
+    );
   });
 
   test("workflowJobs: đọc timeout, thiếu → null; matrix nhân số tổ hợp", () => {

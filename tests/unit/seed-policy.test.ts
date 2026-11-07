@@ -50,7 +50,12 @@ describe("seed-policy (WF-ENV-010)", () => {
     ["đọc tệp theo biến", "readFileSync(file);", /readFileSync\(file\)/],
     ["đọc tệp qua template có biến", "readFileSync(`e2e/${x}`);", /readFileSync/],
     ["biến môi trường khác", "const u = process.env.PROD_DATABASE_URL;", /process\.env\.PROD_DATABASE_URL/],
-    ["truy cập env động", 'const u = process.env["X"];', /process\.env\[…\]/],
+    ["truy cập env động", 'const u = process.env["X"];', /process\.env \(không qua \.TÊN\)/],
+    [
+      "destructuring env (review #100)",
+      "const { PROD_DATABASE_URL } = process.env;",
+      /process\.env \(không qua \.TÊN\)/,
+    ],
     ["URL thật", `const u = "https://api.x-company.vn/users";`, /URL tới api\.x-company\.vn/],
     [
       "chuỗi kết nối CSDL khác",

@@ -174,6 +174,16 @@ describe("s3Transport: yêu cầu gửi đi (fetch giả)", () => {
     assert.equal(await s3Transport(() => cfg, reply(404), now).getObject("ab/x"), null);
     await s3Transport(() => cfg, reply(204), now).deleteObject("ab/x");
     await s3Transport(() => cfg, reply(404), now).deleteObject("ab/x");
+    const noKey = "<Error><Code>NoSuchKey</Code></Error>";
+    assert.equal(await s3Transport(() => cfg, reply(404, noKey), now).getObject("ab/x"), null);
+    await s3Transport(() => cfg, reply(404, noKey), now).deleteObject("ab/x");
+    // Review #100: 404 NoSuchBucket (worker cấu hình bucket khác web) KHÔNG phải "đã xoá"/"không có tệp" → ném để thử lại/DLQ.
+    const noBucket = "<Error><Code>NoSuchBucket</Code></Error>";
+    for (const op of [
+      () => s3Transport(() => cfg, reply(404, noBucket), now).deleteObject("ab/x"),
+      () => s3Transport(() => cfg, reply(404, noBucket), now).getObject("ab/x"),
+    ])
+      await assert.rejects(op(), { name: "S3Error", status: 404 });
     await assert.rejects(
       s3Transport(() => cfg, reply(403, "<Error><Code>SignatureDoesNotMatch</Code></Error>"), now).getObject(
         "ab/x",

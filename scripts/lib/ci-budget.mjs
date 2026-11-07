@@ -7,7 +7,8 @@ import path from "node:path";
 
 /** Workflow có chạy trên PR không (`on:` dạng khối, một dòng, hay mảng). */
 export function runsOnPr(text) {
-  const on = /^on:([^\n]*)\n((?:[ \t]+.*\n|\n)*)/m.exec(text) ?? [];
+  // Khoá `on` có thể có nháy (`"on":` — YAML 1.1 coi `on` trần là boolean nên có người viết vậy).
+  const on = /^["']?on["']?:([^\n]*)\n((?:[ \t]+.*\n|\n)*)/m.exec(text) ?? [];
   return /\bpull_request(_target)?\b/.test(`${on[1] ?? ""}\n${on[2] ?? ""}`);
 }
 
@@ -15,7 +16,10 @@ export function runsOnPr(text) {
 export function workflowJobs(text) {
   const jobsText = /^jobs:\n([\s\S]*)/m.exec(text)?.[1] ?? "";
   const out = [];
-  for (const m of jobsText.matchAll(/^ {2}([A-Za-z0-9_-]+):\n((?: {4}.*\n|\n| {2}#.*\n)*)/gm)) {
+  // Tên job có thể kèm chú thích cuối dòng; chú thích ở cột 0/2 giữa thân job không cắt job (review #100).
+  for (const m of jobsText.matchAll(
+    /^ {2}([A-Za-z0-9_-]+):[ \t]*(?:#[^\n]*)?\n((?: {4}.*\n|\n| {0,2}#.*\n)*)/gm,
+  )) {
     const body = m[2];
     const t = /^ {4}timeout-minutes:\s*(\d+)\b/m.exec(body);
     // matrix một chiều dạng `name: [a, b, c]` — nhân các chiều đọc được; dạng khác coi như 1 (ghi chú trong lỗi nếu có).
