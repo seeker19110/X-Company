@@ -463,6 +463,19 @@ pii:
     copies: "kho tệp FILE_STORAGE_DIR; sao lưu kho tệp (chưa có quy trình xoá khỏi bản sao lưu)"
     recipients: "chỉ HR"
     status: implemented
+  # Kho lỗi tự host (T-122): thông điệp lỗi client/server ĐÃ CHE (redactString: email, token, JWT, khoá, URL có mật khẩu; dãy ≥ 7 chữ số)
+  # nhưng là văn bản tự do nên có thể sót dữ liệu cá nhân → khai PII. Các cột khác của error_group không chứa dữ liệu cá nhân: `stack` chỉ
+  # giữ dòng khung đã bỏ origin/query và che như trên, `page` là nhãn trang chuẩn hoá (tập giá trị bị chặn); không IP/UA/mã người dùng.
+  - table: error_group
+    column: message
+    class: thuong
+    subject: nguoi_dung
+    purpose: "chẩn đoán lỗi phần mềm (thông điệp lỗi đã che bí mật/PII, gom theo nhóm)"
+    legal_basis: "lợi ích hợp pháp / nghĩa vụ bảo đảm an toàn, ổn định hệ thống (pháp chế xác nhận)"
+    retention: "30 ngày kể từ lần gặp cuối (RETENTION_ERROR_DAYS, trần 180) — tối thiểu hoá lưu trữ"
+    copies: "sao lưu DB"
+    recipients: "quản trị hệ thống (quyền errors.read)"
+    status: implemented
 reviewed_non_pii:
   # rum_sample (T-056, D-042): KHÔNG cột nào trùng bộ dò tên PII (page, metric, value_ms, cls_milli_n, nav_type, received_at) nên không cần
   # khai ở đây. Đã rà: không IP/user agent/mã người dùng; `page` là nhãn chuẩn hoá có tập giá trị bị chặn (lib/rum/page.pure.ts), không chứa

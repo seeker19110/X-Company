@@ -402,6 +402,45 @@
         "security": [{ "cookieAuth": [], "csrfToken": [] }]
       }
     },
+    "/api/app/errors": {
+      "get": {
+        "operationId": "listErrorGroups",
+        "tags": ["Vận hành"],
+        "summary": "Nhóm lỗi của kho lỗi tự host",
+        "description": "Lỗi client (beacon) và lỗi 500 chưa bắt của server, gom theo (fingerprint, release); gặp gần nhất trước. Thông điệp/stack đã che bí mật/PII; giải stack bằng source map riêng tư: `node scripts/sourcemap-resolve.mjs --release <release>`.\n\nQuyền: `errors.read` (quản trị hệ thống).",
+        "x-permission": "`errors.read` (quản trị hệ thống).",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo nguồn lỗi.",
+            "schema": { "type": "string", "enum": ["client", "server"] }
+          },
+          {
+            "name": "release",
+            "in": "query",
+            "required": false,
+            "description": "Lọc theo mã phiên bản build.",
+            "schema": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" }
+          },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Offset" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Một trang nhóm lỗi.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorGroupPage" } } }
+          },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "401": { "$ref": "#/components/responses/Problem401" },
+          "403": { "$ref": "#/components/responses/Problem403" },
+          "500": { "$ref": "#/components/responses/Problem500" },
+          "503": { "$ref": "#/components/responses/Problem503" }
+        },
+        "security": [{ "cookieAuth": [] }]
+      }
+    },
     "/api/app/files": {
       "post": {
         "operationId": "uploadFile",
@@ -1008,6 +1047,29 @@
         "security": []
       }
     },
+    "/api/public/errors": {
+      "post": {
+        "operationId": "submitClientError",
+        "tags": ["Công khai"],
+        "summary": "Gửi lỗi phía trình duyệt (kho lỗi tự host)",
+        "description": "Beacon lỗi của trình duyệt (`navigator.sendBeacon`). Phải cùng nguồn (`Origin`). Tối đa 16 KiB; giới hạn tần suất theo IP (băm). `release` = mã phiên bản build của trang; `page` được chuẩn hoá thành nhãn có số giá trị bị chặn; thông điệp/stack được che bí mật/PII; cùng fingerprint trong cùng release chỉ tăng bộ đếm. Không lưu IP/user agent.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/ClientErrorRequest" } }
+          }
+        },
+        "responses": {
+          "204": { "description": "Đã ghi nhận (không có thân)." },
+          "400": { "$ref": "#/components/responses/Problem400" },
+          "403": { "$ref": "#/components/responses/Problem403" },
+          "413": { "$ref": "#/components/responses/Problem413" },
+          "429": { "$ref": "#/components/responses/Problem429" },
+          "500": { "$ref": "#/components/responses/Problem500" }
+        },
+        "security": []
+      }
+    },
     "/api/public/inquiries": {
       "post": {
         "operationId": "submitInquiry",
@@ -1378,6 +1440,57 @@
           }
         },
         "required": ["items", "limit", "offset", "next_offset", "unread"]
+      },
+      "ErrorGroup": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[0-9]+$", "description": "Id nhóm (bigint dạng chuỗi)." },
+          "source": { "type": "string", "enum": ["client", "server"] },
+          "release": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" },
+          "group_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Fingerprint của nhóm: sha256 của nguồn + loại lỗi + khung stack đầu đã chuẩn hoá."
+          },
+          "error_type": { "type": "string" },
+          "message": { "type": "string", "description": "Thông điệp đã che bí mật/PII." },
+          "stack": {
+            "type": ["string", "null"],
+            "description": "Dòng khung đã chuẩn hoá (giữ dòng:cột để giải source map)."
+          },
+          "page": { "type": ["string", "null"], "description": "Nhãn trang đã chuẩn hoá." },
+          "context": { "type": ["string", "null"] },
+          "occurrence_count": { "type": "integer", "minimum": 1 },
+          "first_seen_at": { "type": "string", "format": "date-time" },
+          "last_seen_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "source",
+          "release",
+          "group_key",
+          "error_type",
+          "message",
+          "stack",
+          "page",
+          "context",
+          "occurrence_count",
+          "first_seen_at",
+          "last_seen_at"
+        ]
+      },
+      "ErrorGroupPage": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ErrorGroup" } },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+          "offset": { "type": "integer", "minimum": 0, "maximum": 10000 },
+          "next_offset": {
+            "type": ["integer", "null"],
+            "description": "Offset của trang kế; null khi đã hết."
+          }
+        },
+        "required": ["items", "limit", "offset", "next_offset"]
       },
       "NotificationReadResult": {
         "type": "object",
@@ -1873,6 +1986,19 @@
           }
         },
         "required": ["page", "metrics"]
+      },
+      "ClientErrorRequest": {
+        "type": "object",
+        "properties": {
+          "release": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" },
+          "page": { "type": "string", "minLength": 1, "maxLength": 200, "format": "starts_with" },
+          "type": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "message": { "type": "string", "maxLength": 2000 },
+          "stack": { "type": "string", "maxLength": 12000 },
+          "context": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "required": ["release", "page", "type", "message"],
+        "additionalProperties": false
       },
       "ApplicationRequest": {
         "type": "object",

@@ -210,6 +210,12 @@
       "duongDanKhongHopLe": "Đường dẫn không hợp lệ",
       "revisionStatusMismatch": "Phiên bản đang ở trạng thái {status}, cần {expected}"
     },
+    "errors": {
+      "guiQuaNhieu": "Gửi quá nhiều lần, vui lòng thử lại sau",
+      "trangKhongHopLe": "Đường dẫn trang không hợp lệ",
+      "nguonKhongHopLe": "Nguồn lỗi không hợp lệ (client hoặc server)",
+      "releaseKhongHopLe": "Mã phiên bản không hợp lệ"
+    },
     "files": {
       "khongTimThayDoiTuong": "Không tìm thấy đối tượng",
       "loaiDoiTuongKhongHopLe": "Loại đối tượng không hợp lệ",

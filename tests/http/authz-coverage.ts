@@ -25,6 +25,8 @@ export const AUTHZ_COVERAGE: Readonly<Record<string, AuthzClass>> = {
   "POST /api/app/auth/logout": { bola: true },
   "GET /api/app/comments": { bola: true },
   "POST /api/app/comments": { bola: true },
+  // Kho lỗi tự host (T-122): dữ liệu hệ thống, không theo người dùng → chỉ BFLA (errors.read = sysadmin).
+  "GET /api/app/errors": { bfla: true },
   "POST /api/app/files": { bola: true },
   "GET /api/app/files/[id]": { bola: true },
   "GET /api/app/inquiries": { bola: true, bfla: true },
