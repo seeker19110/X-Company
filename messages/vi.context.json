@@ -499,6 +499,9 @@
       "confirmPhrase": "Lỗi kiểm tra đầu vào khi xoá tài khoản tự phục vụ: chuỗi xác nhận thiếu hoặc sai; {phrase} = chuỗi phải gõ (giữ nguyên, không dịch).",
       "cannotStartInState": "Lỗi 409 INVALID_STATE khi bắt đầu xử lý yêu cầu quyền dữ liệu không ở trạng thái 'received'; {status} = mã trạng thái.",
       "requestClosed": "Lỗi 409 INVALID_STATE khi thao tác trên yêu cầu quyền dữ liệu đã hoàn tất/từ chối; {status} = mã trạng thái.",
+      "selfEraseViaProfile": "Lỗi 409 khi HR hoàn tất yêu cầu xoá có tài khoản của CHÍNH người xử lý — phải tự xoá ở trang Cá nhân (xác thực lại).",
+      "accountHasPrivileges": "Lỗi 409 khi HR hoàn tất yêu cầu xoá mà tài khoản đích còn quyền ngoài 'employee' (vd sysadmin, hr) — cần thu hồi quyền trước.",
+      "requestBusy": "Lỗi 409 khi nhân viên tự xoá tài khoản đúng lúc HR đang giữ yêu cầu xoá của họ (khoá NOWAIT) — thử lại.",
       "canLyDoGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền privacy: gia hạn yêu cầu quyền dữ liệu thiếu lý do.",
       "daGiaHanMotLan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_ALREADY_USED 409); miền privacy: gia hạn lần hai bị từ chối.",
       "quaHanKhongGiaHan": "Thông báo lỗi nghiệp vụ trả client (AppError EXTENSION_TOO_LATE 409); miền privacy: gia hạn sau khi đã quá hạn."

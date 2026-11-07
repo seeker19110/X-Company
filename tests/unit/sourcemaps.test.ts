@@ -122,6 +122,8 @@ describe("sourcemaps-stash", () => {
       /không được nằm trong \.next/,
     );
     assert.throws(() => releaseDir(f.dir, ""), /release không hợp lệ/);
+    // review #100: APP_VERSION=".." từng làm thư mục release = cha của dir (xoá cả .data/); "." xoá map mọi release.
+    for (const r of [".", "..", "..."]) assert.throws(() => releaseDir(f.dir, r), /release không hợp lệ/, r);
   });
 
   test("chạy lại cùng release: thư mục release được làm mới (không trộn map cũ)", () => {
@@ -176,7 +178,18 @@ describe("sourcemap-resolve", () => {
 
   test("RELEASE_RE và safeRelease của script khớp bản TypeScript (lib/errors/normalize.pure.ts)", () => {
     assert.equal(RELEASE_RE.source, TS_RELEASE_RE.source);
-    for (const raw of [undefined, null, "", "v1.2.3", "2026.11.06+abc", "a b/c", "x".repeat(80), "Phiên bản"])
+    for (const raw of [
+      undefined,
+      null,
+      "",
+      "v1.2.3",
+      "2026.11.06+abc",
+      "a b/c",
+      "x".repeat(80),
+      "Phiên bản",
+      ".",
+      "..",
+    ])
       assert.equal(safeRelease(raw), tsSafeRelease(raw as string | null | undefined), String(raw));
   });
 });

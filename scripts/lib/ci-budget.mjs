@@ -8,7 +8,8 @@ import path from "node:path";
 /** Workflow có chạy trên PR không (`on:` dạng khối, một dòng, hay mảng). */
 export function runsOnPr(text) {
   // Khoá `on` có thể có nháy (`"on":` — YAML 1.1 coi `on` trần là boolean nên có người viết vậy).
-  const on = /^["']?on["']?:([^\n]*)\n((?:[ \t]+.*\n|\n)*)/m.exec(text) ?? [];
+  // Chú thích ở cột 0 trong khối `on:` không kết thúc khối (review #100).
+  const on = /^["']?on["']?:([^\n]*)\n((?:[ \t]+.*\n|\n|#.*\n)*)/m.exec(text) ?? [];
   return /\bpull_request(_target)?\b/.test(`${on[1] ?? ""}\n${on[2] ?? ""}`);
 }
 

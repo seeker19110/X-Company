@@ -137,7 +137,7 @@ export async function recordError(
     `INSERT INTO error_group (source, release, group_key, error_type, message, stack, page, context, first_seen_at, last_seen_at)
      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $9
       WHERE EXISTS (SELECT 1 FROM error_group WHERE group_key = $3 AND release = $2)
-         OR (SELECT count(*) FROM (SELECT 1 FROM error_group WHERE first_seen_at >= $10 LIMIT $11) d) < $11
+         OR (SELECT count(*) FROM (SELECT 1 FROM error_group WHERE source = $1 AND first_seen_at >= $10 LIMIT $11) d) < $11
      ON CONFLICT (group_key, release) DO UPDATE
         SET occurrence_count = LEAST(error_group.occurrence_count::bigint + 1, $12)::integer,
             last_seen_at = GREATEST(error_group.last_seen_at, EXCLUDED.last_seen_at)

@@ -422,7 +422,7 @@
             "in": "query",
             "required": false,
             "description": "Lọc theo mã phiên bản build.",
-            "schema": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" }
+            "schema": { "type": "string", "pattern": "^(?!\\.+$)[A-Za-z0-9._+-]{1,64}$" }
           },
           { "$ref": "#/components/parameters/Limit" },
           { "$ref": "#/components/parameters/Offset" }
@@ -1488,7 +1488,7 @@
         "properties": {
           "id": { "type": "string", "pattern": "^[0-9]+$", "description": "Id nhóm (bigint dạng chuỗi)." },
           "source": { "type": "string", "enum": ["client", "server"] },
-          "release": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" },
+          "release": { "type": "string", "pattern": "^(?!\\.+$)[A-Za-z0-9._+-]{1,64}$" },
           "group_key": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$",
@@ -2042,7 +2042,7 @@
       "ClientErrorRequest": {
         "type": "object",
         "properties": {
-          "release": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" },
+          "release": { "type": "string", "pattern": "^(?!\\.+$)[A-Za-z0-9._+-]{1,64}$" },
           "page": { "type": "string", "minLength": 1, "maxLength": 200, "format": "starts_with" },
           "type": { "type": "string", "minLength": 1, "maxLength": 100 },
           "message": { "type": "string", "maxLength": 2000 },

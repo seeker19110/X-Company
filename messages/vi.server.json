@@ -309,6 +309,9 @@
       "confirmPhrase": "Gõ đúng {phrase} để xác nhận xoá tài khoản",
       "cannotStartInState": "Không bắt đầu được yêu cầu ở trạng thái {status}",
       "requestClosed": "Yêu cầu đã đóng ({status})",
+      "selfEraseViaProfile": "Không tự xoá tài khoản của chính mình qua yêu cầu quyền dữ liệu — dùng mục Xoá tài khoản ở trang Cá nhân (có xác thực lại)",
+      "accountHasPrivileges": "Tài khoản còn quyền ngoài nhân viên — quản trị hệ thống thu hồi quyền trước khi hoàn tất yêu cầu xoá",
+      "requestBusy": "Yêu cầu xoá đang được xử lý — thử lại sau ít phút",
       "canLyDoGiaHan": "Cần nêu lý do gia hạn (1–1000 ký tự)",
       "daGiaHanMotLan": "Yêu cầu này đã gia hạn một lần; luật chỉ cho gia hạn tối đa một lần",
       "quaHanKhongGiaHan": "Yêu cầu đã quá hạn xử lý nên không gia hạn được; hãy hoàn tất hoặc từ chối và nêu căn cứ"

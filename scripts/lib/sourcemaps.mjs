@@ -23,14 +23,15 @@ import path from "node:path";
 
 export const DEFAULT_DIR = ".data/sourcemaps";
 /** Khớp RELEASE_RE của lib/errors/normalize.pure.ts (tests/unit/sourcemaps.test.ts so hai bản). */
-export const RELEASE_RE = /^[A-Za-z0-9._+-]{1,64}$/;
+// Tên toàn dấu chấm (".", "..") bị cấm: thư mục source map theo release sẽ trỏ ra thư mục cha (review #100).
+export const RELEASE_RE = /^(?!\.+$)[A-Za-z0-9._+-]{1,64}$/;
 
 /** Khớp safeRelease của lib/errors/normalize.pure.ts: ký tự lạ → "-", rỗng → "dev". */
 export function safeRelease(raw) {
   const s = String(raw ?? "")
     .replace(/[^A-Za-z0-9._+-]/g, "-")
     .slice(0, 64);
-  return s === "" ? "dev" : s;
+  return s === "" || /^\.+$/.test(s) ? "dev" : s;
 }
 
 function walk(dir, pred, out = []) {

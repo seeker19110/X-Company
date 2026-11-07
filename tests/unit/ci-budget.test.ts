@@ -36,6 +36,7 @@ describe("ci-budget (XC-GREEN-002)", () => {
     // review #100: khoá `on` có nháy vẫn được nhận.
     assert.ok(runsOnPr('"on":\n  pull_request:\n'));
     assert.ok(runsOnPr("'on': [pull_request]\n"));
+    assert.ok(runsOnPr("on:\n# trigger\n  pull_request:\njobs:\n"));
   });
 
   test("job có chú thích cuối dòng / chú thích cột 0 giữa các job vẫn được đếm (review #100)", () => {

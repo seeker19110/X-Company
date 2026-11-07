@@ -331,6 +331,15 @@ describe("kho lỗi (DB thật)", () => {
     assert.equal(fresh.status, 204);
     assert.equal((await rows("error_type = 'RangeError'")).length, 0, "nhóm mới bị bỏ");
     assert.equal(await recordError(db.app, entry, now), "counted");
+    // review #100: trần đếm theo nguồn — client lấp đầy trần không chặn nhóm lỗi SERVER mới.
+    assert.equal(
+      await recordError(
+        db.app,
+        { source: "server", type: "ServerOnly", message: "x", stack: null, release: "fill" },
+        now,
+      ),
+      "inserted",
+    );
     await db.admin.query(
       "UPDATE error_group SET first_seen_at = first_seen_at - interval '2 days', last_seen_at = last_seen_at - interval '1 day' WHERE release = 'fill'",
     );

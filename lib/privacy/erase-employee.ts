@@ -6,6 +6,7 @@
 import { eraseAccount, type AccountErased } from "../identity/account.ts";
 import type { Queryable } from "../db/index.ts";
 import { t } from "../i18n/index.ts";
+import { AppError } from "../nen/app-error.ts";
 import { withdrawConsent } from "./consent.ts";
 import { CATEGORY_AUDIT_LOG, CATEGORY_CONSENT_EVIDENCE, type RetainedCategory } from "./retained.ts";
 
@@ -30,6 +31,7 @@ export async function eraseEmployee(
   r: { id: string; subject_id: string },
   now: Date,
   retained: readonly Pick<RetainedCategory, "category" | "reason">[],
+  opts: { selfService?: boolean } = {},
 ): Promise<EmployeeErased> {
   const c = actor.companyId;
   const e = r.subject_id;
@@ -38,7 +40,23 @@ export async function eraseEmployee(
     "SELECT id FROM app_user WHERE company_id = $1 AND employee_id = $2",
     [c, e],
   );
-  const account = u.rows[0] ? await eraseAccount(tx, actor, c, u.rows[0].id) : null;
+  const target = u.rows[0]?.id;
+  if (target && !opts.selfService) {
+    // Đường HR (DSAR) không có bước xác thực lại của chủ tài khoản (review #100): không cho xoá tài khoản của CHÍNH người
+    // xử lý (kẻ chiếm phiên HR né D-075) và không cho xoá tài khoản còn quyền ngoài `employee` (HR không có access.manage —
+    // sysadmin thu hồi quyền trước, có audit riêng). Từ chối trước mọi ghi; yêu cầu vẫn mở để xử lý lại.
+    if (target === actor.userId)
+      throw new AppError("SELF_ERASE_VIA_PROFILE", 409, t("err.privacy.selfEraseViaProfile"));
+    const priv = await tx.query(
+      `SELECT 1 FROM role_grant
+        WHERE user_id = $1 AND revoked_at IS NULL AND role <> 'employee' AND (valid_to IS NULL OR valid_to > $2)
+        LIMIT 1`,
+      [target, now],
+    );
+    if ((priv.rowCount ?? 0) > 0)
+      throw new AppError("ACCOUNT_HAS_PRIVILEGES", 409, t("err.privacy.accountHasPrivileges"));
+  }
+  const account = target ? await eraseAccount(tx, actor, c, target) : null;
   // 2) Liên hệ của nhân viên (không thuộc hồ sơ phải giữ — DPIA §4: xoá SĐT/email ngay sau chấm dứt). SĐT xoá cả bản mã + chỉ mục.
   const contact = await tx.query(
     `UPDATE employee SET work_email = NULL, phone = NULL, phone_enc = NULL, phone_bidx = NULL

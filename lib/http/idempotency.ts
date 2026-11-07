@@ -8,8 +8,9 @@
 // bám) — nếu tiến trình chết đúng giữa hai commit, khoá còn `processing` tới hết STALE rồi cho chạy lại (có thể ghi
 // trùng một lần, hiếm). Không áp cho chấm công/sync: chúng có khoá nghiệp vụ riêng trong DB (attendance_event
 // UNIQUE theo idempotency_key / id bản ghi hàng chờ) nên đã idempotent theo bản ghi.
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { getPool, withTx } from "../db/index.ts";
+import { sessionSecret } from "../nen/config.ts";
 import { readCapped, readFormCapped } from "./body.ts";
 import { AppError } from "../nen/app-error.ts";
 import { log } from "../nen/log.ts";
@@ -63,8 +64,15 @@ export function canonicalJson(v: unknown): string {
 }
 
 /** sha256(method + route + body chuẩn hoá); multipart: băm trường + tên/nội dung tệp (biên giới multipart đổi mỗi lần gửi). */
+/**
+ * Vân tay request = HMAC-SHA256 với khoá riêng của server (dẫn xuất từ SESSION_SECRET, tách miền), KHÔNG phải SHA-256 trần:
+ * body có thể chứa bí mật (mật khẩu/TOTP khi xác thực lại — `/api/app/me/delete`). Hash trần lưu ở `idempotency_record`
+ * (lọt vào bản sao lưu chụp đúng lúc, hoặc nằm lại tới 24 h khi tiến trình chết) dò từ điển offline được, vô hiệu Argon2
+ * (review #100). Có khoá server thì hash vô dụng nếu chỉ lộ DB.
+ */
 export async function requestHash(req: Request): Promise<string> {
-  const h = createHash("sha256");
+  const key = createHmac("sha256", sessionSecret()).update("xc-idempotency-request-hash/v1").digest();
+  const h = createHmac("sha256", key);
   h.update(`${req.method}\n${new URL(req.url).pathname}\n`);
   if ((req.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {
     const form = await readFormCapped(req.clone(), MAX_HASH_BYTES);

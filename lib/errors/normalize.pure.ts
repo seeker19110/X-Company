@@ -13,7 +13,8 @@ export const ERROR_CONTEXT_MAX = 200;
 export const STACK_MAX_FRAMES = 30;
 export const FRAME_MAX = 300;
 /** Mã phiên bản build hợp lệ (khớp CHECK error_group.release). */
-export const RELEASE_RE = /^[A-Za-z0-9._+-]{1,64}$/;
+// Tên toàn dấu chấm (".", "..") bị cấm: thư mục source map theo release sẽ trỏ ra thư mục cha (review #100).
+export const RELEASE_RE = /^(?!\.+$)[A-Za-z0-9._+-]{1,64}$/;
 
 // V8 (Chrome, Edge, Node): "    at fn (url:1:2)" · Gecko/WebKit (Firefox, Safari): "fn@url:1:2".
 const V8_FRAME = /^\s*at\s+\S/;
@@ -90,5 +91,5 @@ export function fingerprintInput(p: {
 /** Mã phiên bản build → dạng hợp lệ (ký tự lạ → "-", rỗng → "dev"). */
 export function safeRelease(raw: string | null | undefined): string {
   const s = (raw ?? "").replace(/[^A-Za-z0-9._+-]/g, "-").slice(0, 64);
-  return s === "" ? "dev" : s;
+  return s === "" || /^\.+$/.test(s) ? "dev" : s;
 }

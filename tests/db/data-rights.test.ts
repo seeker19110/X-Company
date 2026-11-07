@@ -776,6 +776,65 @@ describe("quyền chủ thể dữ liệu (DSAR)", () => {
       );
     });
 
+    test("đường HR (không xác thực lại của chủ): tài khoản còn quyền ngoài employee → 409; tài khoản của chính người xử lý → 409; không xoá gì (review #100)", async () => {
+      const codeOf = async (empId: string) =>
+        (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code as string;
+      const untouched = async (userId: string) => {
+        const [acc] = await q("SELECT password_hash, disabled_at FROM app_user WHERE id = $1", [userId]);
+        assert.ok(acc.password_hash !== null);
+        assert.equal(acc.disabled_at, null);
+        assert.ok(
+          (await q("SELECT 1 FROM role_grant WHERE user_id = $1 AND revoked_at IS NULL", [userId])).length >
+            0,
+        );
+      };
+      // sysadmin (công ty còn sysadmin khác — không phải ca LAST_SYSADMIN) — HR không có access.manage.
+      await seedUser(companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      const admin = await seedUser(companyId, { grants: [{ role: "sysadmin", scopeType: "company" }] });
+      const r1 = await handle(await codeOf(admin.employeeId!), "employee", "delete");
+      await assert.rejects(complete(r1.id), isCode("ACCOUNT_HAS_PRIVILEGES"));
+      await untouched(admin.userId);
+      assert.equal(
+        (await q("SELECT status FROM data_subject_request WHERE id = $1", [r1.id]))[0].status,
+        "in_progress",
+      );
+      // Kẻ chiếm phiên HR xoá tài khoản của chính HR đó qua DSAR (né xác thực lại D-075) → 409.
+      const hrEmp = (await q("SELECT employee_id FROM app_user WHERE id = $1", [hr.userId]))[0]
+        .employee_id as string;
+      const r2 = await handle(await codeOf(hrEmp), "employee", "delete");
+      await assert.rejects(complete(r2.id), isCode("SELF_ERASE_VIA_PROFILE"));
+      await untouched(hr.userId);
+      // Quyền đặc quyền đã hết hạn/thu hồi không chặn: sau khi sysadmin thu hồi, HR hoàn tất được.
+      await db.admin.query("UPDATE role_grant SET revoked_at = now() WHERE user_id = $1", [admin.userId]);
+      assert.equal((await complete(r1.id)).status, "done");
+    });
+
+    test("nhân viên tự xoá đúng lúc HR đang giữ yêu cầu xoá của họ → 409 PRIVACY_REQUEST_BUSY, không deadlock (review #100)", async () => {
+      const emp = await seedUser(companyId);
+      const empId = emp.employeeId!;
+      const r = await handle(
+        (await q("SELECT code FROM employee WHERE id = $1", [empId]))[0].code,
+        "employee",
+        "delete",
+      );
+      const holder = await db.admin.connect();
+      try {
+        await holder.query("BEGIN");
+        await holder.query("SELECT 1 FROM data_subject_request WHERE id = $1 FOR UPDATE", [r.id]);
+        await assert.rejects(
+          withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId)),
+          isCode("PRIVACY_REQUEST_BUSY"),
+        );
+      } finally {
+        await holder.query("ROLLBACK");
+        holder.release();
+      }
+      assert.equal(
+        (await withTx((tx) => deleteOwnAccount(tx, { userId: emp.userId, companyId }, empId))).id,
+        r.id,
+      );
+    });
+
     test("sysadmin hiệu lực cuối không tự xoá được (409 LAST_SYSADMIN) — giao dịch lùi, không xoá gì", async () => {
       const { companyId: c2 } = await seedCompany("Công ty Một Quản Trị");
       const admin = await seedUser(c2, { grants: [{ role: "sysadmin", scopeType: "company" }] });

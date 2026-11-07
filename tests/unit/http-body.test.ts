@@ -1,10 +1,14 @@
 // AUD-XFEAT-001: giới hạn kích thước body phải chặn khi ĐỌC (request chunked không có Content-Length), không chỉ nhìn header.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { describe, test } from "node:test";
 import { readCapped, readFormCapped, readJson } from "../../lib/http/index.ts";
 import { requestHash } from "../../lib/http/idempotency.ts";
 import { AppError } from "../../lib/nen/app-error.ts";
 import { kb, mb } from "../../lib/nen/units.ts";
+
+// requestHash dùng khoá server dẫn từ SESSION_SECRET (bắt buộc ở mọi môi trường thật).
+process.env.SESSION_SECRET ??= "unit-test-session-secret-0123456789abcdef";
 
 const CHUNK = mb(1);
 /** Body stream `total` byte, không Content-Length; đếm số byte thực sự bị kéo ra khỏi nguồn. */
@@ -92,5 +96,31 @@ describe("body có trần khi đọc", () => {
   test("Content-Length khai nhỏ nhưng body thật lớn → vẫn 413", async () => {
     const { req } = chunked(mb(8), { "content-length": "10" });
     await assert.rejects(readCapped(req, mb(1)), isTooLarge);
+  });
+});
+
+describe("requestHash có khoá server (review #100: body chứa mật khẩu khi xác thực lại)", () => {
+  const body = '{"confirm":"XOA TAI KHOAN","password":"hunter2","totp":null}';
+  const mk = () =>
+    new Request("http://x.test/api/app/me/delete", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/json" },
+    });
+  const withSecret = async (s: string) => {
+    const prev = process.env.SESSION_SECRET;
+    process.env.SESSION_SECRET = s;
+    try {
+      return await requestHash(mk());
+    } finally {
+      process.env.SESSION_SECRET = prev;
+    }
+  };
+  test("không phải SHA-256 trần (dò từ điển offline từ DB không ra mật khẩu); đổi khoá server → đổi hash; cùng khoá → ổn định", async () => {
+    const naive = createHash("sha256").update(`POST\n/api/app/me/delete\n${body}`).digest("hex");
+    const a = await withSecret("khoa-server-a-0123456789abcdef0123456789");
+    assert.notEqual(a, naive);
+    assert.equal(await withSecret("khoa-server-a-0123456789abcdef0123456789"), a);
+    assert.notEqual(await withSecret("khoa-server-b-0123456789abcdef0123456789"), a);
   });
 });

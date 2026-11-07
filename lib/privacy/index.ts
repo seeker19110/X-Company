@@ -322,6 +322,8 @@ export async function completeRequest(
   actor: PrivacyActor,
   id: string,
   now: Date = new Date(),
+  /** Chỉ `deleteOwnAccount` (đã qua xác thực lại của chính chủ) đặt `selfService`; đường HR thì không (review #100). */
+  opts: { selfService?: boolean } = {},
 ): Promise<RequestRow> {
   const cur = await lockRequest(tx, actor.companyId, id);
   if (cur.status !== "received" && cur.status !== "in_progress")
@@ -344,7 +346,7 @@ export async function completeRequest(
       result = await executeRestrict(tx, actor, cur);
       break;
     case "delete":
-      result = await executeDelete(tx, actor, cur, now);
+      result = await executeDelete(tx, actor, cur, now, opts);
       break;
   }
   // sql-interp-allow: `COLS` là hằng danh sách cột nội bộ của tệp này; mọi giá trị qua $n.
@@ -439,6 +441,7 @@ async function executeDelete(
   actor: PrivacyActor,
   r: RequestRow,
   now: Date,
+  opts: { selfService?: boolean } = {},
 ): Promise<Record<string, unknown>> {
   const retained = RETAINED_BY_SUBJECT[r.subject_type].map((c) => ({
     category: c.category,
@@ -446,7 +449,7 @@ async function executeDelete(
   }));
   if (r.subject_type === "employee") {
     // CMP-RIGHTS-007 (D-075): xoá tài khoản đăng nhập + PII không bắt buộc; hồ sơ lao động/bảng công giữ kèm căn cứ.
-    const result = await eraseEmployee(tx, actor, r, now, retained);
+    const result = await eraseEmployee(tx, actor, r, now, retained, opts);
     const { account, employee_contact, geo_points, consent_withdrawn } = result.deleted;
     await audit(tx, actor, "privacy.erase", r, null, {
       account_erased: account?.account ?? 0,
