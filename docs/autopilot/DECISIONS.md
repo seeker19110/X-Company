@@ -581,7 +581,7 @@
 
 - Phương án: (1) Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do · (2) Đổi sang 'XÓA TÀI KHOẢN' có dấu: người dùng phải gõ dấu (phụ thuộc bộ gõ, NFC/NFD lệch) — chặn người dùng thật · (3) Đổi thành dạng gạch nối để lách regex: vẫn là chữ không dấu, chỉ né kiểm
 - Chọn: Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do
-- Lý do (tiêu chí chất lượng cuối): D-075 đã chọn ASCII để gõ được trên mọi bàn phím; đây là mã xác nhận, không phải văn bản giao diện (nhãn quanh nó qua t() có dấu). Ngoại lệ đặt tên tệp cụ thể, mọi tệp khác vẫn bị quét; chọn 3 là làm xanh bằng cách lừa kiểm.
+- Lý do (tiêu chí chất lượng cuối): mã T-121 (lib/privacy/self-delete.pure.ts) chọn ASCII để gõ được trên mọi bàn phím; đây là mã xác nhận, không phải văn bản giao diện (nhãn quanh nó qua t() có dấu). Ngoại lệ đặt tên tệp cụ thể, mọi tệp khác vẫn bị quét; chọn 3 là làm xanh bằng cách lừa kiểm.
 - Đường lùi: Bỏ --exclude ở lệnh Kiểm UX-CONTENT-001 và đổi SELF_DELETE_CONFIRM
 
 ### D-081 · 2026-11-07T04:49:07+00:00 · 11 lệnh Kiểm blueprint về bảo vệ nhánh main đỏ vì check:github còn so ruleset tag (WF-REL-003, chờ người import)

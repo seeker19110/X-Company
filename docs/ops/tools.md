@@ -6,7 +6,7 @@ status: faithful-fixture — công cụ chạy cục bộ để thử; không ph
 
 # Công cụ vận hành (`.tools/`)
 
-Nhị phân tải về bằng `node scripts/tools/install-tool.mjs install <tên…>` (hoặc `npm run -s tools:install -- <tên…>`): bảng phiên bản + sha256 GHIM trong script, sha256 kiểm TRƯỚC khi giải nén/chạy (sai → xoá bản tải, exit 1), không `curl | sh`, không phụ thuộc npm. Cài vào `.tools/<tên>/<phiên bản>/` và liên kết `.tools/bin/<bin>` (`.tools/` đã `.gitignore`). `node scripts/tools/install-tool.mjs check-pins` tải tệp checksum CHÍNH THỨC của bản phát hành và so với bảng ghim.
+Nhị phân tải về bằng `node scripts/tools/install-tool.mjs install <tên…>` (hoặc `npm run -s tools:install -- <tên…>`): bảng phiên bản + sha256 GHIM trong script, sha256 kiểm TRƯỚC khi giải nén/chạy (sai → xoá bản tải, exit 1), không `curl | sh`, không phụ thuộc npm. Cài vào `.tools/<tên>/<phiên bản>/` và liên kết `.tools/bin/<bin>` (`.tools/` đã `.gitignore`). `node scripts/tools/install-tool.mjs run <tên> [đối số…]` cài nếu thiếu rồi chạy, giữ exit code (bị tín hiệu → 128+n) — vd `npm run -s gitleaks -- git --no-banner --exit-code 1`, dùng ở lệnh Kiểm của blueprint (không cần gitleaks trong PATH). `node scripts/tools/install-tool.mjs check-pins` tải tệp checksum CHÍNH THỨC của bản phát hành và so với bảng ghim.
 
 | Công cụ | Phiên bản | Giấy phép | Dùng cho | sha256 (linux-x64) | Nguồn checksum chính thức |
 |---|---|---|---|---|---|

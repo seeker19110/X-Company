@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Lệnh Kiểm của BLUEPRINT về hàng rào agent (LOOP-ORCH-003, LOOP-STOP-001, LOOP-STOP-002). CHỈ ĐỌC: đọc
-.claude/settings.json và .claude/agents/*.md, chạy hook guard với đầu vào giả qua stdin — không ghi tệp nào.
+"""Lệnh Kiểm của BLUEPRINT về hàng rào agent (LOOP-ORCH-003, LOOP-STOP-001, LOOP-STOP-002). Đọc .claude/settings.json và
+.claude/agents/*.md, chạy hook guard với đầu vào giả qua stdin. Không sửa cấu hình; hook guard tự ghi mỗi quyết định vào
+.autopilot/guard-log.jsonl (session rỗng) — như lệnh cũ.
 
 Tách khỏi `python3 -c "…"` trong BLUEPRINT vì guard của khung (3.31) coi script trình thông dịch chạm .claude/ là ghi hàng rào
 và chặn chạy thẳng; nội dung kiểm giữ nguyên các lệnh cũ.
@@ -40,7 +41,10 @@ def orch_003():
     for f in sorted(glob.glob(os.path.join(ROOT, ".claude", "agents", "*.md"))):
         with open(f, encoding="utf-8") as fh:
             m = re.search(r"^tools: *(.*)$", fh.read(), re.M)
-        for t in (m.group(1).split(",") if m else []):
+        if not m:  # không khai `tools:` = kế thừa MỌI tool (rộng nhất) — đỏ như lệnh cũ
+            bad.append((os.path.basename(f), "không khai tools: (kế thừa mọi tool)"))
+            continue
+        for t in m.group(1).split(","):
             if t.strip() not in allow:
                 bad.append((os.path.basename(f), t.strip()))
     return bad

@@ -20,6 +20,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { constants } from "node:os";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -452,6 +453,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (!installedPath(name)) install(name);
     const r = spawnSync(installedPath(name), rest, { stdio: "inherit" });
     if (r.error) fail(`${name}: ${r.error.message}`);
+    // Bị tín hiệu dừng: báo rõ, exit 128+số tín hiệu (không lẫn với exit 1 = "có phát hiện" của công cụ).
+    if (r.signal) fail(`${name}: bị dừng bởi ${r.signal}`, 128 + (constants.signals[r.signal] ?? 0));
     process.exit(r.status ?? 1);
   } else if (cmd === "check-pins") {
     mkdirSync(TOOLS_DIR, { recursive: true });

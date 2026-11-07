@@ -93,7 +93,7 @@ function dbTlsRule(raw: string): string | undefined {
   const modes = u.searchParams.getAll("sslmode");
   return modes.length > 0 && modes.every((m) => m === "verify-full")
     ? undefined
-    : "phải có sslmode=verify-full ở production (trừ loopback hoặc socket Unix)";
+    : "phải có sslmode=verify-full ở production (trừ đúng host localhost, [::1], địa chỉ loopback IPv4 chuẩn hoặc socket Unix)";
 }
 
 const url = (protocols: RegExp, what: string) =>
