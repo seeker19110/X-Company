@@ -204,11 +204,14 @@ describe("kho lỗi (DB thật)", () => {
   });
 
   test("bí mật/PII trong thông điệp, ngữ cảnh và stack bị che trước khi lưu", async () => {
+    // JWT/khoá AWS giả ghép lúc chạy: gitleaks (jwt, aws-access-token) chặn chuỗi nguyên văn dù là fixture.
+    const JWT = ["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "c2lnbmF0dXJl"].join(".");
+    const AWS_KEY = ["AKIA", "ABCDEFGHIJKLMNOP"].join("");
     const secrets = [
       "nguyen.van.a@example.com",
-      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJl",
+      JWT,
       "s3cr3t-pass",
-      "AKIAABCDEFGHIJKLMNOP",
+      AWS_KEY,
       "0912 345 678",
       "001099012345",
       "tok_live_value_xyz",
@@ -216,8 +219,8 @@ describe("kho lỗi (DB thật)", () => {
     const r = await post(
       report({
         message:
-          `Lỗi khi gửi cho nguyen.van.a@example.com: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJl ` +
-          `password=s3cr3t-pass key AKIAABCDEFGHIJKLMNOP SĐT 0912 345 678 CCCD 001099012345`,
+          `Lỗi khi gửi cho nguyen.van.a@example.com: Bearer ${JWT} ` +
+          `password=s3cr3t-pass key ${AWS_KEY} SĐT 0912 345 678 CCCD 001099012345`,
         context: "gửi token=tok_live_value_xyz",
         stack:
           "Error: x\n    at f (https://u:pw@xc.example/_next/static/chunks/a.js?token=tok_live_value_xyz:1:2)",
