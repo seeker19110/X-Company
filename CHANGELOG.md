@@ -3,6 +3,24 @@
 Mọi thay đổi đáng chú ý của dự án ghi ở đây. Định dạng theo [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 phiên bản theo [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html). Chưa có bản phát hành nào.
 
+## [0.4.0](https://github.com/seeker19110/X-Company/compare/v0.3.0...v0.4.0) (2026-11-07)
+
+
+### Features
+
+* **compliance:** lát 23 — bên xử lý, chuyển dữ liệu, DoR, threat model ([#99](https://github.com/seeker19110/X-Company/issues/99)) ([60359c4](https://github.com/seeker19110/X-Company/commit/60359c40e21d09e321225a4605db54bb12e223fe))
+* **harden:** lát 24–28 — kho S3, TLS DB, xoá tài khoản, kho lỗi ([#100](https://github.com/seeker19110/X-Company/issues/100)) ([dec4fc6](https://github.com/seeker19110/X-Company/commit/dec4fc61c5db602f211627c484e32dbe74ff9d34))
+
+
+### Bug Fixes
+
+* **auth:** bộ đếm sai theo email bỏ qua IP quen (AUD-SEC-006) ([#82](https://github.com/seeker19110/X-Company/issues/82)) ([8655b06](https://github.com/seeker19110/X-Company/commit/8655b06394370c28ee18793b73210658c393485c))
+* **config:** đóng CFG-001, thêm check:github, 11 MUST đạt ([#78](https://github.com/seeker19110/X-Company/issues/78)) ([6f49a0b](https://github.com/seeker19110/X-Company/commit/6f49a0b272cd9f1cfd94ca1419dc0b72f671f020))
+* **deps:** vá glob/minimatch (OSV), gộp bump dependabot ([#89](https://github.com/seeker19110/X-Company/issues/89)) ([207f02a](https://github.com/seeker19110/X-Company/commit/207f02af1b3946c1ac53f56bb85606a31eb2fd20))
+* **e2e:** UX-DS-006 kiểm unicode-range của web font ([#95](https://github.com/seeker19110/X-Company/issues/95)) ([d5f3d69](https://github.com/seeker19110/X-Company/commit/d5f3d69f5106415df0eab08ddb62829d4d65b714))
+* **e2e:** UX-DS-006 so glyph theo họ web font ([#96](https://github.com/seeker19110/X-Company/issues/96)) ([031136f](https://github.com/seeker19110/X-Company/commit/031136fd736d3624a28060466ae5f6c277cf10da))
+* **security:** chặn gọi hàm ghi thiếu kiểm quyền, bằng chứng blueprint ([#81](https://github.com/seeker19110/X-Company/issues/81)) ([b2c117a](https://github.com/seeker19110/X-Company/commit/b2c117a8fafa907bbe4c48e278b49dc9ebc3630d))
+
 ## [0.3.0](https://github.com/seeker19110/X-Company/compare/v0.2.1...v0.3.0) (2026-10-24)
 
 
