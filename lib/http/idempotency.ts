@@ -63,9 +63,9 @@ export function canonicalJson(v: unknown): string {
   return JSON.stringify(v) ?? "null";
 }
 
-/** sha256(method + route + body chuẩn hoá); multipart: băm trường + tên/nội dung tệp (biên giới multipart đổi mỗi lần gửi). */
 /**
- * Vân tay request = HMAC-SHA256 với khoá riêng của server (dẫn xuất từ SESSION_SECRET, tách miền), KHÔNG phải SHA-256 trần:
+ * Vân tay request (method + route + body chuẩn hoá; multipart: trường + tên/nội dung tệp, biên giới multipart đổi mỗi lần gửi)
+ * = HMAC-SHA256 với khoá riêng của server (dẫn xuất từ SESSION_SECRET, tách miền), KHÔNG phải SHA-256 trần:
  * body có thể chứa bí mật (mật khẩu/TOTP khi xác thực lại — `/api/app/me/delete`). Hash trần lưu ở `idempotency_record`
  * (lọt vào bản sao lưu chụp đúng lúc, hoặc nằm lại tới 24 h khi tiến trình chết) dò từ điển offline được, vô hiệu Argon2
  * (review #100). Có khoá server thì hash vô dụng nếu chỉ lộ DB.

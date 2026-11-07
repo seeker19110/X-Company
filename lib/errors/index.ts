@@ -30,7 +30,7 @@ export type ErrorSource = (typeof ERROR_SOURCES)[number];
 /** Giới hạn tần suất riêng của nhóm 'errors' theo IP băm (public_rate_event): một trang lỗi liên tục không làm đầy kho. */
 export const ERROR_RATE_LIMIT = { max: 30, windowMs: minutesToMs(10) };
 /**
- * Trần nhóm MỚI mỗi ngày UTC cho toàn hệ thống: kẻ xấu đổi loại lỗi/khung để đẻ fingerprint mới thì tối đa chừng này dòng/ngày
+ * Trần nhóm MỚI mỗi ngày UTC cho MỖI nguồn (client/server riêng — beacon không lấp được trần của lỗi server): kẻ xấu đổi loại lỗi/khung để đẻ fingerprint mới thì tối đa chừng này dòng/ngày
  * (nhóm đã có vẫn được đếm). Quá trần: bỏ, route vẫn 204. Đếm CHẶN (LIMIT) trên index first_seen_at.
  */
 export const ERROR_DAILY_NEW_GROUP_CAP = 1_000;

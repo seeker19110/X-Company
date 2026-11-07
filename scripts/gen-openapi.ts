@@ -801,7 +801,7 @@ export const REGISTRY: Registry = {
       tag: "Quyền riêng tư",
       summary: "Tự xoá tài khoản của chính mình (xác thực lại trong cùng request)",
       description:
-        "Chủ thể luôn là nhân viên của phiên (không có tham số chủ thể). Thân: mật khẩu hiện tại, mã TOTP khi đã bật (mã đã dùng không dùng lại), `confirm` đúng chuỗi cố định — thiếu/sai → 400 trước khi kiểm mật khẩu. Sai mật khẩu → 403 `REAUTH_FAILED`, thiếu mã → 403 `MFA_CODE_REQUIRED`, sai/phát lại mã → 403 `INVALID_MFA_CODE` (tính vào bộ đếm sai của đăng nhập/TOTP; vượt → 429). Thành công: tạo + hoàn tất yêu cầu xoá trong một giao dịch — thu hồi mọi phiên, vô hiệu đăng nhập, xoá PII không bắt buộc, giữ hồ sơ lao động/bảng công kèm căn cứ (`result`); xoá cookie như đăng xuất. Sysadmin hiệu lực cuối → 409 `LAST_SYSADMIN`.",
+        "Chủ thể luôn là nhân viên của phiên (không có tham số chủ thể). Thân: mật khẩu hiện tại, mã TOTP khi đã bật (mã đã dùng không dùng lại), `confirm` đúng chuỗi cố định — thiếu/sai → 400 trước khi kiểm mật khẩu. Sai mật khẩu → 403 `REAUTH_FAILED`, thiếu mã → 403 `MFA_CODE_REQUIRED`, sai/phát lại mã → 403 `INVALID_MFA_CODE` (tính vào bộ đếm sai của đăng nhập/TOTP; vượt → 429). Thành công: tạo + hoàn tất yêu cầu xoá trong một giao dịch — thu hồi mọi phiên, vô hiệu đăng nhập, xoá PII không bắt buộc, giữ hồ sơ lao động/bảng công kèm căn cứ (`result`); xoá cookie như đăng xuất. Sysadmin hiệu lực cuối → 409 `LAST_SYSADMIN`; yêu cầu xoá đang được HR xử lý cùng lúc → 409 `PRIVACY_REQUEST_BUSY` (thử lại).",
       permission:
         "`account.delete_own` — chỉ chính nhân viên gắn với tài khoản (tài khoản không gắn nhân viên: 403).",
       idempotency: "guard",
@@ -927,7 +927,7 @@ export const REGISTRY: Registry = {
       tag: "Quyền riêng tư",
       summary: "Bắt đầu, ghi nhận phản hồi, gia hạn, hoàn tất hoặc từ chối một yêu cầu",
       permission:
-        "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409).",
+        "`privacy.manage` (HR). Từ chối và gia hạn bắt buộc có lý do (422); gia hạn tối đa một lần và chỉ khi chưa quá hạn (409). Hoàn tất yêu cầu xoá nhân viên: tài khoản có vai trò khác `employee` → 409 `ACCOUNT_HAS_PRIVILEGES` (thu hồi quyền trước), tài khoản của chính người xử lý → 409 `SELF_ERASE_VIA_PROFILE` (dùng tự xoá có xác thực lại).",
       idempotency: "guard",
       params: [
         idParam("Id yêu cầu."),

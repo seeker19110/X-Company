@@ -37,6 +37,14 @@ describe("ci-budget (XC-GREEN-002)", () => {
     assert.ok(runsOnPr('"on":\n  pull_request:\n'));
     assert.ok(runsOnPr("'on': [pull_request]\n"));
     assert.ok(runsOnPr("on:\n# trigger\n  pull_request:\njobs:\n"));
+    // review #100 vòng 2: chữ pull_request chỉ trong chú thích (cột 0 sau khối, cuối dòng) không tính.
+    assert.equal(
+      runsOnPr(
+        "on:\n  push:\n    branches: [main]\n# Không chạy trên pull_request: tốn phút.\npermissions: {}\n",
+      ),
+      false,
+    );
+    assert.equal(runsOnPr("on:\n  push: # pull_request tắt\njobs:\n"), false);
   });
 
   test("job có chú thích cuối dòng / chú thích cột 0 giữa các job vẫn được đếm (review #100)", () => {

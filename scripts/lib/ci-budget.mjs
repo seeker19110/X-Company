@@ -10,7 +10,10 @@ export function runsOnPr(text) {
   // Khoá `on` có thể có nháy (`"on":` — YAML 1.1 coi `on` trần là boolean nên có người viết vậy).
   // Chú thích ở cột 0 trong khối `on:` không kết thúc khối (review #100).
   const on = /^["']?on["']?:([^\n]*)\n((?:[ \t]+.*\n|\n|#.*\n)*)/m.exec(text) ?? [];
-  return /\bpull_request(_target)?\b/.test(`${on[1] ?? ""}\n${on[2] ?? ""}`);
+  // Bỏ chú thích (đầu dòng hoặc sau khoảng trắng) trước khi tìm: chú thích cột 0 ngay sau khối `on:` bị gom vào khối,
+  // chữ "pull_request" trong đó không được tính (review #100 vòng 2).
+  const body = `${on[1] ?? ""}\n${on[2] ?? ""}`.replace(/(^|[ \t])#.*$/gm, "$1");
+  return /\bpull_request(_target)?\b/.test(body);
 }
 
 /** Job của một workflow: [{job, timeout (phút) | null, copies}] — copies = số tổ hợp matrix (1 nếu không có). */

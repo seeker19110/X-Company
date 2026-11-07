@@ -12,7 +12,7 @@ export const ERROR_CONTEXT_MAX = 200;
 /** Số dòng khung giữ lại; một dòng khung tối đa chừng này ký tự. */
 export const STACK_MAX_FRAMES = 30;
 export const FRAME_MAX = 300;
-/** Mã phiên bản build hợp lệ (khớp CHECK error_group.release). */
+/** Mã phiên bản build hợp lệ (chặt hơn CHECK error_group.release ở migration 0035: cấm thêm tên toàn dấu chấm). */
 // Tên toàn dấu chấm (".", "..") bị cấm: thư mục source map theo release sẽ trỏ ra thư mục cha (review #100).
 export const RELEASE_RE = /^(?!\.+$)[A-Za-z0-9._+-]{1,64}$/;
 

@@ -569,3 +569,10 @@
 - Chọn: Nâng trần 232 → 234 (đo: gốc 230,0 → T-122 231,9 → T-121+T-122 233,3 KB), ghi vào docs/PERF-BUDGET.md; cả hai là MUST bắt buộc có UI client
 - Lý do (tiêu chí chất lượng cuối): Hộp thoại hỏi lần cuối là chống bấm nhầm cho thao tác không đảo ngược (tiêu chí 1 an toàn > 5 chi phí); +1,4 KB (0,6 %) có số đo; trang /app/me vẫn trong ngân sách theo route
 - Đường lùi: Hạ trần về 232 và đổi form sang HTML thuần
+
+### D-079 · 2026-11-07T03:19:22+00:00 · Bước N−1 (test-prev-release) đỏ vì test 'COMMENT PII khớp data-map' của v0.3.0 đếm cố định 45 cột PII, schema HEAD thêm error_group.message (T-122)
+
+- Phương án: (1) Bỏ qua có chữ ký (danh mục SAME_VERSION): test tài liệu↔schema cùng phiên bản không chạy ở bước N−1; HEAD vẫn chạy bản của nó · (2) Sao data-map HEAD vào cây N−1: không đủ, test cũ đếm cố định 45 · (3) Sửa tag v0.3.0: không được (bản đã phát hành, không rewrite)
+- Chọn: Bỏ qua có chữ ký (danh mục SAME_VERSION): test tài liệu↔schema cùng phiên bản không chạy ở bước N−1; HEAD vẫn chạy bản của nó
+- Lý do (tiêu chí chất lượng cuối): Đúng: kiểm này nói về tài liệu của chính một phiên bản, không về tương thích rollback mã N−1 trên schema N; HEAD đã chạy nó trên cây HEAD (test vẫn đỏ khi thêm cột PII mà quên data-map). Bỏ qua theo chữ ký, hiện ::warning trên CI, tự hết khi test đổi tên. Không nới test nào chạy ở HEAD.
+- Đường lùi: Xoá dòng SAME_VERSION trong heredoc của scripts/test-prev-release.sh
