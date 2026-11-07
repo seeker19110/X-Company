@@ -576,3 +576,17 @@
 - Chọn: Bỏ qua có chữ ký (danh mục SAME_VERSION): test tài liệu↔schema cùng phiên bản không chạy ở bước N−1; HEAD vẫn chạy bản của nó
 - Lý do (tiêu chí chất lượng cuối): Đúng: kiểm này nói về tài liệu của chính một phiên bản, không về tương thích rollback mã N−1 trên schema N; HEAD đã chạy nó trên cây HEAD (test vẫn đỏ khi thêm cột PII mà quên data-map). Bỏ qua theo chữ ký, hiện ::warning trên CI, tự hết khi test đổi tên. Không nới test nào chạy ở HEAD.
 - Đường lùi: Xoá dòng SAME_VERSION trong heredoc của scripts/test-prev-release.sh
+
+### D-080 · 2026-11-07T04:45:25+00:00 · UX-CONTENT-001 đỏ: chuỗi xác nhận gõ tay của tự xoá tài khoản 'XOA TAI KHOAN' (T-121) không dấu
+
+- Phương án: (1) Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do · (2) Đổi sang 'XÓA TÀI KHOẢN' có dấu: người dùng phải gõ dấu (phụ thuộc bộ gõ, NFC/NFD lệch) — chặn người dùng thật · (3) Đổi thành dạng gạch nối để lách regex: vẫn là chữ không dấu, chỉ né kiểm
+- Chọn: Ngoại lệ hẹp đúng một tệp trong lệnh Kiểm, ghi lý do
+- Lý do (tiêu chí chất lượng cuối): D-075 đã chọn ASCII để gõ được trên mọi bàn phím; đây là mã xác nhận, không phải văn bản giao diện (nhãn quanh nó qua t() có dấu). Ngoại lệ đặt tên tệp cụ thể, mọi tệp khác vẫn bị quét; chọn 3 là làm xanh bằng cách lừa kiểm.
+- Đường lùi: Bỏ --exclude ở lệnh Kiểm UX-CONTENT-001 và đổi SELF_DELETE_CONFIRM
+
+### D-081 · 2026-11-07T04:49:07+00:00 · 11 lệnh Kiểm blueprint về bảo vệ nhánh main đỏ vì check:github còn so ruleset tag (WF-REL-003, chờ người import)
+
+- Phương án: (1) Thêm --no-tags cho check:github; 10 mục về nhánh main dùng --no-tags, WF-REL-003 và release-check giữ kiểm đầy đủ · (2) Bỏ tick 10 mục main tới khi người import ruleset tag: sai sự thật — bảo vệ nhánh main đã khớp · (3) Gỡ kiểm ruleset tag khỏi check:github: nới cổng
+- Chọn: Thêm --no-tags cho check:github; 10 mục về nhánh main dùng --no-tags, WF-REL-003 và release-check giữ kiểm đầy đủ
+- Lý do (tiêu chí chất lượng cuối): Mỗi lệnh kiểm chỉ chứng minh đúng mục của nó; ruleset main vẫn so với GitHub, tags.json vẫn kiểm hợp lệ tại chỗ; mặc định không đổi nên cổng phát hành (release-check, WF-REL-003) vẫn đỏ tới khi người import.
+- Đường lùi: Bỏ ' -- --no-tags' ở 10 lệnh Kiểm trong BLUEPRINT.md

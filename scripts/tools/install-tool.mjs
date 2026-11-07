@@ -2,7 +2,8 @@
 // Không `curl | sh`, không phụ thuộc npm: tải bằng `curl --proto =https`, giải nén bằng `tar`/`bzip2` của hệ điều hành.
 // Dùng:  node scripts/tools/install-tool.mjs install <tên…>      cài (idempotent; sai sha256 → xoá bản tải, exit 1)
 //        node scripts/tools/install-tool.mjs path <tên>          in đường dẫn nhị phân đã cài (exit 1 nếu chưa cài)
-//        node scripts/tools/install-tool.mjs check-pins [tên…]   tải tệp checksum CHÍNH THỨC của bản phát hành, so với bảng ghim
+//        node scripts/tools/install-tool.mjs run <tên> [đối số…]  cài nếu thiếu rồi chạy, giữ exit code (npm run -s gitleaks -- …)
+//        node scripts/tools/install-tool.mjs check-pins [tên…]  tải tệp checksum CHÍNH THỨC của bản phát hành, so với bảng ghim
 //        node scripts/tools/install-tool.mjs list                bảng phiên bản/giấy phép
 // Bố cục: `.tools/<tên>/<phiên bản>/<bin>` + liên kết `.tools/bin/<bin>`. Nguồn + ngày xác minh: docs/ops/tools.md.
 // Thêm công cụ = thêm một mục vào TOOLS (đủ url + sha256 của tệp tải + cách giải nén); sha256 lấy từ tệp checksum chính thức.
@@ -444,11 +445,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const p = installedPath(args[0] ?? "");
     if (!p) fail(`${args[0]} chưa cài (chạy: node scripts/tools/install-tool.mjs install ${args[0]})`);
     process.stdout.write(`${p}\n`);
+  } else if (cmd === "run") {
+    // Cài nếu thiếu (idempotent, kiểm sha256) rồi chạy với đối số còn lại; exit code của công cụ được giữ nguyên.
+    const [name, ...rest] = args;
+    if (!name) fail("thiếu tên công cụ", 2);
+    if (!installedPath(name)) install(name);
+    const r = spawnSync(installedPath(name), rest, { stdio: "inherit" });
+    if (r.error) fail(`${name}: ${r.error.message}`);
+    process.exit(r.status ?? 1);
   } else if (cmd === "check-pins") {
     mkdirSync(TOOLS_DIR, { recursive: true });
     process.exit(checkPins(args.length > 0 ? args : Object.keys(TOOLS)) === 0 ? 0 : 1);
   } else if (cmd === "list") {
     for (const [n, t] of Object.entries(TOOLS))
       process.stdout.write(`${n} ${t.version} ${t.license} ${t.release}\n`);
-  } else fail("dùng: install <tên…> | path <tên> | check-pins [tên…] | list", 2);
+  } else fail("dùng: install <tên…> | path <tên> | run <tên> [đối số…] | check-pins [tên…] | list", 2);
 }

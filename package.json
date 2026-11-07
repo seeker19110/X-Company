@@ -55,6 +55,7 @@
     "check:sbom": "node scripts/check-sbom.mjs",
     "check:supply-wiring": "node scripts/check-supply-wiring.mjs",
     "check:vendors": "node scripts/check-vendors.mjs",
+    "gitleaks": "node scripts/tools/install-tool.mjs run gitleaks",
     "notices": "node scripts/gen-third-party-notices.mjs",
     "eol:check": "node scripts/eol-check.mjs",
     "check:supply-chain": "npm run -s check:licenses && npm run -s check:osv-exceptions && node scripts/gen-third-party-notices.mjs --check && npm run -s check:sql-interpolation && npm run -s check:sbom && npm run -s check:supply-wiring && npm run -s check:vendors && python3 .xtemplates/scripts/xt.py ci-check .github/workflows",

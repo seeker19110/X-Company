@@ -122,12 +122,17 @@ function main() {
   const all = api(repo, "/rulesets");
   const found = all.find((r) => r.name === file.name);
   const foundTags = all.find((r) => r.name === tags.name);
+  // --no-tags: chỉ so ruleset nhánh main với GitHub (mục blueprint về bảo vệ nhánh); tags.json vẫn được kiểm hợp lệ tại chỗ.
+  // Ruleset tag là việc của WF-REL-003 (chờ người import) — không để nó làm đỏ các mục về nhánh main. Mặc định: kiểm cả hai.
+  const withTags = !process.argv.slice(2).includes("--no-tags");
   const errors = [
     ...diffRuleset(found ? api(repo, `/rulesets/${found.id}`) : null, file),
     ...validateTagRuleset(tags).map((e) => `.github/rulesets/tags.json: ${e}`),
-    ...diffRuleset(foundTags ? api(repo, `/rulesets/${foundTags.id}`) : null, tags).map((e) =>
-      e.replace(".github/rulesets/main.json", ".github/rulesets/tags.json"),
-    ),
+    ...(withTags
+      ? diffRuleset(foundTags ? api(repo, `/rulesets/${foundTags.id}`) : null, tags).map((e) =>
+          e.replace(".github/rulesets/main.json", ".github/rulesets/tags.json"),
+        )
+      : []),
     ...strictOrPushMain(file, readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8")),
   ];
   if (api(repo, "/private-vulnerability-reporting").enabled !== true)
@@ -136,7 +141,11 @@ function main() {
     console.error(`check:github — ${errors.length} lệch:\n${errors.map((e) => `  ${e}`).join("\n")}`);
     process.exit(1);
   }
-  console.log(`check:github: OK (ruleset "${file.name}" và "${tags.name}" khớp file, PVR bật)`);
+  console.log(
+    withTags
+      ? `check:github: OK (ruleset "${file.name}" và "${tags.name}" khớp file, PVR bật)`
+      : `check:github: OK (ruleset "${file.name}" khớp file, PVR bật; ruleset tag không so — --no-tags)`,
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
