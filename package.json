@@ -77,7 +77,9 @@
     "kms:drill": "scripts/with-test-db.sh scripts/kms-dev.sh run -- tsx scripts/kms-rotation-drill.ts",
     "tools:install": "node scripts/tools/install-tool.mjs install",
     "backup:offsite": "scripts/backup-offsite.sh",
-    "backup:offsite:drill": "scripts/restore-offsite-drill.sh"
+    "backup:offsite:drill": "scripts/restore-offsite-drill.sh",
+    "backup:files": "scripts/backup-files.sh",
+    "backup:files:drill": "scripts/restore-files-drill.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "2.2.2",

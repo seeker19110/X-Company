@@ -130,6 +130,19 @@ npm run -s backup:offsite:drill                    # restic check --read-data �
 - Khôi phục thật: `restic restore latest --tag xc-db --target <thư mục>` rồi làm theo [runbooks/restore-db.md](runbooks/restore-db.md) với tệp khôi phục.
 - Chưa chứng minh: đích thật khác nhà cung cấp/khu vực (3-2-1 thật), lịch tự động trên máy chủ thật (cron/timer `15 3 * * *`), quyền ghi-chỉ-thêm/immutable ở đích (OPS-DR-007: restic `--append-only` qua rest-server hoặc object lock S3), khoá kho do người giữ riêng.
 
+### Sao lưu kho tệp S3 (`FILE_STORAGE=s3`, T-126)
+Nhãn: **faithful-fixture** — S3 tự host `rclone serve s3` + restic THẬT, cùng máy dev (không phải nhà cung cấp production — D-005, D-073). Kho đĩa (`FILE_STORAGE=disk`) không đi đường này: [runbooks/restore-files.md](runbooks/restore-files.md) §A.
+```bash
+# chạy với CÙNG env của ứng dụng (FILE_STORAGE=s3, S3_*, DATA_ENCRYPTION_KEYS hoặc KMS_*) + RESTIC_REPOSITORY/RESTIC_PASSWORD_FILE như mục trên
+npm run -s backup:files          # ListObjectsV2 → chụp bản MÃ mọi đối tượng + files-manifest.json (giải mã thử từng tệp) → restic backup --tag xc-files → check → forget
+npm run -s backup:files:drill    # restic check --read-data → restore bản chụp mới nhất vào thư mục tạm → đọc lại qua objectStorage.get, sha256 bản rõ khớp manifest
+```
+- Exit `backup-files.sh`: 0 xong · 1 lỗi (đối tượng lạ/không giải mã được, S3 lỗi, restic lỗi/check đỏ) · 2 cấu hình (FILE_STORAGE khác s3, thiếu mật khẩu kho/công cụ). `restore-files-drill.sh`: 0 khớp · 1 lệch/không đọc được · 2 cấu hình · 3 kho hỏng/không mở/không có bản `xc-files`.
+- **Đối tượng lạ** (khoá không dạng `xx/<40 hex>` hoặc thiếu đầu mã hoá `XCFILE`) → sao lưu DỪNG, nêu khoá; không âm thầm bỏ qua. Chuyển đối tượng đó ra bucket khác rồi chạy lại.
+- Trạng thái: `BACKUP_DIR/files-offsite-status.json` (khi đẩy xong), `files-offsite-drill.json` (khi diễn tập đạt). Giữ: `BACKUP_FILES_KEEP_LAST|DAILY|WEEKLY|MONTHLY` (mặc định 7/7/4/6), nhóm riêng với `xc-db`.
+- Bản chụp chỉ chứa bản mã — đọc lại cần khoá chủ (env/KMS) **của thời điểm chụp**: sau xoay khoá, GIỮ khoá cũ (tách khỏi cấu hình đang chạy, trong kho bí mật) cho tới khi mọi bản chụp/bản CSDL cũ hơn lần xoay hết hạn giữ; gỡ khoá cũ khỏi kho bí mật trước đó = bản sao lưu cũ không đọc được.
+- Khôi phục thật: [runbooks/restore-files.md](runbooks/restore-files.md) §B (S3). Chưa chứng minh: nhà cung cấp S3 thật, lịch tự động, cảnh báo riêng cho tuổi `files-offsite-status.json` (chưa có luật trong `alerts.json`).
+
 ### Vận hành KMS (OpenBao Transit) — khi `KMS_PROVIDER=transit`
 Nhãn: **faithful-fixture** (OpenBao 2.7.1 thật cục bộ qua `scripts/kms-dev.sh`; KHÔNG HSM, KHÔNG hạ tầng thật). Cấu hình mẫu production: [kms-deploy.md](kms-deploy.md); thiết kế: [../security/encryption-at-rest.md](../security/encryption-at-rest.md).
 - **Mở niêm phong (unseal)**: sau mỗi lần khởi động/khởi động lại, OpenBao ở trạng thái niêm phong → ứng dụng ghi/đọc dữ liệu mã hoá đều lỗi `KMS_UNAVAILABLE` (fail-closed, KHÔNG rơi về khoá env). Mở bằng ngưỡng khoá chia (`bao operator unseal` — nhập từng phần, mỗi người một phần; khoá KHÔNG dán lên dòng lệnh dùng chung). Dev: `scripts/kms-dev.sh unseal`.
@@ -176,7 +189,7 @@ psql "$MIGRATE_DATABASE_URL" -c 'delete from session'
 ### `DATA_ENCRYPTION_KEYS` / `DATA_INDEX_KEY` — mã hoá dữ liệu lúc lưu (T-048)
 Chi tiết, phạm vi và cảnh báo mất khoá: [../security/encryption-at-rest.md](../security/encryption-at-rest.md). **Mất mọi khoá = mất dữ liệu đã mã hoá** — sao lưu khoá riêng, tách khỏi sao lưu CSDL.
 1. Sinh khoá: `openssl rand -base64 32`. Thêm khoá MỚI lên ĐẦU: `DATA_ENCRYPTION_KEYS="d2:<khoá-mới>,d1:<khoá-cũ>"` → restart.
-2. Chạy `npm run -s crypto:rotate` (cột PII + bọc lại khoá tệp; idempotent, theo lô, chạy lại được). Xong khi mọi dòng `còn khoá cũ 0`, exit 0.
+2. Chạy `npm run -s crypto:rotate` (cột PII + bọc lại khoá tệp; idempotent, theo lô, chạy lại được). Xong khi mọi dòng `còn khoá cũ 0`, exit 0. Với `FILE_STORAGE=s3` (T-126): script liệt kê cả bucket, bọc lại đầu từng đối tượng (một PUT ghi đè — S3 lỗi giữa chừng thì chạy lại, đối tượng đã xoay rơi vào `đã hiện hành`), rồi đọc thử MỌI đối tượng (`đọc kiểm được N`); đối tượng lạ hoặc không đọc được → exit 1, KHÔNG sang bước 3. Chạy khi không có tác vụ xoá blob đang chờ (`files.blob_delete`): xoá trùng lúc xoay có thể làm đối tượng vừa xoá được ghi lại.
 3. Chỉ sau đó mới bỏ khoá cũ khỏi cấu hình → restart. Kiểm: `npm run -s crypto:rotate` vẫn xanh (không `KEY_UNKNOWN`).
 4. Nghi lộ khoá: làm bước 1–3 NGAY (không chờ), rồi coi dữ liệu mã hoá bằng khoá lộ trong các bản sao lưu cũ là đã lộ → [data-breach.md](runbooks/data-breach.md). `DATA_INDEX_KEY` đổi → `npm run -s crypto:backfill -- --reindex`.
 5. Dữ liệu cũ chưa mã hoá: `npm run -s crypto:backfill` (kiểm số dòng), sau khi đọc kiểm xong mới `-- --scrub` (xoá bản rõ — mất đường lùi "bản trước đọc cột rõ").

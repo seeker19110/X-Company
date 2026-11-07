@@ -402,6 +402,72 @@ export async function rotateFiles(
   return rep;
 }
 
+/**
+ * Kho đối tượng tối thiểu cho xoay khoá (cùng hình với `ObjectInventory` ở lib/files/storage.ts — khai lại theo cấu trúc để
+ * lib/crypto không import ngược lib/files, nơi đã import lib/crypto/file.ts).
+ */
+export interface RotatableObjects {
+  listKeys(): AsyncIterable<string>;
+  getObject(key: string): Promise<Buffer | null>;
+  putObject(key: string, body: Buffer): Promise<void>;
+}
+
+export interface ObjectRotateReport {
+  rewrapped: number;
+  alreadyCurrent: number;
+  /** Có trong danh sách nhưng đã bị xoá trước lúc đọc (ứng dụng xoá song song) — không phải lỗi. */
+  vanished: number;
+  /** Đối tượng KHÔNG phải của ứng dụng (khoá sai dạng hoặc thiếu đầu mã hoá) — không đụng tới; bên gọi phải báo lỗi. */
+  foreign: string[];
+}
+
+/** Cùng dạng `STORAGE_KEY_RE` (lib/files/storage.ts). */
+const OBJECT_KEY_RE = /^[0-9a-f]{2}\/[0-9a-f]{40}$/;
+
+/**
+ * Xoay khoá tệp trên kho ĐỐI TƯỢNG (FILE_STORAGE=s3, T-126) — cùng cách `rotateFiles` làm với đĩa: đọc đầu, mở DEK bằng khoá cũ
+ * (bất kỳ khoá nào trong bộ khoá / KMS), bọc lại bằng khoá hiện hành, ghi ĐÈ cả đối tượng = đầu mới + phần thân bản mã giữ nguyên
+ * (không giải mã nội dung). Một PUT là nguyên tử với S3 (đọc thấy bản cũ hoặc bản mới, không có bản dở) → lỗi giữa chừng để lại
+ * mỗi đối tượng ở trạng thái cũ HOẶC mới, cả hai đều đọc được khi khoá cũ còn trong cấu hình; chạy lại thì đối tượng đã xoay rơi vào
+ * `alreadyCurrent` (idempotent). Kho đối tượng không có "tệp cũ bản rõ" (objectStorage từ chối) → đối tượng thiếu đầu mã hoá là
+ * đối tượng LẠ: không sửa, trả trong `foreign` để người vận hành xử lý (không âm thầm bỏ qua).
+ */
+export async function rotateObjects(
+  store: RotatableObjects,
+  opts: { ring?: Keyring } = {},
+): Promise<ObjectRotateReport> {
+  const ring = opts.ring ?? (await keyProvider().ringForWrite());
+  const target = ring.kms === undefined ? undefined : await ring.kms.latestVersion();
+  const rep: ObjectRotateReport = { rewrapped: 0, alreadyCurrent: 0, vanished: 0, foreign: [] };
+  for await (const key of store.listKeys()) {
+    if (!OBJECT_KEY_RE.test(key)) {
+      rep.foreign.push(key);
+      continue;
+    }
+    const body = await store.getObject(key);
+    if (body === null) {
+      rep.vanished += 1;
+      continue;
+    }
+    const head = body.subarray(0, Math.min(HEAD_BYTES, body.length));
+    if (!isEncryptedFile(head)) {
+      rep.foreign.push(key);
+      continue;
+    }
+    const re =
+      ring.kms === undefined
+        ? rewrapHeader(head, { storageKey: key }, ring)
+        : await rewrapHeaderAsync(head, { storageKey: key }, ring, target);
+    if (!re.changed) {
+      rep.alreadyCurrent += 1;
+      continue;
+    }
+    await store.putObject(key, Buffer.concat([re.header, body.subarray(re.oldLength)]));
+    rep.rewrapped += 1;
+  }
+  return rep;
+}
+
 /** Kiểm đọc được MỌI tệp trong kho (giải mã/đọc rõ) — dùng sau xoay khoá để chứng minh không mất tệp. Trả số tệp. */
 export async function verifyFiles(root: string, ring?: Keyring): Promise<number> {
   let n = 0;

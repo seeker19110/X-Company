@@ -5,10 +5,13 @@
 // bản mã → lỗi xác thực · Unicode/rỗng/~5 MB (nhiều khối) · khoá lạ/không tồn tại → lỗi rõ · remove idempotent · ghi đồng thời ·
 // hai thể hiện (mô phỏng 2 bản sao) đọc chéo · đi qua lib/files (Postgres thật). Nhãn: faithful-fixture (rclone cục bộ, không phải
 // nhà cung cấp production — G7, D-005).
+// T-126: xoay khoá tệp trên S3 (rotateObjects + CLI crypto:rotate, gỡ khoá cũ vẫn đọc được, S3 lỗi giữa chừng → chạy lại hoàn tất,
+// xoay đồng thời) · chụp/kiểm/khôi phục kho S3 (lib/files/object-admin: kho rỗng, đối tượng lạ, bản chụp hỏng). Đường restic đầy đủ:
+// tests/db/backup-offsite.test.ts.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
@@ -18,7 +21,19 @@ import { loadActor } from "../../lib/authz/load.ts";
 import type { ActorContext } from "../../lib/authz/index.ts";
 import { withTx } from "../../lib/db/index.ts";
 import { FILE_MAGIC } from "../../lib/crypto/file.ts";
+import { rotateObjects, type RotatableObjects } from "../../lib/crypto/rotate.ts";
 import { downloadFile, uploadFile } from "../../lib/files/index.ts";
+import {
+  dirObjects,
+  exportObjects,
+  ForeignObjectsError,
+  MANIFEST_NAME,
+  OBJECTS_DIR,
+  restoreSnapshot,
+  verifyObjectStore,
+  verifySnapshot,
+  type ObjectManifest,
+} from "../../lib/files/object-admin.ts";
 import {
   diskStorage,
   getStorage,
@@ -26,6 +41,7 @@ import {
   setStorage,
   STORAGE_KEY_RE,
   StorageNotFoundError,
+  type ObjectInventory,
   type ObjectTransport,
   type Storage,
 } from "../../lib/files/storage.ts";
@@ -224,31 +240,6 @@ describe("kho tệp qua lib/files (Postgres thật): uploadFile → downloadFile
     await db.close();
   });
 
-  test("crypto:rotate với FILE_STORAGE=s3 → exit 1 + cảnh báo không bỏ khoá cũ (chưa bọc lại khoá tệp trên S3); disk → exit 0", () => {
-    const url = new URL(process.env.DATABASE_URL!);
-    url.pathname = `/${db.name}`;
-    const run = (extra: Record<string, string>) =>
-      spawnSync("npx", ["--no-install", "tsx", "scripts/crypto-rotate.ts"], {
-        env: { ...process.env, DATABASE_URL: url.toString(), ...extra },
-        encoding: "utf8",
-      });
-    const s3run = run({ ...s3.env });
-    assert.equal(s3run.status, 1, s3run.stderr);
-    assert.match(
-      s3run.stderr,
-      /FILE_STORAGE=s3: chưa hỗ trợ bọc lại khoá tệp trên kho S3 — KHÔNG bỏ khoá cũ/,
-    );
-    // Thư mục riêng: diskDir có tệp bị sửa cố ý ở ca contract phía trên.
-    const empty = mkdtempSync(path.join(tmpdir(), "xc-contract-rotate-"));
-    try {
-      const disk = run({ FILE_STORAGE: "disk", FILE_STORAGE_DIR: empty });
-      assert.equal(disk.status, 0, disk.stderr);
-      assert.match(disk.stdout, /\[crypto:rotate\] tệp: bọc lại/);
-    } finally {
-      rmSync(empty, { recursive: true, force: true });
-    }
-  });
-
   for (const name of ["disk", "s3"] as const)
     test(`${name}: tải lên rồi tải về đúng nội dung + sha256; backend giữ bản mã`, async () => {
       const be = backends.find((x) => x.name === name)!;
@@ -430,5 +421,343 @@ describe("kho S3: riêng phần mạng/cấu hình", () => {
     assert.equal(issues({ ...full, S3_ENDPOINT: "https://s3.example", S3_BUCKET: "Bucket_Sai" }).length, 1);
     assert.doesNotMatch(JSON.stringify(insecure), new RegExp(secret));
     assert.deepEqual(issues({ ...baseEnv }), [], "mặc định FILE_STORAGE=disk không đòi S3_*");
+  });
+});
+// ---------------------------------------------------------------------------------------------------------------------------
+// T-126: xoay khoá + chụp/khôi phục kho S3. Mỗi describe dùng máy chủ S3 RIÊNG (bucket sạch): bucket chung ở trên có đối tượng bị
+// sửa/tráo cố ý (ca contract), mà xoay khoá/sao lưu duyệt CẢ bucket.
+
+const newKey = () => randomBytes(32).toString("base64");
+const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+/** Bộ dữ liệu: rỗng, Unicode, nhiều khối 64 KiB. */
+const SAMPLES = () => [
+  Buffer.alloc(0),
+  Buffer.from("Biên bản nghiệm thu — Đắk Lắk ✓ 🧾\n", "utf8"),
+  randomBytes(200 * 1024 + 7),
+];
+
+/** Đặt DATA_ENCRYPTION_KEYS cho tiến trình test; trả hàm hoàn nguyên. */
+function keysEnv(): { use(v: string): void; restore(): void } {
+  const saved = process.env.DATA_ENCRYPTION_KEYS;
+  return {
+    use: (v) => {
+      process.env.DATA_ENCRYPTION_KEYS = v;
+    },
+    restore: () => {
+      if (saved === undefined) delete process.env.DATA_ENCRYPTION_KEYS;
+      else process.env.DATA_ENCRYPTION_KEYS = saved;
+    },
+  };
+}
+
+async function emptyBucket(t: ObjectInventory): Promise<void> {
+  const keys: string[] = [];
+  for await (const k of t.listKeys()) keys.push(k);
+  for (const k of keys) await t.deleteObject(k);
+}
+
+async function listAll(t: ObjectInventory): Promise<string[]> {
+  const keys: string[] = [];
+  for await (const k of t.listKeys()) keys.push(k);
+  return keys;
+}
+
+describe("kho S3: xoay khoá tệp (rotateObjects, T-126) — máy chủ S3 thật riêng", () => {
+  let own: S3Fixture;
+  const K1 = newKey();
+  const K2 = newKey();
+  const keys = keysEnv();
+  const t = () => s3Transport(() => own);
+  /** Ghi các mẫu bằng khoá k1; trả khoá lưu (theo thứ tự liệt kê) + sha256 bản rõ. */
+  const seed = async () => {
+    await emptyBucket(t());
+    keys.use(`k1:${K1}`);
+    const want = new Map<string, string>();
+    for (const d of SAMPLES()) want.set(await objectStorage(t()).put(d), sha(d));
+    return { want, order: await listAll(t()) };
+  };
+  const readsAll = async (want: Map<string, string>) => {
+    for (const [k, s] of want) assert.equal(sha(await objectStorage(t()).get(k)), s, `đọc lại ${k}`);
+  };
+  before(async () => {
+    own = await startS3();
+  });
+  after(async () => {
+    keys.restore();
+    await own?.stop();
+  });
+
+  test("xoay sang khoá mới rồi GỠ khoá cũ khỏi cấu hình → mọi tệp vẫn đọc đúng (sha256 khớp); chạy lại idempotent", async () => {
+    const { want } = await seed();
+    keys.use(`k2:${K2},k1:${K1}`);
+    const r1 = await rotateObjects(t());
+    assert.deepEqual(r1, {
+      rewrapped: 3,
+      alreadyCurrent: 0,
+      vanished: 0,
+      foreign: [],
+    });
+    const r2 = await rotateObjects(t());
+    assert.deepEqual(r2, {
+      rewrapped: 0,
+      alreadyCurrent: 3,
+      vanished: 0,
+      foreign: [],
+    });
+    keys.use(`k2:${K2}`); // khoá cũ đã gỡ
+    await readsAll(want);
+    assert.deepEqual(await verifyObjectStore(t()), {
+      readable: 3,
+      problems: [],
+      foreign: [],
+    });
+    keys.use(`k1:${K1}`); // chỉ còn khoá cũ → không mở được (chứng minh đã bọc lại thật)
+    await assert.rejects(objectStorage(t()).get([...want.keys()][0]!), {
+      name: "CryptoError",
+    });
+  });
+
+  for (const mode of ["PUT ném trước khi ghi", "PUT đã ghi nhưng báo lỗi (hết giờ chờ)"] as const)
+    test(`S3 lỗi ở đối tượng thứ 2 (${mode}) → dừng có lỗi, không mất tệp; chạy lại → hoàn tất; gỡ khoá cũ vẫn đọc được`, async () => {
+      const { want, order } = await seed();
+      keys.use(`k2:${K2},k1:${K1}`);
+      let puts = 0;
+      const base = t();
+      const flaky: RotatableObjects = {
+        listKeys: () => base.listKeys(),
+        getObject: (k) => base.getObject(k),
+        putObject: async (k, b) => {
+          puts += 1;
+          if (puts !== 2) return base.putObject(k, b);
+          if (mode.startsWith("PUT đã ghi")) await base.putObject(k, b);
+          throw new S3Error("PutObject", 503, "SlowDown");
+        },
+      };
+      await assert.rejects(rotateObjects(flaky), {
+        name: "S3Error",
+        status: 503,
+      });
+      await readsAll(want); // còn cả hai khoá: không tệp nào mất/dở
+      keys.use(`k2:${K2}`);
+      assert.equal(sha(await objectStorage(t()).get(order[0]!)), want.get(order[0]!), "đối tượng 1 đã xoay");
+      await assert.rejects(
+        objectStorage(t()).get(order[2]!),
+        { name: "CryptoError" },
+        "đối tượng 3 chưa xoay",
+      );
+      keys.use(`k2:${K2},k1:${K1}`);
+      const again = await rotateObjects(t());
+      assert.equal(again.rewrapped + again.alreadyCurrent, 3);
+      assert.equal(again.rewrapped, mode.startsWith("PUT đã ghi") ? 1 : 2);
+      keys.use(`k2:${K2}`);
+      await readsAll(want);
+    });
+
+  test("đồng thời: hai lần xoay song song → không đối tượng nào hỏng/mất; chạy lại hoàn tất, đọc được bằng khoá mới", async () => {
+    const { want } = await seed();
+    keys.use(`k2:${K2},k1:${K1}`);
+    // rclone serve s3 (fixture) có thể trả HTTP 500 cho GET trùng lúc PUT cùng khoá (S3 thật: PUT nguyên tử) → một lần xoay được
+    // phép dừng có S3Error; điều bắt buộc: không đối tượng nào hỏng/mất, và chạy lại thì hoàn tất.
+    const runs = await Promise.allSettled([rotateObjects(t()), rotateObjects(t())]);
+    for (const r of runs)
+      if (r.status === "rejected") assert.equal((r.reason as Error).name, "S3Error");
+      else assert.equal(r.value.rewrapped + r.value.alreadyCurrent, 3);
+    await readsAll(want); // còn cả hai khoá: mọi đối tượng nguyên vẹn
+    const again = await rotateObjects(t());
+    assert.equal(again.rewrapped + again.alreadyCurrent, 3);
+    keys.use(`k2:${K2}`);
+    await readsAll(want);
+  });
+
+  test("ca biên: kho rỗng → 0; đối tượng lạ (khoá sai dạng / thiếu đầu mã hoá) → báo trong foreign, KHÔNG bị sửa", async () => {
+    await emptyBucket(t());
+    keys.use(`k2:${K2},k1:${K1}`);
+    assert.deepEqual(await rotateObjects(t()), {
+      rewrapped: 0,
+      alreadyCurrent: 0,
+      vanished: 0,
+      foreign: [],
+    });
+    assert.deepEqual(await verifyObjectStore(t()), {
+      readable: 0,
+      problems: [],
+      foreign: [],
+    });
+    const { want } = await seed();
+    keys.use(`k2:${K2},k1:${K1}`);
+    await t().putObject("ghi-chu.txt", Buffer.from("không phải tệp của ứng dụng"));
+    await t().putObject(MISSING, PDF); // đúng dạng khoá nhưng bản rõ
+    const r = await rotateObjects(t());
+    assert.deepEqual(r.foreign.sort(), [MISSING, "ghi-chu.txt"].sort());
+    assert.equal(r.rewrapped, 3);
+    assert.deepEqual(await t().getObject(MISSING), PDF, "đối tượng lạ giữ nguyên");
+    const v = await verifyObjectStore(t());
+    assert.equal(v.readable, want.size);
+    assert.deepEqual(v.foreign.sort(), [MISSING, "ghi-chu.txt"].sort());
+  });
+});
+
+describe("kho S3: chụp → kiểm → khôi phục (lib/files/object-admin, T-126) — hai máy chủ S3 thật", () => {
+  let src: S3Fixture;
+  let dst: S3Fixture;
+  let work: string;
+  const ts = () => s3Transport(() => src);
+  const td = () => s3Transport(() => dst);
+  before(async () => {
+    src = await startS3();
+    dst = await startS3();
+    work = mkdtempSync(path.join(tmpdir(), "xc-snap-"));
+  });
+  after(async () => {
+    await src?.stop();
+    await dst?.stop();
+    rmSync(work, { recursive: true, force: true });
+  });
+
+  test("Given kho S3 có tệp đã mã hoá When chụp rồi khôi phục vào kho khác Then đọc lại qua objectStorage, sha256 khớp", async () => {
+    await emptyBucket(ts());
+    const want = new Map<string, string>();
+    for (const d of SAMPLES()) want.set(await objectStorage(ts()).put(d), sha(d));
+    const dir = path.join(work, "a");
+    const m = await exportObjects(ts(), dir);
+    assert.equal(m.objects, 3);
+    assert.deepEqual(m.entries.map((e) => e.key).sort(), [...want.keys()].sort());
+    for (const e of m.entries) assert.equal(e.plain_sha256, want.get(e.key));
+    // bản chụp chỉ chứa bản mã
+    for (const e of m.entries) {
+      const raw = readFileSync(path.join(dir, OBJECTS_DIR, e.key));
+      assert.ok(raw.subarray(0, 6).equals(Buffer.from("XCFILE")));
+    }
+    assert.deepEqual(await verifySnapshot(dir), { checked: 3, problems: [] });
+    // đọc bản chụp qua đúng đường giải mã của ứng dụng
+    for (const [k, s] of want)
+      assert.equal(sha(await objectStorage(dirObjects(path.join(dir, OBJECTS_DIR))).get(k)), s);
+    await emptyBucket(td());
+    const r = await restoreSnapshot(dir, td());
+    assert.deepEqual(r, {
+      restored: 3,
+      skippedExisting: 0,
+      checked: 3,
+      problems: [],
+    });
+    for (const [k, s] of want) assert.equal(sha(await objectStorage(td()).get(k)), s);
+    // chạy lại: không ghi đè bản đã có (idempotent)
+    const again = await restoreSnapshot(dir, td());
+    assert.equal(again.restored, 0);
+    assert.equal(again.skippedExisting, 3);
+    assert.deepEqual(again.problems, []);
+    await assert.rejects(exportObjects(ts(), dir), /đã có files-manifest\.json/);
+  });
+
+  test("ca biên: kho rỗng → bản chụp 0 đối tượng, kiểm + khôi phục đạt", async () => {
+    await emptyBucket(ts());
+    const dir = path.join(work, "rong");
+    const m = await exportObjects(ts(), dir);
+    assert.equal(m.objects, 0);
+    assert.equal(m.total_bytes, 0);
+    assert.deepEqual(await verifySnapshot(dir), { checked: 0, problems: [] });
+    assert.equal((await restoreSnapshot(dir, td())).restored, 0);
+  });
+
+  test("ca biên: đối tượng không phải của ứng dụng (thiếu đầu mã hoá / khoá lạ) → lỗi nêu khoá, KHÔNG ghi manifest", async () => {
+    await emptyBucket(ts());
+    await objectStorage(ts()).put(PDF);
+    await ts().putObject(MISSING, PDF);
+    await ts().putObject("anh chụp & ghi chú.txt", Buffer.from("x"));
+    const dir = path.join(work, "la");
+    await assert.rejects(exportObjects(ts(), dir), (e: Error) => {
+      assert.ok(e instanceof ForeignObjectsError);
+      assert.deepEqual([...e.keys].sort(), [MISSING, "anh chụp & ghi chú.txt"].sort());
+      assert.match(e.message, /2 đối tượng không phải của ứng dụng/);
+      assert.match(e.message, new RegExp(MISSING));
+      return true;
+    });
+    assert.equal(existsSync(path.join(dir, MANIFEST_NAME)), false);
+  });
+
+  test("bản chụp hỏng: sửa 1 byte bản mã → verify báo lệch; restore từ chối, KHÔNG ghi gì vào đích", async () => {
+    await emptyBucket(ts());
+    for (const d of SAMPLES()) await objectStorage(ts()).put(d);
+    const dir = path.join(work, "hong");
+    const m = await exportObjects(ts(), dir);
+    const victim = m.entries[1]!;
+    const f = path.join(dir, OBJECTS_DIR, victim.key);
+    const raw = readFileSync(f);
+    raw[raw.length - 3] = (raw[raw.length - 3] ?? 0) ^ 0x40;
+    writeFileSync(f, raw);
+    const v = await verifySnapshot(dir);
+    assert.deepEqual(v.problems, [`${victim.key}: sha256 bản mã lệch manifest`]);
+    await emptyBucket(td());
+    await assert.rejects(restoreSnapshot(dir, td()), /bản chụp hỏng\/thiếu 1 đối tượng/);
+    assert.deepEqual(await listAll(td()), []);
+    // trả lại bản mã đúng, rồi sửa sha256 BẢN RÕ trong manifest → chỉ phát hiện được khi giải mã thật
+    raw[raw.length - 3] = (raw[raw.length - 3] ?? 0) ^ 0x40;
+    writeFileSync(f, raw);
+    assert.deepEqual((await verifySnapshot(dir)).problems, []);
+    const man = JSON.parse(readFileSync(path.join(dir, MANIFEST_NAME), "utf8")) as ObjectManifest;
+    man.entries[1]!.plain_sha256 = "0".repeat(64);
+    writeFileSync(path.join(dir, MANIFEST_NAME), JSON.stringify(man));
+    assert.deepEqual((await verifySnapshot(dir)).problems, [`${victim.key}: sha256 bản rõ lệch manifest`]);
+  });
+});
+
+describe("crypto:rotate (CLI) với FILE_STORAGE=s3: bọc lại khoá tệp trên S3 (T-126; thay hàng rào exit 1 của T-116)", () => {
+  let db: TestDb;
+  let own: S3Fixture;
+  const K1 = newKey();
+  const K2 = newKey();
+  const keys = keysEnv();
+  before(async () => {
+    db = await freshDb(); // DB trống (không dòng PII) → chỉ phần tệp đổi theo khoá thử
+    own = await startS3();
+  });
+  after(async () => {
+    keys.restore();
+    await own?.stop();
+    await db.close();
+  });
+  const run = (extra: Record<string, string>) => {
+    const url = new URL(process.env.DATABASE_URL!);
+    url.pathname = `/${db.name}`;
+    return spawnSync("npx", ["--no-install", "tsx", "scripts/crypto-rotate.ts"], {
+      env: { ...process.env, DATABASE_URL: url.toString(), ...extra },
+      encoding: "utf8",
+    });
+  };
+
+  test("xoay → exit 0 → GỠ khoá cũ → tệp vẫn đọc được; chạy lại idempotent; đối tượng lạ → exit 1 nêu khoá; disk vẫn exit 0", async () => {
+    const t = s3Transport(() => own);
+    keys.use(`k1:${K1}`);
+    const want = new Map<string, string>();
+    for (const d of SAMPLES()) want.set(await objectStorage(t).put(d), sha(d));
+    const both = `k2:${K2},k1:${K1}`;
+    const r1 = run({ ...own.env, DATA_ENCRYPTION_KEYS: both });
+    assert.equal(r1.status, 0, r1.stderr);
+    assert.match(r1.stdout, /tệp \(S3\): bọc lại 3, đã hiện hành 0, đã bị xoá giữa chừng 0, đọc kiểm được 3/);
+    const r2 = run({ ...own.env, DATA_ENCRYPTION_KEYS: both });
+    assert.equal(r2.status, 0, r2.stderr);
+    assert.match(r2.stdout, /bọc lại 0, đã hiện hành 3/);
+    const onlyNew = run({ ...own.env, DATA_ENCRYPTION_KEYS: `k2:${K2}` }); // khoá cũ đã gỡ
+    assert.equal(onlyNew.status, 0, onlyNew.stderr);
+    keys.use(`k2:${K2}`);
+    for (const [k, s] of want) assert.equal(sha(await objectStorage(t).get(k)), s);
+    for (const out of [r1.stdout, r1.stderr, r2.stdout, onlyNew.stdout])
+      assert.equal(out.includes(K2) || out.includes(K1), false, "lộ khoá");
+    await t.putObject("ghi-chu.txt", Buffer.from("tệp lạ"));
+    const bad = run({ ...own.env, DATA_ENCRYPTION_KEYS: `k2:${K2}` });
+    assert.equal(bad.status, 1);
+    assert.match(bad.stderr, /1 đối tượng không phải của ứng dụng.*"ghi-chu\.txt"/);
+    const empty = mkdtempSync(path.join(tmpdir(), "xc-contract-rotate-"));
+    try {
+      const disk = run({
+        FILE_STORAGE: "disk",
+        FILE_STORAGE_DIR: empty,
+        DATA_ENCRYPTION_KEYS: `k2:${K2}`,
+      });
+      assert.equal(disk.status, 0, disk.stderr);
+      assert.match(disk.stdout, /\[crypto:rotate\] tệp: bọc lại/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
   });
 });
