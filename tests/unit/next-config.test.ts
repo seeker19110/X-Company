@@ -4,7 +4,12 @@ import assert from "node:assert/strict";
 import { randomBytes, randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
-import nextConfig, { API_HSTS, MALFORMED_PATH_RE, STATIC_SOURCES } from "../../next.config.ts";
+import nextConfig, {
+  API_HSTS,
+  MALFORMED_PATH_RE,
+  SOURCE_MAP_SOURCE,
+  STATIC_SOURCES,
+} from "../../next.config.ts";
 import { securityHeaders } from "../../proxy.ts";
 
 const re = new RegExp(`^${MALFORMED_PATH_RE}$`, "su");
@@ -98,9 +103,30 @@ describe("MALFORMED_PATH_RE", () => {
 
   test("next.config có rewrite beforeFiles dùng đúng biểu thức", async () => {
     const r = (await nextConfig.rewrites?.()) as { beforeFiles: { source: string; destination: string }[] };
-    assert.equal(r.beforeFiles.length, 1);
+    assert.equal(r.beforeFiles.length, 2);
     assert.ok(r.beforeFiles[0]!.source.includes(MALFORMED_PATH_RE));
     assert.equal(r.beforeFiles[0]!.destination, "/khong-hop-le");
+  });
+
+  test("source map (T-122): sinh lúc build nhưng *.map dưới /_next/static bị rewrite beforeFiles về trang không tồn tại", async () => {
+    assert.equal(nextConfig.productionBrowserSourceMaps, true);
+    const r = (await nextConfig.rewrites?.()) as { beforeFiles: { source: string; destination: string }[] };
+    const sm = r.beforeFiles.find((x) => x.source === SOURCE_MAP_SOURCE);
+    assert.ok(sm, "phải có rewrite chặn *.map");
+    assert.equal(sm.destination, "/khong-hop-le");
+    // Mẫu path-to-regexp `:path(.*\.map)` — khớp mọi *.map dưới /_next/static, không khớp tệp JS/CSS.
+    const re = new RegExp(`^/_next/static/(${SOURCE_MAP_SOURCE.slice("/_next/static/:path(".length, -1)})$`);
+    for (const ok of [
+      "/_next/static/chunks/a.js.map",
+      "/_next/static/css/x.css.map",
+      "/_next/static/a/b/c.map",
+    ])
+      assert.ok(re.test(ok), ok);
+    for (const no of ["/_next/static/chunks/a.js", "/_next/static/chunks/map.js", "/_next/static/a.mapx"])
+      assert.ok(!re.test(no), no);
+    // Gói build phải chạy bước lưu map riêng tư ngay sau `next build`.
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    assert.match(pkg.scripts.build!, /^next build && node scripts\/sourcemaps-stash\.mjs$/);
   });
 
   test("header API: nosniff + HSTS, HSTS trùng giá trị của proxy.ts", async () => {

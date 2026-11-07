@@ -400,6 +400,12 @@
       "duongDanKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền cms. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "revisionStatusMismatch": "Lỗi 409 INVALID_STATE khi chuyển trạng thái bản nội dung; {status} = trạng thái hiện tại (mã), {expected} = trạng thái cần có (mã)."
     },
+    "errors": {
+      "guiQuaNhieu": "Thông báo lỗi nghiệp vụ trả client (AppError RATE_LIMITED 429); miền errors (kho lỗi tự host), beacon lỗi gửi quá nhiều. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
+      "trangKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, đường dẫn trang trong beacon lỗi không chuẩn hoá được. Giữ nguyên ý, ngắn.",
+      "nguonKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, tham số lọc `source` của danh sách lỗi nội bộ sai. Giữ nguyên ý, ngắn.",
+      "releaseKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 400); miền errors, tham số lọc `release` (mã phiên bản build) sai định dạng. Giữ nguyên ý, ngắn."
+    },
     "files": {
       "khongTimThayDoiTuong": "Thông báo lỗi nghiệp vụ trả client (AppError NOT_FOUND 404); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",
       "loaiDoiTuongKhongHopLe": "Thông báo lỗi nghiệp vụ trả client (AppError VALIDATION 422); miền files. Giữ nguyên ý, ngắn, nói rõ cách sửa nếu có.",

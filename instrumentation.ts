@@ -22,6 +22,9 @@ export async function register(): Promise<void> {
 export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const { log } = await import("./lib/nen/log.ts");
+  // Kho lỗi tự host (T-122): lỗi render/route chưa bắt của Next, gắn release; chạy nền, không bao giờ ném.
+  const { recordServerError } = await import("./lib/errors/index.ts");
+  recordServerError(err, { path: request.path.split("?")[0] });
   log.error("lỗi chưa bắt khi xử lý request", {
     err,
     method: request.method,

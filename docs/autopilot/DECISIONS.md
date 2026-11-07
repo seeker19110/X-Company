@@ -548,3 +548,24 @@
 - Chọn: Tự phục vụ: xác thực lại (mật khẩu + TOTP nếu đã bật, chống phát lại) → tạo yêu cầu delete cho chính mình và thực thi NGAY trong một giao dịch: thu hồi mọi phiên, vô hiệu đăng nhập (xoá mật khẩu băm, TOTP, thiết bị, đăng ký thông báo), xoá PII không thuộc danh mục phải giữ (RETAINED_BY_SUBJECT/data-map), giữ phần bắt buộc kèm processing_restriction ghi căn cứ; blob qua outbox (T-125)
 - Lý do (tiêu chí chất lượng cuối): Đúng yêu cầu (tự phục vụ + xác thực lại + lan mọi kho + chỉ giữ phần bắt buộc kèm căn cứ); phương án 3 trái BLLĐ/NĐ 145 về lưu hồ sơ lao động; phương án 2 không phải tự phục vụ. Xác thực lại chặn kẻ chiếm phiên xoá tài khoản; audit ghi chỉ số đếm/loại, không PII. Ngoại lệ cứng: người merge
 - Đường lùi: Tắt route tự phục vụ (yêu cầu đi lại qua HR); dữ liệu đã xoá chỉ khôi phục từ sao lưu theo quy trình DSAR
+
+### D-076 · 2026-11-07T01:55:21+00:00 · T-122: bộ bắt lỗi client (ErrorReporter ở 3 layout) làm tổng JS tĩnh 231,9 KB gzip > trần 230 KB (bản gốc đã chạm trần 230,0)
+
+- Phương án: (1) Nâng max_static_js_gzip_kb_total 230 → 232 trong cùng PR, ghi đo trước/sau (230,0 → 231,9 KB) và lý do: tính năng PRF-WEB-008 bắt buộc, không có cách bắt lỗi window/promise mà không thêm mã client · (2) Bỏ bắt lỗi chưa xử lý ở client, chỉ giữ reportClientError gọi tay — mất lỗi window/unhandledrejection · (3) Giữ trần 230, tối ưu chỗ khác trong task riêng — CI check:perf-budget đỏ tới khi xong
+- Chọn: Nâng max_static_js_gzip_kb_total 230 → 232 trong cùng PR, ghi đo trước/sau (230,0 → 231,9 KB) và lý do: tính năng PRF-WEB-008 bắt buộc, không có cách bắt lỗi window/promise mà không thêm mã client
+- Lý do (tiêu chí chất lượng cuối): Ngân sách là công cụ ra quyết định có ý thức chứ không phải để chặn tính năng bắt buộc; nâng 2 KB (0,9 %) kèm số đo trước/sau đúng quy trình docs/PERF-BUDGET.md 'Đổi ngân sách'. Phương án 2 bỏ mất phần chính của PRF-WEB-008; phương án 3 để cổng đỏ. Reporter đã đặt ở 3 layout thay vì root (3,8 → 1,9 KB)
+- Đường lùi: Hạ trần về 230 và bỏ ErrorReporter khỏi layout
+
+### D-077 · 2026-11-07T01:55:21+00:00 · T-122: kho lỗi error_group là dữ liệu toàn hệ thống; quyền errors.read (sysadmin) có thấy lỗi phát sinh từ công ty khác không
+
+- Phương án: (1) Chấp nhận: một đơn vị vận hành (sysadmin là quản trị hệ thống, không phải vai trò nghiệp vụ của công ty); thông điệp/stack đã che bí mật + PII; ghi nợ thêm company_id khi có triển khai nhiều tổ chức vận hành độc lập · (2) Thêm company_id nullable cho lỗi server có actor, lọc theo công ty của người xem; lỗi client/không actor chỉ quản trị hệ thống cấp cao thấy
+- Chọn: Chấp nhận: một đơn vị vận hành (sysadmin là quản trị hệ thống, không phải vai trò nghiệp vụ của công ty); thông điệp/stack đã che bí mật + PII; ghi nợ thêm company_id khi có triển khai nhiều tổ chức vận hành độc lập
+- Lý do (tiêu chí chất lượng cuối): Triển khai hiện là một tổ chức vận hành một cụm (ADR-0001 tự host); lỗi là dữ liệu vận hành, đã che; phương án 2 cần phân cấp sysadmin chưa tồn tại và lỗi client công khai không có công ty. Giữ đường lùi: thêm cột nullable sau không phá dữ liệu
+- Đường lùi: Thêm cột company_id (migration expand) + lọc trong getErrorGroups
+
+### D-078 · 2026-11-07T01:56:06+00:00 · Đo chung T-121 + T-122 (build thật 2026-11-07): tổng JS tĩnh 233,3 KB > trần 232 của D-076 — form xoá tài khoản (T-121, CMP-RIGHTS-007) thêm ~1,4 KB
+
+- Phương án: (1) Nâng trần 232 → 234 (đo: gốc 230,0 → T-122 231,9 → T-121+T-122 233,3 KB), ghi vào docs/PERF-BUDGET.md; cả hai là MUST bắt buộc có UI client · (2) Chuyển form xoá tài khoản thành form HTML thuần không JS (mất hộp thoại xác nhận phía client, server vẫn đòi confirm + xác thực lại)
+- Chọn: Nâng trần 232 → 234 (đo: gốc 230,0 → T-122 231,9 → T-121+T-122 233,3 KB), ghi vào docs/PERF-BUDGET.md; cả hai là MUST bắt buộc có UI client
+- Lý do (tiêu chí chất lượng cuối): Hộp thoại hỏi lần cuối là chống bấm nhầm cho thao tác không đảo ngược (tiêu chí 1 an toàn > 5 chi phí); +1,4 KB (0,6 %) có số đo; trang /app/me vẫn trong ngân sách theo route
+- Đường lùi: Hạ trần về 232 và đổi form sang HTML thuần

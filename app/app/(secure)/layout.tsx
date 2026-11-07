@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { requireSession } from "@/app/server/session";
 import { SessionProvider } from "@/app/components/session-context";
 import { AppNav } from "@/app/components/app-nav";
+import { ErrorReporting } from "@/app/server/errors";
 import { RumIfEnabled } from "@/app/server/rum";
 import { ServiceWorkerRegister } from "@/app/components/sw-register";
 import { getPool } from "@/lib/db";
@@ -40,6 +41,7 @@ export default async function SecureLayout({ children }: { children: ReactNode }
         <AppNav approver={approver} unread={unread} />
         <ServiceWorkerRegister />
         <RumIfEnabled />
+        <ErrorReporting />
       </div>
     </SessionProvider>
   );

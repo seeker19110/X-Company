@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/sourcemaps-stash.mjs",
     "start": "NEXT_MANUAL_SIG_HANDLE=true next start -H ${HOST:-127.0.0.1}",
     "lint": "eslint . --max-warnings=0 && npm run -s check:env && npm run -s check:deps",
     "typecheck": "tsc --noEmit",

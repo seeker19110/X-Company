@@ -17,6 +17,7 @@ import { ApplicationInput, InquiryInput } from "../lib/inquiry/index.ts";
 import { Batch } from "../lib/offline/sync-route.ts";
 import { CreateRequestInput, KINDS as PRIVACY_KINDS } from "../lib/privacy/index.ts";
 import { RumInput } from "../lib/rum/index.ts";
+import { ClientErrorInput, ERROR_SOURCES, RELEASE_RE } from "../lib/errors/index.ts";
 import {
   ACTIONS as PRIVACY_ACTIONS,
   ActionBody,
@@ -224,6 +225,28 @@ const SCHEMAS: Record<string, Json> = {
     },
     required: ["items", "limit", "offset", "next_offset", "unread"],
   },
+  ErrorGroup: obj({
+    id: { type: "string", pattern: "^[0-9]+$", description: "Id nhóm (bigint dạng chuỗi)." },
+    source: { type: "string", enum: [...ERROR_SOURCES] },
+    release: { type: "string", pattern: RELEASE_RE.source },
+    group_key: {
+      type: "string",
+      pattern: "^[0-9a-f]{64}$",
+      description: "Fingerprint của nhóm: sha256 của nguồn + loại lỗi + khung stack đầu đã chuẩn hoá.",
+    },
+    error_type: { type: "string" },
+    message: { type: "string", description: "Thông điệp đã che bí mật/PII." },
+    stack: nullable({
+      type: "string",
+      description: "Dòng khung đã chuẩn hoá (giữ dòng:cột để giải source map).",
+    }),
+    page: nullable({ type: "string", description: "Nhãn trang đã chuẩn hoá." }),
+    context: nullable({ type: "string" }),
+    occurrence_count: { type: "integer", minimum: 1 },
+    first_seen_at: dateTime,
+    last_seen_at: dateTime,
+  }),
+  ErrorGroupPage: pageOf("ErrorGroup"),
   NotificationReadResult: obj({
     updated: { type: "integer", minimum: 0, description: "Số thông báo vừa chuyển sang đã đọc." },
     unread: { type: "integer", minimum: 0 },
@@ -414,6 +437,7 @@ function requestSchemas(): Record<string, Json> {
     DeleteOwnAccountRequest: fromZod(DeleteOwnAccountBody),
     InquiryRequest: fromZod(InquiryInput),
     RumRequest: fromZod(RumInput),
+    ClientErrorRequest: fromZod(ClientErrorInput),
     ApplicationRequest: fromZod(ApplicationInput),
   };
 }
@@ -657,6 +681,36 @@ export const REGISTRY: Registry = {
       body: { kind: "json", schema: "CommentCreateRequest" },
       ok: created("IdResult", "Đã tạo bình luận"),
       errors: [404, 422],
+    },
+  },
+  "/api/app/errors": {
+    GET: {
+      source: "lib/errors/routes.ts#getErrorGroups",
+      operationId: "listErrorGroups",
+      tag: "Vận hành",
+      summary: "Nhóm lỗi của kho lỗi tự host",
+      description:
+        "Lỗi client (beacon) và lỗi 500 chưa bắt của server, gom theo (fingerprint, release); gặp gần nhất trước. Thông điệp/stack đã " +
+        "che bí mật/PII; giải stack bằng source map riêng tư: `node scripts/sourcemap-resolve.mjs --release <release>`.",
+      permission: "`errors.read` (quản trị hệ thống).",
+      idempotency: "none",
+      paged: true,
+      params: [
+        {
+          name: "source",
+          in: "query",
+          schema: { type: "string", enum: [...ERROR_SOURCES] },
+          description: "Lọc theo nguồn lỗi.",
+        },
+        {
+          name: "release",
+          in: "query",
+          schema: { type: "string", pattern: RELEASE_RE.source },
+          description: "Lọc theo mã phiên bản build.",
+        },
+      ],
+      ok: { 200: { description: "Một trang nhóm lỗi.", schema: "ErrorGroupPage" } },
+      errors: [400, 403],
     },
   },
   "/api/app/files": {
@@ -988,6 +1042,23 @@ export const REGISTRY: Registry = {
         201: { description: "Đã tạo hồ sơ.", schema: "CodeResult" },
       },
       errors: [404, 413, 429],
+    },
+  },
+  "/api/public/errors": {
+    POST: {
+      source: "lib/errors/routes.ts#postClientError",
+      operationId: "submitClientError",
+      tag: "Công khai",
+      summary: "Gửi lỗi phía trình duyệt (kho lỗi tự host)",
+      description:
+        "Beacon lỗi của trình duyệt (`navigator.sendBeacon`). Phải cùng nguồn (`Origin`). Tối đa 16 KiB; giới hạn tần suất theo IP " +
+        "(băm). `release` = mã phiên bản build của trang; `page` được chuẩn hoá thành nhãn có số giá trị bị chặn; thông điệp/stack " +
+        "được che bí mật/PII; cùng fingerprint trong cùng release chỉ tăng bộ đếm. Không lưu IP/user agent.",
+      auth: "public",
+      idempotency: "none",
+      body: { kind: "json", schema: "ClientErrorRequest" },
+      ok: { 204: { description: "Đã ghi nhận (không có thân)." } },
+      errors: [403, 429],
     },
   },
   "/api/public/inquiries": {

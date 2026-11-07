@@ -327,6 +327,9 @@ export const SERVER_SPEC = {
   RETENTION_IDEMPOTENCY_HOURS: field(z.coerce.number().int().min(1).max(8_760).default(24)),
   // Mẫu RUM (rum_sample): 30 ngày — đủ so sánh tuần/tháng; số đo gộp p75 chỉ cần 24 giờ gần nhất.
   RETENTION_RUM_DAYS: field(z.coerce.number().int().min(1).max(365).default(30)),
+  // Kho lỗi tự host (error_group, T-122): xoá nhóm lỗi không gặp lại sau ngần ấy ngày (tính từ last_seen_at). 30 ngày đủ so lỗi
+  // giữa các bản phát hành gần nhau; thông điệp đã che nhưng vẫn có thể sót dữ liệu cá nhân → giữ tối thiểu, trần 180 ngày.
+  RETENTION_ERROR_DAYS: field(z.coerce.number().int().min(1).max(180).default(30)),
   // Toạ độ GPS chấm công (attendance_event.geo_*; AUD-DATA-003): xoá toạ độ (bản mã + bản rõ) sau ngần ấy ngày kể từ lúc server
   // nhận; giờ công/sự kiện giữ nguyên. Mặc định 90 ngày (GIẢ ĐỊNH, chưa có xác nhận pháp chế): toạ độ chỉ dùng đối chiếu vị trí,
   // dữ liệu nhạy cảm → giữ tối thiểu (Luật 91/2025 Điều 3.3, 14.1 — mức A), đủ qua chốt kỳ tháng + thời gian khiếu nại/điều chỉnh.

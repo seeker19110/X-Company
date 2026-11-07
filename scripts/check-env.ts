@@ -90,6 +90,8 @@ export const PENDING_EXAMPLE_KEYS = new Set<string>([
   "S3_REGION",
   "S3_ACCESS_KEY_ID",
   "S3_SECRET_ACCESS_KEY",
+  // T-122: thời hạn lưu kho lỗi tự host (error_group) — chờ người thêm vào `.env.example`.
+  "RETENTION_ERROR_DAYS",
 ]);
 
 /** Khoá chỉ script shell vận hành đọc (`scripts/backup.sh`, `restore-*.sh`) — có trong `.env.example` nhưng không thuộc module env. */
