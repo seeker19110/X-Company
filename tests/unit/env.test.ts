@@ -179,7 +179,8 @@ describe("che bí mật khi dump (BASE-CFG-005)", () => {
     S3_ENDPOINT: "https://s3.example.test",
     S3_BUCKET: "xc-files",
     S3_ACCESS_KEY_ID: "s3-akid-leak-0123",
-    S3_SECRET_ACCESS_KEY: "s3-secret-leak-0123456789",
+    // Giá trị giả entropy thấp (gitleaks generic-api-key bắt chuỗi ngẫu nhiên sau tên *_SECRET_*); vẫn đủ riêng để test che.
+    S3_SECRET_ACCESS_KEY: "s3-gia-s3-gia-s3-gia-s3-gia",
   };
 
   test("JSON.stringify(maskedEnv) cho *** ở MỌI trường bí mật và không lộ giá trị", () => {

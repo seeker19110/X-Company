@@ -410,7 +410,8 @@ describe("kho S3: riêng phần mạng/cấu hình", () => {
         missing.some((m) => m.startsWith(`${k}:`)),
         `thiếu báo lỗi ${k}`,
       );
-    const secret = "bi-mat-khong-duoc-in-ra-0123456789";
+    // Entropy thấp để gitleaks generic-api-key không bắt nhầm fixture; vẫn là chuỗi riêng để kiểm "không in giá trị".
+    const secret = "bi-mat-gia-bi-mat-gia-bi-mat-gia";
     const full = {
       ...baseEnv,
       FILE_STORAGE: "s3",
